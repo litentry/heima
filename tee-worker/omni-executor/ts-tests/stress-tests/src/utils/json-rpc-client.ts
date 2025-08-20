@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export class JsonRpcClient {
   private url: string;
   private requestId = 0;
@@ -6,7 +8,7 @@ export class JsonRpcClient {
     this.url = url;
   }
 
-  async call(method: string, params: any = {}, token?: string): Promise<any> {
+  async call(method: string, params: any = null, token?: string): Promise<any> {
     const id = ++this.requestId;
     
     const headers: Record<string, string> = {
@@ -17,11 +19,21 @@ export class JsonRpcClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    const body = JSON.stringify({
+    const requestBody = {
       jsonrpc: '2.0',
-      id,
+      id: id.toString(),  // ID should be string like in your curl example
       method,
-      params
+      params: params || {}  // Always include params object, empty if no params
+    };
+    
+    const body = JSON.stringify(requestBody);
+    
+    // Print request details
+    console.log(`🔵 [${new Date().toISOString()}] JSON-RPC Request:`, {
+      url: this.url,
+      method: method,
+      params: params,
+      requestBody: requestBody
     });
     
     const response = await fetch(this.url, {
@@ -31,13 +43,29 @@ export class JsonRpcClient {
     });
     
     if (!response.ok) {
+      console.log(`🔴 [${new Date().toISOString()}] HTTP Error:`, {
+        status: response.status,
+        statusText: response.statusText,
+        method: method
+      });
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const jsonResponse = await response.json() as any;
     
+    // Print response details
+    console.log(`🟢 [${new Date().toISOString()}] JSON-RPC Response:`, {
+      method: method,
+      success: !jsonResponse.error,
+      response: jsonResponse
+    });
+    
     if (jsonResponse.error) {
-      throw new Error(`JSON-RPC Error: ${jsonResponse.error.message}`);
+      console.log(`🔴 [${new Date().toISOString()}] JSON-RPC Error:`, {
+        method: method,
+        error: jsonResponse.error
+      });
+      throw new Error(`JSON-RPC Error: ${jsonResponse.error.message || jsonResponse.error}`);
     }
     
     return jsonResponse.result;

@@ -3,387 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Omni Executor Stress Test Dashboard</title>
+    <title>Omni Stress Test Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .header h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .header .subtitle {
-            opacity: 0.9;
-            font-size: 1rem;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-
-        .controls {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .control-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #555;
-        }
-
-        .form-group input {
-            padding: 0.75rem;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .buttons {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5a6fd8;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .status {
-            background: white;
-            padding: 1rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-
-        .status.running {
-            border-left: 4px solid #28a745;
-        }
-
-        .status.stopped {
-            border-left: 4px solid #dc3545;
-        }
-
-        .status.idle {
-            border-left: 4px solid #6c757d;
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .metric-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .metric-card h3 {
-            color: #555;
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
-        }
-
-        .metric-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .metric-value.success {
-            color: #28a745;
-        }
-
-        .metric-value.warning {
-            color: #ffc107;
-        }
-
-        .metric-value.danger {
-            color: #dc3545;
-        }
-
-        .metric-label {
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .chart-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .chart-card h3 {
-            color: #555;
-            margin-bottom: 1rem;
-            text-align: center;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-        }
-
-        .logs {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .logs h3 {
-            color: #555;
-            margin-bottom: 1rem;
-        }
-
-        .log-entry {
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-            border-radius: 4px;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 0.8rem;
-        }
-
-        .log-entry.success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .log-entry.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .log-entry.info {
-            background: #cce7ff;
-            color: #0c5460;
-        }
-
-        @media (max-width: 768px) {
-            .control-group {
-                grid-template-columns: 1fr;
-            }
-
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .metrics-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-    </style>
 </head>
 <body>
-    <header class="header">
-        <h1>Omni Executor Stress Test Dashboard</h1>
-        <div class="subtitle">Real-time performance monitoring and testing</div>
-    </header>
+    <div class="dashboard">
+        <!-- Header -->
+        <header class="header">
+            <h1>🚀 Omni Stress Test Dashboard</h1>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <span class="stat-label">Total Sessions</span>
+                    <span class="stat-value" id="totalSessions">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Active Tests</span>
+                    <span class="stat-value" id="activeTests">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total Requests</span>
+                    <span class="stat-value" id="totalRequests">0</span>
+                </div>
+            </div>
+        </header>
 
-    <div class="container">
-        <!-- Test Controls -->
-        <div class="controls">
-            <div class="control-group">
-                <div class="form-group">
-                    <label for="testName">Test Name</label>
-                    <input type="text" id="testName" value="Load Test" />
-                </div>
-                <div class="form-group">
-                    <label for="duration">Duration (seconds)</label>
-                    <input type="number" id="duration" value="60" min="10" max="3600" />
-                </div>
-                <div class="form-group">
-                    <label for="concurrency">Concurrency</label>
-                    <input type="number" id="concurrency" value="10" min="1" max="1000" />
-                </div>
-                <div class="form-group">
-                    <label for="rampUpTime">Ramp Up Time (seconds)</label>
-                    <input type="number" id="rampUpTime" value="10" min="0" max="300" />
-                </div>
-                <div class="form-group">
-                    <label for="targetUrl">Target URL</label>
-                    <input type="text" id="targetUrl" value="http://localhost:2100/" />
-                </div>
-                <div class="form-group">
-                    <label for="requestTimeout">Request Timeout (ms)</label>
-                    <input type="number" id="requestTimeout" value="30000" min="1000" max="300000" />
-                </div>
-            </div>
-            <div class="buttons">
-                <button class="btn btn-primary" id="startTest">Start Test</button>
-                <button class="btn btn-danger" id="stopTest" disabled>Stop Test</button>
-                <button class="btn btn-secondary" id="clearResults">Clear Results</button>
-            </div>
-        </div>
+        <!-- Navigation -->
+        <nav class="nav-tabs">
+            <button class="tab-button active" onclick="showTab('overview')">Overview</button>
+            <button class="tab-button" onclick="showTab('sessions')">Sessions</button>
+            <button class="tab-button" onclick="showTab('analysis')">Analysis</button>
+            <button class="tab-button" onclick="showTab('realtime')">Real-time</button>
+            <button class="tab-button" onclick="showTab('comparison')">Comparison</button>
+        </nav>
 
-        <!-- Status -->
-        <div class="status idle" id="status">
-            <h3>Status: <span id="statusText">Idle</span></h3>
-            <div id="statusDetails">Ready to start stress test</div>
-        </div>
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <!-- Key Metrics Cards -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="currentQPS">0</div>
+                        <div class="metric-label">Current QPS</div>
+                        <div class="metric-trend" id="qpsTrend">+0%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="avgLatency">0ms</div>
+                        <div class="metric-label">Avg Response Time</div>
+                        <div class="metric-trend" id="latencyTrend">+0%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="errorRate">0%</div>
+                        <div class="metric-label">Error Rate</div>
+                        <div class="metric-trend" id="errorTrend">+0%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="throughput">0</div>
+                        <div class="metric-label">Req/Min</div>
+                        <div class="metric-trend" id="throughputTrend">+0%</div>
+                    </div>
+                </div>
+                
+                <!-- Main Charts -->
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Response Time Latency</h3>
+                        <canvas id="latencyChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>QPS & Error Rate</h3>
+                        <canvas id="qpsErrorChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Detailed Charts -->
+                <div class="grid-3">
+                    <div class="card">
+                        <h3>QPS Progression</h3>
+                        <canvas id="qpsProgressionChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Error Distribution</h3>
+                        <canvas id="errorDistributionChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Endpoint Comparison</h3>
+                        <canvas id="endpointComparisonChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Recent Sessions -->
+                <div class="card">
+                    <h3>Recent Test Sessions</h3>
+                    <div id="recentSessions" class="session-list"></div>
+                </div>
+            </div>
 
-        <!-- Real-time Metrics -->
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <h3>Current RPS</h3>
-                <div class="metric-value success" id="currentRps">0</div>
-                <div class="metric-label">Requests per second</div>
+            <!-- Sessions Tab -->
+            <div id="sessions" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Test Sessions</h3>
+                        <div class="controls">
+                            <input type="text" id="sessionFilter" placeholder="Filter sessions..." />
+                            <button onclick="refreshSessions()">Refresh</button>
+                            <button onclick="exportAllData()">Export All</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="sessionsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Session ID</th>
+                                    <th>Start Time</th>
+                                    <th>Duration</th>
+                                    <th>Requests</th>
+                                    <th>Max QPS</th>
+                                    <th>Success Rate</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="metric-card">
-                <h3>Error Rate</h3>
-                <div class="metric-value" id="errorRate">0%</div>
-                <div class="metric-label">Failed requests percentage</div>
-            </div>
-            <div class="metric-card">
-                <h3>Avg Response Time</h3>
-                <div class="metric-value" id="avgResponseTime">0ms</div>
-                <div class="metric-label">Average response time</div>
-            </div>
-            <div class="metric-card">
-                <h3>Total Requests</h3>
-                <div class="metric-value" id="totalRequests">0</div>
-                <div class="metric-label">Requests processed</div>
-            </div>
-            <div class="metric-card">
-                <h3>CPU Usage</h3>
-                <div class="metric-value" id="cpuUsage">0%</div>
-                <div class="metric-label">System CPU usage</div>
-            </div>
-            <div class="metric-card">
-                <h3>Memory Usage</h3>
-                <div class="metric-value" id="memoryUsage">0%</div>
-                <div class="metric-label">System memory usage</div>
-            </div>
-        </div>
 
-        <!-- Charts -->
-        <div class="charts-grid">
-            <div class="chart-card">
-                <h3>Response Time Over Time</h3>
-                <div class="chart-container">
-                    <canvas id="responseTimeChart"></canvas>
+            <!-- Analysis Tab -->
+            <div id="analysis" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Session Analysis</h3>
+                        <select id="analysisSessionSelect" onchange="loadAnalysis()">
+                            <option value="">Select a session...</option>
+                        </select>
+                    </div>
+                    <div id="analysisContent">
+                        <p>Select a session to view detailed analysis</p>
+                    </div>
                 </div>
             </div>
-            <div class="chart-card">
-                <h3>Requests per Second</h3>
-                <div class="chart-container">
-                    <canvas id="rpsChart"></canvas>
-                </div>
-            </div>
-            <div class="chart-card">
-                <h3>System Resources</h3>
-                <div class="chart-container">
-                    <canvas id="systemChart"></canvas>
-                </div>
-            </div>
-            <div class="chart-card">
-                <h3>Error Distribution</h3>
-                <div class="chart-container">
-                    <canvas id="errorChart"></canvas>
-                </div>
-            </div>
-        </div>
 
-        <!-- Logs -->
-        <div class="logs">
-            <h3>Live Logs</h3>
-            <div id="logContainer"></div>
+            <!-- Real-time Tab -->
+            <div id="realtime" class="tab-content">
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Live QPS</h3>
+                        <canvas id="liveQpsChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>Live Response Times</h3>
+                        <canvas id="liveLatencyChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Active Session Details</h3>
+                    <div id="activeSessionDetails">
+                        <p>No active sessions</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Tab -->
+            <div id="comparison" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Session Comparison</h3>
+                        <div class="controls">
+                            <select id="compareSession1">
+                                <option value="">Select first session...</option>
+                            </select>
+                            <select id="compareSession2">
+                                <option value="">Select second session...</option>
+                            </select>
+                            <button onclick="compareSessions()">Compare</button>
+                        </div>
+                    </div>
+                    <div id="comparisonResults"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for detailed views -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
         </div>
     </div>
 

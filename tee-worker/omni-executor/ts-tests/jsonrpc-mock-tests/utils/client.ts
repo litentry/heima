@@ -30,7 +30,7 @@ export class JsonRpcError extends Error {
 
 export class JsonRpcClient {
     private static instance: JsonRpcClient;
-    private readonly endpoint = process.env.OMNI_WORKER_ENDPOINT ?? 'http://localhost:2100/';
+    private readonly endpoint = process.env.OMNI_WORKER_ENDPOINT ?? 'https://staging-dex-worker.heima.network';
     private requestId = 1;
 
     private constructor() {}

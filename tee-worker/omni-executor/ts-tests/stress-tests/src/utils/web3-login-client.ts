@@ -1,3 +1,5 @@
+import 'dotenv/config';
+import { createHash } from 'crypto';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { signMessage } from 'viem/accounts';
 import { JsonRpcClient } from './json-rpc-client';
@@ -30,6 +32,7 @@ interface LoginResult {
 
 const ClientId = {
   Wildmeta: 'wildmeta' as const,
+  Heima:'heima' as const,
   Console: 'console' as const
 };
 
@@ -60,10 +63,42 @@ export class Web3LoginClient {
     return wallet;
   }
 
-  private calculateOmniAccount(evmAddress: string): string {
-    // Simplified omni account calculation
-    // This should match the logic from the existing test
-    return evmAddress.toLowerCase();
+  private calculateOmniAccount(evmAddress: string, clientId: string = ClientId.Wildmeta): string {
+    // Proper omni account calculation based on jsonrpc-mock-tests implementation
+    const inputs: Uint8Array[] = [];
+    
+    // First: clientId as raw bytes
+    const clientIdBytes = new TextEncoder().encode(clientId);
+    inputs.push(clientIdBytes);
+    
+    // Second: identity type ("evm")
+    inputs.push(new TextEncoder().encode('evm'));
+    
+    // Third: EVM address bytes (remove 0x prefix)
+    const addressHex = evmAddress.slice(2).toLowerCase();
+    const addressBytes = new Uint8Array(20); // EVM addresses are 20 bytes
+    for (let i = 0; i < addressHex.length; i += 2) {
+      addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
+    }
+    inputs.push(addressBytes);
+    
+    // Combine all inputs
+    const totalLength = inputs.reduce((sum, arr) => sum + arr.length, 0);
+    const combined = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const input of inputs) {
+      combined.set(input, offset);
+      offset += input.length;
+    }
+    
+    // Calculate SHA256 hash (using Web Crypto API)
+    return this.sha256Hash(combined);
+  }
+
+  private sha256Hash(data: Uint8Array): string {
+    // Simple SHA256 implementation for Node.js
+    const hash = createHash('sha256').update(data).digest();
+    return `0x${Array.from(hash, (b: number) => b.toString(16).padStart(2, '0')).join('')}`;
   }
 
   async performLogin(): Promise<LoginResult> {
@@ -76,18 +111,16 @@ export class Web3LoginClient {
     try {
       // Always get a wallet, even if subsequent steps fail
       wallet = this.getNextWallet();
-      const omniAccount = this.calculateOmniAccount(wallet.address);
+      const omniAccount = this.calculateOmniAccount(wallet.address, ClientId.Wildmeta);
       
       // Step 1: Get Web3 sign-in message (non-breaking)
       let messageResponse: Web3SignInMessage;
       try {
-        messageResponse = await this.rpcClient.call(
-          'omni_getWeb3SignInMessage',
-          [{
-            client_id: ClientId.Wildmeta,
-            omni_account: omniAccount
-          }]
-        );
+
+        messageResponse = await this.rpcClient.call('omni_getWeb3SignInMessage', {
+          client_id: ClientId.Wildmeta,
+          omni_account: omniAccount
+        });
         requestSize += JSON.stringify([ClientId.Wildmeta, omniAccount]).length;
         responseSize += JSON.stringify(messageResponse).length;
       } catch (error) {
@@ -113,25 +146,25 @@ export class Web3LoginClient {
       let loginResponse: UserLoginResponse;
       try {
         const loginRequest = {
-          user_id: {
-            type: 'evm' as const,
-            value: wallet.address,
-          },
-          user_auth: {
-            type: 'evm' as const,
-            value: signature,
-          },
-          client_id: ClientId.Wildmeta,
-          client_auth: {
-            type: 'wildmeta',
-            value: {
-              google_code: '',
-              invite_code: '',
+            user_id: {
+                type: 'evm' as const,
+                value: wallet.address,
             },
-          },
+            user_auth: {
+                type: 'evm' as const,
+                value: signature,
+            },
+            client_id: ClientId.Heima,
+            client_auth: {
+                type: 'wildmeta',
+                value: {
+                    google_code: '',
+                    invite_code: '',
+                },
+            },
         };
         
-        loginResponse = await this.rpcClient.call('omni_userLogin', [loginRequest]);
+        loginResponse = await this.rpcClient.call('omni_userLogin', loginRequest);
         requestSize += JSON.stringify(loginRequest).length;
         responseSize += JSON.stringify(loginResponse).length;
       } catch (error) {
@@ -178,7 +211,7 @@ export class Web3LoginClient {
     let responseSize = 0;
     
     try {
-      const response = await this.rpcClient.call('omni_getShieldingKey', []);
+      const response = await this.rpcClient.call('omni_getShieldingKey');
       
       const endTime = performance.now();
       const responseTime = endTime - startTime;
@@ -216,6 +249,8 @@ export class Web3LoginClient {
     }
   }
 
+  // COMMENTED OUT - addWallet functionality disabled
+  /*
   async performAddWalletRequest(idToken?: string): Promise<LoginResult> {
     const startTime = performance.now();
     let requestSize = 0;
@@ -238,7 +273,7 @@ export class Web3LoginClient {
         authToken = loginResult.data.id_token;
       }
       
-      const response = await this.rpcClient.call('omni_addWallet', [], authToken);
+      const response = await this.rpcClient.call('omni_addWallet', {}, authToken);
       
       const endTime = performance.now();
       const responseTime = endTime - startTime;
@@ -271,6 +306,7 @@ export class Web3LoginClient {
       };
     }
   }
+  */
 
   async performGetNextIntentId(): Promise<LoginResult> {
     const startTime = performance.now();
@@ -314,36 +350,34 @@ export class Web3LoginClient {
     }
   }
 
-  // Mixed request pattern for realistic load testing
+  // Mixed request pattern for realistic load testing (addWallet disabled)
   async performRandomRequest(authenticatedToken?: string): Promise<LoginResult> {
     const requestTypes = [
       () => this.performLogin(),
       () => this.performShieldingKeyRequest(),
       () => this.performGetNextIntentId(),
-      () => this.performAddWalletRequest(authenticatedToken)
+      // () => this.performAddWalletRequest(authenticatedToken) // DISABLED
     ];
     
     const randomIndex = Math.floor(Math.random() * requestTypes.length);
     return await requestTypes[randomIndex]();
   }
 
-  // Weighted mixed requests (more realistic distribution)
+  // Weighted mixed requests (more realistic distribution, addWallet disabled)
   async performWeightedRandomRequest(authenticatedToken?: string): Promise<LoginResult> {
     const random = Math.random();
     
-    // Weight distribution based on typical usage patterns
-    if (random < 0.4) {
-      // 40% - User login (most common)
+    // Weight distribution based on typical usage patterns (addWallet disabled)
+    if (random < 0.5) {
+      // 50% - User login (most common)
       return this.performLogin();
-    } else if (random < 0.7) {
+    } else if (random < 0.8) {
       // 30% - Get shielding key (common for security operations)
       return this.performShieldingKeyRequest();
-    } else if (random < 0.9) {
+    } else {
       // 20% - Get next intent ID (transaction preparation)
       return this.performGetNextIntentId();
-    } else {
-      // 10% - Add wallet (less frequent operation)
-      return this.performAddWalletRequest(authenticatedToken);
     }
+    // Note: addWallet (originally 10%) has been disabled and redistributed
   }
 }
