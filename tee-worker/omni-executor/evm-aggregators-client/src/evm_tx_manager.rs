@@ -30,8 +30,12 @@ use rust_decimal::prelude::{Decimal, ToPrimitive};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::kyber_client::types::{GetSwapRouteRequest, SwapRequestBuilder as KyberSwapRequestBuilder};
-use crate::okx_client::types::{convert_slippage_to_okx, get_okx_gas_level, SwapRequestBuilder as OkxSwapRequestBuilder};
+use crate::kyber_client::types::{
+	GetSwapRouteRequest, SwapRequestBuilder as KyberSwapRequestBuilder,
+};
+use crate::okx_client::types::{
+	convert_slippage_to_okx, get_okx_gas_level, SwapRequestBuilder as OkxSwapRequestBuilder,
+};
 use alloy::primitives::Uint;
 use alloy::{
 	primitives::{Address, TxKind},
@@ -96,23 +100,26 @@ where
 		let chain_id = create_market_tx.chain_id;
 
 		// Safely access INCH_DEX_IDS_MAP to prevent panics
-		let chain_map = INCH_DEX_IDS_MAP.get(&chain_id)
-			.ok_or_else(|| ClientError::UnsupportedChainId { chain_id })?;
-		
-		let dex_id = chain_map.get(&create_market_tx.trade_pool_name)
-			.ok_or_else(|| ClientError::UnsupportedTradePool { 
+		let chain_map = INCH_DEX_IDS_MAP
+			.get(&chain_id)
+			.ok_or(ClientError::UnsupportedChainId { chain_id })?;
+
+		let dex_id = chain_map.get(&create_market_tx.trade_pool_name).ok_or_else(|| {
+			ClientError::UnsupportedTradePool {
 				pool_name: create_market_tx.trade_pool_name.clone(),
-				chain_id 
-			})?;
+				chain_id,
+			}
+		})?;
 
 		// Determine token addresses based on native token handling
-		let (from_token_address, to_token_address) = if is_native_token(create_market_tx.in_token_ca.as_bytes()) {
-			// Case 1: Selling native token (ETH → USDC)
-			(NATIVE_ADDRESS.to_string(), create_market_tx.out_token_ca.clone())
-		} else {
-			// Case 2: Buying native token (USDC → ETH)
-			(create_market_tx.in_token_ca.clone(), NATIVE_ADDRESS.to_string())
-		};
+		let (from_token_address, to_token_address) =
+			if is_native_token(create_market_tx.in_token_ca.as_bytes()) {
+				// Case 1: Selling native token (ETH → USDC)
+				(NATIVE_ADDRESS.to_string(), create_market_tx.out_token_ca.clone())
+			} else {
+				// Case 2: Buying native token (USDC → ETH)
+				(create_market_tx.in_token_ca.clone(), NATIVE_ADDRESS.to_string())
+			};
 
 		// Use SwapRequestBuilder with validation
 		let swap_request = SwapRequestBuilder::new()
@@ -131,29 +138,14 @@ where
 			.inch_client
 			.swap(chain_id, swap_request)
 			.await
-			.map_err(|e| {
-				error!("Failed to get swap response from 1inch due to: {:?}", e);
-				ClientError::Network { message: format!("1inch API error: {}", e) }
-			})?;
+			.map_err(|e| ClientError::Network { message: format!("1inch API error: {}", e) })?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data()
-			.map_err(|e| {
-				error!("Failed to extract transaction details from swap response: {:?}", e);
-				e
-			})?;
+		let (data, to, value, gas) = swap_response.get_transaction_data()?;
 
-		let gas_price = self
-			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
-			.await
-			.map_err(|e| {
-				error!("Failed to get gas price by level: {:?}", e);
-				e
-			})?;
-		let gas_price = gas_price.to_u128()
-			.ok_or_else(|| {
-				error!("Failed to convert gas price to u128");
-				ClientError::GasCalculation { reason: "Gas price conversion overflow".to_string() }
-			})?;
+		let gas_price = self.get_gas_price_by_level(chain_id, create_market_tx.gas_type).await?;
+		let gas_price = gas_price.to_u128().ok_or(ClientError::GasCalculation {
+			reason: "Gas price conversion overflow".to_string(),
+		})?;
 
 		let tx = TransactionRequest {
 			nonce: Some(nonce),
@@ -180,22 +172,31 @@ where
 		}
 
 		// Safely access OKX_DEX_IDS_MAP to prevent panics
-		let dex_id = OKX_DEX_IDS_MAP.get(&create_market_tx.trade_pool_name)
-			.ok_or_else(|| ClientError::UnsupportedDex { 
+		let dex_id = OKX_DEX_IDS_MAP.get(&create_market_tx.trade_pool_name).ok_or_else(|| {
+			ClientError::UnsupportedDex {
 				dex_name: "OKX".to_string(),
-				pool_name: create_market_tx.trade_pool_name.clone()
-			})?;
+				pool_name: create_market_tx.trade_pool_name.clone(),
+			}
+		})?;
 
 		// Determine token addresses and referrer setup based on native token handling
-		let (from_token_address, to_token_address, from_referrer, to_referrer) = 
+		let (from_token_address, to_token_address, from_referrer, to_referrer) =
 			if is_native_token(create_market_tx.in_token_ca.as_bytes()) {
 				// Case 1: Selling native token (ETH → USDC)
-				(NATIVE_ADDRESS.to_string(), create_market_tx.out_token_ca.clone(), 
-				 Some(self.fee_receiver.clone()), None)
+				(
+					NATIVE_ADDRESS.to_string(),
+					create_market_tx.out_token_ca.clone(),
+					Some(self.fee_receiver.clone()),
+					None,
+				)
 			} else {
 				// Case 2: Buying native token (USDC → ETH)
-				(create_market_tx.in_token_ca.clone(), NATIVE_ADDRESS.to_string(), 
-				 None, Some(self.fee_receiver.clone()))
+				(
+					create_market_tx.in_token_ca.clone(),
+					NATIVE_ADDRESS.to_string(),
+					None,
+					Some(self.fee_receiver.clone()),
+				)
 			};
 
 		// Use OkxSwapRequestBuilder with validation
@@ -220,30 +221,18 @@ where
 
 		let swap_request = builder.build()?;
 
-		let swap_response = self.okx_client.swap(swap_request).await
-			.map_err(|e| {
-				error!("Failed to get swap response from OKX: {:?}", e);
-				ClientError::Network { message: format!("OKX API error: {}", e) }
-			})?;
-
-		let (data, to, value, gas) = swap_response.get_transaction_data()
-			.map_err(|e| {
-				error!("Failed to extract transaction details from swap response: {:?}", e);
-				e
-			})?;
-
-		let gas_price = self
-			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
+		let swap_response = self
+			.okx_client
+			.swap(swap_request)
 			.await
-			.map_err(|e| {
-				error!("Failed to get gas price by level: {:?}", e);
-				e
-			})?;
-		let gas_price = gas_price.to_u128()
-			.ok_or_else(|| {
-				error!("Failed to convert gas price to u128");
-				ClientError::GasCalculation { reason: "Gas price conversion overflow".to_string() }
-			})?;
+			.map_err(|e| ClientError::Network { message: format!("OKX API error: {}", e) })?;
+
+		let (data, to, value, gas) = swap_response.get_transaction_data()?;
+
+		let gas_price = self.get_gas_price_by_level(chain_id, create_market_tx.gas_type).await?;
+		let gas_price = gas_price.to_u128().ok_or(ClientError::GasCalculation {
+			reason: "Gas price conversion overflow".to_string(),
+		})?;
 
 		let tx = TransactionRequest {
 			nonce: Some(nonce),
@@ -270,10 +259,11 @@ where
 		}
 
 		// Safely access KYBER_SWAP_DEX_ID_MAP to prevent panics
-		let dex_id = KYBER_SWAP_DEX_ID_MAP.get(create_market_tx.trade_pool_name.as_str())
-			.ok_or_else(|| ClientError::UnsupportedDex { 
+		let dex_id = KYBER_SWAP_DEX_ID_MAP
+			.get(create_market_tx.trade_pool_name.as_str())
+			.ok_or_else(|| ClientError::UnsupportedDex {
 				dex_name: "Kyber".to_string(),
-				pool_name: create_market_tx.trade_pool_name.clone()
+				pool_name: create_market_tx.trade_pool_name.clone(),
 			})?;
 
 		let mut swap_route_request = GetSwapRouteRequest {
@@ -301,7 +291,7 @@ where
 			// Set fee collection from the native token being sold (more gas efficient)
 			swap_route_request.is_from_token_referrer = true;
 		} else {
-			// Case 2: User is buying native token (e.g., USDC → ETH)  
+			// Case 2: User is buying native token (e.g., USDC → ETH)
 			// Set the output token to use the native marker
 			swap_route_request.to_token_address = NATIVE_ADDRESS.to_string();
 			// Keep default fee collection behavior (from output token)
@@ -311,19 +301,16 @@ where
 			.kyber_client
 			.get_swap_route(chain_id, swap_route_request)
 			.await
-			.map_err(|e| {
-				error!("Failed to get swap route response from Kyber: {}", e);
-				ClientError::Network { message: format!("Kyber route API error: {}", e) }
+			.map_err(|e| ClientError::Network {
+				message: format!("Kyber route API error: {}", e),
 			})?;
 
 		// Calculate deadline (current time + 60 seconds)
 		let deadline = std::time::SystemTime::now()
 			.duration_since(std::time::UNIX_EPOCH)
-			.map_err(|e| {
-				log::error!("System time error: {}", e);
-				ClientError::SystemTime { message: e.to_string() }
-			})?
-			.as_secs() + 60;
+			.map_err(|e| ClientError::SystemTime { message: e.to_string() })?
+			.as_secs()
+			+ 60;
 
 		// Use KyberSwapRequestBuilder with validation
 		let swap_request = KyberSwapRequestBuilder::new()
@@ -336,30 +323,16 @@ where
 			.ignore_capped_slippage(true)
 			.build()?;
 
-		let swap_response = self.kyber_client.swap(chain_id, swap_request).await
-			.map_err(|e| {
-				error!("Failed to get swap response from Kyber: {}", e);
-				ClientError::Network { message: format!("Kyber swap API error: {}", e) }
-			})?;
+		let swap_response = self.kyber_client.swap(chain_id, swap_request).await.map_err(|e| {
+			ClientError::Network { message: format!("Kyber swap API error: {}", e) }
+		})?;
 
-		let (data, to, value, gas) = swap_response.get_transaction_data()
-			.map_err(|e| {
-				error!("Failed to extract transaction details from swap response: {:?}", e);
-				e
-			})?;
+		let (data, to, value, gas) = swap_response.get_transaction_data()?;
 
-		let gas_price = self
-			.get_gas_price_by_level(chain_id, create_market_tx.gas_type)
-			.await
-			.map_err(|e| {
-				error!("Failed to get gas price by level: {:?}", e);
-				e
-			})?;
-		let gas_price = gas_price.to_u128()
-			.ok_or_else(|| {
-				error!("Failed to convert gas price to u128");
-				ClientError::GasCalculation { reason: "Gas price conversion overflow".to_string() }
-			})?;
+		let gas_price = self.get_gas_price_by_level(chain_id, create_market_tx.gas_type).await?;
+		let gas_price = gas_price.to_u128().ok_or(ClientError::GasCalculation {
+			reason: "Gas price conversion overflow".to_string(),
+		})?;
 
 		let tx = TransactionRequest {
 			nonce: Some(nonce),
@@ -384,31 +357,21 @@ where
 	OkxClient: OkxSwap + ?Sized,
 {
 	pub async fn get_gas_price_by_level(&self, chain_id: u64, level: i32) -> ClientResult<Decimal> {
-		let gas_price = self
-			.okx_client
-			.get_gas_price(chain_id)
-			.await
-			.map_err(|e| {
-				error!("Failed to get gas price due to: {:?}", e);
-				ClientError::Network { message: format!("OKX gas price API error: {}", e) }
-			})?;
+		let gas_price =
+			self.okx_client
+				.get_gas_price(chain_id)
+				.await
+				.map_err(|e| ClientError::Network {
+					message: format!("OKX gas price API error: {}", e),
+				})?;
 
 		match level {
 			1_i32 => Decimal::from_str(&gas_price.min)
-				.map_err(|e| {
-					error!("Failed to parse min gas price: {}", e);
-					ClientError::InvalidDecimal { value: gas_price.min.clone() }
-				}),
+				.map_err(|_| ClientError::InvalidDecimal { value: gas_price.min.clone() }),
 			2_i32 => Decimal::from_str(&gas_price.normal)
-				.map_err(|e| {
-					error!("Failed to parse normal gas price: {}", e);
-					ClientError::InvalidDecimal { value: gas_price.normal.clone() }
-				}),
+				.map_err(|_| ClientError::InvalidDecimal { value: gas_price.normal.clone() }),
 			3_i32 => Decimal::from_str(&gas_price.max)
-				.map_err(|e| {
-					error!("Failed to parse max gas price: {}", e);
-					ClientError::InvalidDecimal { value: gas_price.max.clone() }
-				}),
+				.map_err(|_| ClientError::InvalidDecimal { value: gas_price.max.clone() }),
 			_ => {
 				error!("Invalid gas level: {}", level);
 				Err(ClientError::InvalidGasLevel { level: level.to_string() })
@@ -558,11 +521,11 @@ pub enum Platform {
 
 /// Helper function to create the native token swap route request logic.
 /// This function encapsulates the native token handling logic for testing purposes.
-/// 
+///
 /// # Arguments
 /// * `in_token_ca` - Input token contract address
 /// * `base_request` - Base swap route request to modify
-/// 
+///
 /// # Returns
 /// Modified swap route request with proper native token handling
 pub fn configure_native_token_swap(
@@ -588,8 +551,8 @@ mod tests {
 		GetSwapRouteRequest {
 			chain_id: 1,
 			amount: "1000000000000000000".to_string(), // 1 ETH in wei
-			from_token_address: "".to_string(), // Will be set by test
-			to_token_address: "".to_string(),   // Will be set by test
+			from_token_address: "".to_string(),        // Will be set by test
+			to_token_address: "".to_string(),          // Will be set by test
 			fee_bps: "100".to_string(),
 			referrer: "0x742d35Cc6641b4Fc7b05cC38f69Cc8D7C2B6B444".to_string(),
 			dex_ids: "uniswap".to_string(),
@@ -602,20 +565,26 @@ mod tests {
 		// Test Case 1: Selling ETH for USDC (ETH → USDC)
 		let weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // WETH on Ethereum
 		let usdc_address = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
-		
+
 		let mut base_request = create_test_swap_route_request();
 		base_request.from_token_address = weth_address.to_string();
 		base_request.to_token_address = usdc_address.to_string();
-		
+
 		let result = configure_native_token_swap(weth_address, base_request);
-		
+
 		// Assertions for selling native token
-		assert_eq!(result.from_token_address, NATIVE_ADDRESS, 
-			"When selling native token, from_token_address should be NATIVE_ADDRESS");
-		assert_eq!(result.to_token_address, usdc_address,
-			"When selling native token, to_token_address should remain unchanged");
-		assert_eq!(result.is_from_token_referrer, true,
-			"When selling native token, fees should be collected from input token");
+		assert_eq!(
+			result.from_token_address, NATIVE_ADDRESS,
+			"When selling native token, from_token_address should be NATIVE_ADDRESS"
+		);
+		assert_eq!(
+			result.to_token_address, usdc_address,
+			"When selling native token, to_token_address should remain unchanged"
+		);
+		assert_eq!(
+			result.is_from_token_referrer, true,
+			"When selling native token, fees should be collected from input token"
+		);
 	}
 
 	#[test]
@@ -623,20 +592,26 @@ mod tests {
 		// Test Case 2: Buying ETH with USDC (USDC → ETH)
 		let usdc_address = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
 		let weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"; // WETH on Ethereum
-		
+
 		let mut base_request = create_test_swap_route_request();
 		base_request.from_token_address = usdc_address.to_string();
 		base_request.to_token_address = weth_address.to_string();
-		
+
 		let result = configure_native_token_swap(usdc_address, base_request);
-		
+
 		// Assertions for buying native token
-		assert_eq!(result.from_token_address, usdc_address,
-			"When buying native token, from_token_address should remain unchanged");
-		assert_eq!(result.to_token_address, NATIVE_ADDRESS,
-			"When buying native token, to_token_address should be NATIVE_ADDRESS");
-		assert_eq!(result.is_from_token_referrer, false,
-			"When buying native token, fees should be collected from output token");
+		assert_eq!(
+			result.from_token_address, usdc_address,
+			"When buying native token, from_token_address should remain unchanged"
+		);
+		assert_eq!(
+			result.to_token_address, NATIVE_ADDRESS,
+			"When buying native token, to_token_address should be NATIVE_ADDRESS"
+		);
+		assert_eq!(
+			result.is_from_token_referrer, false,
+			"When buying native token, fees should be collected from output token"
+		);
 	}
 
 	#[test]
@@ -644,21 +619,27 @@ mod tests {
 		// Test BSC: Selling BNB for BUSD (BNB → BUSD)
 		let wbnb_address = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"; // WBNB on BSC
 		let busd_address = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56"; // BUSD
-		
+
 		let mut base_request = create_test_swap_route_request();
 		base_request.chain_id = 56; // BSC chain ID
 		base_request.from_token_address = wbnb_address.to_string();
 		base_request.to_token_address = busd_address.to_string();
-		
+
 		let result = configure_native_token_swap(wbnb_address, base_request);
-		
+
 		// Assertions for BSC native token
-		assert_eq!(result.from_token_address, NATIVE_ADDRESS,
-			"When selling BNB, from_token_address should be NATIVE_ADDRESS");
-		assert_eq!(result.to_token_address, busd_address,
-			"When selling BNB, to_token_address should remain unchanged");
-		assert_eq!(result.is_from_token_referrer, true,
-			"When selling BNB, fees should be collected from input token");
+		assert_eq!(
+			result.from_token_address, NATIVE_ADDRESS,
+			"When selling BNB, from_token_address should be NATIVE_ADDRESS"
+		);
+		assert_eq!(
+			result.to_token_address, busd_address,
+			"When selling BNB, to_token_address should remain unchanged"
+		);
+		assert_eq!(
+			result.is_from_token_referrer, true,
+			"When selling BNB, fees should be collected from input token"
+		);
 	}
 
 	#[test]
@@ -666,43 +647,53 @@ mod tests {
 		// Test Base Chain: Selling ETH for USDC (ETH → USDC)
 		let base_weth = "0x4200000000000000000000000000000000000006"; // WETH on Base
 		let base_usdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
-		
+
 		let mut base_request = create_test_swap_route_request();
 		base_request.chain_id = 8453; // Base chain ID
 		base_request.from_token_address = base_weth.to_string();
 		base_request.to_token_address = base_usdc.to_string();
-		
+
 		let result = configure_native_token_swap(base_weth, base_request);
-		
+
 		// Assertions for Base chain native token
-		assert_eq!(result.from_token_address, NATIVE_ADDRESS,
-			"When selling ETH on Base, from_token_address should be NATIVE_ADDRESS");
-		assert_eq!(result.to_token_address, base_usdc,
-			"When selling ETH on Base, to_token_address should remain unchanged");
-		assert_eq!(result.is_from_token_referrer, true,
-			"When selling ETH on Base, fees should be collected from input token");
+		assert_eq!(
+			result.from_token_address, NATIVE_ADDRESS,
+			"When selling ETH on Base, from_token_address should be NATIVE_ADDRESS"
+		);
+		assert_eq!(
+			result.to_token_address, base_usdc,
+			"When selling ETH on Base, to_token_address should remain unchanged"
+		);
+		assert_eq!(
+			result.is_from_token_referrer, true,
+			"When selling ETH on Base, fees should be collected from input token"
+		);
 	}
 
-	#[test] 
+	#[test]
 	fn test_erc20_to_erc20_swap() {
 		// Test ERC-20 to ERC-20 swap (no native tokens involved)
 		let usdc_address = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
 		let usdt_address = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // USDT
-		
+
 		let mut base_request = create_test_swap_route_request();
 		base_request.from_token_address = usdc_address.to_string();
 		base_request.to_token_address = usdt_address.to_string();
-		
+
 		let result = configure_native_token_swap(usdc_address, base_request);
-		
+
 		// When no native tokens are involved, only to_token should be set to NATIVE_ADDRESS
 		// This is because the function assumes at least one token must be native
-		assert_eq!(result.from_token_address, usdc_address,
-			"For ERC-20 to ERC-20, from_token_address should remain unchanged");
+		assert_eq!(
+			result.from_token_address, usdc_address,
+			"For ERC-20 to ERC-20, from_token_address should remain unchanged"
+		);
 		assert_eq!(result.to_token_address, NATIVE_ADDRESS,
 			"For ERC-20 to ERC-20, to_token_address gets set to NATIVE_ADDRESS (function assumption)");
-		assert_eq!(result.is_from_token_referrer, false,
-			"For ERC-20 to ERC-20, should use default fee collection");
+		assert_eq!(
+			result.is_from_token_referrer, false,
+			"For ERC-20 to ERC-20, should use default fee collection"
+		);
 	}
 
 	#[test]
@@ -711,23 +702,29 @@ mod tests {
 		let native_token_variants = vec![
 			"0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // NATIVE_TOKEN constant
 			"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
-			"0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB  
+			"0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
 			"0x4200000000000000000000000000000000000006", // Base WETH
 		];
-		
+
 		let non_native_token = "0xA0b86a33E6417c8f7851efA37A9f7F1A5d8C8f6E"; // USDC
-		
+
 		for native_variant in native_token_variants {
 			let mut base_request = create_test_swap_route_request();
 			base_request.from_token_address = native_variant.to_string();
 			base_request.to_token_address = non_native_token.to_string();
-			
+
 			let result = configure_native_token_swap(native_variant, base_request);
-			
-			assert_eq!(result.from_token_address, NATIVE_ADDRESS,
-				"Native token variant {} should be converted to NATIVE_ADDRESS", native_variant);
-			assert_eq!(result.is_from_token_referrer, true,
-				"Native token variant {} should set is_from_token_referrer to true", native_variant);
+
+			assert_eq!(
+				result.from_token_address, NATIVE_ADDRESS,
+				"Native token variant {} should be converted to NATIVE_ADDRESS",
+				native_variant
+			);
+			assert_eq!(
+				result.is_from_token_referrer, true,
+				"Native token variant {} should set is_from_token_referrer to true",
+				native_variant
+			);
 		}
 	}
 }

@@ -16,7 +16,6 @@
 
 use crate::inch_client::types::{SwapRequest, SwapResponse};
 use async_trait::async_trait;
-use log::error;
 use reqwest::{Client, Error};
 use std::sync::Arc;
 
@@ -57,20 +56,9 @@ impl InchSwap for InchClient {
 			.header("content-type", "application/json")
 			.bearer_auth(self.access_token.clone())
 			.send()
-			.await
-			.map_err(|e| {
-				error!("Failed to send 1inch swap request: {:?}", e);
-				e
-			})?;
+			.await?;
 
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			error!("swap request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-		response.json().await.map_err(|e| {
-			error!("Failed to parse 1inch swap response: {:?}", e);
-			e
-		})
+		let response = response.error_for_status()?;
+		response.json().await
 	}
 }

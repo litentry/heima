@@ -16,7 +16,6 @@
 
 use crate::okx_client::types::{GetGasPriceResp, SwapRequest, SwapResponse};
 use async_trait::async_trait;
-use log::error;
 use reqwest::{Client, Error};
 
 use std::sync::Arc;
@@ -57,21 +56,10 @@ impl OkxSwap for OkxClient {
 			.header("content-type", "application/json")
 			.bearer_auth(self.access_token.clone())
 			.send()
-			.await
-			.map_err(|e| {
-				error!("Failed to send okx swap request: {:?}", e);
-				e
-			})?;
+			.await?;
 
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			error!("okx_swap request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-		response.json().await.map_err(|e| {
-			error!("Failed to parse okx swap response: {:?}", e);
-			e
-		})
+		let response = response.error_for_status()?;
+		response.json().await
 	}
 
 	async fn get_gas_price(&self, chain_id: u64) -> Result<GetGasPriceResp, Error> {
@@ -86,20 +74,9 @@ impl OkxSwap for OkxClient {
 			.header("content-type", "application/json")
 			.bearer_auth(self.access_token.clone())
 			.send()
-			.await
-			.map_err(|e| {
-				error!("Failed to send get_gas_price request: {:?}", e);
-				e
-			})?;
+			.await?;
 
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			error!("okx_get_gas_price request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-		response.json().await.map_err(|e| {
-			error!("Failed to parse okx gas price response: {:?}", e);
-			e
-		})
+		let response = response.error_for_status()?;
+		response.json().await
 	}
 }

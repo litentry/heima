@@ -18,105 +18,95 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ClientError {
-    #[error("Invalid address format: {address}")]
-    InvalidAddress { address: String },
+	#[error("Invalid address format: {address}")]
+	InvalidAddress { address: String },
 
-    #[error("Invalid amount format: {amount}")]
-    InvalidAmount { amount: String },
+	#[error("Invalid amount format: {amount}")]
+	InvalidAmount { amount: String },
 
-    #[error("Invalid chain ID: {chain_id}")]
-    InvalidChainId { chain_id: String },
+	#[error("Invalid chain ID: {chain_id}")]
+	InvalidChainId { chain_id: String },
 
-    #[error("Invalid decimal format: {value}")]
-    InvalidDecimal { value: String },
+	#[error("Invalid decimal format: {value}")]
+	InvalidDecimal { value: String },
 
-    #[error("Invalid hex format: {value}")]
-    InvalidHex { value: String },
+	#[error("Invalid hex format: {value}")]
+	InvalidHex { value: String },
 
-    #[error("HTTP request failed: {message}")]
-    HttpRequest { message: String },
+	#[error("HTTP request failed: {message}")]
+	HttpRequest { message: String },
 
-    #[error("JSON serialization/deserialization failed: {message}")]
-    JsonSerialization { message: String },
+	#[error("JSON serialization/deserialization failed: {message}")]
+	JsonSerialization { message: String },
 
-    #[error("Gas calculation failed: {reason}")]
-    GasCalculation { reason: String },
+	#[error("Gas calculation failed: {reason}")]
+	GasCalculation { reason: String },
 
-    #[error("Transaction data extraction failed: {reason}")]
-    TransactionDataExtraction { reason: String },
+	#[error("Transaction data extraction failed: {reason}")]
+	TransactionDataExtraction { reason: String },
 
-    #[error("Missing required field: {field}")]
-    MissingRequiredField { field: String },
+	#[error("Missing required field: {field}")]
+	MissingRequiredField { field: String },
 
-    #[error("Invalid slippage value: {value}")]
-    InvalidSlippage { value: String },
+	#[error("Invalid slippage value: {value}")]
+	InvalidSlippage { value: String },
 
-    #[error("Invalid gas level: {level}")]
-    InvalidGasLevel { level: String },
+	#[error("Invalid gas level: {level}")]
+	InvalidGasLevel { level: String },
 
-    #[error("Unsupported chain ID: {chain_id}")]
-    UnsupportedChainId { chain_id: u64 },
+	#[error("Unsupported chain ID: {chain_id}")]
+	UnsupportedChainId { chain_id: u64 },
 
-    #[error("Unsupported trade pool: {pool_name} for chain {chain_id}")]
-    UnsupportedTradePool { pool_name: String, chain_id: u64 },
+	#[error("Unsupported trade pool: {pool_name} for chain {chain_id}")]
+	UnsupportedTradePool { pool_name: String, chain_id: u64 },
 
-    #[error("Unsupported DEX: {dex_name} for trade pool {pool_name}")]
-    UnsupportedDex { dex_name: String, pool_name: String },
+	#[error("Unsupported DEX: {dex_name} for trade pool {pool_name}")]
+	UnsupportedDex { dex_name: String, pool_name: String },
 
-    #[error("Amount overflow or underflow")]
-    AmountOverflow,
+	#[error("Amount overflow or underflow")]
+	AmountOverflow,
 
-    #[error("System time error: {message}")]
-    SystemTime { message: String },
+	#[error("System time error: {message}")]
+	SystemTime { message: String },
 
-    #[error("Builder validation failed: {message}")]
-    BuilderValidation { message: String },
+	#[error("Builder validation failed: {message}")]
+	BuilderValidation { message: String },
 
-    #[error("Network error: {message}")]
-    Network { message: String },
+	#[error("Network error: {message}")]
+	Network { message: String },
 
-    #[error("Internal error: {message}")]
-    Internal { message: String },
+	#[error("Internal error: {message}")]
+	Internal { message: String },
 }
 
 impl From<reqwest::Error> for ClientError {
-    fn from(err: reqwest::Error) -> Self {
-        ClientError::HttpRequest {
-            message: err.to_string(),
-        }
-    }
+	fn from(err: reqwest::Error) -> Self {
+		ClientError::HttpRequest { message: err.to_string() }
+	}
 }
 
 impl From<serde_json::Error> for ClientError {
-    fn from(err: serde_json::Error) -> Self {
-        ClientError::JsonSerialization {
-            message: err.to_string(),
-        }
-    }
+	fn from(err: serde_json::Error) -> Self {
+		ClientError::JsonSerialization { message: err.to_string() }
+	}
 }
 
 impl From<hex::FromHexError> for ClientError {
-    fn from(err: hex::FromHexError) -> Self {
-        ClientError::InvalidHex {
-            value: err.to_string(),
-        }
-    }
+	fn from(err: hex::FromHexError) -> Self {
+		ClientError::InvalidHex { value: err.to_string() }
+	}
 }
 
 impl From<rust_decimal::Error> for ClientError {
-    fn from(err: rust_decimal::Error) -> Self {
-        ClientError::InvalidDecimal {
-            value: err.to_string(),
-        }
-    }
+	fn from(err: rust_decimal::Error) -> Self {
+		ClientError::InvalidDecimal { value: err.to_string() }
+	}
 }
 
 impl From<std::time::SystemTimeError> for ClientError {
-    fn from(err: std::time::SystemTimeError) -> Self {
-        ClientError::SystemTime {
-            message: err.to_string(),
-        }
-    }
+	fn from(err: std::time::SystemTimeError) -> Self {
+		ClientError::SystemTime { message: err.to_string() }
+	}
 }
 
 pub type ClientResult<T> = Result<T, ClientError>;

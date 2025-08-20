@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use alloy::primitives::{Address, U256};
 use crate::errors::{ClientError, ClientResult};
-use crate::transaction_extractor::{TransactionDataExtractor, TransactionGas, extract_transaction_data};
+use crate::transaction_extractor::{
+	extract_transaction_data, TransactionDataExtractor, TransactionGas,
+};
+use alloy::primitives::{Address, U256};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -206,6 +208,12 @@ pub struct SwapRequestBuilder {
 	ignore_capped_slippage: Option<bool>,
 }
 
+impl Default for SwapRequestBuilder {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 impl SwapRequestBuilder {
 	pub fn new() -> Self {
 		Self {
@@ -255,8 +263,9 @@ impl SwapRequestBuilder {
 	}
 
 	pub fn build(self) -> ClientResult<SwapRequest> {
-		let route_summary = self.route_summary
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "route_summary".to_string() })?;
+		let route_summary = self.route_summary.ok_or_else(|| {
+			ClientError::MissingRequiredField { field: "route_summary".to_string() }
+		})?;
 
 		Ok(SwapRequest {
 			route_summary,

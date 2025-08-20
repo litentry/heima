@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use alloy::primitives::{Address, U256};
 use crate::errors::{ClientError, ClientResult};
-use crate::transaction_extractor::{TransactionDataExtractor, TransactionGas, extract_transaction_data};
+use crate::transaction_extractor::{
+	extract_transaction_data, TransactionDataExtractor, TransactionGas,
+};
+use alloy::primitives::{Address, U256};
 use rust_decimal::prelude::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -96,16 +98,16 @@ impl SwapRequest {
 }
 
 /// Converts slippage from basis points (bps) to percentage format expected by 1inch API.
-/// 
-/// This function takes slippage tolerance in basis points (where 100 bps = 1%) and converts 
+///
+/// This function takes slippage tolerance in basis points (where 100 bps = 1%) and converts
 /// it to the decimal percentage format that the 1inch aggregator API expects.
-/// 
+///
 /// # Arguments
 /// * `slippage` - Slippage tolerance in basis points (e.g., 50 = 0.5%, 100 = 1%, 500 = 5%)
-/// 
+///
 /// # Returns
 /// String representation of slippage percentage (e.g., "0.5", "1", "5")
-/// 
+///
 /// # Examples
 /// * 50 bps → "0.5" (0.5%)
 /// * 100 bps → "1" (1%)  
@@ -136,6 +138,12 @@ pub struct SwapRequestBuilder {
 	fee_percent: Option<String>,
 	referrer: Option<String>,
 	dex_ids: Option<String>,
+}
+
+impl Default for SwapRequestBuilder {
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl SwapRequestBuilder {
@@ -199,23 +207,29 @@ impl SwapRequestBuilder {
 	}
 
 	pub fn build(self) -> ClientResult<SwapRequest> {
-		let chain_id = self.chain_id
+		let chain_id = self
+			.chain_id
 			.ok_or_else(|| ClientError::MissingRequiredField { field: "chain_id".to_string() })?;
-		
-		let amount = self.amount
+
+		let amount = self
+			.amount
 			.ok_or_else(|| ClientError::MissingRequiredField { field: "amount".to_string() })?;
-		
-		let from_token_address = self.from_token_address
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "from_token_address".to_string() })?;
-		
-		let to_token_address = self.to_token_address
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "to_token_address".to_string() })?;
-		
-		let slippage = self.slippage
+
+		let from_token_address = self.from_token_address.ok_or_else(|| {
+			ClientError::MissingRequiredField { field: "from_token_address".to_string() }
+		})?;
+
+		let to_token_address = self.to_token_address.ok_or_else(|| {
+			ClientError::MissingRequiredField { field: "to_token_address".to_string() }
+		})?;
+
+		let slippage = self
+			.slippage
 			.ok_or_else(|| ClientError::MissingRequiredField { field: "slippage".to_string() })?;
-		
-		let user_wallet_address = self.user_wallet_address
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "user_wallet_address".to_string() })?;
+
+		let user_wallet_address = self.user_wallet_address.ok_or_else(|| {
+			ClientError::MissingRequiredField { field: "user_wallet_address".to_string() }
+		})?;
 
 		Ok(SwapRequest {
 			chain_id,
@@ -226,7 +240,6 @@ impl SwapRequestBuilder {
 			user_wallet_address,
 			fee_percent: self.fee_percent.unwrap_or_default(),
 			referrer: self.referrer.unwrap_or_default(),
-			gas_level: Default::default(),
 			dex_ids: self.dex_ids.unwrap_or_default(),
 		})
 	}
@@ -258,7 +271,11 @@ mod tests {
 	#[test]
 	fn test_convert_slippage_to_inch_maximum_cap() {
 		// Test maximum slippage cap (50%)
-		assert_eq!(convert_slippage_to_inch(5000), "50", "5000 bps should convert to 50% (at limit)");
+		assert_eq!(
+			convert_slippage_to_inch(5000),
+			"50",
+			"5000 bps should convert to 50% (at limit)"
+		);
 		assert_eq!(convert_slippage_to_inch(5001), "50", "5001 bps should be capped at 50%");
 		assert_eq!(convert_slippage_to_inch(6000), "50", "6000 bps should be capped at 50%");
 		assert_eq!(convert_slippage_to_inch(10000), "50", "10000 bps should be capped at 50%");

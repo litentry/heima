@@ -18,7 +18,6 @@ use crate::kyber_client::types::{
 	GetSwapRouteRequest, GetSwapRouteResponse, SwapRequest, SwapResponse,
 };
 use async_trait::async_trait;
-use log::error;
 use reqwest::{Client, Error};
 use std::sync::Arc;
 
@@ -66,21 +65,10 @@ impl KyberSwap for KyberClient {
 			.header("content-type", "application/json")
 			.bearer_auth(self.access_token.clone())
 			.send()
-			.await
-			.map_err(|e| {
-				error!("Failed to send kyber get_swap_route request: {:?}", e);
-				e
-			})?;
+			.await?;
 
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			error!("get_swap_route request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-		response.json().await.map_err(|e| {
-			error!("Failed to parse get_swap_route response: {:?}", e);
-			e
-		})
+		let response = response.error_for_status()?;
+		response.json().await
 	}
 
 	async fn swap(&self, chain_id: u64, swap_request: SwapRequest) -> Result<SwapResponse, Error> {
@@ -94,20 +82,9 @@ impl KyberSwap for KyberClient {
 			.header("content-type", "application/json")
 			.bearer_auth(self.access_token.clone())
 			.send()
-			.await
-			.map_err(|e| {
-				error!("Failed to send kyber swap request: {:?}", e);
-				e
-			})?;
+			.await?;
 
-		let status = response.status();
-		let response = response.error_for_status().map_err(|e| {
-			error!("swap request failed with status: {}, error: {:?}", status, e);
-			e
-		})?;
-		response.json().await.map_err(|e| {
-			error!("Failed to parse kyber swap response: {:?}", e);
-			e
-		})
+		let response = response.error_for_status()?;
+		response.json().await
 	}
 }

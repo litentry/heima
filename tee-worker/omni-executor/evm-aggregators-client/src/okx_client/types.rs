@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use alloy::primitives::{Address, U256};
 use crate::errors::{ClientError, ClientResult};
-use crate::transaction_extractor::{TransactionDataExtractor, TransactionGas, extract_transaction_data};
+use crate::transaction_extractor::{
+	extract_transaction_data, TransactionDataExtractor, TransactionGas,
+};
+use alloy::primitives::{Address, U256};
 use rust_decimal::prelude::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -203,7 +205,8 @@ pub struct Erc1599Protocol {
 pub fn convert_slippage_to_okx(slippage: u32) -> String {
 	let slippage_decimal = Decimal::from(slippage);
 	let all_bp_decimal = Decimal::from(10000u32);
-	slippage_decimal.checked_div(all_bp_decimal)
+	slippage_decimal
+		.checked_div(all_bp_decimal)
 		.unwrap_or(Decimal::ZERO)
 		.to_string()
 }
@@ -231,6 +234,12 @@ pub struct SwapRequestBuilder {
 	gas_level: Option<String>,
 	dex_ids: Option<String>,
 	auto_slippage: Option<bool>,
+}
+
+impl Default for SwapRequestBuilder {
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl SwapRequestBuilder {
@@ -312,26 +321,33 @@ impl SwapRequestBuilder {
 	}
 
 	pub fn build(self) -> ClientResult<SwapRequest> {
-		let chain_id = self.chain_id
+		let chain_id = self
+			.chain_id
 			.ok_or_else(|| ClientError::MissingRequiredField { field: "chain_id".to_string() })?;
-		
-		let amount = self.amount
+
+		let amount = self
+			.amount
 			.ok_or_else(|| ClientError::MissingRequiredField { field: "amount".to_string() })?;
-		
-		let from_token_address = self.from_token_address
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "from_token_address".to_string() })?;
-		
-		let to_token_address = self.to_token_address
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "to_token_address".to_string() })?;
-		
-		let slippage = self.slippage
+
+		let from_token_address = self.from_token_address.ok_or_else(|| {
+			ClientError::MissingRequiredField { field: "from_token_address".to_string() }
+		})?;
+
+		let to_token_address = self.to_token_address.ok_or_else(|| {
+			ClientError::MissingRequiredField { field: "to_token_address".to_string() }
+		})?;
+
+		let slippage = self
+			.slippage
 			.ok_or_else(|| ClientError::MissingRequiredField { field: "slippage".to_string() })?;
-		
-		let user_wallet_address = self.user_wallet_address
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "user_wallet_address".to_string() })?;
-		
-		let fee_percent = self.fee_percent
-			.ok_or_else(|| ClientError::MissingRequiredField { field: "fee_percent".to_string() })?;
+
+		let user_wallet_address = self.user_wallet_address.ok_or_else(|| {
+			ClientError::MissingRequiredField { field: "user_wallet_address".to_string() }
+		})?;
+
+		let fee_percent = self.fee_percent.ok_or_else(|| ClientError::MissingRequiredField {
+			field: "fee_percent".to_string(),
+		})?;
 
 		Ok(SwapRequest {
 			chain_id,
@@ -341,8 +357,12 @@ impl SwapRequestBuilder {
 			slippage,
 			user_wallet_address,
 			fee_percent,
-			from_token_referrer_wallet_address: self.from_token_referrer_wallet_address.unwrap_or_default(),
-			to_token_referrer_wallet_address: self.to_token_referrer_wallet_address.unwrap_or_default(),
+			from_token_referrer_wallet_address: self
+				.from_token_referrer_wallet_address
+				.unwrap_or_default(),
+			to_token_referrer_wallet_address: self
+				.to_token_referrer_wallet_address
+				.unwrap_or_default(),
 			gas_level: self.gas_level.unwrap_or_default(),
 			dex_ids: self.dex_ids.unwrap_or_default(),
 			auto_slippage: self.auto_slippage.unwrap_or(false),
