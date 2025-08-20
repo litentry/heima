@@ -241,6 +241,7 @@ impl SwapRequestBuilder {
 			fee_percent: self.fee_percent.unwrap_or_default(),
 			referrer: self.referrer.unwrap_or_default(),
 			dex_ids: self.dex_ids.unwrap_or_default(),
+			gas_level: Default::default(),
 		})
 	}
 }
