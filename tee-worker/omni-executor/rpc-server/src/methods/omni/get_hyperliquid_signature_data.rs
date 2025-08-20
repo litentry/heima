@@ -223,7 +223,7 @@ pub fn register_get_hyperliquid_signature_data<
 			// Make sure `user_id` is non-evm type
 			if matches!(params.user_id, UserId::Evm(_)) {
 				error!("Invalid user_id type, expected non-Evm");
-return Err(ErrorObject::from(ErrorCode::InvalidParams));
+				return Err(ErrorObject::from(ErrorCode::InvalidParams));
 			}
 
 			// Unified authentication logic
