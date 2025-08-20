@@ -609,6 +609,11 @@ jobs:
           sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
+      - name: Install system dependencies for anchor
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev
+
       - name: Install anchor
         run: |
           cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
