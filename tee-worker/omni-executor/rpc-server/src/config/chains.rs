@@ -11,6 +11,8 @@ pub const SUPPORTED_EVM_CHAINS: &[u32] = &[
 	8453,     // Base
 	84532,    // Base Sepolia
 	1337,     // Local Anvil
+	56,       // Binance Smart Chain
+	97,       // Binance Smart Chain Testnet
 ];
 
 // Maximum wallet index allowed
