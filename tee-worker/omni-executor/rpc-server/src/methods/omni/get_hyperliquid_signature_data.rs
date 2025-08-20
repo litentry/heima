@@ -220,6 +220,12 @@ pub fn register_get_hyperliquid_signature_data<
 
 			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
 
+			// Make sure `user_id` is non-evm type
+			if matches!(params.user_id, UserId::Evm(_)) {
+				error!("Invalid user_id type, expected non-Evm");
+				return Err(ErrorObject::from(ErrorCode::ParseError));
+			}
+
 			// Unified authentication logic
 			let main_address = if let Some(user_auth) = &params.user_auth {
 				// User authentication provided
