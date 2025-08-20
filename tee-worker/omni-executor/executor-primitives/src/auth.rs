@@ -203,6 +203,66 @@ pub enum ClientAuth {
 		signature: String,
 		login_type: u32,
 	},
+	WildmetaBackend {
+		signature: String, // EVM signature with 0x prefix
+	},
+}
+
+/// Convert UserAuth + UserId + client_id into OmniAuth
+pub fn to_omni_auth(
+	user_auth: &UserAuth,
+	user_id: &UserId,
+	client_id: &str,
+) -> Result<OmniAuth, &'static str> {
+	let omni_auth = match user_auth {
+		UserAuth::Email(code) => {
+			let UserId::Email(email) = user_id else {
+				return Err("User ID must be an email for Email authentication");
+			};
+			OmniAuth::Email(client_id.to_string(), email.clone(), code.clone())
+		},
+		UserAuth::Substrate(signature) => {
+			let identity =
+				Identity::try_from(user_id.clone()).map_err(|_| "Invalid user ID format")?;
+			if !identity.is_substrate() {
+				return Err("User ID must be a Substrate identity for Substrate authentication");
+			}
+			OmniAuth::Web3(client_id.to_string(), identity, signature.clone().into())
+		},
+		UserAuth::Evm(signature) => {
+			let identity =
+				Identity::try_from(user_id.clone()).map_err(|_| "Invalid user ID format")?;
+			if !identity.is_evm() {
+				return Err("User ID must be an EVM identity for EVM authentication");
+			}
+			OmniAuth::Web3(client_id.to_string(), identity, signature.clone().into())
+		},
+		UserAuth::Solana(signature) => {
+			let identity =
+				Identity::try_from(user_id.clone()).map_err(|_| "Invalid user ID format")?;
+			if !identity.is_solana() {
+				return Err("User ID must be a Solana identity for Solana authentication");
+			}
+			OmniAuth::Web3(client_id.to_string(), identity, (*signature).into())
+		},
+		UserAuth::Bitcoin(signature) => {
+			let identity =
+				Identity::try_from(user_id.clone()).map_err(|_| "Invalid user ID format")?;
+			if !identity.is_bitcoin() {
+				return Err("User ID must be a Bitcoin identity for Bitcoin authentication");
+			}
+			OmniAuth::Web3(client_id.to_string(), identity, signature.clone().into())
+		},
+		UserAuth::AuthToken(token) => OmniAuth::AuthToken(token.clone()),
+		UserAuth::OAuth2(data) => {
+			let identity =
+				Identity::try_from(user_id.clone()).map_err(|_| "Invalid user ID format")?;
+			OmniAuth::OAuth2(identity, data.clone())
+		},
+		UserAuth::Passkey(data) => OmniAuth::Passkey(data.clone()),
+	};
+
+	Ok(omni_auth)
 }
 
 #[cfg(test)]
@@ -228,5 +288,31 @@ mod tests {
 			invite_code: Some("456".to_string()),
 		};
 		assert_eq!(deserialized, expected);
+	}
+
+	#[test]
+	fn test_wildmeta_backend_client_auth_serde() {
+		let json =
+			r#"{"type": "wildmeta_backend", "value": { "signature": "0x1234567890abcdef" }}"#;
+		let deserialized: ClientAuth = serde_json::from_str(json).unwrap();
+		let expected = ClientAuth::WildmetaBackend { signature: "0x1234567890abcdef".to_string() };
+		assert_eq!(deserialized, expected);
+	}
+
+	#[test]
+	fn test_to_omni_auth_email() {
+		let user_auth = UserAuth::Email("123456".to_string());
+		let user_id = UserId::Email("test@test.com".to_string());
+		let client_id = "test_client";
+
+		let result = to_omni_auth(&user_auth, &user_id, client_id).unwrap();
+		match result {
+			OmniAuth::Email(client, email, code) => {
+				assert_eq!(client, "test_client");
+				assert_eq!(email, "test@test.com");
+				assert_eq!(code, "123456");
+			},
+			_ => panic!("Expected Email auth"),
+		}
 	}
 }

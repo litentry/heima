@@ -18,7 +18,7 @@
 pub use secp256k1::Secp256k1;
 use secp256k1::{
 	ecdsa::{RecoverableSignature, RecoveryId},
-	Message, SECP256K1,
+	Message, SecretKey, SECP256K1,
 };
 
 /// Error verifying ECDSA signature
@@ -74,4 +74,28 @@ pub fn secp256k1_ecdsa_recover_compressed(
 		.recover_ecdsa(&msg, &sig)
 		.map_err(|_| EcdsaVerifyError::BadSignature)?;
 	Ok(pubkey.serialize())
+}
+
+/// Sign a message with a SECP256k1 private key.
+///
+/// - `private_key` is a 32-byte private key
+/// - `msg` is the 32-byte hash to sign
+///
+/// Returns the 65-byte signature in RSV format.
+pub fn secp256k1_ecdsa_sign(
+	private_key: &[u8; 32],
+	msg: &[u8; 32],
+) -> Result<[u8; 65], EcdsaVerifyError> {
+	let secret_key =
+		SecretKey::from_slice(private_key).map_err(|_| EcdsaVerifyError::BadSignature)?;
+	let message = Message::from_digest_slice(msg).expect("Message is 32 bytes; qed");
+
+	let signature = SECP256K1.sign_ecdsa_recoverable(&message, &secret_key);
+	let (recovery_id, signature_bytes) = signature.serialize_compact();
+
+	let mut result = [0u8; 65];
+	result[..64].copy_from_slice(&signature_bytes);
+	result[64] = recovery_id.to_i32() as u8;
+
+	Ok(result)
 }

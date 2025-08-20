@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod client;
+pub mod error;
 pub mod signer;
 
 use alloy::eips::{BlockId, BlockNumberOrTag};
@@ -33,6 +34,8 @@ use executor_core::wallet_metrics::WalletBalanceFetcher;
 use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::log::error;
+
+pub use error::RpcProviderError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Eip1559FeeEstimate {
@@ -83,20 +86,20 @@ pub trait RpcProvider: Send + Sync {
 		&self,
 		wallet: &EthereumWallet,
 		tx: Self::Transaction,
-	) -> Result<String, ()>;
-	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()>;
-	async fn get_gas_price(&self) -> Result<u128, ()>;
-	async fn estimate_eip1559_fees(&self) -> Result<Eip1559FeeEstimate, ()>;
+	) -> Result<String, RpcProviderError>;
+	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, RpcProviderError>;
+	async fn get_gas_price(&self) -> Result<u128, RpcProviderError>;
+	async fn estimate_eip1559_fees(&self) -> Result<Eip1559FeeEstimate, RpcProviderError>;
 
-	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()>;
+	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, RpcProviderError>;
 
-	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, Option<Vec<u8>>>;
+	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, RpcProviderError>;
 	async fn call_with_state_override(
 		&self,
 		tx: Self::Transaction,
 		state_override: HashMap<Address, AccountOverride>,
-	) -> Result<Vec<u8>, Option<Vec<u8>>>;
-	async fn get_wallet_address(&self) -> Result<Address, ()>;
+	) -> Result<Vec<u8>, RpcProviderError>;
+	async fn get_wallet_address(&self) -> Result<Address, RpcProviderError>;
 }
 
 pub struct AlloyRpcProvider {
@@ -119,14 +122,13 @@ impl RpcProvider for AlloyRpcProvider {
 	type Addr = Address;
 	type Transaction = TransactionRequest;
 
-	async fn get_balance(&self, address: Self::Addr) -> Result<U256, ()> {
+	async fn get_balance(&self, address: Self::Addr) -> Result<U256, RpcProviderError> {
 		let provider = ProviderBuilder::new().connect_http(
-			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
-		provider
-			.get_balance(address)
-			.await
-			.map_err(|e| error!("Could not get balance: {:?}", e))
+		provider.get_balance(address).await.map_err(RpcProviderError::from_alloy_error)
 	}
 
 	async fn get_pending_nonce(&self, address: Self::Addr) -> Result<u64, ()> {
@@ -141,20 +143,24 @@ impl RpcProvider for AlloyRpcProvider {
 			.map_err(|e| error!("Could not get pending nonce: {:?}", e))
 	}
 
-	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, ()> {
+	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, RpcProviderError> {
 		let provider = ProviderBuilder::new().connect_http(
-			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
 		provider
 			.get_transaction_count(address)
 			.await
-			.map_err(|e| error!("Could not get transaction count: {:?}", e))
+			.map_err(RpcProviderError::from_alloy_error)
 	}
 
-	async fn send_transaction(&self, raw_tx: Self::Transaction) -> Result<String, ()> {
+	async fn send_transaction(
+		&self,
+		raw_tx: Self::Transaction,
+	) -> Result<String, RpcProviderError> {
 		let Some(ref wallet) = self.wallet else {
-			error!("Provider without a wallet cannot send transactions");
-			return Err(());
+			return Err(RpcProviderError::NoWallet);
 		};
 
 		self.send_transaction_with_wallet(wallet, raw_tx).await
@@ -164,9 +170,11 @@ impl RpcProvider for AlloyRpcProvider {
 		&self,
 		wallet: &EthereumWallet,
 		raw_tx: Self::Transaction,
-	) -> Result<String, ()> {
+	) -> Result<String, RpcProviderError> {
 		let provider = ProviderBuilder::new().wallet(wallet.clone()).connect_http(
-			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
 
 		let signer_address = wallet.default_signer().address();
@@ -174,52 +182,51 @@ impl RpcProvider for AlloyRpcProvider {
 		// Add a 10% buffer to gas to make it safer
 		tx.gas = Some(self.estimate_gas(tx.clone()).await? * 110 / 100);
 
-		let pending_tx = provider.send_transaction(tx).await.map_err(|e| {
-			error!("Could not send transaction: {:?}", e);
-		})?;
+		let pending_tx = provider
+			.send_transaction(tx)
+			.await
+			.map_err(RpcProviderError::from_alloy_error)?;
 
-		// Get transaction hash before waiting for receipt
+		// Get transaction hash and return immediately without waiting for confirmation
 		let tx_hash = pending_tx.tx_hash().to_string();
-
-		// wait for transaction to be included
-		let _ = pending_tx.get_receipt().await.map_err(|e| {
-			error!("Could not get transaction receipt: {:?}", e);
-		})?;
 
 		Ok(tx_hash)
 	}
 
-	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, ()> {
+	async fn estimate_gas(&self, tx: Self::Transaction) -> Result<u64, RpcProviderError> {
 		let provider = ProviderBuilder::new().connect_http(
-			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
 
 		provider
 			.estimate_gas(tx.clone())
 			.await
-			.map_err(|e| error!("Could not estimate gas: {:?}", e))
+			.map_err(RpcProviderError::from_alloy_error)
 	}
 
-	async fn get_gas_price(&self) -> Result<u128, ()> {
+	async fn get_gas_price(&self) -> Result<u128, RpcProviderError> {
 		let provider = ProviderBuilder::new().connect_http(
-			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
 
-		provider
-			.get_gas_price()
-			.await
-			.map_err(|e| error!("Could not get gas price: {:?}", e))
+		provider.get_gas_price().await.map_err(RpcProviderError::from_alloy_error)
 	}
 
-	async fn estimate_eip1559_fees(&self) -> Result<Eip1559FeeEstimate, ()> {
+	async fn estimate_eip1559_fees(&self) -> Result<Eip1559FeeEstimate, RpcProviderError> {
 		let provider = ProviderBuilder::new().connect_http(
-			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
 
 		let estimation = provider
 			.estimate_eip1559_fees()
 			.await
-			.map_err(|e| error!("Could not estimate EIP-1559 fees: {:?}", e))?;
+			.map_err(RpcProviderError::from_alloy_error)?;
 
 		Ok(Eip1559FeeEstimate {
 			max_fee_per_gas: estimation.max_fee_per_gas,
@@ -227,46 +234,51 @@ impl RpcProvider for AlloyRpcProvider {
 		})
 	}
 
-	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, ()> {
+	async fn get_code_at(&self, address: Self::Addr) -> Result<Vec<u8>, RpcProviderError> {
 		let provider = ProviderBuilder::new().connect_http(
-			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
 
 		provider
 			.get_code_at(address)
 			.await
-			.map_err(|e| error!("Could not get gas price: {:?}", e))
+			.map_err(RpcProviderError::from_alloy_error)
 			.map(|b| b.to_vec())
 	}
 
-	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, Option<Vec<u8>>> {
-		let provider = ProviderBuilder::new().connect_http(self.url.parse().map_err(|e| {
-			error!("Could not parse rpc url: {:?}", e);
-			None
-		})?);
-		let result = match provider.call(tx).await {
-			Ok(r) => r,
-			Err(e) => {
-				error!("Error from call: {:?}", e);
-				match e {
-					RpcError::ErrorResp(resp) => match resp.data {
-						Some(value) => {
-							let value: String = serde_json::from_str(value.get()).map_err(|e| {
-								error!("Could not deserialize rpc response: {:?}", e);
-								None
-							})?;
-							let decoded = hex::decode(value).map_err(|e| {
-								error!("Could not decode rpc response: {:?}", e);
-								None
-							})?;
-							return Err(Some(decoded));
-						},
-						None => return Err(None),
-					},
-					_ => return Err(None),
+	async fn call(&self, tx: Self::Transaction) -> Result<Vec<u8>, RpcProviderError> {
+		let provider = ProviderBuilder::new().connect_http(
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
+		);
+		let result = provider.call(tx).await.map_err(|e| {
+			// Special handling for contract reverts
+			if let RpcError::ErrorResp(resp) = &e {
+				if let Some(data) = &resp.data {
+					// Try to extract revert data
+					if let Ok(value) = serde_json::from_str::<String>(data.get()) {
+						if value.starts_with("0x") {
+							let decoded = match hex::decode(value) {
+								Ok(bytes) => Some(bytes),
+								Err(e) => {
+									error!("Could not decode rpc response: {:?}", e);
+									None
+								},
+							};
+							// This is likely revert data, return as execution reverted
+							return RpcProviderError::ExecutionReverted {
+								reason: resp.message.to_string(),
+								data: decoded,
+							};
+						}
+					}
 				}
-			},
-		};
+			}
+			RpcProviderError::from_alloy_error(e)
+		})?;
 		Ok(result.to_vec())
 	}
 
@@ -274,52 +286,58 @@ impl RpcProvider for AlloyRpcProvider {
 		&self,
 		tx: Self::Transaction,
 		state_override: HashMap<Address, AccountOverride>,
-	) -> Result<Vec<u8>, Option<Vec<u8>>> {
-		let provider = ProviderBuilder::new().connect_http(self.url.parse().map_err(|e| {
-			error!("Could not parse rpc url: {:?}", e);
-			None
-		})?);
+	) -> Result<Vec<u8>, RpcProviderError> {
+		let provider = ProviderBuilder::new().connect_http(
+			self.url
+				.parse()
+				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
+		);
 
 		// Use the raw_request method to make eth_call with state override
 		let params = serde_json::json!([tx, "latest", state_override]);
 
-		let result = match provider.raw_request::<_, String>("eth_call".into(), params).await {
-			Ok(r) => r,
-			Err(e) => {
-				error!("Error from call with state override: {:?}", e);
-				match e {
-					RpcError::ErrorResp(resp) => match resp.data {
-						Some(value) => {
-							let value: String = serde_json::from_str(value.get()).map_err(|e| {
-								error!("Could not deserialize rpc response: {:?}", e);
-								None
-							})?;
-							let decoded = hex::decode(value).map_err(|e| {
-								error!("Could not decode rpc response: {:?}", e);
-								None
-							})?;
-							return Err(Some(decoded));
-						},
-						None => return Err(None),
-					},
-					_ => return Err(None),
-				}
-			},
-		};
+		let result =
+			provider
+				.raw_request::<_, String>("eth_call".into(), params)
+				.await
+				.map_err(|e| {
+					// Special handling for contract reverts with state override
+					if let RpcError::ErrorResp(resp) = &e {
+						if let Some(data) = &resp.data {
+							// Try to extract revert data
+							if let Ok(value) = serde_json::from_str::<String>(data.get()) {
+								if value.starts_with("0x") {
+									let decoded = match hex::decode(value) {
+										Ok(bytes) => Some(bytes),
+										Err(e) => {
+											error!("Could not decode rpc response: {:?}", e);
+											None
+										},
+									};
+									// This is likely revert data, return as execution reverted
+									return RpcProviderError::ExecutionReverted {
+										reason: resp.message.to_string(),
+										data: decoded,
+									};
+								}
+							}
+						}
+					}
+					RpcProviderError::from_alloy_error(e)
+				})?;
 
 		let decoded = hex::decode(&result[2..]).map_err(|e| {
-			error!("Could not decode hex response: {:?}", e);
-			None
+			RpcProviderError::Generic(format!("Failed to decode hex response: {}", e))
 		})?;
 
 		Ok(decoded)
 	}
 
-	async fn get_wallet_address(&self) -> Result<Address, ()> {
+	async fn get_wallet_address(&self) -> Result<Address, RpcProviderError> {
 		if let Some(ref wallet) = self.wallet {
 			Ok(<EthereumWallet as NetworkWallet<Ethereum>>::default_signer_address(wallet))
 		} else {
-			Err(())
+			Err(RpcProviderError::NoWallet)
 		}
 	}
 }
@@ -344,6 +362,7 @@ impl WalletBalanceFetcher for AlloyRpcProvider {
 pub mod mocks {
 	use crate::Eip1559FeeEstimate;
 	use crate::RpcProvider as RpcProviderTrait;
+	use crate::RpcProviderError;
 	use crate::RpcProviderFactory;
 	use alloy::network::EthereumWallet;
 	use alloy::primitives::Address;

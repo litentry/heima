@@ -5,11 +5,13 @@ use crate::{
 	server::RpcContext,
 	ErrorCode,
 };
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::add_wallet::AddWalletResponse;
 use serde::Serialize;
 use tracing::{debug, error};
@@ -19,7 +21,25 @@ pub struct RPCAddWalletResponse {
 	pub backend_response: AddWalletResponse,
 }
 
-pub fn register_add_wallet(module: &mut RpcModule<RpcContext>) {
+pub fn register_add_wallet<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_addWallet", |_params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {

@@ -31,13 +31,20 @@ pub enum NativeTaskOk {
 	PumpxTransferWithdraw(CreateTransferTxResponse),
 	PumpxNotifyLimitOrderResult,
 	SubmitUserOp(Option<String>), // transaction_hash
+	EstimateUserOpGas {
+		call_gas_limit: u128,
+		verification_gas_limit: u128,
+		pre_verification_gas: u128,
+		paymaster_verification_gas_limit: u128,
+		paymaster_post_op_gas_limit: u128,
+	},
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTaskError {
 	UnauthorizedSender,
 	AuthTokenCreationFailed,
-	InternalError,
+	InternalError(Option<String>),
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,

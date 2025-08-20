@@ -46,7 +46,7 @@ export class JsonRpcClient {
         const request: JsonRpcRequest = {
             jsonrpc: '2.0',
             method,
-            params: params || [],
+            params: params ?? null,
             id: this.requestId++,
         };
 

@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::error::{AaContractError, ContractError, RpcError};
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, OwnerType, SenderAddressResult,
-	ValidationResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, FailedOp, OwnerType,
+	SenderAddressResult, ValidationResult,
 };
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
@@ -28,7 +29,7 @@ use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
-use ethereum_rpc::RpcProvider;
+use ethereum_rpc::{RpcProvider, RpcProviderError};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{error, info, warn};
@@ -46,6 +47,36 @@ pub struct GasPriceConfig {
 	pub min_priority_fee: u128,
 	/// Maximum priority fee in wei (default: 50 gwei)
 	pub max_priority_fee: u128,
+}
+
+impl GasPriceConfig {
+	/// Validate that the configuration values are reasonable
+	pub fn validate(&self) -> Result<(), String> {
+		if self.min_priority_fee > self.max_priority_fee {
+			return Err("min_priority_fee cannot be greater than max_priority_fee".to_string());
+		}
+
+		if self.gas_price_buffer_percent > 500 {
+			return Err(
+				"gas_price_buffer_percent should not exceed 500% to prevent excessive fees"
+					.to_string(),
+			);
+		}
+
+		// Warn about very high max priority fees (>500 gwei)
+		if self.max_priority_fee > 500_000_000_000 {
+			tracing::warn!("max_priority_fee is very high ({} gwei), this may result in expensive transactions", self.max_priority_fee / 1_000_000_000);
+		}
+
+		// Ensure minimum priority fee is not zero (could cause stuck transactions)
+		if self.min_priority_fee == 0 {
+			return Err(
+				"min_priority_fee should not be zero to prevent stuck transactions".to_string()
+			);
+		}
+
+		Ok(())
+	}
 }
 
 impl Default for GasPriceConfig {
@@ -92,6 +123,37 @@ impl GasPriceConfig {
 			gas_price_buffer_percent: 20,    // Lower buffer due to stable, low fees
 			min_priority_fee: 10_000_000,    // 0.01 gwei
 			max_priority_fee: 1_000_000_000, // 1 gwei
+		}
+	}
+
+	/// Chain-specific gas price configuration
+	pub fn for_chain(chain_id: u64) -> Self {
+		match chain_id {
+			1 => Self::mainnet(),    // Ethereum mainnet
+			137 => Self::l2(),       // Polygon
+			42161 => Self::l2(),     // Arbitrum One
+			421614 => Self::l2(),    // Arbitrum Sepolia
+			10 => Self::l2(),        // Optimism
+			8453 => Self::l2(),      // Base
+			84532 => Self::l2(),     // Base Sepolia
+			56 => Self::bsc(),       // BSC
+			97 => Self::bsc(),       // BSC Testnet
+			999 => Self::hyperevm(), // HyperEVM
+			998 => Self::hyperevm(), // HyperEVM Testnet
+			// Ethereum testnets use mainnet config but with lower values
+			11155111 => Self {
+				// Sepolia
+				gas_price_buffer_percent: 30,
+				min_priority_fee: 1_000_000_000,  // 1 gwei
+				max_priority_fee: 20_000_000_000, // 20 gwei
+			},
+			17000 => Self {
+				// Holesky
+				gas_price_buffer_percent: 30,
+				min_priority_fee: 1_000_000_000,  // 1 gwei
+				max_priority_fee: 20_000_000_000, // 20 gwei
+			},
+			_ => Self::default(),
 		}
 	}
 }
@@ -201,6 +263,12 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		gas_config: GasPriceConfig,
 		retry_config: RetryConfig,
 	) -> Self {
+		// Validate gas configuration
+		if let Err(e) = gas_config.validate() {
+			tracing::error!("Invalid gas configuration: {}", e);
+			panic!("Invalid gas configuration: {}", e);
+		}
+
 		Self { entry_point_address, rpc_client, gas_config, retry_config }
 	}
 
@@ -209,7 +277,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	}
 
 	pub async fn get_wallet_address(&self) -> Result<Address, ()> {
-		self.rpc_client.get_wallet_address().await
+		self.rpc_client.get_wallet_address().await.map_err(|_| ())
 	}
 
 	/// Calculate dynamic gas fees based on current network conditions
@@ -226,9 +294,28 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
 
 				// Use the EIP-1559 priority fee with bounds
-				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+				let mut priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
 					.max(U256::from(self.gas_config.min_priority_fee))
 					.min(U256::from(self.gas_config.max_priority_fee));
+
+				// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+				if priority_fee > max_fee_per_gas {
+					tracing::warn!(
+						"Priority fee ({} gwei) exceeds max fee per gas ({} gwei), capping to max fee",
+						priority_fee / U256::from(1_000_000_000),
+						max_fee_per_gas / U256::from(1_000_000_000)
+					);
+					priority_fee = max_fee_per_gas;
+				}
+
+				tracing::debug!(
+					"EIP-1559 gas fees calculated: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), buffer={}%",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					self.gas_config.gas_price_buffer_percent
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -250,9 +337,29 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 				// Calculate priority fee (tip) with bounds
 				// Use 10% of current gas price as priority fee, bounded by min/max
-				let priority_fee = U256::from(current_gas_price / 10)
+				let mut priority_fee = U256::from(current_gas_price / 10)
 					.max(U256::from(self.gas_config.min_priority_fee))
 					.min(U256::from(self.gas_config.max_priority_fee));
+
+				// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+				if priority_fee > max_fee_per_gas {
+					tracing::warn!(
+						"Priority fee ({} gwei) exceeds max fee per gas ({} gwei), capping to max fee",
+						priority_fee / U256::from(1_000_000_000),
+						max_fee_per_gas / U256::from(1_000_000_000)
+					);
+					priority_fee = max_fee_per_gas;
+				}
+
+				tracing::debug!(
+					"Legacy gas fees calculated: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), buffer={}%, base_price={} gwei",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					self.gas_config.gas_price_buffer_percent,
+					current_gas_price / 1_000_000_000
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -264,13 +371,22 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	pub async fn simulate_validation(
 		&self,
 		user_op: PackedUserOperation,
-	) -> Result<ValidationResult, ()> {
+	) -> Result<ValidationResult, String> {
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
 		state_override.insert(
 			self.entry_point_address,
 			AccountOverride {
-				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				code: Some(
+					hex::decode(SIMULATION_BYTECODE.trim())
+						.map_err(|e| {
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
+						})?
+						.into(),
+				),
 				..Default::default()
 			},
 		);
@@ -284,19 +400,48 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		match self.rpc_client.call_with_state_override(tx, state_override).await {
 			Ok(result) => {
 				// Decode the ValidationResult from the successful response
-				ValidationResult::abi_decode(&result).map_err(|_| {
-					error!("Could not decode ValidationResult from response");
+				ValidationResult::abi_decode(&result).map_err(|e| {
+					let error_msg =
+						format!("Could not decode ValidationResult from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(Some(revert_data)) => {
-				// In some cases, the simulation might revert with ValidationResult data
-				ValidationResult::abi_decode(&revert_data).map_err(|_| {
-					error!("Could not decode ValidationResult from revert data");
-				})
-			},
-			Err(None) => {
-				error!("Simulation failed with no data");
-				Err(())
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Decode FailedOp from revert data
+								let failed_op: FailedOp =
+									FailedOp::abi_decode(&data).map_err(|e| {
+										let error_msg = format!(
+											"Could not decode FailedOp from revert data: {:?}",
+											e
+										);
+										error!("{}", error_msg);
+										error_msg
+									})?;
+								let error_msg = format!(
+									"Simulation failed, opIndex: {}, reason: {}",
+									failed_op.opIndex, failed_op.reason
+								);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+						}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
+				}
 			},
 		}
 	}
@@ -305,13 +450,22 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		&self,
 		user_ops: &[PackedUserOperation],
 		beneficiary: Address,
-	) -> Result<Vec<ExecutionResult>, ()> {
+	) -> Result<Vec<ExecutionResult>, String> {
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
 		state_override.insert(
 			self.entry_point_address,
 			AccountOverride {
-				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				code: Some(
+					hex::decode(SIMULATION_BYTECODE.trim())
+						.map_err(|e| {
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
+						})?
+						.into(),
+				),
 				..Default::default()
 			},
 		);
@@ -326,19 +480,48 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		match self.rpc_client.call_with_state_override(tx, state_override).await {
 			Ok(result) => {
 				// Decode the ExecutionResult[] from the successful response
-				Vec::<ExecutionResult>::abi_decode(&result).map_err(|_| {
-					error!("Could not decode ExecutionResult[] from response");
+				Vec::<ExecutionResult>::abi_decode(&result).map_err(|e| {
+					let error_msg =
+						format!("Could not decode ExecutionResult[] from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(Some(revert_data)) => {
-				// In some cases, the simulation might revert with ExecutionResult[] data
-				Vec::<ExecutionResult>::abi_decode(&revert_data).map_err(|_| {
-					error!("Could not decode ExecutionResult[] from revert data");
-				})
-			},
-			Err(None) => {
-				error!("Simulation failed with no data");
-				Err(())
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Decode FailedOp from revert data
+								let failed_op: FailedOp =
+									FailedOp::abi_decode(&data).map_err(|e| {
+										let error_msg = format!(
+											"Could not decode FailedOp from revert data: {:?}",
+											e
+										);
+										error!("{}", error_msg);
+										error_msg
+									})?;
+								let error_msg = format!(
+									"Simulation failed, opIndex: {}, reason: {}",
+									failed_op.opIndex, failed_op.reason
+								);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
+						}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
+				}
 			},
 		}
 	}
@@ -369,7 +552,9 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		loop {
 			// Calculate gas fees with increasing buffer on retries
 			let (base_max_fee, base_priority_fee) =
-				self.calculate_gas_fees_with_buffer(gas_buffer_adjustment).await?;
+				self.calculate_gas_fees_with_buffer(gas_buffer_adjustment).await.map_err(|_| {
+					error!("Failed to calculate gas fees");
+				})?;
 
 			// Build transaction with adjusted gas
 			let ops = user_ops.to_vec();
@@ -391,9 +576,13 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					}
 					return Ok(tx_hash);
 				},
-				Err(_) => {
-					// Since RPC provider returns unit error, we treat all errors as potentially gas-related
-					// TODO: improve error handling, classify retryable vs non-retryable errors
+				Err(rpc_error) => {
+					let error = self.classify_rpc_error(rpc_error);
+
+					if !error.is_retryable() {
+						error!("Non-retryable error encountered: {:?}", error);
+						return Err(());
+					}
 
 					attempt += 1;
 					if attempt >= self.retry_config.max_attempts {
@@ -401,10 +590,8 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 						return Err(());
 					}
 
-					// Calculate backoff delay
 					let delay = self.calculate_backoff_delay(attempt);
 
-					// Increase gas buffer for next attempt
 					gas_buffer_adjustment += self.retry_config.gas_increase_percent as u64;
 
 					warn!(
@@ -418,59 +605,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
 				},
 			}
-		}
-	}
-
-	/// Calculate gas fees with additional buffer percentage
-	async fn calculate_gas_fees_with_buffer(
-		&self,
-		additional_buffer_percent: u64,
-	) -> Result<(U256, U256), ()> {
-		// Try EIP-1559 estimation first
-		match self.rpc_client.estimate_eip1559_fees().await {
-			Ok(eip1559_estimate) => {
-				// Use EIP-1559 fees with buffer
-				let total_buffer =
-					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
-				let buffer_multiplier = 100 + total_buffer;
-
-				let max_fee_per_gas = U256::from(eip1559_estimate.max_fee_per_gas)
-					.saturating_mul(U256::from(buffer_multiplier))
-					.checked_div(U256::from(100))
-					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
-
-				// Use the EIP-1559 priority fee with bounds
-				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
-					.max(U256::from(self.gas_config.min_priority_fee))
-					.min(U256::from(self.gas_config.max_priority_fee));
-
-				Ok((max_fee_per_gas, priority_fee))
-			},
-			Err(_) => {
-				// Fallback to legacy gas price calculation
-				let current_gas_price = self
-					.rpc_client
-					.get_gas_price()
-					.await
-					.map_err(|_| error!("Failed to fetch gas price"))?;
-
-				// Apply base buffer plus additional retry buffer
-				let total_buffer =
-					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
-				let buffer_multiplier = 100 + total_buffer;
-
-				let max_fee_per_gas = U256::from(current_gas_price)
-					.saturating_mul(U256::from(buffer_multiplier))
-					.checked_div(U256::from(100))
-					.unwrap_or(U256::from(current_gas_price));
-
-				// Calculate priority fee (tip) with bounds
-				let priority_fee = U256::from(current_gas_price / 10)
-					.max(U256::from(self.gas_config.min_priority_fee))
-					.min(U256::from(self.gas_config.max_priority_fee));
-
-				Ok((max_fee_per_gas, priority_fee))
-			},
 		}
 	}
 
@@ -491,14 +625,21 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let call_data = getSenderAddressCall { initCode: init_code }.abi_encode();
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
-			Err(e) => {
-				if let Some(bytes) = e {
-					let result = SenderAddressResult::abi_decode(&bytes)
-						.map_err(|_| error!("Could not decode SenderAddressResult"))?;
-					Ok(result.sender)
-				} else {
-					Err(())
+			Err(err) => {
+				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } = &err {
+					if reason.contains("0x") {
+						if let Some(start) = reason.find("0x") {
+							let hex_data = &reason[start..];
+							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
+								let result = SenderAddressResult::abi_decode(&revert_data)
+									.map_err(|_| error!("Could not decode SenderAddressResult"))?;
+								return Ok(result.sender);
+							}
+						}
+					}
 				}
+				error!("Failed to get sender address: {:?}", err);
+				Err(())
 			},
 			Ok(_) => Err(()),
 		}
@@ -683,6 +824,189 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			signature: Bytes::new(),
 		})
 	}
+
+	/// Calculate gas fees with additional buffer percentage
+	async fn calculate_gas_fees_with_buffer(
+		&self,
+		additional_buffer_percent: u64,
+	) -> Result<(U256, U256), AaContractError> {
+		// Try EIP-1559 estimation first
+		match self.rpc_client.estimate_eip1559_fees().await {
+			Ok(eip1559_estimate) => {
+				// Use EIP-1559 fees with buffer
+				let total_buffer =
+					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
+				let buffer_multiplier = 100 + total_buffer;
+
+				let max_fee_per_gas = U256::from(eip1559_estimate.max_fee_per_gas)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
+
+				// Use the EIP-1559 priority fee with bounds
+				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee))
+					// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+					.min(max_fee_per_gas);
+
+				tracing::debug!(
+					"EIP-1559 gas fees with buffer: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), total_buffer={}%",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					total_buffer
+				);
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+			Err(_) => {
+				// Fallback to legacy gas price calculation
+				let current_gas_price = self.rpc_client.get_gas_price().await.map_err(|e| {
+					error!("Failed to fetch gas price: {:?}", e);
+					AaContractError::from(e)
+				})?;
+
+				// Apply base buffer plus additional retry buffer
+				let total_buffer =
+					self.gas_config.gas_price_buffer_percent + additional_buffer_percent;
+				let buffer_multiplier = 100 + total_buffer;
+
+				let max_fee_per_gas = U256::from(current_gas_price)
+					.saturating_mul(U256::from(buffer_multiplier))
+					.checked_div(U256::from(100))
+					.unwrap_or(U256::from(current_gas_price));
+
+				// Calculate priority fee (tip) with bounds
+				let priority_fee = U256::from(current_gas_price / 10)
+					.max(U256::from(self.gas_config.min_priority_fee))
+					.min(U256::from(self.gas_config.max_priority_fee))
+					// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+					.min(max_fee_per_gas);
+
+				tracing::debug!(
+					"Legacy gas fees with buffer: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), total_buffer={}%, base_price={} gwei",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					total_buffer,
+					current_gas_price / 1_000_000_000
+				);
+
+				Ok((max_fee_per_gas, priority_fee))
+			},
+		}
+	}
+
+	fn classify_rpc_error(&self, rpc_error: ethereum_rpc::RpcProviderError) -> AaContractError {
+		match rpc_error {
+			ethereum_rpc::RpcProviderError::InvalidUrl(url) => {
+				AaContractError::Validation(format!("Invalid RPC URL: {}", url))
+			},
+			ethereum_rpc::RpcProviderError::Network(msg) => {
+				AaContractError::Rpc(RpcError::ConnectionFailed { endpoint: msg })
+			},
+			ethereum_rpc::RpcProviderError::NoWallet => {
+				AaContractError::Validation("No wallet configured for signing".to_string())
+			},
+			ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } => {
+				AaContractError::Contract(ContractError::ExecutionReverted { reason })
+			},
+			ethereum_rpc::RpcProviderError::JsonRpc { code, message, data } => {
+				// Parse JSON-RPC error codes for specific error types
+				match code {
+					-32099..=-32000 => {
+						// Server errors - parse message for specific conditions
+						let message_lower = message.to_lowercase();
+						if message_lower.contains("nonce too low")
+							|| message_lower.contains("nonce already used")
+						{
+							AaContractError::Rpc(RpcError::NonceTooLow)
+						} else if message_lower.contains("replacement transaction underpriced")
+							|| message_lower.contains("transaction underpriced")
+							|| message_lower.contains("max fee per gas less than block base fee")
+							|| message_lower.contains("gasfeecap less than block base fee")
+						{
+							AaContractError::Rpc(RpcError::TransactionUnderpriced)
+						} else if message_lower.contains("insufficient funds")
+							|| message_lower.contains("insufficient balance")
+						{
+							AaContractError::Contract(ContractError::InsufficientFunds)
+						} else if message_lower.contains("gas required exceeds")
+							|| message_lower.contains("out of gas")
+							|| message_lower.contains("gas too low")
+							|| message_lower.contains("intrinsic gas too low")
+						{
+							AaContractError::Contract(ContractError::GasEstimationFailed {
+								reason: message.clone(),
+							})
+						} else if message_lower.contains("invalid signature")
+							|| message_lower.contains("ecrecover")
+						{
+							AaContractError::Contract(ContractError::InvalidSignature)
+						} else {
+							AaContractError::Rpc(RpcError::Generic { code, message })
+						}
+					},
+					429 => {
+						// HTTP 429 Too Many Requests
+						AaContractError::Rpc(RpcError::RateLimited)
+					},
+					-32603 => {
+						// Internal error - usually retryable
+						AaContractError::Rpc(RpcError::Generic { code, message })
+					},
+					_ => {
+						// Other error codes
+						if let Some(ref data_str) = data {
+							// Check if this is contract revert data
+							if data_str.starts_with("0x08c379a0") {
+								AaContractError::Contract(ContractError::ExecutionReverted {
+									reason: message,
+								})
+							} else {
+								AaContractError::Rpc(RpcError::Generic { code, message })
+							}
+						} else {
+							AaContractError::Rpc(RpcError::Generic { code, message })
+						}
+					},
+				}
+			},
+			ethereum_rpc::RpcProviderError::Transaction(msg) => {
+				let msg_lower = msg.to_lowercase();
+				if msg_lower.contains("nonce too low") || msg_lower.contains("nonce already used") {
+					AaContractError::Rpc(RpcError::NonceTooLow)
+				} else if msg_lower.contains("replacement transaction underpriced")
+					|| msg_lower.contains("transaction underpriced")
+					|| msg_lower.contains("max fee per gas less than block base fee")
+					|| msg_lower.contains("gasfeecap less than block base fee")
+					|| msg_lower.contains("gas price too low")
+				{
+					AaContractError::Rpc(RpcError::TransactionUnderpriced)
+				} else if msg_lower.contains("insufficient funds")
+					|| msg_lower.contains("insufficient balance")
+				{
+					AaContractError::Contract(ContractError::InsufficientFunds)
+				} else if msg_lower.contains("gas required exceeds")
+					|| msg_lower.contains("out of gas")
+					|| msg_lower.contains("gas too low")
+					|| msg_lower.contains("intrinsic gas too low")
+				{
+					AaContractError::Contract(ContractError::GasEstimationFailed {
+						reason: msg.clone(),
+					})
+				} else if msg_lower.contains("execution reverted") || msg_lower.contains("revert") {
+					AaContractError::Contract(ContractError::ExecutionReverted { reason: msg })
+				} else {
+					AaContractError::Transaction(msg)
+				}
+			},
+			ethereum_rpc::RpcProviderError::Generic(msg) => AaContractError::Generic(msg),
+		}
+	}
 }
 
 #[allow(dead_code)]
@@ -736,10 +1060,10 @@ pub fn create_account_gas_limits(
 
 pub fn create_gas_fees(max_fee_per_gas: U256, max_priority_fee_per_gas: U256) -> FixedBytes<32> {
 	let mut gas_fees = [0u8; 32];
-	// First 16 bytes: max priority fee per gas
-	gas_fees[0..16].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes::<32>()[16..]);
-	// Last 16 bytes: max fee per gas
-	gas_fees[16..32].copy_from_slice(&max_fee_per_gas.to_be_bytes::<32>()[16..]);
+	// First 16 bytes: max fee per gas (EIP-4337 specification)
+	gas_fees[0..16].copy_from_slice(&max_fee_per_gas.to_be_bytes::<32>()[16..]);
+	// Last 16 bytes: max priority fee per gas (EIP-4337 specification)
+	gas_fees[16..32].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes::<32>()[16..]);
 	FixedBytes::from(gas_fees)
 }
 
@@ -771,12 +1095,18 @@ pub mod test {
 		let root_address = address!("0x0000000000000000000000000000000000000001");
 		let mut rpc_client = MockRpcProvider::new();
 
-		rpc_client.expect_call()
-            .with(mockall::predicate::always())
-            .times(1)
-            .returning(|_| {
-                Err(Some(hex::decode("0x6ca7b8060000000000000000000000005dfec187c82986cf670f4e2ed6de1cd001cee5be").unwrap()))
-            });
+		rpc_client
+			.expect_call()
+			.with(mockall::predicate::always())
+			.times(1)
+			.returning(|_| {
+				let revert_data = hex::decode(
+					"0x6ca7b8060000000000000000000000005dfec187c82986cf670f4e2ed6de1cd001cee5be",
+				)
+				.unwrap();
+				let reason = format!("execution reverted: 0x{}", hex::encode(&revert_data));
+				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data: None })
+			});
 
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
 
@@ -1089,7 +1419,9 @@ pub mod test {
 		let mut rpc_client = MockRpcProvider::new();
 
 		// Mock EIP-1559 to fail, forcing legacy fallback
-		rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
 		// Mock gas price at 30 gwei
 		let mock_gas_price = 30_000_000_000u128;
 		rpc_client.expect_get_gas_price().times(1).returning(move || Ok(mock_gas_price));
@@ -1105,7 +1437,9 @@ pub mod test {
 
 		// Test with mainnet config
 		let mut mainnet_rpc_client = MockRpcProvider::new();
-		mainnet_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		mainnet_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
 		mainnet_rpc_client
 			.expect_get_gas_price()
 			.times(1)
@@ -1128,7 +1462,9 @@ pub mod test {
 		// Test with L2 config and lower gas price
 		let mut l2_rpc_client = MockRpcProvider::new();
 		let l2_gas_price = 1_000_000_000u128; // 1 gwei
-		l2_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		l2_rpc_client.expect_estimate_eip1559_fees().times(1).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
 		l2_rpc_client
 			.expect_get_gas_price()
 			.times(1)
@@ -1217,7 +1553,9 @@ pub mod test {
 		let counter_clone = counter.clone();
 
 		// Set up EIP-1559 to fail, forcing legacy fallback
-		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| Err(()));
+		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
 		// Set up gas price expectation
 		mock_client.expect_get_gas_price().times(3).returning(|| Ok(30_000_000_000u128)); // 30 gwei
 
@@ -1225,7 +1563,8 @@ pub mod test {
 		mock_client.expect_send_transaction().times(3).returning(move |_| {
 			let count = counter_clone.fetch_add(1, Ordering::SeqCst);
 			if count < 2 {
-				Err(()) // Fail first two attempts
+				Err(ethereum_rpc::RpcProviderError::Network("Temporary network error".to_string()))
+			// Fail first two attempts
 			} else {
 				Ok("0x1234567890abcdef".to_string()) // Succeed on third
 			}
@@ -1256,12 +1595,16 @@ pub mod test {
 		let mut mock_client = MockRpcProvider::new();
 
 		// Set up EIP-1559 to fail, forcing legacy fallback
-		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| Err(()));
+		mock_client.expect_estimate_eip1559_fees().times(3).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
 		// Set up gas price expectation
 		mock_client.expect_get_gas_price().times(3).returning(|| Ok(30_000_000_000u128)); // 30 gwei
 
 		// Set up send_transaction to always fail
-		mock_client.expect_send_transaction().times(3).returning(|_| Err(()));
+		mock_client.expect_send_transaction().times(3).returning(|_| {
+			Err(ethereum_rpc::RpcProviderError::Network("Connection failed".to_string()))
+		});
 
 		let client = EntryPointClient::new_with_config(
 			address!("0x0000000000000000000000000000000000000000"),
@@ -1286,7 +1629,9 @@ pub mod test {
 		let mut mock_client = MockRpcProvider::new();
 
 		// Set up EIP-1559 to fail, forcing legacy fallback
-		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
 
 		// Set up gas price expectation
 		mock_client.expect_get_gas_price().times(1).returning(|| Ok(20_000_000_000u128)); // 20 gwei
@@ -1347,7 +1692,9 @@ pub mod test {
 		let mut mock_client = MockRpcProvider::new();
 
 		// Set up EIP-1559 to fail, fallback to legacy
-		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| Err(()));
+		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
 
 		mock_client.expect_get_gas_price().times(1).returning(|| Ok(30_000_000_000u128)); // 30 gwei
 
@@ -1369,5 +1716,159 @@ pub mod test {
 		assert_eq!(max_fee, U256::from(45_000_000_000u128));
 		// Priority fee: 30 gwei / 10 = 3 gwei (within bounds)
 		assert_eq!(priority_fee, U256::from(3_000_000_000u128));
+	}
+
+	#[test]
+	fn test_error_classification() {
+		use crate::error::{AaContractError, ContractError, RpcError};
+		use ethereum_rpc::RpcProviderError;
+
+		let client = EntryPointClient::new(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(MockRpcProvider::new()),
+		);
+
+		// Test network error classification
+		let network_error = RpcProviderError::Network("Connection refused".to_string());
+		let classified = client.classify_rpc_error(network_error);
+		match classified {
+			AaContractError::Rpc(RpcError::ConnectionFailed { endpoint }) => {
+				assert_eq!(endpoint, "Connection refused");
+			},
+			_ => panic!("Expected ConnectionFailed error"),
+		}
+
+		// Test nonce too low error
+		let nonce_error = RpcProviderError::Transaction(
+			"nonce too low: address 0x123 current nonce 5".to_string(),
+		);
+		let classified = client.classify_rpc_error(nonce_error);
+		match classified {
+			AaContractError::Rpc(RpcError::NonceTooLow) => {},
+			_ => panic!("Expected NonceTooLow error"),
+		}
+
+		// Test transaction underpriced error
+		let gas_error =
+			RpcProviderError::Transaction("replacement transaction underpriced".to_string());
+		let classified = client.classify_rpc_error(gas_error);
+		match classified {
+			AaContractError::Rpc(RpcError::TransactionUnderpriced) => {},
+			_ => panic!("Expected TransactionUnderpriced error"),
+		}
+
+		// Test insufficient funds error
+		let funds_error =
+			RpcProviderError::Transaction("insufficient funds for gas * price + value".to_string());
+		let classified = client.classify_rpc_error(funds_error);
+		match classified {
+			AaContractError::Contract(ContractError::InsufficientFunds) => {},
+			_ => panic!("Expected InsufficientFunds error"),
+		}
+
+		// Test execution reverted error
+		let revert_error = RpcProviderError::Transaction(
+			"execution reverted: ERC20: transfer amount exceeds balance".to_string(),
+		);
+		let classified = client.classify_rpc_error(revert_error);
+		match classified {
+			AaContractError::Contract(ContractError::ExecutionReverted { reason }) => {
+				assert!(reason.contains("execution reverted"));
+			},
+			_ => panic!("Expected ExecutionReverted error"),
+		}
+
+		// Test rate limiting error
+		let rate_limit_error = RpcProviderError::JsonRpc {
+			code: 429,
+			message: "too many requests, please retry later".to_string(),
+			data: None,
+		};
+		let classified = client.classify_rpc_error(rate_limit_error);
+		match classified {
+			AaContractError::Rpc(RpcError::RateLimited) => {},
+			_ => panic!("Expected RateLimited error"),
+		}
+
+		// Test new error patterns
+		// Test "max fee per gas less than block base fee"
+		let max_fee_error =
+			RpcProviderError::Transaction("max fee per gas less than block base fee".to_string());
+		let classified = client.classify_rpc_error(max_fee_error);
+		match classified {
+			AaContractError::Rpc(RpcError::TransactionUnderpriced) => {},
+			_ => panic!("Expected TransactionUnderpriced for max fee per gas error"),
+		}
+
+		// Test "gas too low"
+		let gas_low_error = RpcProviderError::Transaction("gas too low".to_string());
+		let classified = client.classify_rpc_error(gas_low_error);
+		match classified {
+			AaContractError::Contract(ContractError::GasEstimationFailed { reason }) => {
+				assert!(reason.contains("gas too low"));
+			},
+			_ => panic!("Expected GasEstimationFailed for gas too low error"),
+		}
+
+		// Test "intrinsic gas too low"
+		let intrinsic_gas_error = RpcProviderError::JsonRpc {
+			code: -32000,
+			message: "intrinsic gas too low".to_string(),
+			data: None,
+		};
+		let classified = client.classify_rpc_error(intrinsic_gas_error);
+		match classified {
+			AaContractError::Contract(ContractError::GasEstimationFailed { reason }) => {
+				assert!(reason.contains("intrinsic gas too low"));
+			},
+			_ => panic!("Expected GasEstimationFailed for intrinsic gas error"),
+		}
+
+		// Test "gas price too low"
+		let gas_price_error = RpcProviderError::Transaction("gas price too low".to_string());
+		let classified = client.classify_rpc_error(gas_price_error);
+		match classified {
+			AaContractError::Rpc(RpcError::TransactionUnderpriced) => {},
+			_ => panic!("Expected TransactionUnderpriced for gas price too low error"),
+		}
+	}
+
+	#[test(tokio::test)]
+	async fn test_handle_ops_with_retry_non_retryable() {
+		// Create a mock that implements RpcProvider
+		let mut mock_client = MockRpcProvider::new();
+
+		// Mock estimate_eip1559_fees_ext to fail, forcing legacy fallback
+		mock_client.expect_estimate_eip1559_fees().times(1).returning(|| {
+			Err(ethereum_rpc::RpcProviderError::Generic("EIP-1559 not supported".to_string()))
+		});
+		mock_client.expect_get_gas_price().times(1).returning(|| Ok(30_000_000_000u128));
+
+		// Mock send_transaction to return a non-retryable error
+		mock_client.expect_send_transaction().times(1).returning(|_| {
+			Err(ethereum_rpc::RpcProviderError::ExecutionReverted {
+				reason: "Contract error".to_string(),
+				data: None,
+			})
+		});
+
+		let client = EntryPointClient::new_with_config(
+			address!("0x0000000000000000000000000000000000000000"),
+			Arc::new(mock_client),
+			GasPriceConfig::default(),
+			crate::RetryConfig {
+				max_attempts: 3,
+				initial_delay_ms: 100,
+				max_delay_ms: 1000,
+				gas_increase_percent: 10,
+			},
+		);
+
+		// Test that non-retryable errors fail immediately
+		let result = client
+			.handle_ops_with_retry(&[], address!("0x0000000000000000000000000000000000000000"))
+			.await;
+
+		assert!(result.is_err());
 	}
 }
