@@ -75,10 +75,10 @@ pub fn register_estimate_user_op_gas<
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
-						crate::detailed_error::MISSING_REQUIRED_FIELD_CODE,
+						crate::error_code::MISSING_REQUIRED_FIELD_CODE,
 						"Failed to parse request parameters",
 					)
-					.with_suggestion(format!("Parse error: {}", e)),
+					.with_reason(format!("Parse error: {}", e)),
 				)
 			})?;
 

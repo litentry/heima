@@ -1,6 +1,11 @@
 use super::common::handle_omni_native_task;
 use crate::methods::omni::{common::check_auth, PumpxRpcError};
-use crate::{error_code::*, server::RpcContext, Deserialize, ErrorCode};
+use crate::{
+	detailed_error::DetailedError,
+	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
+	server::RpcContext,
+	Deserialize,
+};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
@@ -40,14 +45,21 @@ pub fn register_notify_limit_order_result<
 		.register_async_method("omni_notifyLimitOrderResult", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
+				PumpxRpcError::from(
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_suggestion("Please check your authentication credentials"),
+				)
 			})?;
 
 			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields"),
+				)
 			})?;
 
 			debug!(
@@ -57,7 +69,10 @@ pub fn register_notify_limit_order_result<
 
 			let Ok(address) = Address32::from_hex(&user.omni_account) else {
 				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to parse omni account from authentication token"),
+				));
 			};
 
 			let wrapper = NativeTaskWrapper::new(
@@ -76,7 +91,10 @@ pub fn register_notify_limit_order_result<
 				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Unexpected response type from native task handler"),
+					))
 				},
 			})
 			.await
