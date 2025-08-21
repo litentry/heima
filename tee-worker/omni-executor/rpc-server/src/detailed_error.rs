@@ -1,3 +1,10 @@
+use crate::error_code::{
+	ACCOUNT_PARSE_ERROR_CODE, EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE,
+	INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
+	INVALID_HEX_FORMAT_CODE, INVALID_USER_OPERATION_CODE, INVALID_WALLET_INDEX_CODE,
+	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
+	UNEXPECTED_RESPONSE_TYPE_CODE,
+};
 use jsonrpsee::types::ErrorObject;
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +24,8 @@ pub struct ErrorDetails {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub received: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
+	pub reason: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub suggestion: Option<String>,
 }
 
@@ -25,7 +34,13 @@ impl DetailedError {
 		Self {
 			code,
 			message: message.into(),
-			details: ErrorDetails { field: None, expected: None, received: None, suggestion: None },
+			details: ErrorDetails {
+				field: None,
+				expected: None,
+				received: None,
+				reason: None,
+				suggestion: None,
+			},
 		}
 	}
 
@@ -44,6 +59,11 @@ impl DetailedError {
 		self
 	}
 
+	pub fn with_reason(mut self, reason: impl Into<String>) -> Self {
+		self.details.reason = Some(reason.into());
+		self
+	}
+
 	pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
 		self.details.suggestion = Some(suggestion.into());
 		self
@@ -53,37 +73,6 @@ impl DetailedError {
 		ErrorObject::owned(self.code, self.message.clone(), Some(self.details.clone()))
 	}
 }
-
-// Input Validation Error Codes (-32100 to -32119)
-pub const INVALID_CHAIN_ID_CODE: i32 = -32100;
-pub const INVALID_WALLET_INDEX_CODE: i32 = -32101;
-pub const INVALID_ADDRESS_FORMAT_CODE: i32 = -32102;
-pub const INVALID_AMOUNT_CODE: i32 = -32103;
-pub const INVALID_TOKEN_ADDRESS_CODE: i32 = -32104;
-pub const MISSING_REQUIRED_FIELD_CODE: i32 = -32105;
-pub const INVALID_HEX_FORMAT_CODE: i32 = -32106;
-pub const INVALID_EMAIL_FORMAT_CODE: i32 = -32107;
-// Account/Identity Error Codes (-32120 to -32139)
-pub const ACCOUNT_PARSE_ERROR_CODE: i32 = -32121;
-pub const INVALID_ACCOUNT_LENGTH_CODE: i32 = -32124;
-
-// Operation Error Codes (-32140 to -32159)
-// Note: Currently no operation error codes are in use
-
-// External Service Error Codes (-32160 to -32179)
-pub const SIGNER_SERVICE_ERROR_CODE: i32 = -32160;
-pub const EMAIL_SERVICE_ERROR_CODE: i32 = -32162;
-pub const STORAGE_SERVICE_ERROR_CODE: i32 = -32163;
-pub const EXTERNAL_API_ERROR_CODE: i32 = -32164;
-
-// Response Processing Error Codes (-32180 to -32199)
-pub const UNEXPECTED_RESPONSE_TYPE_CODE: i32 = -32180;
-
-// Native Task Error Codes (-32200 to -32219)
-pub const UNSUPPORTED_CHAIN_CODE: i32 = -32200;
-pub const INVALID_USER_OPERATION_CODE: i32 = -32201;
-pub const GAS_ESTIMATION_FAILED_CODE: i32 = -32202;
-pub const SIGNATURE_SERVICE_UNAVAILABLE_CODE: i32 = -32203;
 
 impl DetailedError {
 	pub fn invalid_chain_id(chain_id: u64, supported_chains: &[u64]) -> Self {
@@ -148,22 +137,19 @@ impl DetailedError {
 	}
 
 	pub fn signer_service_error(operation: &str, error: &str) -> Self {
-		Self::new(SIGNER_SERVICE_ERROR_CODE, "Signer service error")
-			.with_field("operation")
-			.with_received(operation.to_string())
+		Self::new(SIGNER_SERVICE_ERROR_CODE, format!("Signer service error during {}", operation))
 			.with_suggestion(format!("Signer error: {}", error))
 	}
 
-	pub fn email_service_error(_email: &str, _client_id: &str) -> Self {
+	pub fn email_service_error(email: &str) -> Self {
 		Self::new(EMAIL_SERVICE_ERROR_CODE, "Email service error")
 			.with_field("email")
+			.with_received(email.to_string())
 			.with_suggestion("Failed to send verification email. Please try again later.")
 	}
 
-	pub fn storage_error(operation: &str, _key: &str) -> Self {
-		Self::new(STORAGE_SERVICE_ERROR_CODE, "Storage service error")
-			.with_field("operation")
-			.with_received(operation.to_string())
+	pub fn storage_error(operation: &str) -> Self {
+		Self::new(STORAGE_SERVICE_ERROR_CODE, format!("Storage service error during {}", operation))
 			.with_suggestion("Storage operation failed. Please try again later.")
 	}
 
@@ -173,7 +159,7 @@ impl DetailedError {
 		use crate::config::SUPPORTED_EVM_CHAINS;
 		let supported: Vec<u64> = SUPPORTED_EVM_CHAINS.iter().map(|&c| c as u64).collect();
 
-		Self::new(UNSUPPORTED_CHAIN_CODE, "Chain not supported")
+		Self::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
 			.with_field("chain_id")
 			.with_received(chain_id.to_string())
 			.with_expected(format!("One of: {:?}", supported))
