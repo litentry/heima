@@ -16,7 +16,7 @@
 
 use super::common::handle_omni_native_task;
 use crate::detailed_error::DetailedError;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
@@ -79,11 +79,8 @@ pub fn register_submit_user_op<
 			let params = params.parse::<SubmitUserOpParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from(
-					DetailedError::new(
-						jsonrpsee::types::ErrorCode::ParseError.code(),
-						"Failed to parse request parameters",
-					)
-					.with_suggestion(format!("Invalid JSON structure: {}", e)),
+					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
+						.with_suggestion(format!("Invalid JSON structure: {}", e)),
 				)
 			})?;
 
