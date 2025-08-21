@@ -478,6 +478,7 @@ async fn generate_eip712_signature<
 mod tests {
 	use super::*;
 	use executor_primitives::VerificationCode;
+	use std::str::FromStr;
 
 	#[test]
 	fn test_approve_agent_action_signature() {

@@ -164,33 +164,6 @@ pub fn validate_email(email: &str) -> Result<(), Box<DetailedError>> {
 	Ok(())
 }
 
-#[allow(dead_code)]
-pub fn validate_hex_string(
-	hex_str: &str,
-	field_name: &str,
-	expected_bytes: Option<usize>,
-) -> Result<Vec<u8>, Box<DetailedError>> {
-	let hex_str = hex_str.strip_prefix("0x").unwrap_or(hex_str);
-
-	let bytes = hex::decode(hex_str).map_err(|e| {
-		Box::new(
-			DetailedError::invalid_hex_format(field_name, hex_str, expected_bytes)
-				.with_reason(format!("Hex decode error: {}", e)),
-		)
-	})?;
-
-	if let Some(expected) = expected_bytes {
-		if bytes.len() != expected {
-			return Err(Box::new(
-				DetailedError::invalid_hex_format(field_name, hex_str, Some(expected))
-					.with_received(format!("{} bytes", bytes.len())),
-			));
-		}
-	}
-
-	Ok(bytes)
-}
-
 pub fn validate_user_operations(
 	operations: &[executor_core::types::SerializablePackedUserOperation],
 ) -> Result<(), Box<DetailedError>> {
@@ -396,28 +369,5 @@ mod tests {
 		for email in invalid_emails {
 			assert!(validate_email(email).is_err(), "Should fail for: {}", email);
 		}
-	}
-
-	#[test]
-	fn test_validate_hex_string_valid() {
-		let hex_8_bytes = "0x1234567890abcdef";
-		let result = validate_hex_string(hex_8_bytes, "test", Some(8));
-		assert!(result.is_ok());
-		assert_eq!(result.unwrap().len(), 8);
-	}
-
-	#[test]
-	fn test_validate_hex_string_wrong_length() {
-		let hex_8_bytes = "0x1234567890abcdef";
-		// Expecting 10 bytes but providing 8
-		assert!(validate_hex_string(hex_8_bytes, "test", Some(10)).is_err());
-	}
-
-	#[test]
-	fn test_validate_hex_string_no_length_requirement() {
-		let hex_any = "0x12345678";
-		let result = validate_hex_string(hex_any, "test", None);
-		assert!(result.is_ok());
-		assert_eq!(result.unwrap().len(), 4);
 	}
 }
