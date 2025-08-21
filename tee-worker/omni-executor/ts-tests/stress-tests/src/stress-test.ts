@@ -9,7 +9,6 @@ import { sha256 } from 'js-sha256';
 import { DataStorage } from './storage/advanced-data-storage';
 import { Logger } from './utils/advanced-logger';
 import { PerformanceAnalyzer } from './analysis/advanced-performance-analyzer';
-import { Dashboard } from './dashboard/advanced-dashboard';
 
 // Test configuration interface
 interface TestConfig {
@@ -113,7 +112,6 @@ class AdvancedStressTest {
   private storage: DataStorage;
   private logger: Logger;
   private analyzer: PerformanceAnalyzer;
-  private dashboard: Dashboard;
   private sessionId: string;
   private running = false;
 
@@ -167,7 +165,6 @@ class AdvancedStressTest {
     this.storage = new DataStorage(this.config.outputDir, this.sessionId);
     this.logger = new Logger(this.config.outputDir, this.sessionId);
     this.analyzer = new PerformanceAnalyzer();
-    this.dashboard = new Dashboard(this.config.outputDir);
     
     this.initializeWalletPool();
   }
@@ -613,8 +610,7 @@ class AdvancedStressTest {
     const analysis = await this.analyzer.analyze(sessionResult);
     this.storage.storeAnalysis(analysis);
     
-    // Start dashboard server
-    await this.dashboard.start();
+    // Dashboard is now separate - run with: npm run dashboard
     
     this.logger.info('✅ Stress test completed', {
       duration: endTime - startTime,
@@ -734,7 +730,7 @@ class AdvancedStressTest {
     console.log('\n' + chalk.blue.bold('💾 Results Storage'));
     console.log('-'.repeat(80));
     console.log(`Results saved to: ${this.config.outputDir}/${this.sessionId}/`);
-    console.log(`Dashboard available at: http://localhost:3000`);
+    console.log(`Dashboard available at: http://localhost:3000 (run 'npm run dashboard' to start)`);
     
     console.log('\n' + chalk.yellow('💡 Recommendations'));
     console.log('-'.repeat(80));

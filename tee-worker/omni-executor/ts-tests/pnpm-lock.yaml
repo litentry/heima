@@ -257,6 +257,9 @@ importers:
       express:
         specifier: ^4.19.2
         version: 4.21.2
+      js-sha256:
+        specifier: ^0.11.1
+        version: 0.11.1
       ora:
         specifier: ^8.0.1
         version: 8.2.0

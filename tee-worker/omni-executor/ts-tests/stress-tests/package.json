@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "stress": "tsx src/stress-test.ts",
-    "dashboard": "tsx src/dashboard/advanced-dashboard.ts",
+    "dashboard": "cd src/dashboard && pnpm run dev",
+    "dashboard:install": "cd src/dashboard && pnpm install",
+    "dashboard:build": "cd src/dashboard && pnpm run build && pnpm run start",
     "clean": "rm -rf dist stress-test-results",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",

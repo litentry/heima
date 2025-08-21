@@ -1,3 +1,4 @@
 dist
 stress-test-results/
 .env
+.next

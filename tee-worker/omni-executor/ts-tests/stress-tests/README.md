@@ -51,14 +51,49 @@ npx tsx src/simple-stress-test.ts
 3. **Performance Analysis**: Calculate sustainable QPS and recommendations
 4. **Data Storage**: Save detailed results for dashboard analysis
 
-### Dashboard
-Access real-time monitoring at: `http://localhost:3001`
+## 📊 Dashboard
 
-Features:
-- Live QPS and latency charts
-- Error rate monitoring
-- Session comparison
-- Export capabilities
+### 🎯 Prerequisites
+**You must run stress tests first to generate data before the dashboard will display content**
+
+```bash
+# 1. Run stress tests to generate test data
+pnpm run stress
+
+# 2. Install dashboard dependencies (first time only)
+pnpm run dashboard:install
+
+# 3. Start dashboard
+pnpm run dashboard
+```
+
+### 📱 Access
+Open browser and visit: `http://localhost:3000`
+
+### ⚙️ Tech Stack
+- **Framework**: Next.js 14 + TypeScript
+- **Package Manager**: pnpm (recommended)
+- **Charts**: Chart.js + react-chartjs-2
+- **Styling**: CSS-in-JS
+
+### 📋 Features
+- **Real-time Data Visualization**: QPS performance charts, latency analysis
+- **Success Rate Monitoring**: Error rate statistics and trend analysis
+- **Session Comparison**: Historical test session comparison
+- **Data Analysis**: Detailed performance metrics and recommendations
+
+### 🚨 Important Notes
+1. **Data Dependency**: Dashboard reads data from `stress-test-results/` directory
+2. **Port Availability**: Ensure port 3000 is not occupied
+3. **Package Manager**: Use pnpm instead of npm to avoid version conflicts
+4. **Data Refresh**: Page automatically refreshes data every 30 seconds, or manually refresh browser
+
+### 🔧 Development Mode
+```bash
+cd src/dashboard
+pnpm install
+pnpm run dev
+```
 
 ## 🎯 Expected Results
 

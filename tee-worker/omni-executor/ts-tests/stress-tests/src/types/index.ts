@@ -17,7 +17,7 @@ export interface StressTestConfig {
   outputFormat: ('json' | 'excel' | 'console')[];
   outputPath: string;
   enableDashboard: boolean;
-  dashboardPort: number;
+  dashboardPort: number; // Default: 3000
 }
 
 export interface RequestResult {
