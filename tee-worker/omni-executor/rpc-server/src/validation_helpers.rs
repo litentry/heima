@@ -38,7 +38,7 @@ pub fn validate_ethereum_address(
 				address,
 				"0x-prefixed 20-byte Ethereum address (40 hex chars)",
 			)
-			.with_suggestion(format!("Parse error: {}", e)),
+			.with_reason(format!("Parse error: {}", e)),
 		)
 	})
 }
@@ -52,7 +52,7 @@ pub fn validate_omni_account_hex(
 	hex::decode(hex_str).map_err(|e| {
 		Box::new(
 			DetailedError::invalid_hex_format(field_name, hex_str, Some(32))
-				.with_suggestion(format!("Hex decode error: {}", e)),
+				.with_reason(format!("Hex decode error: {}", e)),
 		)
 	})
 }
@@ -64,7 +64,7 @@ pub fn validate_omni_account_length(
 	if bytes.len() != 32 {
 		return Err(Box::new(
 			DetailedError::new(
-				crate::detailed_error::INVALID_ACCOUNT_LENGTH_CODE,
+				crate::error_code::INVALID_ACCOUNT_LENGTH_CODE,
 				"Invalid account length",
 			)
 			.with_field(field_name)
@@ -119,7 +119,7 @@ pub fn validate_token_address(
 	validate_ethereum_address(address, field_name).map_err(|_e| {
 		Box::new(
 			DetailedError::new(
-				crate::detailed_error::INVALID_TOKEN_ADDRESS_CODE,
+				crate::error_code::INVALID_TOKEN_ADDRESS_CODE,
 				"Invalid token contract address",
 			)
 			.with_field(field_name)
@@ -134,7 +134,7 @@ pub fn validate_email(email: &str) -> Result<(), Box<DetailedError>> {
 	if !EmailAddress::is_valid(email) {
 		return Err(Box::new(
 			DetailedError::new(
-				crate::detailed_error::INVALID_EMAIL_FORMAT_CODE,
+				crate::error_code::INVALID_EMAIL_FORMAT_CODE,
 				"Invalid email format",
 			)
 			.with_field("email")
@@ -150,7 +150,7 @@ pub fn validate_email(email: &str) -> Result<(), Box<DetailedError>> {
 		if !domain.contains('.') {
 			return Err(Box::new(
 				DetailedError::new(
-					crate::detailed_error::INVALID_EMAIL_FORMAT_CODE,
+					crate::error_code::INVALID_EMAIL_FORMAT_CODE,
 					"Invalid email format",
 				)
 				.with_field("email")
@@ -175,7 +175,7 @@ pub fn validate_hex_string(
 	let bytes = hex::decode(hex_str).map_err(|e| {
 		Box::new(
 			DetailedError::invalid_hex_format(field_name, hex_str, expected_bytes)
-				.with_suggestion(format!("Hex decode error: {}", e)),
+				.with_reason(format!("Hex decode error: {}", e)),
 		)
 	})?;
 
@@ -197,7 +197,7 @@ pub fn validate_user_operations(
 	if operations.is_empty() {
 		return Err(Box::new(
 			DetailedError::new(
-				crate::detailed_error::MISSING_REQUIRED_FIELD_CODE,
+				crate::error_code::MISSING_REQUIRED_FIELD_CODE,
 				"User operations cannot be empty",
 			)
 			.with_field("user_operations")
