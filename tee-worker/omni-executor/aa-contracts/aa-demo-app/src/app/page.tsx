@@ -497,7 +497,7 @@ function HomeContent() {
                                         Step 5: Send Token Transfer
                                     </h2>
                                     <p className="text-gray-600 mb-6">
-                                        Transfer USDC or USDT through the TEE worker using UserOperations.
+                                        Transfer ETH, USDC, or USDT through the TEE worker using UserOperations.
                                     </p>
                                     <TEETokenTransfer
                                         omniAccountAddress={omniAccountAddress}
