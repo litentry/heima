@@ -7,7 +7,7 @@ use serde::Serialize;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{
-		INTENT_NONCE_MISMATCH_ERROR_CODE, UNAUTHORIZED_SENDER_CODE, UNSUPPORTED_CHAIN_ERROR_CODE, *,
+		INTENT_NONCE_MISMATCH_ERROR_CODE, INVALID_CHAIN_ID_CODE, UNAUTHORIZED_SENDER_CODE, *,
 	},
 	middlewares::RpcExtensions,
 	server::RpcContext,
@@ -52,7 +52,7 @@ impl PumpxRpcError {
 		T: Codec,
 	{
 		Self {
-			code: ErrorCode::InternalError.code(),
+			code: INTERNAL_ERROR_CODE,
 			message: ErrorCode::InternalError.message().to_string(),
 			data: Some(PumpxRpcErrorData {
 				backend_response: Some(PumpxRpcErrorBackendResponse {
@@ -75,12 +75,7 @@ impl From<DetailedError> for PumpxRpcError {
 		Self {
 			code: error.code,
 			message: error.message,
-			data: Some(PumpxRpcErrorData {
-				backend_response: Some(PumpxRpcErrorBackendResponse {
-					code: error.code,
-					message: format!("{:?}", error.details),
-				}),
-			}),
+			data: Some(PumpxRpcErrorData { backend_response: None }),
 		}
 	}
 }
@@ -146,14 +141,17 @@ where
 				NativeTaskError::SignatureServiceUnavailable => {
 					DetailedError::signature_service_unavailable()
 				},
-				NativeTaskError::InternalError(_) => DetailedError::new(-32603, "Internal error")
-					.with_suggestion("An internal error occurred. Please try again later."),
+				NativeTaskError::InternalError(_) => {
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("An internal error occurred")
+						.with_suggestion("Please try again later")
+				},
 				NativeTaskError::UnauthorizedSender => {
 					DetailedError::new(UNAUTHORIZED_SENDER_CODE, "Unauthorized sender")
 						.with_suggestion("Please check your authentication credentials")
 				},
 				NativeTaskError::UnsupportedChain => {
-					DetailedError::new(UNSUPPORTED_CHAIN_ERROR_CODE, "Chain not supported")
+					DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
 						.with_suggestion("Please use a supported blockchain network")
 				},
 				NativeTaskError::IntentNonceMismatch => {
