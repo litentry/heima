@@ -44,14 +44,23 @@ function handleWebSocketMessage(data) {
 
 async function loadInitialData() {
     try {
+        console.log('Loading initial data...');
         const [sessions, stats] = await Promise.all([
-            fetch('/api/sessions').then(r => r.json()),
-            fetch('/api/stats/overview').then(r => r.json())
+            fetch('/api/sessions').then(r => {
+                console.log('Sessions response:', r.status);
+                return r.json();
+            }),
+            fetch('/api/stats/overview').then(r => {
+                console.log('Stats response:', r.status);
+                return r.json();
+            })
         ]);
+        
+        console.log('Loaded sessions:', sessions);
+        console.log('Loaded stats:', stats);
         
         updateSessionsTable(sessions);
         updateOverviewStats(stats);
-        updateSessionSelects(sessions);
         createOverviewCharts(sessions);
     } catch (error) {
         console.error('Failed to load initial data:', error);
@@ -81,12 +90,6 @@ function showTab(tabName) {
     switch(tabName) {
         case 'sessions':
             refreshSessions();
-            break;
-        case 'analysis':
-            loadAnalysisData();
-            break;
-        case 'realtime':
-            initializeRealtimeCharts();
             break;
     }
 }
@@ -657,33 +660,6 @@ function formatDuration(ms) {
 }
 
 // Additional functions for other tabs would go here...
-function loadAnalysisData() {
-    // Load analysis tab data
-}
-
-function initializeRealtimeCharts() {
-    // Initialize real-time charts
-}
-
-function compareSessions() {
-    // Compare two sessions
-}
-
-function updateSessionSelects(sessions) {
-    const selects = ['analysisSessionSelect', 'compareSession1', 'compareSession2'];
-    
-    selects.forEach(selectId => {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="">Select a session...</option>';
-        
-        sessions.forEach(session => {
-            const option = document.createElement('option');
-            option.value = session.sessionId;
-            option.textContent = session.sessionId + ' (' + new Date(session.startTime).toLocaleString() + ')';
-            select.appendChild(option);
-        });
-    });
-}
 
 // Close modal when clicking outside
 window.onclick = function(event) {

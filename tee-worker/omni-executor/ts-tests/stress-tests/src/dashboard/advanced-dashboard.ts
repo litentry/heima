@@ -4,6 +4,7 @@ import fs from 'fs';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -148,15 +149,13 @@ export class Dashboard {
     // API Routes
     this.app.get('/api/sessions', this.handleGetSessions.bind(this));
     this.app.get('/api/sessions/:sessionId', this.handleGetSession.bind(this));
-    this.app.get('/api/sessions/:sessionId/analysis', this.handleGetAnalysis.bind(this));
     this.app.get('/api/sessions/:sessionId/requests', this.handleGetRequests.bind(this));
     this.app.get('/api/sessions/:sessionId/steps', this.handleGetSteps.bind(this));
     this.app.get('/api/sessions/:sessionId/export/:format', this.handleExport.bind(this));
     this.app.delete('/api/sessions/:sessionId', this.handleDeleteSession.bind(this));
     
-    // Statistics and comparison
+    // Statistics
     this.app.get('/api/stats/overview', this.handleGetOverviewStats.bind(this));
-    this.app.post('/api/sessions/compare', this.handleCompareSessions.bind(this));
     
     // Real-time updates
     this.app.post('/api/sessions/:sessionId/update', this.handleSessionUpdate.bind(this));
@@ -238,9 +237,6 @@ export class Dashboard {
         <nav class="nav-tabs">
             <button class="tab-button active" onclick="showTab('overview')">Overview</button>
             <button class="tab-button" onclick="showTab('sessions')">Sessions</button>
-            <button class="tab-button" onclick="showTab('analysis')">Analysis</button>
-            <button class="tab-button" onclick="showTab('realtime')">Real-time</button>
-            <button class="tab-button" onclick="showTab('comparison')">Comparison</button>
         </nav>
 
         <!-- Main Content -->
@@ -334,60 +330,6 @@ export class Dashboard {
                             <tbody></tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-
-            <!-- Analysis Tab -->
-            <div id="analysis" class="tab-content">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Session Analysis</h3>
-                        <select id="analysisSessionSelect" onchange="loadAnalysis()">
-                            <option value="">Select a session...</option>
-                        </select>
-                    </div>
-                    <div id="analysisContent">
-                        <p>Select a session to view detailed analysis</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Real-time Tab -->
-            <div id="realtime" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <h3>Live QPS</h3>
-                        <canvas id="liveQpsChart"></canvas>
-                    </div>
-                    <div class="card">
-                        <h3>Live Response Times</h3>
-                        <canvas id="liveLatencyChart"></canvas>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>Active Session Details</h3>
-                    <div id="activeSessionDetails">
-                        <p>No active sessions</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Comparison Tab -->
-            <div id="comparison" class="tab-content">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Session Comparison</h3>
-                        <div class="controls">
-                            <select id="compareSession1">
-                                <option value="">Select first session...</option>
-                            </select>
-                            <select id="compareSession2">
-                                <option value="">Select second session...</option>
-                            </select>
-                            <button onclick="compareSessions()">Compare</button>
-                        </div>
-                    </div>
-                    <div id="comparisonResults"></div>
                 </div>
             </div>
         </main>
@@ -490,12 +432,6 @@ function showTab(tabName) {
     switch(tabName) {
         case 'sessions':
             refreshSessions();
-            break;
-        case 'analysis':
-            loadAnalysisData();
-            break;
-        case 'realtime':
-            initializeRealtimeCharts();
             break;
     }
 }
@@ -954,19 +890,15 @@ function calculateStepMaxLatency(step) {
 
 async function viewSession(sessionId) {
     try {
-        const [session, analysis] = await Promise.all([
-            fetch('/api/sessions/' + sessionId).then(r => r.json()),
-            fetch('/api/sessions/' + sessionId + '/analysis').then(r => r.json())
-        ]);
-        
-        showSessionModal(session, analysis);
+        const session = await fetch('/api/sessions/' + sessionId).then(r => r.json());
+        showSessionModal(session);
     } catch (error) {
         console.error('Failed to load session details:', error);
         alert('Failed to load session details');
     }
 }
 
-function showSessionModal(session, analysis) {
+function showSessionModal(session) {
     const content = \`
         <h2>Session Details: \${session.sessionId}</h2>
         <div class="session-details">
@@ -977,20 +909,6 @@ function showSessionModal(session, analysis) {
                 <div><strong>Max Sustainable QPS:</strong> \${session.maxSustainableQPS}</div>
                 <div><strong>Recommended QPS:</strong> \${session.recommendedMaxQPS}</div>
             </div>
-            
-            \${analysis ? \`
-                <h3>Performance Analysis</h3>
-                <div class="analysis-summary">
-                    <p><strong>Peak QPS:</strong> \${analysis.summary.peakQPS}</p>
-                    <p><strong>Average Response Time:</strong> \${analysis.summary.averageResponseTime.toFixed(2)}ms</p>
-                    <p><strong>Top Errors:</strong></p>
-                    <ul>
-                        ' + analysis.summary.topErrors.map(error => 
-                            '<li>' + error.type + ': ' + error.count + ' (' + error.percentage.toFixed(1) + '%)</li>'
-                        ).join('') + '
-                    </ul>
-                </div>
-            \` : '<p>Analysis not available</p>'}
         </div>
     \`;
     
@@ -1066,33 +984,6 @@ function formatDuration(ms) {
 }
 
 // Additional functions for other tabs would go here...
-function loadAnalysisData() {
-    // Load analysis tab data
-}
-
-function initializeRealtimeCharts() {
-    // Initialize real-time charts
-}
-
-function compareSessions() {
-    // Compare two sessions
-}
-
-function updateSessionSelects(sessions) {
-    const selects = ['analysisSessionSelect', 'compareSession1', 'compareSession2'];
-    
-    selects.forEach(selectId => {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '<option value="">Select a session...</option>';
-        
-        sessions.forEach(session => {
-            const option = document.createElement('option');
-            option.value = session.sessionId;
-            option.textContent = session.sessionId + ' (' + new Date(session.startTime).toLocaleString() + ')';
-            select.appendChild(option);
-        });
-    });
-}
 
 // Close modal when clicking outside
 window.onclick = function(event) {
@@ -1449,12 +1340,6 @@ select:focus {
     margin-bottom: 2rem;
 }
 
-.analysis-summary {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-top: 1rem;
-}
 
 .session-list {
     max-height: 400px;
@@ -1629,22 +1514,6 @@ a:hover {
     }
   }
 
-  private async handleGetAnalysis(req: express.Request, res: express.Response): Promise<void> {
-    try {
-      const { sessionId } = req.params;
-      const analysisPath = path.join(this.config.outputDir, sessionId, 'analysis', 'full-analysis.json');
-      
-      if (!fs.existsSync(analysisPath)) {
-        res.status(404).json({ error: 'Analysis not found' });
-        return;
-      }
-
-      const analysisData = JSON.parse(fs.readFileSync(analysisPath, 'utf-8'));
-      res.json(analysisData);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to load analysis' });
-    }
-  }
 
   private async handleGetRequests(req: express.Request, res: express.Response): Promise<void> {
     try {
@@ -1769,10 +1638,6 @@ a:hover {
     }
   }
 
-  private async handleCompareSessions(req: express.Request, res: express.Response): Promise<void> {
-    // Implementation for session comparison
-    res.json({ message: 'Comparison feature coming soon' });
-  }
 
   private async handleSessionUpdate(req: express.Request, res: express.Response): Promise<void> {
     const { sessionId } = req.params;
@@ -1860,18 +1725,13 @@ a:hover {
   }
 
   private async generateJSONExport(sessionId: string, filePath: string): Promise<void> {
-    // Load all session data
+    // Load session data
     const sessionPath = path.join(this.config.outputDir, sessionId, 'session-result.json');
-    const analysisPath = path.join(this.config.outputDir, sessionId, 'analysis', 'full-analysis.json');
     
     const exportData: any = {};
     
     if (fs.existsSync(sessionPath)) {
       exportData.session = JSON.parse(fs.readFileSync(sessionPath, 'utf-8'));
-    }
-    
-    if (fs.existsSync(analysisPath)) {
-      exportData.analysis = JSON.parse(fs.readFileSync(analysisPath, 'utf-8'));
     }
 
     fs.writeFileSync(filePath, JSON.stringify(exportData, null, 2));
@@ -1881,7 +1741,12 @@ a:hover {
   public async start(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server.listen(this.config.port, this.config.host, () => {
-        console.log('🌐 Dashboard server started at http://' + this.config.host + ':' + this.config.port);
+        const url = `http://localhost:${this.config.port}`;
+        console.log('🌐 Dashboard server started at ' + url);
+        
+        // Auto-open browser
+        this.openBrowser(url);
+        
         resolve();
       });
 
@@ -1889,6 +1754,30 @@ a:hover {
         console.error('Dashboard server error:', error);
         reject(error);
       });
+    });
+  }
+
+  private openBrowser(url: string): void {
+    let command: string;
+    
+    switch (process.platform) {
+      case 'darwin': // macOS
+        command = `open "${url}"`;
+        break;
+      case 'win32': // Windows
+        command = `start "" "${url}"`;
+        break;
+      default: // Linux and others
+        command = `xdg-open "${url}"`;
+        break;
+    }
+    
+    exec(command, (error) => {
+      if (error) {
+        console.log('💡 Open browser manually: ' + url);
+      } else {
+        console.log('🚀 Dashboard opened in browser automatically');
+      }
     });
   }
 
@@ -1908,4 +1797,32 @@ a:hover {
   public getUrl(): string {
     return 'http://' + this.config.host + ':' + this.config.port;
   }
+}
+
+// CLI execution
+async function main() {
+  try {
+    const outputDir = process.argv[2] || './stress-test-results';
+    console.log('🚀 Starting Dashboard Server...');
+    console.log('📂 Output directory:', outputDir);
+    
+    const dashboard = new Dashboard(outputDir);
+    await dashboard.start();
+    
+    // Keep the process running
+    process.on('SIGINT', async () => {
+      console.log('\n👋 Shutting down dashboard...');
+      await dashboard.stop();
+      process.exit(0);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start dashboard:', error);
+    process.exit(1);
+  }
+}
+
+// Run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
 }

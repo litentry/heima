@@ -33,9 +33,6 @@
         <nav class="nav-tabs">
             <button class="tab-button active" onclick="showTab('overview')">Overview</button>
             <button class="tab-button" onclick="showTab('sessions')">Sessions</button>
-            <button class="tab-button" onclick="showTab('analysis')">Analysis</button>
-            <button class="tab-button" onclick="showTab('realtime')">Real-time</button>
-            <button class="tab-button" onclick="showTab('comparison')">Comparison</button>
         </nav>
 
         <!-- Main Content -->
@@ -129,60 +126,6 @@
                             <tbody></tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-
-            <!-- Analysis Tab -->
-            <div id="analysis" class="tab-content">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Session Analysis</h3>
-                        <select id="analysisSessionSelect" onchange="loadAnalysis()">
-                            <option value="">Select a session...</option>
-                        </select>
-                    </div>
-                    <div id="analysisContent">
-                        <p>Select a session to view detailed analysis</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Real-time Tab -->
-            <div id="realtime" class="tab-content">
-                <div class="grid-2">
-                    <div class="card">
-                        <h3>Live QPS</h3>
-                        <canvas id="liveQpsChart"></canvas>
-                    </div>
-                    <div class="card">
-                        <h3>Live Response Times</h3>
-                        <canvas id="liveLatencyChart"></canvas>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>Active Session Details</h3>
-                    <div id="activeSessionDetails">
-                        <p>No active sessions</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Comparison Tab -->
-            <div id="comparison" class="tab-content">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Session Comparison</h3>
-                        <div class="controls">
-                            <select id="compareSession1">
-                                <option value="">Select first session...</option>
-                            </select>
-                            <select id="compareSession2">
-                                <option value="">Select second session...</option>
-                            </select>
-                            <button onclick="compareSessions()">Compare</button>
-                        </div>
-                    </div>
-                    <div id="comparisonResults"></div>
                 </div>
             </div>
         </main>

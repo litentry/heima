@@ -124,9 +124,9 @@ class AdvancedStressTest {
     this.config = {
       targetUrl: process.env.OMNI_RPC_URL || 'http://localhost:2100/',
       maxQPSPercentage: 70,
-      stepDurationSeconds: 30,
-      rampUpStrategy: 'linear',
-      testDurationMinutes: 30,
+      stepDurationSeconds: 20,
+      rampUpStrategy: 'exponential',
+      testDurationMinutes: 10,
       walletPoolSize: 500,
       outputDir: './stress-test-results',
       endpoints: [
@@ -335,26 +335,33 @@ class AdvancedStressTest {
     
     switch (this.config.rampUpStrategy) {
       case 'linear':
-        if (errorRate < 1) return currentQPS + Math.max(2, Math.floor(currentQPS * 0.2));
-        if (errorRate < 5) return currentQPS + 1;
+        if (errorRate < 1) return currentQPS + Math.max(5, Math.floor(currentQPS * 0.3));
+        if (errorRate < 5) return currentQPS + 2;
         return currentQPS; // Stop increasing
         
       case 'exponential':
-        if (errorRate < 1) return Math.floor(currentQPS * 1.5);
-        if (errorRate < 5) return currentQPS + Math.floor(currentQPS * 0.1);
-        return currentQPS;
+        // More aggressive scaling to reach blockchain-level QPS
+        if (currentQPS < 10) {
+          return errorRate < 1 ? currentQPS * 3 : currentQPS + 2;
+        } else if (currentQPS < 50) {
+          return errorRate < 1 ? Math.floor(currentQPS * 2) : currentQPS + Math.floor(currentQPS * 0.2);
+        } else if (currentQPS < 200) {
+          return errorRate < 1 ? Math.floor(currentQPS * 1.5) : currentQPS + Math.floor(currentQPS * 0.1);
+        } else {
+          return errorRate < 1 ? Math.floor(currentQPS * 1.2) : currentQPS + 5;
+        }
         
       case 'fibonacci':
         // Fibonacci-like sequence for gradual increase
         if (errorRate < 1) {
-          const increment = Math.max(1, Math.floor(Math.log2(currentQPS + 1)));
+          const increment = Math.max(2, Math.floor(Math.log2(currentQPS + 1)) * 2);
           return currentQPS + increment;
         }
-        if (errorRate < 5) return currentQPS + 1;
+        if (errorRate < 5) return currentQPS + 2;
         return currentQPS;
         
       default:
-        return currentQPS + 1;
+        return currentQPS + 2;
     }
   }
 
@@ -373,10 +380,37 @@ class AdvancedStressTest {
     return { errorRate, criticalErrors };
   }
 
+  private async runWorker(
+    requestsPerWorker: number, 
+    intervalMs: number, 
+    endTime: number, 
+    targetQPS: number, 
+    results: RequestResult[]
+  ): Promise<void> {
+    let requestCount = 0;
+    
+    while (Date.now() < endTime && requestCount < requestsPerWorker && this.running) {
+      const endpoint = this.selectEndpointByWeight();
+      
+      try {
+        const result = await this.executeRequest(endpoint, targetQPS);
+        results.push(result);
+        this.storage.storeRequestResult(result);
+        requestCount++;
+        
+        // Wait for next request with some jitter to avoid thundering herd
+        const jitter = Math.random() * 0.2 - 0.1; // ±10% jitter
+        const actualInterval = intervalMs * (1 + jitter);
+        await new Promise(resolve => setTimeout(resolve, Math.max(1, actualInterval)));
+      } catch (error) {
+        this.logger.error(`Worker error: ${error}`);
+        break;
+      }
+    }
+  }
+
   private async runQPSStep(targetQPS: number): Promise<QPSStepResult> {
     const stepDuration = this.config.stepDurationSeconds;
-    const intervalMs = 1000 / targetQPS;
-    
     const stepStartTime = Date.now();
     const endTime = stepStartTime + (stepDuration * 1000);
     
@@ -385,23 +419,18 @@ class AdvancedStressTest {
     
     this.logger.info(`Starting QPS step: ${targetQPS} QPS for ${stepDuration}s`);
     
-    // Start request workers to maintain target QPS
-    while (Date.now() < endTime && this.running) {
-      const endpoint = this.selectEndpointByWeight();
-      
-      const worker = this.executeRequest(endpoint, targetQPS).then(result => {
-        results.push(result);
-        // Store individual request result
-        this.storage.storeRequestResult(result);
-      });
-      
+    // Use concurrent workers instead of sequential timing
+    const workerCount = Math.min(targetQPS, 50); // Max 50 concurrent workers
+    const requestsPerWorker = Math.ceil((targetQPS * stepDuration) / workerCount);
+    const intervalMs = Math.max(10, 1000 / (targetQPS / workerCount)); // Min 10ms interval
+    
+    // Start concurrent workers
+    for (let i = 0; i < workerCount; i++) {
+      const worker = this.runWorker(requestsPerWorker, intervalMs, endTime, targetQPS, results);
       workers.push(worker);
-      
-      // Wait for next request time
-      await new Promise(resolve => setTimeout(resolve, intervalMs));
     }
     
-    // Wait for all requests to complete with timeout
+    // Wait for all workers to complete
     await Promise.allSettled(workers);
     
     const actualDuration = (Date.now() - stepStartTime) / 1000;
@@ -504,7 +533,7 @@ class AdvancedStressTest {
     await this.testConnectivity();
     
     const results: QPSStepResult[] = [];
-    let currentQPS = 1;
+    let currentQPS = 5; // Start higher for blockchain-level testing
     let maxSustainableQPS = 0;
     this.running = true;
     
@@ -514,7 +543,7 @@ class AdvancedStressTest {
       this.running = false;
     });
     
-    // Main test loop
+    // Main test loop - start higher for blockchain-level testing
     while (this.running && Date.now() - startTime < this.config.testDurationMinutes * 60 * 1000) {
       const stepResult = await this.runQPSStep(currentQPS);
       results.push(stepResult);
@@ -532,7 +561,7 @@ class AdvancedStressTest {
         maxSustainableQPS = currentQPS;
       }
       
-      // Calculate next QPS
+      // Calculate next QPS - more aggressive scaling for higher targets
       const nextQPS = this.calculateNextQPS(currentQPS, stepResult);
       if (nextQPS === currentQPS && errorRate > 5) {
         this.logger.info('Max QPS reached, stopping test');
@@ -540,6 +569,12 @@ class AdvancedStressTest {
       }
       
       currentQPS = nextQPS;
+      
+      // Stop if we've reached a very high QPS to avoid runaway
+      if (currentQPS > 1000) {
+        this.logger.info('Reached maximum test limit (1000 QPS), stopping test');
+        break;
+      }
       
       if (!this.running) break;
     }
@@ -739,9 +774,9 @@ async function main() {
   const config: Partial<TestConfig> = {
     targetUrl,
     maxQPSPercentage: 70,
-    stepDurationSeconds: 30,
-    rampUpStrategy: 'linear',
-    testDurationMinutes: 30,
+    stepDurationSeconds: 20,
+    rampUpStrategy: 'exponential',
+    testDurationMinutes: 10,
     walletPoolSize: 500,
     outputDir: './stress-test-results'
   };
