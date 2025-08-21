@@ -3,7 +3,7 @@ use crate::auth_utils::{
 	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
 };
 use crate::detailed_error::DetailedError;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::validation_helpers::{
@@ -65,10 +65,10 @@ pub fn register_submit_user_op_with_auth<
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
-						jsonrpsee::types::ErrorCode::ParseError.code(),
+						PARSE_ERROR_CODE,
 						"Failed to parse request parameters",
 					)
-					.with_suggestion(format!("Invalid JSON structure: {}", e)),
+					.with_reason(format!("Invalid JSON structure: {}", e)),
 				)
 			})?;
 
@@ -94,11 +94,11 @@ pub fn register_submit_user_op_with_auth<
 							error!("Failed to parse business_json: {:?}", e);
 							PumpxRpcError::from(
 								DetailedError::new(
-									jsonrpsee::types::ErrorCode::ParseError.code(),
+									PARSE_ERROR_CODE,
 									"Failed to parse business JSON",
 								)
 								.with_field("business_json")
-								.with_suggestion(format!("JSON parse error: {}", e)),
+								.with_reason(format!("JSON parse error: {}", e)),
 							)
 						})?;
 
@@ -109,12 +109,12 @@ pub fn register_submit_user_op_with_auth<
 							error!("Missing timestamp in business_json");
 							PumpxRpcError::from(
 								DetailedError::new(
-									crate::detailed_error::MISSING_REQUIRED_FIELD_CODE,
+									crate::error_code::MISSING_REQUIRED_FIELD_CODE,
 									"Missing required field in business JSON",
 								)
 								.with_field("timestamp")
 								.with_expected("Unix timestamp as number")
-								.with_suggestion("Business JSON must contain a 'timestamp' field"),
+								.with_reason("Business JSON must contain a 'timestamp' field"),
 							)
 						})?;
 
@@ -132,12 +132,12 @@ pub fn register_submit_user_op_with_auth<
 							error!("Failed to verify hyperliquid link: {:?}", e);
 							PumpxRpcError::from(
 								DetailedError::new(
-									crate::detailed_error::EXTERNAL_API_ERROR_CODE,
+									crate::error_code::EXTERNAL_API_ERROR_CODE,
 									"Failed to verify Hyperliquid account link",
 								)
 								.with_field("operation")
 								.with_received("verify_hyperliquid_link")
-								.with_suggestion("Could not verify agent and main address linkage"),
+								.with_reason("Could not verify agent and main address linkage"),
 							)
 						})?;
 
@@ -219,7 +219,7 @@ pub fn register_submit_user_op_with_auth<
 					error!("Invalid client auth type");
 					return Err(PumpxRpcError::from(
 						DetailedError::new(
-							jsonrpsee::types::ErrorCode::ParseError.code(),
+							PARSE_ERROR_CODE,
 							"Invalid client authentication type",
 						)
 						.with_field("client_auth")
@@ -233,11 +233,11 @@ pub fn register_submit_user_op_with_auth<
 				error!("Failed to convert UserId to Identity: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
-						crate::detailed_error::ACCOUNT_PARSE_ERROR_CODE,
+						crate::error_code::ACCOUNT_PARSE_ERROR_CODE,
 						"Invalid user identity format",
 					)
 					.with_field("user_id")
-					.with_suggestion(format!("Failed to parse user identity: {}", e)),
+					.with_reason(format!("Failed to parse user identity: {}", e)),
 				)
 			})?;
 
@@ -290,7 +290,7 @@ pub fn register_submit_user_op_with_auth<
 									)
 									.with_field("operation")
 									.with_received("pubkey_to_address conversion")
-									.with_suggestion(format!("Internal error converting public key to address: {:?}", e)),
+									.with_reason(format!("Internal error converting public key to address: {:?}", e)),
 								)
 							})?;
 						if derived_address.to_lowercase() != main_addr.to_lowercase() {

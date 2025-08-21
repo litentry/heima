@@ -1,6 +1,6 @@
 use crate::{
-	detailed_error::DetailedError, server::RpcContext, validation_helpers::validate_email,
-	Deserialize,
+	detailed_error::DetailedError, error_code::PARSE_ERROR_CODE, server::RpcContext,
+	validation_helpers::validate_email, Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{Hashable, Identity, Web2IdentityType};
@@ -8,10 +8,7 @@ use executor_storage::{Storage, VerificationCodeStorage};
 use heima_identity_verification::web2::email::{
 	generate_verification_code, send_verification_email,
 };
-use jsonrpsee::{
-	types::{ErrorCode, ErrorObject},
-	RpcModule,
-};
+use jsonrpsee::{types::ErrorObject, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::{debug, error};
 
@@ -44,12 +41,9 @@ pub fn register_request_email_verification_code<
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
 			let params = params.parse::<RequestEmailVerificationCodeParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(
-					ErrorCode::ParseError.code(),
-					"Failed to parse request parameters",
-				)
-				.with_suggestion(format!("Invalid JSON structure: {}", e))
-				.to_error_object()
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
+					.with_reason(format!("Invalid JSON structure: {}", e))
+					.to_error_object()
 			})?;
 
 			debug!(
@@ -69,11 +63,7 @@ pub fn register_request_email_verification_code<
 				.insert(&omni_account.hash(), verification_code.clone())
 				.map_err(|e| {
 					error!("Failed to store verification code: {:?}", e);
-					DetailedError::storage_error(
-						"insert verification code",
-						&format!("account: {:?}", omni_account.hash()),
-					)
-					.to_error_object()
+					DetailedError::storage_error("insert verification code").to_error_object()
 				})?;
 
 			// Get the appropriate mailer for this client
@@ -81,12 +71,12 @@ pub fn register_request_email_verification_code<
 				ctx.mailer_factory.get_mailer_for_client(&params.client_id).map_err(|e| {
 					error!("Failed to get mailer for client '{}': {}", params.client_id, e);
 					DetailedError::new(
-						crate::detailed_error::EXTERNAL_API_ERROR_CODE,
+						crate::error_code::EXTERNAL_API_ERROR_CODE,
 						"Failed to initialize email service",
 					)
 					.with_field("client_id")
 					.with_received(&params.client_id)
-					.with_suggestion(format!("Error: {}", e))
+					.with_reason(format!("Error: {}", e))
 					.to_error_object()
 				})?;
 
@@ -97,8 +87,7 @@ pub fn register_request_email_verification_code<
 						"Failed to send verification email for client '{}': {:?}",
 						params.client_id, e
 					);
-					DetailedError::email_service_error(&params.user_email, &params.client_id)
-						.to_error_object()
+					DetailedError::email_service_error(&params.user_email).to_error_object()
 				})?;
 
 			Ok::<(), ErrorObject>(())

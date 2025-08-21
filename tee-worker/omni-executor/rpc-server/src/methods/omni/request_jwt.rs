@@ -1,7 +1,11 @@
 use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
-	error_code::*, methods::omni::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
-	Deserialize, ErrorCode,
+	detailed_error::DetailedError,
+	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
+	methods::omni::PumpxRpcError,
+	server::RpcContext,
+	verify_auth::verify_auth,
+	Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
@@ -71,7 +75,10 @@ pub fn register_request_jwt<
 		.register_async_method("omni_requestJwt", |params, ctx, _ext| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields"),
+				)
 			})?;
 
 			debug!(
@@ -84,15 +91,20 @@ pub fn register_request_jwt<
 			if wrapper.task.require_auth() {
 				let Some(ref auth) = wrapper.auth else {
 					error!("Missing auth token");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						REQUIRE_AUTHENTICATION_CODE,
-					)));
+					return Err(PumpxRpcError::from(
+						DetailedError::new(REQUIRE_AUTHENTICATION_CODE, "Authentication required")
+							.with_suggestion("Please provide authentication credentials"),
+					));
 				};
 				verify_auth(ctx.clone(), auth).await.map_err(|e| {
 					error!("Failed to verify auth: {:?}, reason: {:?}", wrapper.auth, e);
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					))
+					PumpxRpcError::from(
+						DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Authentication verification failed",
+						)
+						.with_suggestion("Please check your authentication credentials"),
+					)
 				})?;
 			}
 
@@ -103,7 +115,10 @@ pub fn register_request_jwt<
 				},
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Unexpected response type from native task handler"),
+					))
 				},
 			})
 			.await

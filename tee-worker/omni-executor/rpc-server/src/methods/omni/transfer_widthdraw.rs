@@ -96,10 +96,10 @@ pub fn register_transfer_withdraw<
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from(DetailedError::new(
-					jsonrpsee::types::ErrorCode::ParseError.code(),
+					PARSE_ERROR_CODE,
 					"Failed to parse request parameters"
 				)
-				.with_suggestion(format!("Invalid JSON structure: {}", e)))
+				.with_reason(format!("Invalid JSON structure: {}", e)))
 			})?;
 
 			debug!("Received omni_transferWithdraw, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
