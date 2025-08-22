@@ -52,7 +52,6 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use native_task_handler::NativeTaskChannelType;
 	use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use parentchain_signer::key_store::SubstrateKeyStore;
@@ -64,7 +63,6 @@ mod test {
 	use std::path::Path;
 	use std::sync::Arc;
 	use tempfile::tempdir;
-	use tokio::sync::mpsc;
 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
@@ -72,7 +70,6 @@ mod test {
 		let tmp_dir = tempdir().unwrap();
 		let port = 2004;
 		let shielding_key = ShieldingKey::new();
-		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
 		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 
 		let mut rng = rand::thread_rng();
@@ -86,9 +83,9 @@ mod test {
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
 
-		let (solana_intent_executor, solana_mock_recv) = MockedIntentExecutor::new();
-		let (ethereum_intent_executor, ethereum_mock_recv) = MockedIntentExecutor::new();
-		let (cross_chain_intent_executor, cross_chain_mock_recv) = MockedIntentExecutor::new();
+		let (solana_intent_executor, _solana_mock_recv) = MockedIntentExecutor::new();
+		let (ethereum_intent_executor, _ethereum_mock_recv) = MockedIntentExecutor::new();
+		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 
 		let client_factory =
 			SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);

@@ -2,10 +2,13 @@ use super::common::handle_omni_native_task;
 use crate::auth_utils::{
 	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
 };
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+use crate::detailed_error::DetailedError;
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
+use crate::validation_helpers::{
+	validate_chain_id, validate_user_operations, validate_wallet_index,
+};
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
@@ -60,10 +63,21 @@ pub fn register_submit_user_op_with_auth<
 		.register_async_method("omni_submitUserOpWithAuth", |params, ctx, _ext| async move {
 			let params = params.parse::<SubmitUserOpWithAuthParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(
+						PARSE_ERROR_CODE,
+						"Failed to parse request parameters",
+					)
+					.with_reason(format!("Invalid JSON structure: {}", e)),
+				)
 			})?;
 
 			debug!("Received omni_submitUserOpWithAuth, params: {:?}", params);
+
+			// Validate common parameters
+			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(PumpxRpcError::from)?;
+			validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
+			validate_user_operations(&params.user_operations).map_err(PumpxRpcError::from)?;
 
 			let main_address = match &params.client_auth {
 				ClientAuth::WildmetaHl {
@@ -78,7 +92,14 @@ pub fn register_submit_user_op_with_auth<
 					let business_data: serde_json::Value = serde_json::from_str(business_json)
 						.map_err(|e| {
 							error!("Failed to parse business_json: {:?}", e);
-							PumpxRpcError::from_error_code(ErrorCode::ParseError)
+							PumpxRpcError::from(
+								DetailedError::new(
+									PARSE_ERROR_CODE,
+									"Failed to parse business JSON",
+								)
+								.with_field("business_json")
+								.with_reason(format!("JSON parse error: {}", e)),
+							)
 						})?;
 
 					let timestamp = business_data
@@ -86,7 +107,15 @@ pub fn register_submit_user_op_with_auth<
 						.and_then(|v| v.as_u64())
 						.ok_or_else(|| {
 							error!("Missing timestamp in business_json");
-							PumpxRpcError::from_error_code(ErrorCode::ParseError)
+							PumpxRpcError::from(
+								DetailedError::new(
+									crate::error_code::MISSING_REQUIRED_FIELD_CODE,
+									"Missing required field in business JSON",
+								)
+								.with_field("timestamp")
+								.with_expected("Unix timestamp as number")
+								.with_reason("Business JSON must contain a 'timestamp' field"),
+							)
 						})?;
 
 					verify_payload_timestamp_wrapper(
@@ -99,16 +128,30 @@ pub fn register_submit_user_op_with_auth<
 						.wildmeta_api
 						.verify_hyperliquid_link(agent_address, main_address, *login_type)
 						.await
-						.map_err(|_| {
-							error!("Failed to verify hyperliquid link");
-							PumpxRpcError::from_error_code(ErrorCode::InternalError)
+						.map_err(|e| {
+							error!("Failed to verify hyperliquid link: {:?}", e);
+							PumpxRpcError::from(
+								DetailedError::new(
+									crate::error_code::EXTERNAL_API_ERROR_CODE,
+									"Failed to verify Hyperliquid account link",
+								)
+								.with_field("operation")
+								.with_received("verify_hyperliquid_link")
+								.with_reason("Could not verify agent and main address linkage"),
+							)
 						})?;
 
 					if !linked {
 						error!("Agent and main addresses are not linked");
-						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-							AUTH_VERIFICATION_FAILED_CODE,
-						)));
+						return Err(PumpxRpcError::from(
+							DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"Agent and main addresses are not linked",
+							)
+							.with_field("agent_address")
+							.with_received(agent_address.to_string())
+							.with_suggestion("Ensure the agent address is properly linked to the main address"),
+						));
 					}
 
 					Some(main_address.clone())
@@ -120,9 +163,16 @@ pub fn register_submit_user_op_with_auth<
 							"WildmetaBackend requires wallet_index to be 1, got: {}",
 							params.wallet_index
 						);
-						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-							AUTH_VERIFICATION_FAILED_CODE,
-						)));
+						return Err(PumpxRpcError::from(
+							DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"Invalid wallet index for WildmetaBackend authentication",
+							)
+							.with_field("wallet_index")
+							.with_received(params.wallet_index.to_string())
+							.with_expected("1")
+							.with_suggestion("WildmetaBackend authentication requires wallet_index to be exactly 1"),
+						));
 					}
 
 					// Validate client_id must be "wildmeta" for WildmetaBackend
@@ -131,16 +181,25 @@ pub fn register_submit_user_op_with_auth<
 							"WildmetaBackend requires client_id to be 'wildmeta', got: {}",
 							params.client_id
 						);
-						return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-							AUTH_VERIFICATION_FAILED_CODE,
-						)));
+						return Err(PumpxRpcError::from(
+							DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"Invalid client ID for WildmetaBackend authentication",
+							)
+							.with_field("client_id")
+							.with_received(params.client_id.clone())
+							.with_expected("wildmeta")
+							.with_suggestion("WildmetaBackend authentication requires client_id to be 'wildmeta'"),
+						));
 					}
 
 					// Get entry point address for the chain
 					let entry_point_client =
 						ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 							error!("No entry point client found for chain_id: {}", params.chain_id);
-							PumpxRpcError::from_error_code(ErrorCode::InternalError)
+							PumpxRpcError::from(
+								DetailedError::chain_not_supported(params.chain_id),
+							)
 						})?;
 
 					let entry_point_address = entry_point_client.entry_point_address();
@@ -158,13 +217,28 @@ pub fn register_submit_user_op_with_auth<
 				},
 				_ => {
 					error!("Invalid client auth type");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ParseError));
+					return Err(PumpxRpcError::from(
+						DetailedError::new(
+							PARSE_ERROR_CODE,
+							"Invalid client authentication type",
+						)
+						.with_field("client_auth")
+						.with_expected("WildmetaHl or WildmetaBackend")
+						.with_suggestion("Use a supported authentication method"),
+					));
 				},
 			};
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
 				error!("Failed to convert UserId to Identity: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(
+						crate::error_code::ACCOUNT_PARSE_ERROR_CODE,
+						"Invalid user identity format",
+					)
+					.with_field("user_id")
+					.with_reason(format!("Failed to parse user identity: {}", e)),
+				)
 			})?;
 
 			// Only validate main_address if it's provided (not None)
@@ -174,8 +248,15 @@ pub fn register_submit_user_op_with_auth<
 						if let UserId::Evm(user_address) = &params.user_id {
 							if user_address.to_lowercase() != main_addr.to_lowercase() {
 								error!("Main address does not match user_id for EVM identity");
-								return Err(PumpxRpcError::from_error_code(
-									ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE),
+								return Err(PumpxRpcError::from(
+									DetailedError::new(
+										AUTH_VERIFICATION_FAILED_CODE,
+										"User address does not match authenticated main address for EVM identity",
+									)
+									.with_field("user_address")
+									.with_received(user_address.to_string())
+									.with_expected(main_addr.to_string())
+									.with_suggestion("For EVM identity, the user_id must match the authenticated main address"),
 								));
 							}
 						}
@@ -190,22 +271,40 @@ pub fn register_submit_user_op_with_auth<
 								*omni_account.as_ref(),
 							)
 							.await
-							.map_err(|_| {
-								error!("Failed to derive EVM address");
-								PumpxRpcError::from_error_code(ErrorCode::InternalError)
+							.map_err(|e| {
+								error!("Failed to derive EVM address: {:?}", e);
+								PumpxRpcError::from(
+									DetailedError::signer_service_error(
+										"request_wallet",
+										&format!("Failed to derive wallet: {:?}", e),
+									),
+								)
 							})?;
 						let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
-							.map_err(|_| {
-								error!("Failed to convert derived pubkey to address");
-								PumpxRpcError::from_error_code(ErrorCode::ServerError(
-									AUTH_VERIFICATION_FAILED_CODE,
-								))
+							.map_err(|e| {
+								error!("Failed to convert derived pubkey to address: {:?}", e);
+								PumpxRpcError::from(
+									DetailedError::new(
+										AUTH_VERIFICATION_FAILED_CODE,
+										"Failed to convert derived public key to address",
+									)
+									.with_field("operation")
+									.with_received("pubkey_to_address conversion")
+									.with_reason(format!("Internal error converting public key to address: {:?}", e)),
+								)
 							})?;
 						if derived_address.to_lowercase() != main_addr.to_lowercase() {
 							error!("Main address does not match derived EVM address");
-							return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-								AUTH_VERIFICATION_FAILED_CODE,
-							)));
+							return Err(PumpxRpcError::from(
+								DetailedError::new(
+									AUTH_VERIFICATION_FAILED_CODE,
+									"Derived address does not match authenticated address",
+								)
+								.with_field("derived_address")
+								.with_received(derived_address.to_string())
+								.with_expected(main_addr.to_string())
+								.with_suggestion("The derived EVM address must match the authenticated main address"),
+							));
 						}
 					},
 				}
@@ -213,10 +312,18 @@ pub fn register_submit_user_op_with_auth<
 
 			let account_id = identity.to_omni_account(&params.client_id);
 
-			for op in &params.user_operations {
+			// Validate each operation's sender address (already done by validate_user_operations)
+			// Additional validation for address format if needed
+			for (index, op) in params.user_operations.iter().enumerate() {
 				op.sender.parse::<Address>().map_err(|e| {
 					error!("Invalid sender address '{}': {}", op.sender, e);
-					PumpxRpcError::from_error_code(ErrorCode::ParseError)
+					PumpxRpcError::from(
+						DetailedError::invalid_address_format(
+							&format!("user_operations[{}].sender", index),
+							&op.sender,
+							"0x-prefixed 20-byte Ethereum address (40 hex chars)",
+						),
+					)
 				})?;
 			}
 
@@ -237,8 +344,8 @@ pub fn register_submit_user_op_with_auth<
 					Ok(SubmitUserOpWithAuthResponse { transaction_hash })
 				},
 				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					error!("Unexpected response type from native task handler");
+					Err(DetailedError::unexpected_response_type("SubmitUserOp", "Unknown").into())
 				},
 			})
 			.await
@@ -252,8 +359,14 @@ fn verify_wildmeta_signature_wrapper(
 	business_json: &str,
 	signature: &str,
 ) -> Result<(), PumpxRpcError> {
-	verify_wildmeta_signature(agent_address, business_json, signature)
-		.map_err(|err| PumpxRpcError::from_error_code(err.code().into()))
+	verify_wildmeta_signature(agent_address, business_json, signature).map_err(|err| {
+		PumpxRpcError::from(
+			DetailedError::new(err.code(), "Wildmeta signature verification failed")
+				.with_field("agent_address")
+				.with_received(agent_address.to_string())
+				.with_suggestion("Ensure the signature is valid and matches the agent address"),
+		)
+	})
 }
 
 fn verify_payload_timestamp_wrapper(
@@ -261,8 +374,14 @@ fn verify_payload_timestamp_wrapper(
 	main_address: &str,
 	new_timestamp: u64,
 ) -> Result<(), PumpxRpcError> {
-	verify_payload_timestamp(storage, main_address, new_timestamp)
-		.map_err(|err| PumpxRpcError::from_error_code(err.code().into()))
+	verify_payload_timestamp(storage, main_address, new_timestamp).map_err(|err| {
+		PumpxRpcError::from(
+			DetailedError::new(err.code(), "Timestamp verification failed")
+				.with_field("timestamp")
+				.with_received(new_timestamp.to_string())
+				.with_suggestion("Timestamp must be greater than the previously used timestamp"),
+		)
+	})
 }
 
 fn verify_wildmeta_backend_signature_wrapper(
@@ -279,7 +398,13 @@ fn verify_wildmeta_backend_signature_wrapper(
 		entry_point_address,
 		expected_pubkey,
 	)
-	.map_err(|err| PumpxRpcError::from_error_code(err.code().into()))
+	.map_err(|err| {
+		PumpxRpcError::from(
+			DetailedError::new(err.code(), "Backend signature verification failed")
+				.with_field("signature")
+				.with_suggestion("Ensure the backend signature is valid for the given operations"),
+		)
+	})
 }
 
 #[cfg(test)]
