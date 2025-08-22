@@ -39,7 +39,7 @@ contract EntryPointTest is Test {
         bytes32 aliceOa = TestUtils.prepare_evm_oa(alice, clientId);
 
         address factory = address(omniAccountFactory);
-        address sender = 0xB6D24951E90CaCC151Eb9216e516e66eF1BF05A4;
+        address sender = omniAccountFactory.getAddress(aliceOa, OwnerType.Evm, clientId, rootAddress);
 
         fundAccountOnEntryPoint(sender, entryPoint);
 

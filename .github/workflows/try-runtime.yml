@@ -14,7 +14,7 @@ jobs:
       runtime: ${{ steps.runtime.outputs.runtime }}
     name: Parse runtime matrix
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: runtime
         run: |
           TASKS=$(jq '[.[] | select(.uri != null)]' .github/runtime.json)
@@ -35,7 +35,7 @@ jobs:
         runtime: ${{ fromJSON(needs.runtime-matrix.outputs.runtime) }}
     name: ${{ matrix.runtime.name }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
     

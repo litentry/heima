@@ -528,7 +528,7 @@ pub async fn handle_native_task<
 
 			let Some(chain) = ChainType::from_pumpx_chain_id(pumpx_chain_id) else {
 				error!("Failed to map pumpx chain_id {}", pumpx_chain_id);
-				return Err(NativeTaskError::InternalError(None));
+				return Err(NativeTaskError::ChainNotSupported(pumpx_chain_id as u64));
 			};
 
 			let Ok(mut wallet) = ctx
@@ -545,7 +545,7 @@ pub async fn handle_native_task<
 				.await
 			else {
 				error!("Failed to export wallet from pumpx-signer");
-				return Err(NativeTaskError::InternalError(None));
+				return Err(NativeTaskError::SignatureServiceUnavailable);
 			};
 			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
 				error!("Failed to decrypt wallet");
@@ -590,7 +590,7 @@ pub async fn handle_native_task<
 		NativeTask::PumpxSignLimitOrder(omni_account, chain_id, wallet_index, unsigned_tx) => {
 			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
 				error!("Failed to map pumpx chain_id {}", chain_id);
-				return Err(NativeTaskError::InternalError(None));
+				return Err(NativeTaskError::ChainNotSupported(chain_id as u64));
 			};
 			let Ok(signed_txs) = ctx
 				.pumpx_signer_client
@@ -598,7 +598,7 @@ pub async fn handle_native_task<
 				.await
 			else {
 				error!("Failed to request signatures from pumpx-signer");
-				return Err(NativeTaskError::InternalError(None));
+				return Err(NativeTaskError::SignatureServiceUnavailable);
 			};
 			Ok(NativeTaskOk::PumpxSignLimitOrder(signed_txs))
 		},
@@ -699,7 +699,7 @@ pub async fn handle_native_task<
 				Some(client) => client,
 				None => {
 					error!("No EntryPoint client configured for chain_id: {}", chain_id);
-					return Err(NativeTaskError::UnsupportedChain);
+					return Err(NativeTaskError::ChainNotSupported(chain_id));
 				},
 			};
 
@@ -708,21 +708,21 @@ pub async fn handle_native_task<
 				Ok(user_op) => user_op,
 				Err(e) => {
 					error!("Failed to convert UserOperation: {}", e);
-					return Err(NativeTaskError::InternalError(None));
+					return Err(NativeTaskError::InvalidUserOperation(
+						"Invalid user operation format".to_string(),
+					));
 				},
 			};
 
 			// Perform gas estimation (wallet_index can be used for wallet-specific optimizations)
-			match estimate_user_op_gas(entry_point_client, packed_user_op, chain_id, wallet_index)
-				.await
-			{
+			match estimate_user_op_gas(entry_point_client, packed_user_op, chain_id).await {
 				Ok(gas_estimates) => {
 					info!("Gas estimation successful: {:?}", gas_estimates);
 					Ok(gas_estimates)
 				},
 				Err(e) => {
 					error!("Gas estimation failed: {}", e);
-					Err(NativeTaskError::InternalError(None))
+					Err(NativeTaskError::GasEstimationFailed)
 				},
 			}
 		},
@@ -738,7 +738,7 @@ pub async fn handle_native_task<
 				Some(client) => client,
 				None => {
 					error!("No EntryPoint client configured for chain_id: {}", chain_id);
-					return Err(NativeTaskError::UnsupportedChain);
+					return Err(NativeTaskError::ChainNotSupported(chain_id));
 				},
 			};
 
@@ -752,7 +752,10 @@ pub async fn handle_native_task<
 						Ok(user_op) => user_op,
 						Err(e) => {
 							error!("Failed to convert UserOperation {}: {}", index, e);
-							return Err(NativeTaskError::InternalError(None));
+							return Err(NativeTaskError::InvalidUserOperation(format!(
+								"Invalid user operation at index {}",
+								index
+							)));
 						},
 					};
 
@@ -803,9 +806,7 @@ pub async fn handle_native_task<
 						Ok(sig) => substrate_to_ethereum_signature(&sig).unwrap().to_vec(),
 						Err(_) => {
 							error!("Failed to sign user operation {}", index);
-							return Err(NativeTaskError::PumpxSignerError(
-								PumpxSignerError::RequestSignatureFailed,
-							));
+							return Err(NativeTaskError::SignatureServiceUnavailable);
 						},
 					};
 
@@ -863,7 +864,7 @@ pub async fn handle_native_task<
 				Err(e) => {
 					let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
 					error!("{}", err_msg.clone());
-					return Err(NativeTaskError::InternalError(Some(err_msg)));
+					return Err(NativeTaskError::InvalidUserOperation(err_msg));
 				},
 			}
 
@@ -1056,7 +1057,7 @@ pub fn substrate_to_ethereum_signature(substrate_sig: &[u8]) -> Result<[u8; 65],
 }
 
 /// Convert SerializablePackedUserOperation to aa_contracts_client::PackedUserOperation
-fn convert_to_packed_user_op(
+pub fn convert_to_packed_user_op(
 	user_op: SerializablePackedUserOperation,
 ) -> Result<aa_contracts_client::PackedUserOperation, String> {
 	use std::str::FromStr;
@@ -1114,13 +1115,7 @@ async fn estimate_user_op_gas(
 	entry_point_client: Arc<EntryPointClient<AlloyRpcProvider>>,
 	user_op: aa_contracts_client::PackedUserOperation,
 	chain_id: ChainId,
-	wallet_index: u32,
 ) -> Result<NativeTaskOk, String> {
-	info!(
-		"Starting gas estimation for UserOperation on chain {} (wallet_index: {})",
-		chain_id, wallet_index
-	);
-
 	// Step 1: Simulate validation to get base gas requirements
 	let validation_result = entry_point_client
 		.simulate_validation(user_op.clone())

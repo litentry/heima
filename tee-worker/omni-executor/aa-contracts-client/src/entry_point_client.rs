@@ -131,15 +131,18 @@ impl GasPriceConfig {
 		match chain_id {
 			1 => Self::mainnet(),    // Ethereum mainnet
 			137 => Self::l2(),       // Polygon
+			80001 => Self::l2(),     // Polygon Mumbai
 			42161 => Self::l2(),     // Arbitrum One
 			421614 => Self::l2(),    // Arbitrum Sepolia
 			10 => Self::l2(),        // Optimism
+			11155420 => Self::l2(),  // Optimism Sepolia
 			8453 => Self::l2(),      // Base
 			84532 => Self::l2(),     // Base Sepolia
 			56 => Self::bsc(),       // BSC
 			97 => Self::bsc(),       // BSC Testnet
 			999 => Self::hyperevm(), // HyperEVM
 			998 => Self::hyperevm(), // HyperEVM Testnet
+			1337 => Self::l2(),      // Local Anvil
 			// Ethereum testnets use mainnet config but with lower values
 			11155111 => Self {
 				// Sepolia
@@ -227,13 +230,19 @@ impl RetryConfig {
 	pub fn for_chain(chain_id: u64) -> Self {
 		match chain_id {
 			1 => Self::mainnet(),    // Ethereum mainnet
+			11155111 => Self::l2(),  // Sepolia
 			137 => Self::l2(),       // Polygon
+			80001 => Self::l2(),     // Polygon Mumbai
 			42161 => Self::l2(),     // Arbitrum
+			421614 => Self::l2(),    // Arbitrum Sepolia
 			10 => Self::l2(),        // Optimism
+			11155420 => Self::l2(),  // Optimism Sepolia
 			8453 => Self::l2(),      // Base
+			84532 => Self::l2(),     // Base Sepolia
 			56 => Self::bsc(),       // BSC
 			999 => Self::hyperevm(), // HyperEVM
 			998 => Self::hyperevm(), // HyperEVM Testnet
+			1337 => Self::l2(),      // Local Anvil
 			_ => Self::default(),
 		}
 	}
