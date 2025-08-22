@@ -1,9 +1,10 @@
 use super::common::handle_omni_native_task;
 use crate::{
-	error_code::*,
+	detailed_error::DetailedError,
+	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
 	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
-	Deserialize, ErrorCode,
+	Deserialize,
 };
 use ethers::types::Bytes;
 use executor_core::intent_executor::IntentExecutor;
@@ -71,21 +72,28 @@ pub fn register_export_wallet<
 		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				PumpxRpcError::from(DetailedError::new(
 					AUTH_VERIFICATION_FAILED_CODE,
-				))
+					"Authentication verification failed"
+				).with_suggestion("Please check your authentication credentials"))
 			})?;
 
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Parse error"
+				).with_reason("Invalid JSON format or missing required fields"))
 			})?;
 
 			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
 
 			let Ok(address) = Address32::from_hex(&user.omni_account) else {
 				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(DetailedError::new(
+					INTERNAL_ERROR_CODE,
+					"Internal error"
+				).with_reason("Failed to parse omni account from authentication token")));
 			};
 			let omni_account = AccountId::from(address);
 
@@ -95,17 +103,17 @@ pub fn register_export_wallet<
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
 				.map_err(|e| {
 					error!("Failed to decrypt shielded value: {:?}", e);
-					PumpxRpcError::from_code_and_message(
+					PumpxRpcError::from(DetailedError::new(
 						DECRYPT_REQUEST_FAILED_CODE,
-						"Shielded value decryption failed".into(),
-					)
+						"Shielded value decryption failed"
+					).with_field("key").with_reason("The provided RSA-encrypted AES key could not be decrypted").with_suggestion("Ensure the RSA public key matches the encryption key"))
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
 				error!("Failed to convert AesKey");
-				PumpxRpcError::from_code_and_message(
+				PumpxRpcError::from(DetailedError::new(
 					AES_KEY_CONVERT_FAILED_CODE,
-					"AesKey convert failed".into(),
-				)
+					"AesKey convert failed"
+				).with_field("key").with_reason("The decrypted key is not a valid 256-bit AES key").with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)"))
 			})?;
 
 			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
@@ -118,7 +126,10 @@ pub fn register_export_wallet<
 				},
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(DetailedError::new(
+						INTERNAL_ERROR_CODE,
+						"Internal error"
+					).with_reason("Unexpected response type from native task handler")))
 				},
 			})
 			.await

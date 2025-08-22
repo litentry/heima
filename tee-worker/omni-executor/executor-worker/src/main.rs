@@ -67,8 +67,7 @@ use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
-use tracing::info;
-use tracing::log::error;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
 mod cli;
@@ -522,6 +521,25 @@ async fn main() -> Result<(), ()> {
 			let wildmeta_timestamp_storage =
 				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
 
+			// Parse wildmeta backend ECDSA public key from hex
+			let wildmeta_backend_ecdsa_pubkey = {
+				use executor_primitives::utils::hex::decode_hex;
+				let pubkey_hex = &config_loader.wildmeta_backend_ecdsa_pubkey;
+				let pubkey_bytes = decode_hex(pubkey_hex).map_err(|e| {
+					error!("Failed to decode wildmeta backend ECDSA public key: {:?}", e);
+				})?;
+				if pubkey_bytes.len() != 33 {
+					error!(
+						"Invalid wildmeta backend ECDSA public key length: expected 33 bytes, got {}",
+						pubkey_bytes.len()
+					);
+					return Err(());
+				}
+				let mut pubkey_array = [0u8; 33];
+				pubkey_array.copy_from_slice(&pubkey_bytes);
+				pubkey_array
+			};
+
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
@@ -532,6 +550,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
+				wildmeta_backend_ecdsa_pubkey,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),

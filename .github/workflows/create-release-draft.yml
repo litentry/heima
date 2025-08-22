@@ -80,7 +80,7 @@ jobs:
     name: ${{ matrix.chain }}
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -118,7 +118,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -164,7 +164,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -233,7 +233,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -260,6 +260,7 @@ jobs:
         uses: docker/build-push-action@v6
         env:
           DOCKER_BUILD_RECORD_UPLOAD: false
+          OE_WILDMETA_BACKEND_ECDSA_PUBKEY: ${{ secrets.OE_WILDMETA_BACKEND_ECDSA_PUBKEY }}
         with:
           context: .
           file: tee-worker/omni-executor/Dockerfile
@@ -288,7 +289,7 @@ jobs:
     name: ${{ matrix.chain }}
     steps:
       - name: Checkout codes
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -356,7 +357,7 @@ jobs:
       (success('build-parachain-runtime') || success('parachain-ts-tests') || success('build-identity-worker') || success('build-omni-executor'))
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0

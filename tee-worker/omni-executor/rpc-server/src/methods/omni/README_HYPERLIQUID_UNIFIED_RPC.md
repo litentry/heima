@@ -44,11 +44,13 @@ curl -X POST http://localhost:2100 \
       "client_id": "wildmeta",
       "client_auth": {
         "type": "wildmeta_hl",
-        "agent_address": "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd",
-        "business_json": "{\"action\":\"approve_agent\",\"agent_address\":\"0x742d35Cc6634C0532925a3b844Bc9e7595f02A10\",\"timestamp\":1752573555}",
-        "main_address": "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e",
-        "signature": "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c",
-        "login_type": 0
+        "value": {
+          "agent_address": "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd",
+          "business_json": "{\"action\":\"approve_agent\",\"agent_address\":\"0x742d35Cc6634C0532925a3b844Bc9e7595f02A10\",\"timestamp\":1752573555}",
+          "main_address": "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e",
+          "signature": "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c",
+          "login_type": 0
+        }
       },
       "action_type": {
         "type": "approve_agent",

@@ -15,12 +15,15 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::common::handle_omni_native_task;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+use crate::detailed_error::DetailedError;
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
-use alloy::primitives::Address;
+use crate::validation_helpers::{
+	validate_chain_id, validate_omni_account_hex, validate_omni_account_length,
+	validate_user_operations, validate_wallet_index,
+};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
@@ -67,46 +70,42 @@ pub fn register_submit_user_op<
 		.register_async_method("omni_submitUserOp", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
+				PumpxRpcError::from(
+					DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication failed")
+						.with_suggestion("Please provide valid authentication credentials"),
+				)
 			})?;
 
 			let params = params.parse::<SubmitUserOpParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
+						.with_suggestion(format!("Invalid JSON structure: {}", e)),
+				)
 			})?;
 
 			debug!("Received omni_submitUserOp, params: {:?}", params);
 
-			let address_bytes =
-				hex::decode(user.omni_account.strip_prefix("0x").unwrap_or(&user.omni_account))
-					.map_err(|_| {
-						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from_error_code(ErrorCode::InternalError)
-					})?;
+			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(PumpxRpcError::from)?;
 
-			if address_bytes.len() != 32 {
-				error!(
-					"Invalid omni account length: expected 32 bytes, got {}",
-					address_bytes.len()
-				);
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			}
+			validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
 
-			// Validate sender addresses
-			for op in &params.user_operations {
-				op.sender.parse::<Address>().map_err(|e| {
-					error!("Invalid sender address '{}': {}", op.sender, e);
-					PumpxRpcError::from_error_code(ErrorCode::ParseError)
-				})?;
-			}
+			validate_user_operations(&params.user_operations).map_err(PumpxRpcError::from)?;
+
+			let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
+				.map_err(PumpxRpcError::from)?;
+
+			validate_omni_account_length(&address_bytes, "omni_account")
+				.map_err(PumpxRpcError::from)?;
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::SubmitUserOp(
-					AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
-						error!("Failed to decode AccountId from bytes");
-						PumpxRpcError::from_error_code(ErrorCode::InternalError)
+					AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
+						error!("Failed to decode AccountId from bytes: {:?}", e);
+						PumpxRpcError::from(DetailedError::account_parse_error(
+							&user.omni_account,
+							&format!("Failed to decode account: {:?}", e),
+						))
 					})?,
 					params.user_operations.clone(),
 					params.chain_id,
@@ -122,8 +121,8 @@ pub fn register_submit_user_op<
 					Ok(SubmitUserOpResponse { transaction_hash })
 				},
 				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					error!("Unexpected response type from native task handler");
+					Err(DetailedError::unexpected_response_type("SubmitUserOp", "Unknown").into())
 				},
 			})
 			.await

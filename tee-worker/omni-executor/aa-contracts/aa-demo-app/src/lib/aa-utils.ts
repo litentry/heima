@@ -797,6 +797,51 @@ export function buildTokenTransferUserOp(params: {
 }
 
 /**
+ * Build UserOperation for native ETH transfer through OmniAccount
+ */
+export function buildNativeTransferUserOp(params: {
+    omniAccountAddress: Address;
+    recipient: Address;
+    amount: bigint;
+    nonce?: bigint;
+    gasParams?: {
+        callGasLimit: bigint;
+        verificationGasLimit: bigint;
+        preVerificationGas: bigint;
+        maxFeePerGas: bigint;
+        maxPriorityFeePerGas: bigint;
+    };
+    paymaster?: {
+        address: Address;
+        validationGasLimit?: bigint;
+        postOpGasLimit?: bigint;
+        data?: `0x${string}`;
+    };
+    forGasEstimation?: boolean;
+}): UserOperation {
+    // Build the OmniAccount execute calldata for native ETH transfer
+    const executeCallData = encodeFunctionData({
+        abi: CONTRACTS.OmniAccountImplementation.abi,
+        functionName: 'execute',
+        args: [
+            params.recipient, // target: recipient address
+            params.amount, // value: amount of ETH to send
+            "0x" as `0x${string}` // data: empty bytes for native transfer
+        ]
+    });
+
+    // Create the UserOperation
+    return createUserOperation({
+        sender: params.omniAccountAddress,
+        nonce: params.nonce,
+        callData: executeCallData,
+        gasParams: params.gasParams,
+        paymaster: params.paymaster,
+        forGasEstimation: params.forGasEstimation,
+    });
+}
+
+/**
  * Estimate gas parameters for a UserOperation using the TEE Worker
  * Falls back to local estimation if the worker call fails
  */
