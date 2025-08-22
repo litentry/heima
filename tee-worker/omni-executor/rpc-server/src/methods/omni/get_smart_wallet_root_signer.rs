@@ -1,4 +1,9 @@
-use crate::{error_code::*, methods::omni::PumpxRpcError, server::RpcContext, ErrorCode};
+use crate::{
+	detailed_error::DetailedError,
+	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
+	methods::omni::PumpxRpcError,
+	server::RpcContext,
+};
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::FromHexPrefixed;
 use heima_primitives::Address32;
@@ -58,14 +63,20 @@ pub fn register_get_smart_wallet_root_signer<
 		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {
 			let params = params.parse::<GetSmartWalletRootSignerParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields"),
+				)
 			})?;
 
 			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 
 			let Ok(address) = Address32::from_hex(&params.omni_account) else {
 				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to parse omni account from authentication token"),
+				));
 			};
 
 			let pubkey = ctx
@@ -78,16 +89,26 @@ pub fn register_get_smart_wallet_root_signer<
 				.await
 				.map_err(|_| {
 					error!("Failed to request wallet from signer client");
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
-					))
+					PumpxRpcError::from(
+						DetailedError::new(
+							PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
+							"Failed to request wallet from signer service",
+						)
+						.with_reason("Signer service is temporarily unavailable")
+						.with_suggestion("Please try again later"),
+					)
 				})?;
 
 			let address = pubkey_to_address(params.chain_type.into(), &pubkey).map_err(|_| {
 				error!("Failed to convert pubkey to address");
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
-				))
+				PumpxRpcError::from(
+					DetailedError::new(
+						PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
+						"Failed to convert public key to address",
+					)
+					.with_reason("Public key conversion error")
+					.with_suggestion("Please check your chain type and try again"),
+				)
 			})?;
 
 			Ok::<String, _>(address)

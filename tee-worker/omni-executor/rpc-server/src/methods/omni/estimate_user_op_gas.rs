@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::handle_omni_native_task;
-use crate::methods::omni::PumpxRpcError;
+use super::common::{handle_omni_native_task, PumpxRpcError};
+use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
-use alloy::primitives::Address;
+use crate::validation_helpers::{
+	validate_ethereum_address, validate_omni_account_hex, validate_omni_account_length,
+};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
@@ -29,8 +30,6 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
-
-const OMNI_ACCOUNT_BYTES_LENGTH: usize = 32;
 
 #[derive(Debug, Deserialize)]
 pub struct EstimateUserOpGasParams {
@@ -74,16 +73,30 @@ pub fn register_estimate_user_op_gas<
 		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {
 			let params = params.parse::<EstimateUserOpGasParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(
+						crate::error_code::MISSING_REQUIRED_FIELD_CODE,
+						"Failed to parse request parameters",
+					)
+					.with_reason(format!("Parse error: {}", e)),
+				)
 			})?;
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
-			let account_id =
-				decode_account_id(&params.omni_account).map_err(PumpxRpcError::from_error_code)?;
+			let account_bytes = validate_omni_account_hex(&params.omni_account, "omni_account")
+				.map_err(PumpxRpcError::from)?;
+			validate_omni_account_length(&account_bytes, "omni_account")
+				.map_err(PumpxRpcError::from)?;
+			let account_id = AccountId::decode(&mut &account_bytes[..]).map_err(|e| {
+				PumpxRpcError::from(DetailedError::account_parse_error(
+					&params.omni_account,
+					&e.to_string(),
+				))
+			})?;
 
-			validate_sender_address(&params.user_operation.sender)
-				.map_err(PumpxRpcError::from_error_code)?;
+			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
+				.map_err(PumpxRpcError::from)?;
 
 			let wrapper = NativeTaskWrapper::new(
 				NativeTask::EstimateUserOpGas(
@@ -113,7 +126,10 @@ pub fn register_estimate_user_op_gas<
 				}),
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(DetailedError::unexpected_response_type(
+						"EstimateUserOpGas response",
+						"Unknown response type",
+					)))
 				},
 			})
 			.await
@@ -121,145 +137,9 @@ pub fn register_estimate_user_op_gas<
 		.expect("Failed to register omni_estimateUserOpGas method");
 }
 
-fn decode_account_id(hex_str: &str) -> Result<AccountId, ErrorCode> {
-	let bytes = hex::decode(hex_str.strip_prefix("0x").unwrap_or(hex_str)).map_err(|e| {
-		error!("Failed to decode omni account hex string: {}", e);
-		ErrorCode::ParseError
-	})?;
-
-	if bytes.len() != OMNI_ACCOUNT_BYTES_LENGTH {
-		error!(
-			"Invalid omni account length: expected {} bytes, got {}",
-			OMNI_ACCOUNT_BYTES_LENGTH,
-			bytes.len()
-		);
-		return Err(ErrorCode::ParseError);
-	}
-
-	AccountId::decode(&mut &bytes[..]).map_err(|e| {
-		error!("Failed to decode AccountId from bytes: {}", e);
-		ErrorCode::ParseError
-	})
-}
-
-fn validate_sender_address(sender: &str) -> Result<Address, ErrorCode> {
-	sender.parse::<Address>().map_err(|e| {
-		error!("Invalid sender address '{}': {}", sender, e);
-		ErrorCode::ParseError
-	})
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
-
-	#[test]
-	fn test_decode_account_id_valid() {
-		// Valid 32-byte hex string
-		let hex_str = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let result = decode_account_id(hex_str);
-		assert!(result.is_ok(), "Should decode valid 32-byte hex");
-
-		let _account_id = result.unwrap();
-		// AccountId is decoded successfully - internal structure is opaque
-	}
-
-	#[test]
-	fn test_decode_account_id_with_0x_prefix() {
-		// Test with 0x prefix
-		let with_prefix = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let without_prefix = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-
-		let result1 = decode_account_id(with_prefix);
-		let result2 = decode_account_id(without_prefix);
-
-		assert!(result1.is_ok(), "Should handle 0x prefix");
-		assert!(result2.is_ok(), "Should handle without 0x prefix");
-		assert_eq!(result1.unwrap(), result2.unwrap(), "Results should be identical");
-	}
-
-	#[test]
-	fn test_decode_account_id_invalid_hex() {
-		// Invalid hex characters
-		let invalid_hex = "0xgggggggg90abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let result = decode_account_id(invalid_hex);
-
-		assert!(result.is_err(), "Should reject invalid hex");
-		assert_eq!(result.unwrap_err(), ErrorCode::ParseError);
-	}
-
-	#[test]
-	fn test_decode_account_id_wrong_length() {
-		// Too short (31 bytes)
-		let too_short = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd";
-		let result_short = decode_account_id(too_short);
-		assert!(result_short.is_err(), "Should reject too short");
-
-		// Too long (33 bytes)
-		let too_long = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef00";
-		let result_long = decode_account_id(too_long);
-		assert!(result_long.is_err(), "Should reject too long");
-
-		// Empty
-		let empty = "";
-		let result_empty = decode_account_id(empty);
-		assert!(result_empty.is_err(), "Should reject empty string");
-	}
-
-	#[test]
-	fn test_validate_sender_address_valid() {
-		// Valid Ethereum addresses
-		let addresses = vec![
-			"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9",
-			"0x0000000000000000000000000000000000000000",
-			"0xffffffffffffffffffffffffffffffffffffffff",
-			"0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae",
-		];
-
-		for addr in addresses {
-			let result = validate_sender_address(addr);
-			assert!(result.is_ok(), "Should accept valid address: {}", addr);
-		}
-	}
-
-	#[test]
-	fn test_validate_sender_address_checksummed() {
-		// Checksummed addresses should work
-		let checksummed = "0x5aAeb6053f3E94C9b9A09f33669435E7Ef1BeAed";
-		let result = validate_sender_address(checksummed);
-		assert!(result.is_ok(), "Should accept checksummed address");
-	}
-
-	#[test]
-	fn test_validate_sender_address_invalid_format() {
-		// Invalid formats
-		let invalid_addresses = vec![
-			"not_an_address",
-			"0x",
-			"0xZZZZ35Cc6634C0532925a3b844Bc9e7595f0bEb9", // Invalid hex
-			// Note: Address without 0x prefix is actually valid in alloy
-			"",
-		];
-
-		for addr in invalid_addresses {
-			let result = validate_sender_address(addr);
-			assert!(result.is_err(), "Should reject invalid address: {}", addr);
-			assert_eq!(result.unwrap_err(), ErrorCode::ParseError);
-		}
-	}
-
-	#[test]
-	fn test_validate_sender_address_wrong_length() {
-		// Wrong length addresses
-		let too_short = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bE"; // 39 chars
-		let too_long = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb900"; // 43 chars
-
-		let result_short = validate_sender_address(too_short);
-		assert!(result_short.is_err(), "Should reject too short address");
-
-		let result_long = validate_sender_address(too_long);
-		assert!(result_long.is_err(), "Should reject too long address");
-	}
 
 	#[test]
 	fn test_parse_estimate_params_valid() {
