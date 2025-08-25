@@ -9,6 +9,8 @@ pub mod create_transfer_unsigned_tx;
 pub mod cross_fail;
 pub mod get_account_user_id;
 pub mod get_gas_info;
+pub mod get_pair_info_by_token;
+pub mod get_token_info;
 pub mod get_user_trade_info;
 pub mod post_heima_login;
 pub mod send_order_tx;

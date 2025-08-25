@@ -33,11 +33,14 @@ use methods::create_transfer_tx::{
 };
 
 use methods::get_gas_info::{get_gas_info_impl, GetGasInfoResponse};
-
-use methods::common::OrderInfoResponse;
-use methods::get_account_user_id::{get_account_user_id_impl, GetAccountUserIdResponse};
+use methods::get_pair_info_by_token::{
+	get_pair_info_by_token_impl, GetPairInfoByTokenRequestBody, GetPairInfoByTokenRequestResponse,
+};
+use methods::get_token_info::{get_token_info_impl, GetTokenInfoBody, GetTokenInfoResponse};
 
 use crate::methods::post_heima_login::PostHeimaLoginBody;
+use methods::common::OrderInfoResponse;
+use methods::get_account_user_id::{get_account_user_id_impl, GetAccountUserIdResponse};
 
 #[async_trait]
 pub trait PumpxApi: Send + Sync {
@@ -131,6 +134,18 @@ pub trait PumpxApi: Send + Sync {
 		access_token: &str,
 		chain_id: u32,
 	) -> Result<GetGasInfoResponse, Error>;
+
+	async fn get_pair_info_by_token(
+		&self,
+		access_token: &str,
+		body: GetPairInfoByTokenRequestBody,
+	) -> Result<GetPairInfoByTokenRequestResponse, Error>;
+
+	async fn get_token_info(
+		&self,
+		access_token: &str,
+		body: GetTokenInfoBody,
+	) -> Result<GetTokenInfoResponse, Error>;
 
 	async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error>;
 
@@ -283,6 +298,22 @@ impl PumpxApi for PumpxApiClient {
 		get_gas_info_impl(self, access_token, chain_id).await
 	}
 
+	async fn get_pair_info_by_token(
+		&self,
+		access_token: &str,
+		body: GetPairInfoByTokenRequestBody,
+	) -> Result<GetPairInfoByTokenRequestResponse, Error> {
+		get_pair_info_by_token_impl(self, access_token, body).await
+	}
+
+	async fn get_token_info(
+		&self,
+		access_token: &str,
+		body: GetTokenInfoBody,
+	) -> Result<GetTokenInfoResponse, Error> {
+		get_token_info_impl(self, access_token, body).await
+	}
+
 	async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error> {
 		get_account_user_id_impl(self, email).await
 	}
@@ -315,6 +346,10 @@ pub mod mocks {
 	use crate::pumpx_api::CrossFailBody;
 	use crate::pumpx_api::GetAccountUserIdResponse;
 	use crate::pumpx_api::GetGasInfoResponse;
+	use crate::pumpx_api::GetPairInfoByTokenRequestBody;
+	use crate::pumpx_api::GetPairInfoByTokenRequestResponse;
+	use crate::pumpx_api::GetTokenInfoBody;
+	use crate::pumpx_api::GetTokenInfoResponse;
 	use crate::pumpx_api::OrderInfoResponse;
 	use crate::pumpx_api::SendOrderTxBody;
 	use crate::pumpx_api::SendOrderTxResponse;
@@ -424,6 +459,18 @@ pub mod mocks {
 				access_token: &str,
 				chain_id: u32,
 			) -> Result<GetGasInfoResponse, Error>;
+
+			async fn get_pair_info_by_token(
+				&self,
+				access_token: &str,
+				body: GetPairInfoByTokenRequestBody
+			) -> Result<GetPairInfoByTokenRequestResponse, Error>;
+
+			async fn get_token_info(
+				&self,
+				access_token: &str,
+				body: GetTokenInfoBody
+			) -> Result<GetTokenInfoResponse, Error>;
 
 			async fn get_account_user_id(&self, email: String) -> Result<GetAccountUserIdResponse, Error>;
 
