@@ -9,6 +9,7 @@ alloy = { workspace = true }
 async-trait = { workspace = true }
 base58 = { workspace = true }
 chrono = { workspace = true }
+email_address = { workspace = true }
 ethers = { workspace = true }
 hex = { workspace = true }
 http = { workspace = true }

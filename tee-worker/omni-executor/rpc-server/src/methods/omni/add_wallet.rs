@@ -1,9 +1,9 @@
 use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
+	detailed_error::DetailedError,
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
-	ErrorCode,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
@@ -44,16 +44,23 @@ pub fn register_add_wallet<
 		.register_async_method("omni_addWallet", |_params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
+				PumpxRpcError::from(
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_suggestion("Please check your authentication credentials"),
+				)
 			})?;
 
 			debug!("Received omni_addWallet");
 
 			let Ok(address) = Address32::from_hex(&user.omni_account) else {
 				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to parse omni account from authentication token"),
+				));
 			};
 
 			let wrapper = NativeTaskWrapper::new(
@@ -70,7 +77,10 @@ pub fn register_add_wallet<
 				},
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Unexpected response type from native task handler"),
+					))
 				},
 			})
 			.await
