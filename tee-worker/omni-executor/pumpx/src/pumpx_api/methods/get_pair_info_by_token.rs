@@ -56,18 +56,18 @@ pub async fn get_pair_info_by_token_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			error!("Failed to send create_market_order_tx request: {:?}", e);
+			error!("Failed to send get_pair_info_by_token request: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		error!("create_market_order_tx failed with status: {}, error: {:?}", status, e);
+		error!("get_pair_info_by_token failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		error!("Failed to parse create_market_order_tx response: {:?}", e);
+		error!("Failed to parse get_pair_info_by_token response: {:?}", e);
 		e
 	})
 }

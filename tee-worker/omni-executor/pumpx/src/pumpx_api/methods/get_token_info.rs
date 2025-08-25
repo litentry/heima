@@ -50,7 +50,7 @@ pub async fn get_token_info_impl(
 	access_token: &str,
 	body: GetTokenInfoBody,
 ) -> Result<GetTokenInfoResponse, Error> {
-	let endpoint = client.base_url.join("v3/trade/create_market_order_tx").unwrap();
+	let endpoint = client.base_url.join("v3/trade/get_token_info").unwrap();
 	let response = client
 		.http_client
 		.post(endpoint)
@@ -59,18 +59,18 @@ pub async fn get_token_info_impl(
 		.send()
 		.await
 		.map_err(|e| {
-			error!("Failed to send create_market_order_tx request: {:?}", e);
+			error!("Failed to send get_token_info request: {:?}", e);
 			e
 		})?;
 
 	let status = response.status();
 	let response = response.error_for_status().map_err(|e| {
-		error!("create_market_order_tx failed with status: {}, error: {:?}", status, e);
+		error!("get_token_info failed with status: {}, error: {:?}", status, e);
 		e
 	})?;
 
 	response.json().await.map_err(|e| {
-		error!("Failed to parse create_market_order_tx response: {:?}", e);
+		error!("Failed to parse get_token_info response: {:?}", e);
 		e
 	})
 }
