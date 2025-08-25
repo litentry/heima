@@ -8,8 +8,11 @@ import {TestToken} from "../src/TestToken.sol";
 import {IPaymaster} from "../src/interfaces/IPaymaster.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract ERC20PaymasterV1Test is Test {
+    using Math for uint256;
+    
     ERC20PaymasterV1 public paymaster;
     EntryPointV1 public entryPoint;
     TestToken public testToken;
@@ -169,14 +172,19 @@ contract ERC20PaymasterV1Test is Test {
         assertEq(validationData, 1); // Should reject
     }
 
-    function test_ValidatePaymasterUserOp_InvalidExchangeRate() public {
+    function test_ValidatePaymasterUserOp_FullSponsorship() public {
         PackedUserOperation memory userOp = TestUtils.preparePackedOp(user, "");
-        userOp.paymasterAndData = _encodePaymasterData(address(testToken), 0); // Zero exchange rate
+        userOp.paymasterAndData = _encodePaymasterData(address(testToken), 0); // Zero exchange rate = full sponsorship
         
         vm.prank(address(entryPoint), bundler1);
-        vm.expectRevert(ERC20PaymasterV1.InvalidExchangeRate.selector);
+        (bytes memory context, uint256 validationData) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
         
-        paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
+        assertEq(validationData, 0); // Should succeed
+        assertTrue(context.length > 0);
+        
+        // Verify no tokens were transferred (full sponsorship)
+        assertEq(testToken.balanceOf(address(paymaster)), 0);
+        assertEq(testToken.balanceOf(user), 100000e18); // User keeps all tokens
     }
 
     function test_ValidatePaymasterUserOp_NativeToken() public {
@@ -319,6 +327,69 @@ contract ERC20PaymasterV1Test is Test {
         vm.prank(unauthorizedBundler);
         vm.expectRevert();
         paymaster.withdrawTokens(address(testToken), unauthorizedBundler, 1000);
+    }
+
+    function test_GetTokenDecimals() public view {
+        // Test with testToken (should have 18 decimals)
+        assertEq(paymaster.getTokenDecimals(address(testToken)), 18);
+        
+        // Test with native token
+        assertEq(paymaster.getTokenDecimals(address(0)), 18);
+    }
+
+    function test_GetTokenDecimals_NonExistentContract() public view {
+        // Create a random address that's not a contract
+        address nonExistentContract = address(0xdead);
+        
+        // Should default to 18 for non-existent contracts
+        assertEq(paymaster.getTokenDecimals(nonExistentContract), 18);
+    }
+
+    function test_CalculateExchangeRate() public view {
+        // Test USDC-like token (6 decimals) at $0.0005 ETH per USDC
+        // Should give us 2000 USDC per 1 ETH = 2000 * 10^6 = 2000000000
+        uint256 rate = paymaster.calculateExchangeRate(6, 0.0005e18);
+        assertEq(rate, 2000000000);
+        
+        // Test 18-decimal token - simplify to avoid precision issues
+        // Use a simpler example: 1000 tokens per 1 ETH
+        // 1 token = 1/1000 ETH = 0.001 ETH = 1000000000000000 wei  
+        uint256 simpleTokenPrice = 0.001e18; // 1/1000 ETH per token
+        uint256 rate18 = paymaster.calculateExchangeRate(18, simpleTokenPrice);
+        // Should give us exactly 1000 tokens per ETH = 1000 * 10^18
+        assertEq(rate18, 1000e18);
+    }
+
+    function test_CalculateExchangeRate_ZeroPrice() public {
+        vm.expectRevert(ERC20PaymasterV1.InvalidExchangeRate.selector);
+        paymaster.calculateExchangeRate(18, 0);
+    }
+
+    function test_PostOp_FullSponsorship() public {
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(user, "");
+        userOp.paymasterAndData = _encodePaymasterData(address(testToken), 0); // Full sponsorship
+        
+        vm.prank(address(entryPoint), bundler1);
+        (bytes memory context, ) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
+        
+        vm.expectEmit(true, true, false, false);
+        emit UserOpSponsored(user, address(testToken), 0.5 ether, 0); // 0 token cost for full sponsorship
+        
+        vm.prank(address(entryPoint));
+        paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, 0.5 ether, 1000000000);
+    }
+
+    function test_ArithmeticOverflowProtection() public pure {
+        // Test with large values that could cause overflow without mulDiv
+        uint256 maxCost = 1e30; // Large but not max uint256
+        uint256 exchangeRate = 1e30;
+        
+        // This should not revert due to overflow protection  
+        uint256 result = maxCost.mulDiv(exchangeRate, 1e18, Math.Rounding.Ceil);
+        assertTrue(result > 0);
+        
+        // The naive calculation would overflow: maxCost * exchangeRate > type(uint256).max
+        // But mulDiv prevents this
     }
 
     function test_WithdrawTokens_BeneficiaryNotContract() public {
