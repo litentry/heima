@@ -1,28 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import { SessionSummary } from '../../../types';
 
-interface SessionSummary {
-  sessionId: string;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  status: string;
-  config: any;
-  maxSustainableQPS: number;
-  recommendedMaxQPS: number;
-  overallStats: {
-    totalRequests: number;
-    totalSuccessful: number;
-    totalFailed: number;
-    overallSuccessRate: number;
-    avgResponseTime: number;
-    maxResponseTime: number;
-    minResponseTime: number;
-  };
-}
 
-const RESULT_PATH = '/Users/verin/Repo/Heima/heima/tee-worker/omni-executor/ts-tests/stress-tests/stress-test-results';
+const RESULT_PATH = process.env.RESULT_PATH || './stress-test-results';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

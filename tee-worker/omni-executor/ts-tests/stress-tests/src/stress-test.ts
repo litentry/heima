@@ -9,6 +9,7 @@ import { sha256 } from 'js-sha256';
 import { DataStorage } from './storage/advanced-data-storage';
 import { Logger } from './utils/advanced-logger';
 import { PerformanceAnalyzer } from './analysis/advanced-performance-analyzer';
+import { RequestResult, QPSStepResult, TestSessionResult } from './types';
 
 // Test configuration interface
 interface TestConfig {
@@ -32,71 +33,6 @@ interface TestEndpoint {
   enabled: boolean;
 }
 
-// Request result interface
-interface RequestResult {
-  endpoint: string;
-  success: boolean;
-  responseTime: number;
-  requestSize: number;
-  responseSize: number;
-  timestamp: number;
-  qps: number;
-  error?: string;
-  statusCode?: number;
-  requestData?: any;
-  responseData?: any;
-}
-
-// QPS step result
-interface QPSStepResult {
-  qps: number;
-  actualQPS: number;
-  duration: number;
-  totalRequests: number;
-  successfulRequests: number;
-  failedRequests: number;
-  endpointStats: Record<string, {
-    total: number;
-    successful: number;
-    failed: number;
-    avgResponseTime: number;
-    minResponseTime: number;
-    maxResponseTime: number;
-    errorRate: number;
-    throughput: number;
-  }>;
-  responseMetrics: {
-    avgLatency: number;
-    minLatency: number;
-    maxLatency: number;
-    p50Latency: number;
-    p95Latency: number;
-    p99Latency: number;
-  };
-  errorDetails: Record<string, number>;
-  shouldStop: boolean;
-  stopReason?: string;
-}
-
-// Test session result
-interface TestSessionResult {
-  sessionId: string;
-  startTime: number;
-  endTime: number;
-  config: TestConfig;
-  steps: QPSStepResult[];
-  maxSustainableQPS: number;
-  recommendedMaxQPS: number;
-  overallStats: {
-    totalRequests: number;
-    totalSuccessful: number;
-    totalFailed: number;
-    overallSuccessRate: number;
-    avgResponseTime: number;
-    maxResponseTime: number;
-    minResponseTime: number;
-  };
-}
 
 const ClientId = {
   Wildmeta: 'wildmeta',
@@ -791,4 +727,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
 
-export { AdvancedStressTest, TestConfig, TestEndpoint, RequestResult, QPSStepResult, TestSessionResult };
+export { AdvancedStressTest, TestConfig, TestEndpoint };

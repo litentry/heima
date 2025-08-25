@@ -22,15 +22,19 @@ export interface StressTestConfig {
 
 export interface RequestResult {
   timestamp: number;
-  requestId: string;
-  method: string;
-  url: string;
-  statusCode: number;
+  requestId?: string;
+  method?: string;
+  url?: string;
+  endpoint?: string;
+  statusCode?: number;
   responseTime: number; // milliseconds
   success: boolean;
   error?: string;
   requestSize: number; // bytes
   responseSize: number; // bytes
+  qps?: number;
+  requestData?: any;
+  responseData?: any;
 }
 
 export interface SystemMetrics {
@@ -191,5 +195,97 @@ export interface PerformanceThresholds {
     cpu: number; // percentage
     memory: number; // percentage
     disk: number; // percentage
+  };
+}
+
+// QPS step result for stress testing
+export interface QPSStepResult {
+  qps: number;
+  actualQPS: number;
+  duration: number;
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  endpointStats: Record<string, {
+    total: number;
+    successful: number;
+    failed: number;
+    avgResponseTime: number;
+    minResponseTime: number;
+    maxResponseTime: number;
+    errorRate: number;
+    throughput: number;
+  }>;
+  responseMetrics: {
+    avgLatency: number;
+    minLatency: number;
+    maxLatency: number;
+    p50Latency: number;
+    p95Latency: number;
+    p99Latency: number;
+  };
+  errorDetails: Record<string, number>;
+  shouldStop: boolean;
+  stopReason?: string;
+}
+
+// Test session result for comprehensive testing
+export interface TestSessionResult {
+  sessionId: string;
+  startTime: number;
+  endTime: number;
+  config: any;
+  steps: QPSStepResult[];
+  maxSustainableQPS: number;
+  recommendedMaxQPS: number;
+  overallStats: {
+    totalRequests: number;
+    totalSuccessful: number;
+    totalFailed: number;
+    overallSuccessRate: number;
+    avgResponseTime: number;
+    maxResponseTime: number;
+    minResponseTime: number;
+  };
+}
+
+// Detailed session result for API responses
+export interface DetailedSessionResult {
+  sessionId: string;
+  startTime: number;
+  endTime: number;
+  config: any;
+  steps: QPSStepResult[];
+  maxSustainableQPS: number;
+  recommendedMaxQPS: number;
+  overallStats: {
+    totalRequests: number;
+    totalSuccessful: number;
+    totalFailed: number;
+    overallSuccessRate: number;
+    avgResponseTime: number;
+    maxResponseTime: number;
+    minResponseTime: number;
+  };
+}
+
+// Session summary for dashboard listing
+export interface SessionSummary {
+  sessionId: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  status: string;
+  config: any;
+  maxSustainableQPS: number;
+  recommendedMaxQPS: number;
+  overallStats: {
+    totalRequests: number;
+    totalSuccessful: number;
+    totalFailed: number;
+    overallSuccessRate: number;
+    avgResponseTime: number;
+    maxResponseTime: number;
+    minResponseTime: number;
   };
 }

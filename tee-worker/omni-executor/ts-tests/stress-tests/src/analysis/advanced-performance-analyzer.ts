@@ -1,68 +1,6 @@
 import { performance } from 'perf_hooks';
+import { RequestResult, QPSStepResult, TestSessionResult } from '../types';
 
-// Import types from main test file
-interface RequestResult {
-  endpoint: string;
-  success: boolean;
-  responseTime: number;
-  requestSize: number;
-  responseSize: number;
-  timestamp: number;
-  qps: number;
-  error?: string;
-  statusCode?: number;
-  requestData?: any;
-  responseData?: any;
-}
-
-interface QPSStepResult {
-  qps: number;
-  actualQPS: number;
-  duration: number;
-  totalRequests: number;
-  successfulRequests: number;
-  failedRequests: number;
-  endpointStats: Record<string, {
-    total: number;
-    successful: number;
-    failed: number;
-    avgResponseTime: number;
-    minResponseTime: number;
-    maxResponseTime: number;
-    errorRate: number;
-    throughput: number;
-  }>;
-  responseMetrics: {
-    avgLatency: number;
-    minLatency: number;
-    maxLatency: number;
-    p50Latency: number;
-    p95Latency: number;
-    p99Latency: number;
-  };
-  errorDetails: Record<string, number>;
-  shouldStop: boolean;
-  stopReason?: string;
-}
-
-interface TestSessionResult {
-  sessionId: string;
-  startTime: number;
-  endTime: number;
-  config: any;
-  steps: QPSStepResult[];
-  maxSustainableQPS: number;
-  recommendedMaxQPS: number;
-  overallStats: {
-    totalRequests: number;
-    totalSuccessful: number;
-    totalFailed: number;
-    overallSuccessRate: number;
-    avgResponseTime: number;
-    maxResponseTime: number;
-    minResponseTime: number;
-  };
-}
 
 // Analysis result interfaces
 interface ThroughputAnalysis {

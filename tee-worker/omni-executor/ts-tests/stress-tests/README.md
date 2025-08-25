@@ -10,24 +10,38 @@ npm install
 ```
 
 ### 2. Configure Environment
+
+#### Create Environment Configuration
+```bash
+# Copy example configuration file
+cp .env.example .env
+
+# Edit configuration file
+vim .env
+```
+
+#### Environment Variables
+```bash
+# Omni Executor RPC Configuration
+OMNI_RPC_URL=https://staging-dex-worker.heima.network
+
+# Stress test results storage path (relative path)
+RESULT_PATH=./stress-test-results
+```
+
+#### Alternative Configuration Methods
 ```bash
 # Option 1: Environment variable
 export OMNI_RPC_URL="http://your-target-server:2100/"
 
 # Option 2: Command line parameter
 OMNI_RPC_URL="http://your-target-server:2100/" npm run stress
-
-# Option 3: .env file
-echo 'OMNI_RPC_URL="http://your-target-server:2100/"' > .env
 ```
 
 ### 3. Run Tests
 ```bash
 # Run stress test with dashboard
 npm run stress
-
-# Simple API test
-npx tsx src/simple-stress-test.ts
 ```
 
 ## 📊 Testing Model
@@ -83,10 +97,11 @@ Open browser and visit: `http://localhost:3000`
 - **Data Analysis**: Detailed performance metrics and recommendations
 
 ### 🚨 Important Notes
-1. **Data Dependency**: Dashboard reads data from `stress-test-results/` directory
+1. **Data Dependency**: Dashboard reads data from the directory specified by `RESULT_PATH` environment variable (default: `./stress-test-results/`)
 2. **Port Availability**: Ensure port 3000 is not occupied
 3. **Package Manager**: Use pnpm instead of npm to avoid version conflicts
 4. **Data Refresh**: Page automatically refreshes data every 30 seconds, or manually refresh browser
+5. **Environment Configuration**: Ensure `.env` file is properly configured with necessary environment variables
 
 ### 🔧 Development Mode
 ```bash
@@ -107,12 +122,54 @@ Max Sustainable QPS: 15
 Recommended Production QPS (70%): 10
 ```
 
+## 🏗️ Architecture
+
+### Type System
+The project uses unified TypeScript type management with all type definitions centralized in `src/types/index.ts`:
+
+```typescript
+// Core Types
+export interface QPSStepResult       // QPS step results
+export interface RequestResult       // Request results
+export interface TestSessionResult   // Test session results
+export interface DetailedSessionResult // Detailed session results
+export interface SessionSummary      // Session summary
+
+// Configuration Types
+export interface StressTestConfig    // Stress test configuration
+export interface QPSRampConfig       // QPS ramp configuration
+export interface PerformanceThresholds // Performance thresholds
+```
+
+### Module Structure
+```
+src/
+├── types/                    # Unified type definitions
+├── utils/                    # Utility functions
+├── storage/                  # Data storage module
+├── analysis/                 # Performance analysis module
+├── dashboard/                # Web dashboard
+└── stress-test.ts           # Main test entry point
+```
+
 ## 📁 Output Structure
 
 ```
 stress-test-results/
-├── stress_test_[timestamp]/
-│   ├── session-result.json     # Complete test results
-│   ├── requests/               # Individual request logs
-│   └── analysis/               # Performance analysis
+├── stress_test_[timestamp]/           # Test session directory
+│   ├── session-result.json          # Complete test results
+│   ├── session_summary.json         # Session summary
+│   ├── metadata.json                # Test metadata
+│   ├── requests/                     # Request logs directory
+│   │   └── requests-[date].jsonl    # Date-grouped request logs
+│   ├── steps/                       # QPS step results
+│   │   └── step-[qps]-[timestamp].json
+│   ├── analysis/                    # Performance analysis results
+│   │   ├── full-analysis.json       # Detailed analysis report
+│   │   └── summary.json             # Analysis summary
+│   ├── exports/                     # Export files
+│   ├── backups/                     # Backup files
+│   └── raw/                         # Raw data
+├── storage-stats.json               # Storage statistics
+└── session-[sessionId].json         # Session quick index
 ```

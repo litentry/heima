@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { QPSStepResult } from '../types';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -45,25 +46,6 @@ interface SessionData {
   };
 }
 
-interface QPSStepResult {
-  qps: number;
-  actualQPS: number;
-  duration: number;
-  totalRequests: number;
-  successfulRequests: number;
-  failedRequests: number;
-  endpointStats: Record<string, any>;
-  responseMetrics: {
-    avgLatency: number;
-    minLatency: number;
-    maxLatency: number;
-    p50Latency: number;
-    p95Latency: number;
-    p99Latency: number;
-  };
-  errorDetails: Record<string, number>;
-  shouldStop: boolean;
-}
 
 interface DetailedSessionData {
   sessionId: string;
