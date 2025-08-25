@@ -134,7 +134,6 @@ impl EthereumClient for EthereumRpcClient {
 		contract_address: Address,
 		nonce: u64,
 	) -> Result<TransactionRequest, ()> {
-		// TODO: Double check this
 		// ERC20 approve function signature: approve(address,uint256)
 		let approve_function_signature = &hex_literal::hex!("095ea7b3");
 
