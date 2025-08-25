@@ -383,6 +383,7 @@ pub mod mocks {
 			type Transaction = TransactionRequest;
 
 			async fn get_balance(&self, address: Address) -> Result<U256, RpcProviderError>;
+			async fn get_pending_nonce(&self, address: Address) -> Result<u64, ()>;
 			async fn get_transaction_count(&self, address: Address) -> Result<u64, RpcProviderError>;
 			async fn send_transaction(&self, tx: TransactionRequest) -> Result<String, RpcProviderError>;
 			async fn send_transaction_with_wallet(&self, wallet: &EthereumWallet, tx: TransactionRequest) -> Result<String, RpcProviderError>;
