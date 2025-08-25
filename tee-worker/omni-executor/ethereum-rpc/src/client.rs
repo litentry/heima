@@ -23,6 +23,14 @@ pub trait EthereumClient: Send + Sync {
 		contract_address: &str,
 		signer: Box<dyn TxSigner<Signature> + Send + Sync>,
 	) -> Result<String, ()>;
+
+	async fn construct_approve_erc20_tx(
+		&self,
+		spender: Address,
+		value: U256,
+		contract_address: Address,
+		nonce: u64,
+	) -> Result<TransactionRequest, ()>;
 }
 
 pub struct EthereumRpcClient {
@@ -118,6 +126,35 @@ impl EthereumClient for EthereumRpcClient {
 
 		Ok(tx_signature)
 	}
+
+	async fn construct_approve_erc20_tx(
+		&self,
+		to: Address,
+		value: U256,
+		contract_address: Address,
+		nonce: u64,
+	) -> Result<TransactionRequest, ()> {
+		// TODO: Double check this
+		// ERC20 approve function signature: approve(address,uint256)
+		let approve_function_signature = &hex_literal::hex!("095ea7b3");
+
+		// Encode the function call with the spender address and amount
+		let mut data = Vec::with_capacity(4 + 32 + 32);
+		data.extend_from_slice(approve_function_signature);
+		let mut address_bytes = [0u8; 32];
+		address_bytes[12..32].copy_from_slice(to.as_slice());
+		data.extend_from_slice(&address_bytes);
+		data.extend_from_slice(&value.to_be_bytes::<32>());
+
+		let tx = TransactionRequest {
+			to: Some(TxKind::from(contract_address)),
+			input: TransactionInput::from(Bytes::from(data)),
+			nonce: Some(nonce),
+			..Default::default()
+		};
+
+		Ok(tx)
+	}
 }
 
 #[cfg(feature = "mocks")]
@@ -125,7 +162,8 @@ pub mod mocks {
 
 	use crate::client::EthereumClient;
 	use alloy::network::TxSigner;
-	use alloy::primitives::{Signature, U256};
+	use alloy::primitives::{Address, Signature, U256};
+	use alloy::rpc::types::TransactionRequest;
 	use async_trait::async_trait;
 	use mockall::mock;
 
@@ -151,6 +189,15 @@ pub mod mocks {
 				contract_address: &str,
 				signer: Box<dyn TxSigner<Signature> + Send + Sync>,
 			) -> Result<String, ()>;
+
+			#[mockall::concretize]
+			async fn construct_approve_erc20_tx(
+				&self,
+				spender: Address,
+				value: U256,
+				contract_address: Address,
+				nonce: u64,
+			) -> Result<TransactionRequest, ()>;
 		}
 
 	}

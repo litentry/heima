@@ -18,6 +18,7 @@ pub mod client;
 pub mod error;
 pub mod signer;
 
+use alloy::eips::{BlockId, BlockNumberOrTag};
 use alloy::hex;
 use alloy::network::Ethereum;
 use alloy::network::EthereumWallet;
@@ -78,6 +79,7 @@ pub trait RpcProvider: Send + Sync {
 	type Transaction;
 
 	async fn get_balance(&self, address: Self::Addr) -> Result<U256, RpcProviderError>;
+	async fn get_pending_nonce(&self, address: Self::Addr) -> Result<u64, ()>;
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, RpcProviderError>;
 	async fn send_transaction(&self, tx: Self::Transaction) -> Result<String, RpcProviderError>;
 	async fn send_transaction_with_wallet(
@@ -127,6 +129,18 @@ impl RpcProvider for AlloyRpcProvider {
 				.map_err(|e: url::ParseError| RpcProviderError::InvalidUrl(e.to_string()))?,
 		);
 		provider.get_balance(address).await.map_err(RpcProviderError::from_alloy_error)
+	}
+
+	async fn get_pending_nonce(&self, address: Self::Addr) -> Result<u64, ()> {
+		let provider = ProviderBuilder::new().connect_http(
+			self.url.parse().map_err(|e| error!("Could not parse rpc url: {:?}", e))?,
+		);
+
+		provider
+			.get_transaction_count(address)
+			.block_id(BlockId::Number(BlockNumberOrTag::Pending))
+			.await
+			.map_err(|e| error!("Could not get pending nonce: {:?}", e))
 	}
 
 	async fn get_transaction_count(&self, address: Self::Addr) -> Result<u64, RpcProviderError> {
