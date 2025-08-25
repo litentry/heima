@@ -6,6 +6,7 @@ members = [
     "binance-api",
     "config-loader",
     "ethereum-rpc",
+    "evm-aggregators-client",
     "executor-crypto",
     "executor-core",
     "executor-worker",
