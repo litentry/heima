@@ -194,13 +194,13 @@ const paymasterAndData = encodePaymasterData(
 5. **Post-Operation**: Paymaster calculates actual cost and refunds excess tokens
 
 #### For Native Token Payments:
-1. **User Preparation**: User account should have native tokens (validation happens during execution)
+1. **User Preparation**: User account should have native tokens and implement a `sendETH` function
 2. **Operation Submission**: Bundler submits UserOp with native token paymaster data  
-3. **Validation**: Paymaster validates bundler and exchange rate, but **no prefunding occurs**
-4. **Execution**: EntryPoint executes operation and **automatically deducts gas cost from user's account balance**
-5. **Post-Operation**: Paymaster logs the sponsored operation
+3. **Validation**: Paymaster validates bundler, exchange rate, and user's native token balance
+4. **Execution**: EntryPoint executes the user operation (paymaster covers gas cost)
+5. **Post-Operation**: Paymaster collects payment from user account by calling `sendETH(beneficiary, amount)`
 
-**Why Native Tokens Don't Need Refunds**: Native token payments work differently because the EntryPoint automatically handles the gas payment from the user's account balance during execution. The paymaster doesn't prefund anything - it just validates that the operation should be sponsored. This is why there's no refund mechanism needed for native tokens.
+**Why Native Token Payment Collection is Different**: Unlike ERC20 tokens which can be transferred during validation using `transferFrom`, native tokens cannot be \"pulled\" from an account. Instead, the user account must actively send the tokens. This is handled in `postOp` by calling the user account's `sendETH` function. If this call fails, the payment failure is logged but doesn't revert the user operation. Native tokens don't need refunds because payment collection happens after the actual gas cost is known.
 
 #### For Full Sponsorship (exchangeRate = 0):
 1. **User Preparation**: No token preparation needed
@@ -268,7 +268,7 @@ paymaster.withdrawTokens(address(0), recipientAddress, amount);
 - Verify paymaster addresses before approving tokens
 - Monitor transaction fees and exchange rates
 - Be aware that refunds depend on the beneficiary configuration
-- Understand that native token payments work differently (no prefunding/refunds)
+- **For native token payments**: Ensure your account contract implements a `sendETH(address,uint256)` function\n- Understand that native token payment collection happens after operation execution
 
 ### For Bundlers
 - Only submit operations from authorized addresses
@@ -288,7 +288,7 @@ paymaster.withdrawTokens(address(0), recipientAddress, amount);
 - `UserOpSponsored`: Emitted when an operation is sponsored
 - `AuthorizedBundlerUpdated`: Emitted when bundler authorization changes  
 - `BeneficiaryUpdated`: Emitted when beneficiary address changes
-- `TokensWithdrawn`: Emitted when tokens are withdrawn by owner
+- `TokensWithdrawn`: Emitted when tokens are withdrawn by owner\n- `NativeTokenPaymentFailed`: Emitted when native token payment collection fails
 
 ## Error Handling
 
