@@ -2,7 +2,9 @@
 pragma solidity ^0.8.28;
 
 import "./BasePaymaster.sol";
+import "./UserOperationLib.sol";
 import "../interfaces/PackedUserOperation.sol";
+import "../interfaces/IPaymaster.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -108,14 +110,14 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
 
         // Handle native token payment (no prefunding needed)
         if (data.token == address(0)) {
-            PostOpContext memory postOpContext = PostOpContext({
+            PostOpContext memory nativeContext = PostOpContext({
                 sender: userOp.sender,
                 token: address(0),
                 exchangeRate: data.exchangeRate,
                 maxCost: maxCost,
                 prefundAmount: 0
             });
-            return (abi.encode(postOpContext), 0);
+            return (abi.encode(nativeContext), 0);
         }
 
         // Handle ERC20 token payment
@@ -143,11 +145,8 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
 
         // Prefund by transferring tokens from user to beneficiary
         if (!isApprovalOp) {
-            try token.safeTransferFrom(userOp.sender, beneficiary, requiredTokenAmount) {
-                // Success - tokens transferred
-            } catch {
-                revert TokenTransferFailed();
-            }
+            // Use direct call since SafeERC20 already handles revert cases
+            token.safeTransferFrom(userOp.sender, beneficiary, requiredTokenAmount);
         }
 
         PostOpContext memory postOpContext = PostOpContext({
@@ -165,7 +164,7 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
      * Post-operation handler to handle refunds and logging
      */
     function _postOp(
-        PostOpMode mode,
+        IPaymaster.PostOpMode mode,
         bytes calldata context,
         uint256 actualGasCost,
         uint256 /* actualUserOpFeePerGas */
@@ -184,19 +183,20 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
         }
 
         // For ERC20 token payments, calculate refund
-        IERC20 token = IERC20(postOpContext.token);
         uint256 actualTokenCost = (actualGasCost * postOpContext.exchangeRate) / 1e18;
         
         // Only refund if operation succeeded and we have excess
-        if (mode == PostOpMode.opSucceeded && postOpContext.prefundAmount > actualTokenCost) {
+        if (mode == IPaymaster.PostOpMode.opSucceeded && postOpContext.prefundAmount > actualTokenCost) {
             uint256 refundAmount = postOpContext.prefundAmount - actualTokenCost;
             
             // Transfer refund from beneficiary back to user
             if (beneficiary == address(this)) {
                 // If beneficiary is this contract, we can refund directly
-                try token.safeTransfer(postOpContext.sender, refundAmount) {
-                    // Success
-                } catch {
+                // Use low-level call to prevent revert on failed refund
+                (bool success,) = postOpContext.token.call(
+                    abi.encodeWithSelector(IERC20.transfer.selector, postOpContext.sender, refundAmount)
+                );
+                if (!success) {
                     // Refund failed, but don't revert the entire operation
                     emit UserOpSponsored(
                         postOpContext.sender,
@@ -227,14 +227,15 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
         returns (PaymasterData memory data) 
     {
         // paymasterAndData format: paymaster_address (20) + paymaster_data
-        // Our data: token(32) + exchangeRate(32) + validUntil(32) + validAfter(32)
-        if (paymasterAndData.length < 20 + 128) {
+        // Our data: padding(12) + token(20) + exchangeRate(32) + validUntil(32) + validAfter(32)
+        if (paymasterAndData.length < 20 + 12 + 20 + 32 + 32 + 32) {
             revert InvalidPaymasterData();
         }
 
         bytes calldata paymasterData = paymasterAndData[20:];
         
-        data.token = address(bytes20(paymasterData[0:20]));
+        // Skip 12 bytes padding, then read 20 bytes token address
+        data.token = address(bytes20(paymasterData[12:32]));
         data.exchangeRate = uint256(bytes32(paymasterData[32:64]));
         data.validUntil = uint256(bytes32(paymasterData[64:96]));
         data.validAfter = uint256(bytes32(paymasterData[96:128]));
@@ -245,7 +246,7 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
      */
     function _isApprovalOperation(
         PackedUserOperation calldata userOp,
-        address tokenAddress
+        address /* tokenAddress */
     ) internal pure returns (bool) {
         // Check if callData is calling approve(address,uint256) on the token
         if (userOp.callData.length < 68) return false; // 4 + 32 + 32
