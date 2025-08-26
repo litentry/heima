@@ -45,8 +45,8 @@ CMD ["$BIN_DIR/executor-worker"]
 ##################################################
 FROM gramineproject/gramine:stable-jammy AS sgx-builder
 
-ARG WILDMETA_BACKEND_ECDSA_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
-ENV WILDMETA_BACKEND_ECDSA_PUBKEY=$WILDMETA_BACKEND_ECDSA_PUBKEY
+ARG OE_WILDMETA_BACKEND_ECDSA_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
+ENV OE_WILDMETA_BACKEND_ECDSA_PUBKEY=$OE_WILDMETA_BACKEND_ECDSA_PUBKEY
 
 RUN apt-get update
 
@@ -95,7 +95,7 @@ RUN apt-get install -y \
     pkg-config \
     ca-certificates
 
-RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db 
+RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx

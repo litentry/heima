@@ -260,12 +260,13 @@ jobs:
         uses: docker/build-push-action@v6
         env:
           DOCKER_BUILD_RECORD_UPLOAD: false
-          OE_WILDMETA_BACKEND_ECDSA_PUBKEY: ${{ secrets.OE_WILDMETA_BACKEND_ECDSA_PUBKEY }}
         with:
           context: .
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:${{ env.RELEASE_TAG }}
           target: release
+          build-args: |
+            OE_WILDMETA_BACKEND_ECDSA_PUBKEY=${{ secrets.OE_WILDMETA_BACKEND_ECDSA_PUBKEY }}
 
       - run: docker images --all
 
