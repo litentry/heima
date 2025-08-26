@@ -118,7 +118,7 @@ const decimals = await paymaster.getTokenDecimals(tokenAddress);
 // Calculate exchange rate
 const exchangeRate = await paymaster.calculateExchangeRate(
     decimals,
-    tokenPriceInWei // Price of 1 token in wei (e.g., 0.0005e18 for $1 USDC when ETH is $2000)
+    tokensPerEth // How many tokens for 1 ETH (e.g., 2000 for USDC when 1 ETH = 2000 USDC)
 );
 ```
 
@@ -182,8 +182,8 @@ const paymasterAndData = encodePaymasterData(
 
 // Method 2: Using helper functions
 const decimals = await paymaster.getTokenDecimals(usdcAddress);
-const tokenPriceInEth = ethers.utils.parseEther('0.0005'); // $1 USDC at $2000 ETH
-const exchangeRate = await paymaster.calculateExchangeRate(decimals, tokenPriceInEth);
+const tokensPerEth = 2000; // 1 ETH = 2000 USDC
+const exchangeRate = await paymaster.calculateExchangeRate(decimals, tokensPerEth);
 const paymasterAndData = encodePaymasterData(
     paymasterAddress,
     3000000, // Validation gas limit

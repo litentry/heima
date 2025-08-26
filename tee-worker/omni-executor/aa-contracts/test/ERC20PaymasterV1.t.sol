@@ -328,21 +328,22 @@ contract ERC20PaymasterV1Test is Test {
     }
 
     function test_CalculateExchangeRate() public view {
-        // Test USDC-like token (6 decimals) at $0.0005 ETH per USDC
-        // Should give us 2000 USDC per 1 ETH = 2000 * 10^6 = 2000000000
-        uint256 rate = paymaster.calculateExchangeRate(6, 0.0005e18);
+        // Test USDC-like token (6 decimals) where 1 ETH = 2000 USDC
+        // Should give us 2000 * 10^6 = 2000000000
+        uint256 rate = paymaster.calculateExchangeRate(6, 2000);
         assertEq(rate, 2000000000);
 
-        // Test 18-decimal token - simplify to avoid precision issues
-        // Use a simpler example: 1000 tokens per 1 ETH
-        // 1 token = 1/1000 ETH = 0.001 ETH = 1000000000000000 wei
-        uint256 simpleTokenPrice = 0.001e18; // 1/1000 ETH per token
-        uint256 rate18 = paymaster.calculateExchangeRate(18, simpleTokenPrice);
-        // Should give us exactly 1000 tokens per ETH = 1000 * 10^18
+        // Test 18-decimal token where 1 ETH = 1000 tokens
+        uint256 rate18 = paymaster.calculateExchangeRate(18, 1000);
+        // Should give us exactly 1000 * 10^18 = 1000e18
         assertEq(rate18, 1000e18);
+
+        // Test edge case: 1 ETH = 1 token (1:1 ratio)
+        uint256 rate1to1 = paymaster.calculateExchangeRate(18, 1);
+        assertEq(rate1to1, 1e18);
     }
 
-    function test_CalculateExchangeRate_ZeroPrice() public {
+    function test_CalculateExchangeRate_ZeroTokensPerEth() public {
         vm.expectRevert(ERC20PaymasterV1.InvalidExchangeRate.selector);
         paymaster.calculateExchangeRate(18, 0);
     }

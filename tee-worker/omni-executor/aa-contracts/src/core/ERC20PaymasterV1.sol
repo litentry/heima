@@ -388,27 +388,27 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     }
 
     /**
-     * Calculate exchange rate for a token given its price in ETH terms
+     * Calculate exchange rate for a token given how many tokens equal 1 ETH
      * @param tokenDecimals The number of decimals the token has
-     * @param tokenPriceInEth The price of the token in ETH (scaled by 1e18)
+     * @param tokensPerEth How many tokens you get for 1 ETH (before decimal scaling)
      * @return exchangeRate The exchange rate to use in PaymasterData
      *
-     * Example: USDC (6 decimals) at $0.0005 ETH per USDC
-     *          exchangeRate = (1e18 / tokenPriceInEth) * 10^tokenDecimals
-     *          exchangeRate = (1e18 / 0.0005e18) * 10^6 = 2000 * 10^6 = 2000000000
+     * Example: USDC (6 decimals) where 1 ETH = 2000 USDC
+     *          exchangeRate = tokensPerEth * 10^tokenDecimals
+     *          exchangeRate = 2000 * 10^6 = 2000000000
      */
-    function calculateExchangeRate(uint8 tokenDecimals, uint256 tokenPriceInEth)
+    function calculateExchangeRate(uint8 tokenDecimals, uint256 tokensPerEth)
         external
         pure
         returns (uint256 exchangeRate)
     {
-        if (tokenPriceInEth == 0) {
+        if (tokensPerEth == 0) {
             revert InvalidExchangeRate();
         }
 
-        // exchangeRate = (1 ETH / tokenPriceInEth) * 10^tokenDecimals
-        // This gives us how many token units per 1 wei of ETH
-        return (1e18 * (10 ** tokenDecimals)) / tokenPriceInEth;
+        // exchangeRate = tokensPerEth * 10^tokenDecimals
+        // This gives us how many token units per 1 ETH
+        return tokensPerEth * (10 ** tokenDecimals);
     }
 
     /**
