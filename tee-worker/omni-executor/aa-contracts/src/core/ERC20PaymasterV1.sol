@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * ERC20PaymasterV1 - A paymaster that allows users to pay gas fees with ERC20 tokens
- * while reimbursing bundlers with ETH. Supports both native token and ERC20 payments.
+ * while reimbursing bundlers with ETH. Only supports ERC20 token payments.
  * Only accepts operations from authorized bundlers for security.
  */
 contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
@@ -21,9 +21,12 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     using UserOperationLib for PackedUserOperation;
     using Math for uint256;
 
+    // Minimum required postOp gas limit to prevent paymaster losses
+    uint256 private constant MIN_POST_OP_GAS_LIMIT = 50000;
+
     // Struct to decode paymaster data
     struct PaymasterData {
-        address token; // ERC20 token address (address(0) for native token)
+        address token; // ERC20 token address (must not be address(0))
         uint256 exchangeRate; // Exchange rate: how many token units per 1 wei of ETH
             // For tokens with different decimals, this should account for the difference
             // Example: For 6-decimal USDC at $2000/ETH: rate = 2000 * 10^6 = 2000000000
@@ -36,10 +39,11 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     // Context for postOp
     struct PostOpContext {
         address sender; // User's account address
-        address token; // Token address (address(0) for native)
+        address token; // ERC20 token address
         uint256 exchangeRate; // Exchange rate used
         uint256 maxCost; // Maximum cost in wei
         uint256 prefundAmount; // Amount prefunded in tokens
+        uint256 postOpGasLimit; // PostOp gas limit from paymasterAndData
     }
 
     // Mapping of authorized bundler addresses
@@ -53,7 +57,6 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     event AuthorizedBundlerUpdated(address indexed bundler, bool authorized);
     event BeneficiaryUpdated(address indexed oldBeneficiary, address indexed newBeneficiary);
     event TokensWithdrawn(address indexed token, address indexed to, uint256 amount);
-    event NativeTokenPaymentFailed(address indexed userAccount, uint256 amount);
 
     // Errors
     error UnauthorizedBundler();
@@ -94,8 +97,14 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
             revert InsufficientDeposit();
         }
 
-        // Decode paymaster data
+        // Decode paymaster data first to validate structure
         PaymasterData memory data = _decodePaymasterData(userOp.paymasterAndData);
+
+        // Extract and validate postOp gas limit after data validation
+        uint256 postOpGasLimit = userOp.unpackPostOpGasLimit();
+        if (postOpGasLimit < MIN_POST_OP_GAS_LIMIT) {
+            revert InsufficientDeposit(); // Reuse existing error for simplicity
+        }
 
         // Validate timestamps
         uint256 currentTime = block.timestamp;
@@ -103,43 +112,13 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
             return ("", 1); // Reject with validation failure
         }
 
+        // Validate token address - native tokens (address(0)) are not supported
+        if (data.token == address(0)) {
+            revert InvalidToken();
+        }
+
         // Handle full sponsorship case (0 exchange rate means paymaster fully sponsors)
         bool isFullSponsorship = data.exchangeRate == 0;
-
-        // Handle native token payment
-        if (data.token == address(0)) {
-            if (!isFullSponsorship) {
-                // Calculate required native token amount
-                uint256 requiredNativeAmount = maxCost.mulDiv(data.exchangeRate, 1e18, Math.Rounding.Ceil);
-
-                // Check user's native token balance (via account's balance)
-                uint256 userNativeBalance = userOp.sender.balance;
-                if (userNativeBalance < requiredNativeAmount) {
-                    revert InsufficientTokenBalance();
-                }
-
-                // For native tokens, we can't prefund directly like ERC20s
-                // Payment will be handled in postOp by calling the user account
-                PostOpContext memory nativeContext = PostOpContext({
-                    sender: userOp.sender,
-                    token: address(0),
-                    exchangeRate: data.exchangeRate,
-                    maxCost: maxCost,
-                    prefundAmount: requiredNativeAmount // Track what user should pay
-                });
-                return (abi.encode(nativeContext), 0);
-            } else {
-                // Full sponsorship for native tokens
-                PostOpContext memory sponsorContext = PostOpContext({
-                    sender: userOp.sender,
-                    token: address(0),
-                    exchangeRate: 0,
-                    maxCost: maxCost,
-                    prefundAmount: 0
-                });
-                return (abi.encode(sponsorContext), 0);
-            }
-        }
 
         // Handle ERC20 token payment
         IERC20 token = IERC20(data.token);
@@ -186,7 +165,8 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
             token: data.token,
             exchangeRate: data.exchangeRate,
             maxCost: maxCost,
-            prefundAmount: requiredTokenAmount
+            prefundAmount: requiredTokenAmount,
+            postOpGasLimit: postOpGasLimit
         });
 
         return (abi.encode(postOpContext), 0);
@@ -199,38 +179,22 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
         IPaymaster.PostOpMode mode,
         bytes calldata context,
         uint256 actualGasCost,
-        uint256 /* actualUserOpFeePerGas */
+        uint256 actualUserOpFeePerGas
     ) internal override nonReentrant {
         PostOpContext memory postOpContext = abi.decode(context, (PostOpContext));
 
-        // Handle native token payments
-        if (postOpContext.token == address(0)) {
-            if (postOpContext.exchangeRate == 0) {
-                // Full sponsorship - no payment needed
-                emit UserOpSponsored(postOpContext.sender, address(0), actualGasCost, 0);
-                return;
-            }
+        // Add postOp gas overhead to actual gas cost to prevent paymaster losses
+        // The actualGasCost parameter doesn't include gas consumed by postOp itself
+        // Use the postOp gas limit from paymasterAndData for accurate accounting
+        uint256 totalGasCost = actualGasCost + (postOpContext.postOpGasLimit * actualUserOpFeePerGas);
 
-            // Calculate actual native token cost
-            uint256 actualNativeTokenCost = actualGasCost.mulDiv(postOpContext.exchangeRate, 1e18, Math.Rounding.Ceil);
-
-            // For native tokens, we need to collect payment from the user account
-            // This is done by making a call to the user account requesting ETH transfer
-            if (mode == IPaymaster.PostOpMode.opSucceeded) {
-                _collectNativeTokenPayment(postOpContext.sender, actualNativeTokenCost);
-            }
-
-            emit UserOpSponsored(postOpContext.sender, address(0), actualGasCost, actualNativeTokenCost);
-            return;
-        }
-
-        // For ERC20 token payments, calculate refund
+        // Calculate token costs and refunds for ERC20 payments
         uint256 actualTokenCost;
         if (postOpContext.exchangeRate == 0) {
             actualTokenCost = 0; // Full sponsorship
         } else {
-            // Use Math.mulDiv to prevent overflow
-            actualTokenCost = actualGasCost.mulDiv(postOpContext.exchangeRate, 1e18, Math.Rounding.Ceil);
+            // Use Math.mulDiv to prevent overflow, include postOp gas overhead
+            actualTokenCost = totalGasCost.mulDiv(postOpContext.exchangeRate, 1e18, Math.Rounding.Ceil);
         }
 
         // Only refund if operation succeeded and we have excess
@@ -247,7 +211,7 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
                 if (!success) {
                     // Refund failed, but don't revert the entire operation
                     emit UserOpSponsored(
-                        postOpContext.sender, postOpContext.token, actualGasCost, postOpContext.prefundAmount
+                        postOpContext.sender, postOpContext.token, totalGasCost, postOpContext.prefundAmount
                     );
                     return;
                 }
@@ -255,26 +219,27 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
             // If beneficiary is external, they need to handle their own refunds
         }
 
-        emit UserOpSponsored(postOpContext.sender, postOpContext.token, actualGasCost, actualTokenCost);
+        emit UserOpSponsored(postOpContext.sender, postOpContext.token, totalGasCost, actualTokenCost);
     }
 
     /**
      * Decode paymaster data from paymasterAndData field
      */
     function _decodePaymasterData(bytes calldata paymasterAndData) internal pure returns (PaymasterData memory data) {
-        // paymasterAndData format: paymaster_address (20) + paymaster_data
-        // Our data: padding(12) + token(20) + exchangeRate(32) + validUntil(32) + validAfter(32)
-        if (paymasterAndData.length < 20 + 12 + 20 + 32 + 32 + 32) {
+        // paymasterAndData format:
+        // paymaster_address (20) + validation_gas_limit (16) + postop_gas_limit (16) + paymaster_data
+        // Our data starting at PAYMASTER_DATA_OFFSET (52): token(20) + exchangeRate(32) + validUntil(32) + validAfter(32)
+        if (paymasterAndData.length < PAYMASTER_DATA_OFFSET + 20 + 32 + 32 + 32) {
             revert InvalidPaymasterData();
         }
 
-        bytes calldata paymasterData = paymasterAndData[20:];
+        bytes calldata paymasterData = paymasterAndData[PAYMASTER_DATA_OFFSET:];
 
-        // Skip 12 bytes padding, then read 20 bytes token address
-        data.token = address(bytes20(paymasterData[12:32]));
-        data.exchangeRate = uint256(bytes32(paymasterData[32:64]));
-        data.validUntil = uint256(bytes32(paymasterData[64:96]));
-        data.validAfter = uint256(bytes32(paymasterData[96:128]));
+        // Read 20 bytes token address, then 32 bytes each for other fields
+        data.token = address(bytes20(paymasterData[0:20]));
+        data.exchangeRate = uint256(bytes32(paymasterData[20:52]));
+        data.validUntil = uint256(bytes32(paymasterData[52:84]));
+        data.validAfter = uint256(bytes32(paymasterData[84:116]));
     }
 
     /**
@@ -401,44 +366,13 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     }
 
     /**
-     * Collect native token payment from user account after operation execution.
-     *
-     * WARNING: This approach has limitations:
-     * - The user account must implement a way to send ETH when called
-     * - The call might fail if the account doesn't have sufficient ETH or doesn't support it
-     * - This is called in postOp, so failures won't revert the user operation
-     *
-     * Alternative approaches for production use:
-     * 1. Require users to pre-deposit ETH to the paymaster
-     * 2. Include payment as part of the UserOp callData
-     * 3. Use a pull payment pattern where users can withdraw refunds
-     */
-    function _collectNativeTokenPayment(address userAccount, uint256 amount) internal {
-        if (amount == 0) return;
-
-        // Attempt to collect ETH from the user account
-        // This requires the user account to support receiving calls and sending ETH
-        (bool success,) =
-            userAccount.call{gas: 50000}(abi.encodeWithSignature("sendETH(address,uint256)", beneficiary, amount));
-
-        if (!success) {
-            // If direct call fails, emit an event for off-chain tracking
-            // In production, you might want to:
-            // 1. Track unpaid amounts and bill later
-            // 2. Blacklist accounts that don't pay
-            // 3. Use a different payment mechanism
-            emit NativeTokenPaymentFailed(userAccount, amount);
-        }
-    }
-
-    /**
      * Get token decimals for a given token (helper function for calculating exchange rates)
      * @param token The token address to query decimals for
      * @return decimals The number of decimals for the token, defaults to 18 if not available
      */
     function getTokenDecimals(address token) external view returns (uint8 decimals) {
         if (token == address(0)) {
-            return 18; // Native token (ETH) has 18 decimals
+            revert InvalidToken(); // Native tokens are not supported
         }
 
         // Check if the address has code
@@ -502,14 +436,13 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
         require(beneficiary == address(this), "Beneficiary is not this contract");
         require(to != address(0), "Invalid recipient");
 
+        // Only ERC20 tokens are supported for withdrawal
         if (token == address(0)) {
-            // Withdraw ETH
-            require(amount <= address(this).balance, "Insufficient ETH balance");
-            payable(to).transfer(amount);
-        } else {
-            // Withdraw ERC20
-            IERC20(token).safeTransfer(to, amount);
+            revert InvalidToken();
         }
+
+        // Withdraw ERC20
+        IERC20(token).safeTransfer(to, amount);
 
         emit TokensWithdrawn(token, to, amount);
     }

@@ -1,11 +1,11 @@
 # ERC20PaymasterV1
 
-A secure, feature-rich paymaster contract that allows users to pay gas fees with ERC20 tokens while reimbursing bundlers with ETH. This paymaster supports both native token payments and arbitrary ERC20 token payments with configurable exchange rates.
+A secure, feature-rich paymaster contract that allows users to pay gas fees with ERC20 tokens while reimbursing bundlers with ETH. This paymaster focuses exclusively on ERC20 token payments with configurable exchange rates.
 
 ## Design Concept
 
 ### Core Functionality
-- **Dual Payment Support**: Accepts both native tokens (ETH, BNB, etc.) and ERC20 tokens (USDC, USDT, etc.)
+- **ERC20 Token Support**: Accepts ERC20 tokens (USDC, USDT, WETH, etc.) for gas fee payments
 - **Bundler Authorization**: Only processes operations from pre-authorized bundlers for security
 - **Dynamic Exchange Rates**: Supports time-bounded exchange rate configurations
 - **Configurable Beneficiary**: ERC20 tokens can be collected by the paymaster or a designated address
@@ -17,6 +17,19 @@ A secure, feature-rich paymaster contract that allows users to pay gas fees with
 - **Safe Token Transfers**: Utilizes OpenZeppelin's `SafeERC20` for secure token operations
 - **Bundler Validation**: Only authorized bundlers can submit operations
 - **Balance & Allowance Checks**: Validates user's token balance and approval before accepting operations
+
+### Design Decisions
+
+#### Why Only ERC20 Tokens?
+This paymaster focuses exclusively on ERC20 tokens and does not support native tokens (ETH) for the following reasons:
+
+1. **Technical Reliability**: Native tokens cannot use the standard `approve()` and `transferFrom()` pattern, requiring custom payment collection mechanisms that can fail
+2. **Industry Standard**: Production paymasters (Pimlico, Coinbase) focus on ERC20 tokens for reliability and standardization
+3. **Simplified Architecture**: ERC20-only design reduces complexity and potential failure points
+
+#### Alternatives for ETH Payments:
+- **Use WETH**: Wrap ETH into WETH (Wrapped ETH) which behaves like a standard ERC20 token
+- **Direct EntryPoint Usage**: For native ETH payments, use the EntryPoint directly without a paymaster
 
 ## Architecture
 
@@ -33,7 +46,7 @@ ERC20PaymasterV1
 #### PaymasterData Structure
 ```solidity
 struct PaymasterData {
-    address token;          // ERC20 token address (address(0) for native)
+    address token;          // ERC20 token address (must not be address(0))
     uint256 exchangeRate;   // Wei of token per 1 wei of ETH (scaled by 1e18)
     uint256 validUntil;     // Timestamp until when rate is valid
     uint256 validAfter;     // Timestamp after which rate is valid
@@ -116,20 +129,23 @@ The `paymasterAndData` field must be encoded with the paymaster address and paym
 ```javascript
 function encodePaymasterData(
     paymasterAddress,
-    tokenAddress,      // address(0) for native token
-    exchangeRate,      // Token units per 1 wei of ETH (see calculation above)
-    validUntil,        // Unix timestamp
-    validAfter         // Unix timestamp
+    validationGasLimit,  // Gas limit for paymaster validation (e.g., 3000000)
+    postOpGasLimit,     // Gas limit for postOp (e.g., 3000000)
+    tokenAddress,       // ERC20 token address (cannot be address(0))
+    exchangeRate,       // Token units per 1 wei of ETH (see calculation above)
+    validUntil,         // Unix timestamp
+    validAfter          // Unix timestamp
 ) {
     return ethers.utils.solidityPack(
-        ['address', 'bytes12', 'address', 'uint256', 'uint256', 'uint256'],
+        ['address', 'uint128', 'uint128', 'address', 'uint256', 'uint256', 'uint256'],
         [
-            paymasterAddress,      // 20 bytes
-            '0x000000000000000000000000', // 12 bytes padding  
-            tokenAddress,          // 20 bytes
-            exchangeRate,          // 32 bytes
-            validUntil,           // 32 bytes
-            validAfter            // 32 bytes
+            paymasterAddress,      // 20 bytes: paymaster address
+            validationGasLimit,    // 16 bytes: validation gas limit
+            postOpGasLimit,        // 16 bytes: postOp gas limit
+            tokenAddress,          // 20 bytes: token address
+            exchangeRate,          // 32 bytes: exchange rate
+            validUntil,           // 32 bytes: valid until
+            validAfter            // 32 bytes: valid after
         ]
     );
 }
@@ -137,12 +153,14 @@ function encodePaymasterData(
 
 ### 4. Example Usage Scenarios
 
-#### Native Token Payment (ETH/BNB)
+#### WETH Token Payment (1:1 with ETH)
 ```javascript
 const paymasterAndData = encodePaymasterData(
     '0x1234...paymaster',
-    '0x0000000000000000000000000000000000000000', // Native token
-    ethers.utils.parseEther('1'),  // 1:1 rate (can be any rate)
+    3000000, // Validation gas limit
+    3000000, // PostOp gas limit
+    '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH token address
+    ethers.utils.parseEther('1'),  // 1:1 rate with ETH
     Math.floor(Date.now() / 1000) + 3600, // Valid for 1 hour
     Math.floor(Date.now() / 1000)         // Valid from now
 );
@@ -154,6 +172,8 @@ const paymasterAndData = encodePaymasterData(
 const usdcExchangeRate = 2000 * (10 ** 6); // 2000 USDC per ETH, 6 decimals
 const paymasterAndData = encodePaymasterData(
     '0x1234...paymaster',
+    3000000, // Validation gas limit
+    3000000, // PostOp gas limit
     '0xA0b86a33E6441E8fd796Fa2b0E8024F5e28D0C70', // USDC address
     usdcExchangeRate,  // 2,000,000,000 USDC units per 1 ETH
     Math.floor(Date.now() / 1000) + 3600, // Valid for 1 hour
@@ -166,6 +186,8 @@ const tokenPriceInEth = ethers.utils.parseEther('0.0005'); // $1 USDC at $2000 E
 const exchangeRate = await paymaster.calculateExchangeRate(decimals, tokenPriceInEth);
 const paymasterAndData = encodePaymasterData(
     paymasterAddress,
+    3000000, // Validation gas limit
+    3000000, // PostOp gas limit
     usdcAddress,
     exchangeRate,
     validUntil,
@@ -177,6 +199,8 @@ const paymasterAndData = encodePaymasterData(
 ```javascript
 const paymasterAndData = encodePaymasterData(
     '0x1234...paymaster',
+    3000000, // Validation gas limit
+    3000000, // PostOp gas limit
     '0xA0b86a33E6441E8fd796Fa2b0E8024F5e28D0C70', // Any token address
     0,  // Zero exchange rate = full sponsorship
     Math.floor(Date.now() / 1000) + 3600,
@@ -193,14 +217,6 @@ const paymasterAndData = encodePaymasterData(
 4. **Execution**: EntryPoint executes the user operation
 5. **Post-Operation**: Paymaster calculates actual cost and refunds excess tokens
 
-#### For Native Token Payments:
-1. **User Preparation**: User account should have native tokens and implement a `sendETH` function
-2. **Operation Submission**: Bundler submits UserOp with native token paymaster data  
-3. **Validation**: Paymaster validates bundler, exchange rate, and user's native token balance
-4. **Execution**: EntryPoint executes the user operation (paymaster covers gas cost)
-5. **Post-Operation**: Paymaster collects payment from user account by calling `sendETH(beneficiary, amount)`
-
-**Why Native Token Payment Collection is Different**: Unlike ERC20 tokens which can be transferred during validation using `transferFrom`, native tokens cannot be \"pulled\" from an account. Instead, the user account must actively send the tokens. This is handled in `postOp` by calling the user account's `sendETH` function. If this call fails, the payment failure is logged but doesn't revert the user operation. Native tokens don't need refunds because payment collection happens after the actual gas cost is known.
 
 #### For Full Sponsorship (exchangeRate = 0):
 1. **User Preparation**: No token preparation needed
@@ -234,8 +250,8 @@ paymaster.setBeneficiary(address(paymaster));
 // Withdraw ERC20 tokens (only if beneficiary is the paymaster)
 paymaster.withdrawTokens(tokenAddress, recipientAddress, amount);
 
-// Withdraw ETH
-paymaster.withdrawTokens(address(0), recipientAddress, amount);
+// Note: Native token (ETH) withdrawal is not supported
+// Only ERC20 tokens can be withdrawn from the paymaster
 ```
 
 ## Security Considerations
@@ -250,6 +266,11 @@ paymaster.withdrawTokens(address(0), recipientAddress, amount);
 - **Bundler authorization**: Only authorized bundlers can submit operations
 - **Balance validation**: Always checks user token balance before accepting operations
 - **Allowance validation**: Verifies sufficient allowance for non-approval operations
+
+### PostOp Gas Protection
+- **Dynamic Gas Overhead**: Uses the actual postOpGasLimit from paymasterAndData to calculate gas overhead, ensuring accurate cost accounting
+- **Accurate Cost Accounting**: The `actualGasCost` parameter only includes gas consumed up to postOp; the postOpGasLimit overhead is added for safety
+- **Loss Prevention**: Ensures the paymaster is compensated for all gas consumption including postOp operations
 
 ### Token Decimal Handling
 - **Automatic decimals detection**: Helper functions handle different token decimals
@@ -268,7 +289,7 @@ paymaster.withdrawTokens(address(0), recipientAddress, amount);
 - Verify paymaster addresses before approving tokens
 - Monitor transaction fees and exchange rates
 - Be aware that refunds depend on the beneficiary configuration
-- **For native token payments**: Ensure your account contract implements a `sendETH(address,uint256)` function\n- Understand that native token payment collection happens after operation execution
+- **For ETH payments**: Use WETH (Wrapped ETH) which behaves like a standard ERC20 token
 
 ### For Bundlers
 - Only submit operations from authorized addresses
@@ -288,8 +309,7 @@ paymaster.withdrawTokens(address(0), recipientAddress, amount);
 - `UserOpSponsored`: Emitted when an operation is sponsored
 - `AuthorizedBundlerUpdated`: Emitted when bundler authorization changes  
 - `BeneficiaryUpdated`: Emitted when beneficiary address changes
-- `TokensWithdrawn`: Emitted when tokens are withdrawn by owner\n- `NativeTokenPaymentFailed`: Emitted when native token payment collection fails
-
+- `TokensWithdrawn`: Emitted when tokens are withdrawn by owner\n
 ## Error Handling
 
 The contract uses custom errors for gas efficiency:

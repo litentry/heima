@@ -12,32 +12,12 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {BaseAccount} from "../src/core/BaseAccount.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// Mock account contract that can send ETH when requested
-contract MockAccount {
-    receive() external payable {}
-
-    function sendETH(address to, uint256 amount) external {
-        payable(to).transfer(amount);
-    }
-}
-
-// Mock account that fails to send ETH
-contract MockAccountFailsPayment {
-    receive() external payable {}
-
-    function sendETH(address, uint256) external pure {
-        revert("Payment failed");
-    }
-}
-
 contract ERC20PaymasterV1Test is Test {
     using Math for uint256;
 
     ERC20PaymasterV1 public paymaster;
     EntryPointV1 public entryPoint;
     TestToken public testToken;
-    MockAccount public mockAccount;
-    MockAccountFailsPayment public mockAccountFailsPayment;
 
     address bundler1 = makeAddr("bundler1");
     address bundler2 = makeAddr("bundler2");
@@ -54,13 +34,10 @@ contract ERC20PaymasterV1Test is Test {
     event BeneficiaryUpdated(address indexed oldBeneficiary, address indexed newBeneficiary);
     event UserOpSponsored(address indexed account, address indexed token, uint256 actualGasCost, uint256 tokenAmount);
     event TokensWithdrawn(address indexed token, address indexed to, uint256 amount);
-    event NativeTokenPaymentFailed(address indexed userAccount, uint256 amount);
 
     function setUp() public {
         entryPoint = new EntryPointV1();
         testToken = new TestToken("Test Token", "TEST", 18);
-        mockAccount = new MockAccount();
-        mockAccountFailsPayment = new MockAccountFailsPayment();
 
         vm.prank(owner);
         paymaster = new ERC20PaymasterV1(entryPoint, bundler1);
@@ -207,34 +184,18 @@ contract ERC20PaymasterV1Test is Test {
         assertEq(testToken.balanceOf(user), 100000e18); // User keeps all tokens
     }
 
-    function test_ValidatePaymasterUserOp_NativeToken() public {
-        // Fund the mock account with ETH to cover the gas cost
-        uint256 maxCost = 1 ether;
-        uint256 requiredETH = maxCost.mulDiv(EXCHANGE_RATE, 1e18, Math.Rounding.Ceil);
-        vm.deal(address(mockAccount), requiredETH + 1 ether); // Extra for buffer
-
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(address(mockAccount), "");
-        userOp.paymasterAndData = _encodePaymasterData(address(0), EXCHANGE_RATE); // Native token
+    function test_ValidatePaymasterUserOp_NativeTokenRejection() public {
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(user, "");
+        userOp.paymasterAndData = _encodePaymasterData(address(0), EXCHANGE_RATE);
 
         vm.prank(address(entryPoint), bundler1);
-        (bytes memory context, uint256 validationData) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), maxCost);
-
-        assertEq(validationData, 0); // Should succeed
-        assertTrue(context.length > 0);
+        vm.expectRevert(ERC20PaymasterV1.InvalidToken.selector);
+        paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
     }
 
-    function test_ValidatePaymasterUserOp_NativeToken_InsufficientBalance() public {
-        // Create a mock account with no ETH
-        MockAccount poorMockAccount = new MockAccount();
-        // Don't fund it with ETH - it should have 0 balance
-
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(address(poorMockAccount), "");
-        userOp.paymasterAndData = _encodePaymasterData(address(0), EXCHANGE_RATE); // Native token
-
-        vm.prank(address(entryPoint), bundler1);
-        vm.expectRevert(ERC20PaymasterV1.InsufficientTokenBalance.selector);
-
-        paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
+    function test_GetTokenDecimals_NativeTokenRejection() public {
+        vm.expectRevert(ERC20PaymasterV1.InvalidToken.selector);
+        paymaster.getTokenDecimals(address(0));
     }
 
     function test_ValidatePaymasterUserOp_ERC20_InsufficientBalance() public {
@@ -279,35 +240,6 @@ contract ERC20PaymasterV1Test is Test {
         assertGt(testToken.balanceOf(address(paymaster)), 0);
     }
 
-    function test_PostOp_NativeToken_Success() public {
-        // Fund the mock account with ETH
-        uint256 maxCost = 1 ether;
-        uint256 requiredETH = maxCost.mulDiv(EXCHANGE_RATE, 1e18, Math.Rounding.Ceil);
-        vm.deal(address(mockAccount), requiredETH + 1 ether);
-
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(address(mockAccount), "");
-        userOp.paymasterAndData = _encodePaymasterData(address(0), EXCHANGE_RATE);
-
-        vm.prank(address(entryPoint), bundler1);
-        (bytes memory context,) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), maxCost);
-
-        // Calculate expected token cost for actual gas used
-        uint256 actualGasCost = 0.5 ether;
-        uint256 expectedTokenCost = actualGasCost.mulDiv(EXCHANGE_RATE, 1e18, Math.Rounding.Ceil);
-
-        uint256 beneficiaryBalanceBefore = beneficiary.balance;
-
-        vm.expectEmit(true, true, false, false);
-        emit UserOpSponsored(address(mockAccount), address(0), actualGasCost, expectedTokenCost);
-
-        vm.prank(address(entryPoint));
-        paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, actualGasCost, 1000000000);
-
-        // Check that payment was collected (if beneficiary is not set to paymaster, payment goes to paymaster by default)
-        // Since beneficiary defaults to address(paymaster), ETH should go to paymaster
-        // Check that payment was collected - the paymaster should have received the payment\n        // Note: paymaster already had some ETH, so we check for the increase\n        assertGt(address(paymaster).balance, 5 ether); // Should be more than initial 5 ether
-    }
-
     function test_PostOp_ERC20_WithRefund() public {
         PackedUserOperation memory userOp = TestUtils.preparePackedOp(user, "");
         userOp.paymasterAndData = _encodePaymasterData(address(testToken), EXCHANGE_RATE);
@@ -326,14 +258,18 @@ contract ERC20PaymasterV1Test is Test {
 
         // Simulate actual gas cost being less than max cost
         uint256 actualGasCost = 0.5 ether;
-        uint256 expectedActualTokenCost = (actualGasCost * EXCHANGE_RATE) / 1e18;
-        // Calculate expected refund but don't use it (refund is handled internally)
+        uint256 actualUserOpFeePerGas = 1000000000;
+
+        // Calculate total gas cost including postOp overhead using actual postOpGasLimit (3,000,000)
+        uint256 postOpGasLimit = 3000000; // From _encodePaymasterDataWithTime
+        uint256 totalGasCost = actualGasCost + (postOpGasLimit * actualUserOpFeePerGas);
+        uint256 expectedActualTokenCost = (totalGasCost * EXCHANGE_RATE) / 1e18;
 
         vm.expectEmit(true, true, false, false);
-        emit UserOpSponsored(user, address(testToken), actualGasCost, expectedActualTokenCost);
+        emit UserOpSponsored(user, address(testToken), totalGasCost, expectedActualTokenCost);
 
         vm.prank(address(entryPoint));
-        paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, actualGasCost, 1000000000);
+        paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, actualGasCost, actualUserOpFeePerGas);
 
         // Check refund was issued
         uint256 userBalanceAfterRefund = testToken.balanceOf(user);
@@ -364,17 +300,10 @@ contract ERC20PaymasterV1Test is Test {
         assertEq(testToken.balanceOf(address(paymaster)), 0);
     }
 
-    function test_WithdrawTokens_ETH() public {
-        uint256 amount = 1 ether;
-        vm.deal(address(paymaster), amount);
-
-        vm.expectEmit(true, true, false, true);
-        emit TokensWithdrawn(address(0), owner, amount);
-
+    function test_WithdrawTokens_NativeTokenRejection() public {
         vm.prank(owner);
-        paymaster.withdrawTokens(address(0), owner, amount);
-
-        assertEq(owner.balance, amount);
+        vm.expectRevert(ERC20PaymasterV1.InvalidToken.selector);
+        paymaster.withdrawTokens(address(0), owner, 1 ether);
     }
 
     function test_WithdrawTokens_OnlyOwner() public {
@@ -387,8 +316,7 @@ contract ERC20PaymasterV1Test is Test {
         // Test with testToken (should have 18 decimals)
         assertEq(paymaster.getTokenDecimals(address(testToken)), 18);
 
-        // Test with native token
-        assertEq(paymaster.getTokenDecimals(address(0)), 18);
+        // Test with address(0) should revert - moved to separate test
     }
 
     function test_GetTokenDecimals_NonExistentContract() public view {
@@ -417,48 +345,6 @@ contract ERC20PaymasterV1Test is Test {
     function test_CalculateExchangeRate_ZeroPrice() public {
         vm.expectRevert(ERC20PaymasterV1.InvalidExchangeRate.selector);
         paymaster.calculateExchangeRate(18, 0);
-    }
-
-    function test_PostOp_NativeToken_PaymentFailed() public {
-        // Use the mock account that fails payment
-        uint256 maxCost = 1 ether;
-        uint256 requiredETH = maxCost.mulDiv(EXCHANGE_RATE, 1e18, Math.Rounding.Ceil);
-        vm.deal(address(mockAccountFailsPayment), requiredETH + 1 ether);
-
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(address(mockAccountFailsPayment), "");
-        userOp.paymasterAndData = _encodePaymasterData(address(0), EXCHANGE_RATE);
-
-        vm.prank(address(entryPoint), bundler1);
-        (bytes memory context,) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), maxCost);
-
-        // Calculate expected token cost for actual gas used
-        uint256 actualGasCost = 0.5 ether;
-        uint256 expectedTokenCost = actualGasCost.mulDiv(EXCHANGE_RATE, 1e18, Math.Rounding.Ceil);
-
-        // Expect the payment failure event
-        vm.expectEmit(true, false, false, true);
-        emit NativeTokenPaymentFailed(address(mockAccountFailsPayment), expectedTokenCost);
-
-        // Also expect the sponsored event
-        vm.expectEmit(true, true, false, false);
-        emit UserOpSponsored(address(mockAccountFailsPayment), address(0), actualGasCost, expectedTokenCost);
-
-        vm.prank(address(entryPoint));
-        paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, actualGasCost, 1000000000);
-    }
-
-    function test_PostOp_NativeToken_FullSponsorship() public {
-        PackedUserOperation memory userOp = TestUtils.preparePackedOp(address(mockAccount), "");
-        userOp.paymasterAndData = _encodePaymasterData(address(0), 0); // Full sponsorship for native token
-
-        vm.prank(address(entryPoint), bundler1);
-        (bytes memory context,) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
-
-        vm.expectEmit(true, true, false, false);
-        emit UserOpSponsored(address(mockAccount), address(0), 0.5 ether, 0); // 0 token cost for full sponsorship
-
-        vm.prank(address(entryPoint));
-        paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, 0.5 ether, 1000000000);
     }
 
     function test_PostOp_ERC20_FullSponsorship() public {
@@ -518,12 +404,13 @@ contract ERC20PaymasterV1Test is Test {
         returns (bytes memory)
     {
         return abi.encodePacked(
-            address(paymaster),
-            bytes12(0), // Pad token address to 32 bytes
-            token,
-            exchangeRate,
-            validUntil,
-            validAfter
+            address(paymaster), // 20 bytes: paymaster address
+            uint128(3000000), // 16 bytes: validation gas limit
+            uint128(3000000), // 16 bytes: postOp gas limit
+            token, // 20 bytes: token address
+            exchangeRate, // 32 bytes: exchange rate
+            validUntil, // 32 bytes: valid until
+            validAfter // 32 bytes: valid after
         );
     }
 
