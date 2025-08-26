@@ -44,6 +44,7 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
         uint256 maxCost; // Maximum cost in wei
         uint256 prefundAmount; // Amount prefunded in tokens
         uint256 postOpGasLimit; // PostOp gas limit from paymasterAndData
+        bool isApprovalOp; // Whether this was an approval operation
     }
 
     // Mapping of authorized bundler addresses
@@ -166,7 +167,8 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
             exchangeRate: data.exchangeRate,
             maxCost: maxCost,
             prefundAmount: requiredTokenAmount,
-            postOpGasLimit: postOpGasLimit
+            postOpGasLimit: postOpGasLimit,
+            isApprovalOp: isApprovalOp
         });
 
         return (abi.encode(postOpContext), 0);
@@ -197,26 +199,46 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
             actualTokenCost = totalGasCost.mulDiv(postOpContext.exchangeRate, 1e18, Math.Rounding.Ceil);
         }
 
-        // Only refund if operation succeeded and we have excess
-        if (mode == IPaymaster.PostOpMode.opSucceeded && postOpContext.prefundAmount > actualTokenCost) {
-            uint256 refundAmount = postOpContext.prefundAmount - actualTokenCost;
-
-            // Transfer refund from beneficiary back to user
-            if (beneficiary == address(this)) {
-                // If beneficiary is this contract, we can refund directly
-                // Use low-level call to prevent revert on failed refund
-                (bool success,) = postOpContext.token.call(
-                    abi.encodeWithSelector(IERC20.transfer.selector, postOpContext.sender, refundAmount)
-                );
-                if (!success) {
-                    // Refund failed, but don't revert the entire operation
-                    emit UserOpSponsored(
-                        postOpContext.sender, postOpContext.token, totalGasCost, postOpContext.prefundAmount
+        // Handle refunds/charges based on operation type
+        if (mode == IPaymaster.PostOpMode.opSucceeded) {
+            if (postOpContext.isApprovalOp) {
+                // For approval operations, charge the user the actual token cost
+                // since no prefunding occurred during validation
+                if (actualTokenCost > 0) {
+                    // Use low-level call to prevent revert on failed charge
+                    (bool success,) = postOpContext.token.call(
+                        abi.encodeWithSelector(
+                            IERC20.transferFrom.selector, postOpContext.sender, beneficiary, actualTokenCost
+                        )
                     );
-                    return;
+                    if (!success) {
+                        // Charge failed, but don't revert the entire operation
+                        // The approval succeeded, but gas payment failed
+                        emit UserOpSponsored(postOpContext.sender, postOpContext.token, totalGasCost, 0);
+                        return;
+                    }
                 }
+            } else if (postOpContext.prefundAmount > actualTokenCost) {
+                // For non-approval operations, refund excess tokens
+                uint256 refundAmount = postOpContext.prefundAmount - actualTokenCost;
+
+                // Transfer refund from beneficiary back to user
+                if (beneficiary == address(this)) {
+                    // If beneficiary is this contract, we can refund directly
+                    // Use low-level call to prevent revert on failed refund
+                    (bool success,) = postOpContext.token.call(
+                        abi.encodeWithSelector(IERC20.transfer.selector, postOpContext.sender, refundAmount)
+                    );
+                    if (!success) {
+                        // Refund failed, but don't revert the entire operation
+                        emit UserOpSponsored(
+                            postOpContext.sender, postOpContext.token, totalGasCost, postOpContext.prefundAmount
+                        );
+                        return;
+                    }
+                }
+                // If beneficiary is external, they need to handle their own refunds
             }
-            // If beneficiary is external, they need to handle their own refunds
         }
 
         emit UserOpSponsored(postOpContext.sender, postOpContext.token, totalGasCost, actualTokenCost);

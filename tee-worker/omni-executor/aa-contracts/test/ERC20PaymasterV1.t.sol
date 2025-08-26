@@ -496,4 +496,80 @@ contract ERC20PaymasterV1Test is Test {
         bool isApproval = paymaster._isApprovalOperation_exposed(userOp, address(testToken));
         assertFalse(isApproval, "Should not detect direct calls as approval");
     }
+
+    function test_ApprovalOperation_GasCharging() public {
+        // Test that approval operations get properly charged in postOp
+        uint256 userBalanceBefore = testToken.balanceOf(user);
+
+        // Create approval operation
+        bytes memory approveData =
+            abi.encodeWithSelector(IERC20.approve.selector, address(paymaster), type(uint256).max);
+        bytes memory executeCallData = abi.encodeWithSelector(
+            bytes4(keccak256("execute(address,uint256,bytes)")), address(testToken), 0, approveData
+        );
+
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(user, "");
+        userOp.callData = executeCallData;
+        userOp.paymasterAndData = _encodePaymasterData(address(testToken), EXCHANGE_RATE);
+
+        // Validation should succeed without transferring tokens
+        vm.prank(address(entryPoint), bundler1);
+        (bytes memory context, uint256 validationData) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
+
+        assertEq(validationData, 0, "Validation should succeed");
+
+        // User balance should be unchanged after validation (no prefunding for approval ops)
+        uint256 userBalanceAfterValidation = testToken.balanceOf(user);
+        assertEq(
+            userBalanceAfterValidation,
+            userBalanceBefore,
+            "No tokens should be charged during validation for approval ops"
+        );
+
+        // Simulate the approval getting executed (this would happen between validation and postOp)
+        vm.prank(user);
+        testToken.approve(address(paymaster), type(uint256).max);
+
+        // Simulate postOp with actual gas cost
+        uint256 actualGasCost = 0.5 ether;
+        uint256 actualUserOpFeePerGas = 1000000000;
+        uint256 postOpGasLimit = 3000000; // From _encodePaymasterDataWithTime
+        uint256 totalGasCost = actualGasCost + (postOpGasLimit * actualUserOpFeePerGas);
+        uint256 expectedTokenCost = totalGasCost.mulDiv(EXCHANGE_RATE, 1e18, Math.Rounding.Ceil);
+
+        vm.expectEmit(true, true, false, false);
+        emit UserOpSponsored(user, address(testToken), totalGasCost, expectedTokenCost);
+
+        vm.prank(address(entryPoint));
+        paymaster.postOp(IPaymaster.PostOpMode.opSucceeded, context, actualGasCost, actualUserOpFeePerGas);
+
+        // User should be charged the actual token cost in postOp
+        uint256 userBalanceAfterPostOp = testToken.balanceOf(user);
+        uint256 actualChargedAmount = userBalanceBefore - userBalanceAfterPostOp;
+        assertEq(actualChargedAmount, expectedTokenCost, "User should be charged actual gas cost for approval op");
+
+        // Beneficiary should receive the tokens
+        assertEq(testToken.balanceOf(address(paymaster)), expectedTokenCost, "Paymaster should receive the tokens");
+    }
+
+    function test_ApprovalOperation_InsufficientBalance() public {
+        // Test that approval operations still check user balance during validation
+        address poorUser = makeAddr("poorUser");
+
+        // Create approval operation
+        bytes memory approveData =
+            abi.encodeWithSelector(IERC20.approve.selector, address(paymaster), type(uint256).max);
+        bytes memory executeCallData = abi.encodeWithSelector(
+            bytes4(keccak256("execute(address,uint256,bytes)")), address(testToken), 0, approveData
+        );
+
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(poorUser, "");
+        userOp.callData = executeCallData;
+        userOp.paymasterAndData = _encodePaymasterData(address(testToken), EXCHANGE_RATE);
+
+        // Should revert due to insufficient balance even for approval ops
+        vm.prank(address(entryPoint), bundler1);
+        vm.expectRevert(ERC20PaymasterV1.InsufficientTokenBalance.selector);
+        paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
+    }
 }
