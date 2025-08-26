@@ -254,7 +254,8 @@ contract ERC20PaymasterV1Test is Test {
         (bytes memory context,) = paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
 
         uint256 userBalanceAfterValidation = testToken.balanceOf(user);
-        uint256 chargedAmount = userBalanceBefore - userBalanceAfterValidation;
+        // Verify tokens were charged during validation
+        assertLt(userBalanceAfterValidation, userBalanceBefore, "Tokens should be charged during validation");
 
         // Simulate actual gas cost being less than max cost
         uint256 actualGasCost = 0.5 ether;
@@ -415,7 +416,7 @@ contract ERC20PaymasterV1Test is Test {
         );
     }
 
-    function test_ApprovalDetection_ExecuteApproval() public {
+    function test_ApprovalDetection_ExecuteApproval() public view {
         // Test detection of execute(token, 0, approve(paymaster, amount))
         bytes memory approveData = abi.encodeWithSelector(IERC20.approve.selector, address(paymaster), 1000e18);
 
@@ -486,7 +487,7 @@ contract ERC20PaymasterV1Test is Test {
         assertFalse(isApproval, "Should not detect transfer as approval");
     }
 
-    function test_ApprovalDetection_DirectCall() public {
+    function test_ApprovalDetection_DirectCall() public view {
         // Test that direct function calls (not execute/executeBatch) are not detected
         PackedUserOperation memory userOp = TestUtils.preparePackedOp(user, "");
         userOp.callData = abi.encodeWithSignature("someOtherFunction()");
