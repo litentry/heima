@@ -572,4 +572,23 @@ contract ERC20PaymasterV1Test is Test {
         vm.expectRevert(ERC20PaymasterV1.InsufficientTokenBalance.selector);
         paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
     }
+
+    function test_ValidatePaymasterUserOp_PostOpGasLimitTooLow() public {
+        PackedUserOperation memory userOp = TestUtils.preparePackedOp(user, "");
+        // Create paymaster data with postOp gas limit below minimum (50,000)
+        userOp.paymasterAndData = abi.encodePacked(
+            address(paymaster), // 20 bytes: paymaster address
+            uint128(3000000), // 16 bytes: validation gas limit
+            uint128(49999), // 16 bytes: postOp gas limit (below MIN_POST_OP_GAS_LIMIT of 50,000)
+            address(testToken), // 20 bytes: token address
+            EXCHANGE_RATE, // 32 bytes: exchange rate
+            VALID_UNTIL, // 32 bytes: valid until
+            VALID_AFTER // 32 bytes: valid after
+        );
+
+        vm.prank(address(entryPoint), bundler1);
+        vm.expectRevert(ERC20PaymasterV1.PostOpGasLimitTooLow.selector);
+
+        paymaster.validatePaymasterUserOp(userOp, bytes32(0), 1 ether);
+    }
 }

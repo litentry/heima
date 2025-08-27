@@ -62,6 +62,7 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     // Errors
     error UnauthorizedBundler();
     error InsufficientDeposit();
+    error PostOpGasLimitTooLow();
     error InvalidToken();
     error InsufficientTokenBalance();
     error InsufficientTokenAllowance();
@@ -104,7 +105,7 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
         // Extract and validate postOp gas limit after data validation
         uint256 postOpGasLimit = userOp.unpackPostOpGasLimit();
         if (postOpGasLimit < MIN_POST_OP_GAS_LIMIT) {
-            revert InsufficientDeposit(); // Reuse existing error for simplicity
+            revert PostOpGasLimitTooLow();
         }
 
         // Validate timestamps
