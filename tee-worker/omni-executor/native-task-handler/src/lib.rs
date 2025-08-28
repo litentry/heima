@@ -1220,22 +1220,30 @@ pub fn convert_to_packed_user_op(
 		updated_data
 	}
 
-	// Map token address to Binance symbol
-	async fn get_token_symbol_for_binance(
+	// Map token address to Binance symbol and return (symbol, decimals)
+	async fn get_token_info_for_binance(
 		token_address: &Address,
 		chain_id: u64,
-	) -> Option<String> {
-		// TODO: This should be a configurable mapping or queried from a token registry
-		// For now, we'll use a hardcoded mapping for common tokens
+	) -> Option<(String, u8)> {
+		// Map token address to (Binance symbol, token decimals)
+		// Symbol format: ETH quoted in the token (e.g., ETHUSDC = ETH priced in USDC)
 		match (chain_id, token_address.to_string().to_lowercase().as_str()) {
 			// Ethereum mainnet (chain_id 1)
-			(1, "0xa0b86991c431c44c32c9cdf158e8c6c6a3b7e4ef7") => Some("USDCETH".to_string()), // USDC
-			(1, "0xdac17f958d2ee523a2206206994597c13d831ec7") => Some("USDTETH".to_string()),  // USDT
-			(1, "0x6b175474e89094c44da98b954eedeac495271d0f") => Some("DAIETH".to_string()),   // DAI
+			(1, "0xa0b86991c431c44c32c9cdf158e8c6c6a3b7e4ef7") => Some(("ETHUSDC".to_string(), 6)), // USDC
+			(1, "0xdac17f958d2ee523a2206206994597c13d831ec7") => Some(("ETHUSDT".to_string(), 6)),  // USDT
+			(1, "0x6b175474e89094c44da98b954eedeac495271d0f") => Some(("ETHDAI".to_string(), 18)),  // DAI
 
-			// Arbitrum (chain_id 42161)
-			(42161, "0xaf88d065e77c8cc2239327c5edb3a432268e5831") => Some("USDCETH".to_string()), // USDC
-			(42161, "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9") => Some("USDTETH".to_string()), // USDT
+			// Arbitrum (chain_id 42161) - same tokens, same symbols since they track ETH price
+			(42161, "0xaf88d065e77c8cc2239327c5edb3a432268e5831") => {
+				Some(("ETHUSDC".to_string(), 6))
+			}, // USDC
+			(42161, "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9") => {
+				Some(("ETHUSDT".to_string(), 6))
+			}, // USDT
+
+			// BSC (chain_id 56)
+			(56, "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d") => Some(("ETHUSDC".to_string(), 18)), // USDC
+			(56, "0x55d398326f99059ff775485246999027b3197955") => Some(("ETHUSDT".to_string(), 18)), // USDT
 
 			// Add more mappings as needed
 			_ => {
@@ -1254,6 +1262,7 @@ pub fn convert_to_packed_user_op(
 		let spot_trading_api = SpotTradingApi::new(binance_api);
 
 		// Query price from Binance
+		// For ETHUSDC, this returns how many USDC for 1 ETH (e.g., 4479.99)
 		let price_str = spot_trading_api
 			.get_symbol_price(token_symbol)
 			.await
@@ -1263,15 +1272,30 @@ pub fn convert_to_packed_user_op(
 			.parse()
 			.map_err(|e| format!("Failed to parse price '{}': {}", price_str, e))?;
 
-		// Apply fee percentage
+		if tokens_per_eth <= 0.0 {
+			return Err(format!("Invalid price from Binance: {}", tokens_per_eth));
+		}
+
+		// Apply fee percentage (increase rate to charge more tokens)
 		let tokens_per_eth_with_fee = tokens_per_eth * (1.0 + EXCHANGE_RATE_FEE_PERCENT / 100.0);
 
-		// Calculate exchange rate: tokensPerEth * 10^tokenDecimals
+		// Calculate exchange rate according to ERC20PaymasterV1.sol:
+		// exchangeRate = tokensPerEth * 10^tokenDecimals
+		// Example: For 6-decimal USDC at $4000/ETH: rate = 4000 * 10^6 = 4000000000
+		// This rate is used as: requiredTokenAmount = (maxCost * exchangeRate) / 1e18
+		// Where maxCost is in wei, so 1 ETH of gas = 10^18 wei
+		// Result: (10^18 * 4000000000) / 10^18 = 4000000000 USDC units = 4000 USDC ✓
+
 		let exchange_rate_f64 = tokens_per_eth_with_fee * (10_f64.powi(token_decimals as i32));
 
 		if exchange_rate_f64 <= 0.0 || exchange_rate_f64 >= u128::MAX as f64 {
 			return Err(format!("Exchange rate {} is out of valid range", exchange_rate_f64));
 		}
+
+		info!(
+			"Calculated exchange rate for {}: {} tokens per ETH -> rate {} (with {}% fee)",
+			token_symbol, tokens_per_eth, exchange_rate_f64 as u128, EXCHANGE_RATE_FEE_PERCENT
+		);
 
 		Ok(exchange_rate_f64 as u128)
 	}
@@ -1293,24 +1317,17 @@ pub fn convert_to_packed_user_op(
 				token_address, original_rate, valid_until, valid_after
 			);
 
-			// Get token symbol for Binance API
-			let token_symbol = match get_token_symbol_for_binance(&token_address, chain_id).await {
-				Some(symbol) => symbol,
-				None => {
-					return Err(format!(
-						"Token address {} on chain {} is not supported for price queries",
-						token_address, chain_id
-					));
-				},
-			};
-
-			// TODO: Get token decimals from contract or mapping (for now assume common decimals)
-			let token_decimals = match token_symbol.as_str() {
-				s if s.starts_with("USDC") => 6,
-				s if s.starts_with("USDT") => 6,
-				s if s.starts_with("DAI") => 18,
-				_ => 18, // Default to 18 decimals
-			};
+			// Get token symbol and decimals for Binance API
+			let (token_symbol, token_decimals) =
+				match get_token_info_for_binance(&token_address, chain_id).await {
+					Some((symbol, decimals)) => (symbol, decimals),
+					None => {
+						return Err(format!(
+							"Token address {} on chain {} is not supported for price queries",
+							token_address, chain_id
+						));
+					},
+				};
 
 			// Calculate new exchange rate
 			let new_exchange_rate =
@@ -2194,19 +2211,19 @@ mod erc20_paymaster_tests {
 	}
 
 	#[test]
-	fn test_get_token_symbol_for_binance_ethereum_usdc() {
+	fn test_get_token_info_for_binance_ethereum_usdc() {
 		let token_address =
 			Address::from_str("0xa0b86991c431c44c32c9cdf158e8c6c6a3b7e4ef7").unwrap();
 		let rt = tokio::runtime::Runtime::new().unwrap();
-		let result = rt.block_on(get_token_symbol_for_binance(&token_address, 1));
-		assert_eq!(result, Some("USDCETH".to_string()));
+		let result = rt.block_on(get_token_info_for_binance(&token_address, 1));
+		assert_eq!(result, Some(("ETHUSDC".to_string(), 6)));
 	}
 
 	#[test]
-	fn test_get_token_symbol_for_binance_unknown_token() {
+	fn test_get_token_info_for_binance_unknown_token() {
 		let token_address = Address::from([0xFF; 20]);
 		let rt = tokio::runtime::Runtime::new().unwrap();
-		let result = rt.block_on(get_token_symbol_for_binance(&token_address, 1));
+		let result = rt.block_on(get_token_info_for_binance(&token_address, 1));
 		assert!(result.is_none());
 	}
 
@@ -2214,23 +2231,23 @@ mod erc20_paymaster_tests {
 	async fn test_calculate_exchange_rate_with_binance() {
 		let mut mock_api = MockBinanceApiClient::new();
 
-		// Mock the SpotTradingApi call to return "2000.50" as price
+		// Mock the SpotTradingApi call to return "4000.50" as price for ETHUSDC
 		mock_api
 			.expect_make_public_get_request::<binance_api::spot_trading_api::types::SymbolPrice>()
 			.with(eq("/api/v3/ticker/price"), always())
 			.times(1)
 			.returning(|_, _| {
 				Ok(binance_api::spot_trading_api::types::SymbolPrice {
-					symbol: "USDCETH".to_string(),
-					price: "2000.50".to_string(),
+					symbol: "ETHUSDC".to_string(),
+					price: "4000.50".to_string(),
 				})
 			});
 
-		let result = calculate_exchange_rate_with_binance(&mock_api, "USDCETH", 6).await;
+		let result = calculate_exchange_rate_with_binance(&mock_api, "ETHUSDC", 6).await;
 		assert!(result.is_ok());
 
-		// Expected: 2000.50 * 10^6 = 2000500000
-		let expected_rate = 2000500000u128;
+		// Expected: 4000.50 * 10^6 = 4000500000 (USDC units per ETH)
+		let expected_rate = 4000500000u128;
 		assert_eq!(result.unwrap(), expected_rate);
 	}
 
@@ -2245,12 +2262,12 @@ mod erc20_paymaster_tests {
 			.times(1)
 			.returning(|_, _| {
 				Ok(binance_api::spot_trading_api::types::SymbolPrice {
-					symbol: "USDCETH".to_string(),
+					symbol: "ETHUSDC".to_string(),
 					price: "invalid".to_string(),
 				})
 			});
 
-		let result = calculate_exchange_rate_with_binance(&mock_api, "USDCETH", 6).await;
+		let result = calculate_exchange_rate_with_binance(&mock_api, "ETHUSDC", 6).await;
 		assert!(result.is_err());
 		assert!(result.unwrap_err().contains("Failed to parse price"));
 	}
@@ -2266,8 +2283,8 @@ mod erc20_paymaster_tests {
 			.times(1)
 			.returning(|_, _| {
 				Ok(binance_api::spot_trading_api::types::SymbolPrice {
-					symbol: "USDCETH".to_string(),
-					price: "2000.0".to_string(),
+					symbol: "ETHUSDC".to_string(),
+					price: "4000.0".to_string(),
 				})
 			});
 
@@ -2303,7 +2320,7 @@ mod erc20_paymaster_tests {
 		let updated_bytes = updated_data.unwrap();
 		let (token_address, new_rate, _, _) = decode_erc20_paymaster_data(&updated_bytes).unwrap();
 		assert_eq!(token_address, usdc_address);
-		assert_eq!(new_rate, 2000000000u128); // 2000 * 10^6
+		assert_eq!(new_rate, 4000000000u128); // 4000 * 10^6
 		assert_ne!(new_rate, initial_rate); // Should be different from initial
 	}
 
