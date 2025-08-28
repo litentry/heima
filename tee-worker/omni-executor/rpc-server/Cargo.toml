@@ -28,6 +28,7 @@ tracing = { workspace = true }
 
 # Local dependencies
 aa-contracts-client = { workspace = true }
+binance-api = { workspace = true }
 config-loader = { workspace = true }
 ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }

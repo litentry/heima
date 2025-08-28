@@ -4,6 +4,7 @@ mod types;
 use aa_contracts_client::calculate_user_operation_hash;
 use aa_contracts_client::EntryPointClient;
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use binance_api::{spot_trading_api::SpotTradingApi, BinanceApi};
 use chrono::{Days, Utc};
 use ethereum_rpc::AlloyRpcProvider;
 use executor_core::{
@@ -76,6 +77,14 @@ const DEFAULT_PAYMASTER_POST_OP_GAS: u128 = 50_000;
 /// Maximum allowed paymaster gas to prevent abuse
 const MAX_PAYMASTER_GAS: u128 = 5_000_000;
 
+// ERC20 paymaster constants
+/// Minimum length for ERC20 paymaster data: paymaster(20) + verification_gas(16) + postop_gas(16) + token(20) + exchange_rate(32) + valid_until(32) + valid_after(32)
+const MIN_ERC20_PAYMASTER_DATA_LENGTH: usize = 20 + 16 + 16 + 20 + 32 + 32 + 32;
+/// Offset where paymaster-specific data starts (after paymaster address + gas limits)
+const PAYMASTER_DATA_OFFSET: usize = 20 + 16 + 16;
+/// Additional fee percentage for exchange rate (0% for now, can be made configurable)
+const EXCHANGE_RATE_FEE_PERCENT: f64 = 0.0;
+
 pub type ParentchainTxSigner = TxSigner<
 	SubxtClient<CustomConfig>,
 	SubxtClientFactory<CustomConfig>,
@@ -102,6 +111,7 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+	pub binance_api_client: Arc<Box<dyn BinanceApi>>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -136,6 +146,7 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+		binance_api_client: Arc<Box<dyn BinanceApi>>,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {
@@ -149,6 +160,7 @@ impl<
 			cross_chain_intent_executor,
 			pumpx_api,
 			pumpx_signer_client,
+			binance_api_client,
 			entry_point_clients,
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
@@ -817,6 +829,36 @@ pub async fn handle_native_task<
 					info!("UserOperation {} signed successfully", index);
 				}
 
+				// Process ERC20 paymaster data if detected
+				if !packed_user_op.paymasterAndData.is_empty() {
+					match process_erc20_paymaster_data(
+						ctx.binance_api_client.as_ref().as_ref(),
+						&packed_user_op.paymasterAndData,
+						chain_id,
+					)
+					.await
+					{
+						Ok(Some(updated_paymaster_data)) => {
+							packed_user_op.paymasterAndData = updated_paymaster_data;
+							info!("Updated ERC20 paymaster data for UserOperation {}", index);
+						},
+						Ok(None) => {
+							// Not an ERC20 paymaster, continue as normal
+							debug!("UserOperation {} does not use ERC20 paymaster", index);
+						},
+						Err(e) => {
+							error!(
+								"Failed to process ERC20 paymaster data for UserOperation {}: {}",
+								index, e
+							);
+							return Err(NativeTaskError::InvalidUserOperation(format!(
+								"ERC20 paymaster processing failed for operation at index {}: {}",
+								index, e
+							)));
+						},
+					}
+				}
+
 				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
 				let aa_user_op = aa_contracts_client::PackedUserOperation {
 					sender: packed_user_op.sender,
@@ -1077,6 +1119,231 @@ pub fn convert_to_packed_user_op(
 			}
 			Ok(bytes)
 		};
+
+	// Helper to decode paymaster data for ERC20 paymaster detection
+	fn decode_erc20_paymaster_data(paymaster_and_data: &[u8]) -> Option<(Address, u128, u64, u64)> {
+		if paymaster_and_data.len() < MIN_ERC20_PAYMASTER_DATA_LENGTH {
+			return None;
+		}
+
+		// Extract token address (20 bytes) starting at PAYMASTER_DATA_OFFSET
+		let token_start = PAYMASTER_DATA_OFFSET;
+		let token_bytes = &paymaster_and_data[token_start..token_start + 20];
+		let token_address = Address::from_slice(token_bytes);
+
+		// Extract exchange rate (32 bytes)
+		let rate_start = token_start + 20;
+		let rate_bytes: [u8; 32] =
+			paymaster_and_data[rate_start..rate_start + 32].try_into().ok()?;
+		let exchange_rate = u128::from_be_bytes([
+			rate_bytes[16],
+			rate_bytes[17],
+			rate_bytes[18],
+			rate_bytes[19],
+			rate_bytes[20],
+			rate_bytes[21],
+			rate_bytes[22],
+			rate_bytes[23],
+			rate_bytes[24],
+			rate_bytes[25],
+			rate_bytes[26],
+			rate_bytes[27],
+			rate_bytes[28],
+			rate_bytes[29],
+			rate_bytes[30],
+			rate_bytes[31],
+		]);
+
+		// Extract validUntil (32 bytes as u64)
+		let valid_until_start = rate_start + 32;
+		let valid_until_bytes: [u8; 32] =
+			paymaster_and_data[valid_until_start..valid_until_start + 32].try_into().ok()?;
+		let valid_until = u64::from_be_bytes([
+			valid_until_bytes[24],
+			valid_until_bytes[25],
+			valid_until_bytes[26],
+			valid_until_bytes[27],
+			valid_until_bytes[28],
+			valid_until_bytes[29],
+			valid_until_bytes[30],
+			valid_until_bytes[31],
+		]);
+
+		// Extract validAfter (32 bytes as u64)
+		let valid_after_start = valid_until_start + 32;
+		let valid_after_bytes: [u8; 32] =
+			paymaster_and_data[valid_after_start..valid_after_start + 32].try_into().ok()?;
+		let valid_after = u64::from_be_bytes([
+			valid_after_bytes[24],
+			valid_after_bytes[25],
+			valid_after_bytes[26],
+			valid_after_bytes[27],
+			valid_after_bytes[28],
+			valid_after_bytes[29],
+			valid_after_bytes[30],
+			valid_after_bytes[31],
+		]);
+
+		Some((token_address, exchange_rate, valid_until, valid_after))
+	}
+
+	// Helper to encode updated paymaster data with new exchange rate
+	fn encode_erc20_paymaster_data(
+		original_data: &[u8],
+		new_exchange_rate: u128,
+		valid_until: u64,
+		valid_after: u64,
+	) -> Vec<u8> {
+		let mut updated_data = original_data.to_vec();
+
+		// Update exchange rate (32 bytes)
+		let rate_start = PAYMASTER_DATA_OFFSET + 20;
+		let rate_bytes = [0u8; 16]
+			.iter()
+			.chain(&new_exchange_rate.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		updated_data[rate_start..rate_start + 32].copy_from_slice(&rate_bytes);
+
+		// Update validUntil (32 bytes)
+		let valid_until_start = rate_start + 32;
+		let valid_until_bytes =
+			[0u8; 24].iter().chain(&valid_until.to_be_bytes()).copied().collect::<Vec<u8>>();
+		updated_data[valid_until_start..valid_until_start + 32].copy_from_slice(&valid_until_bytes);
+
+		// Update validAfter (32 bytes)
+		let valid_after_start = valid_until_start + 32;
+		let valid_after_bytes =
+			[0u8; 24].iter().chain(&valid_after.to_be_bytes()).copied().collect::<Vec<u8>>();
+		updated_data[valid_after_start..valid_after_start + 32].copy_from_slice(&valid_after_bytes);
+
+		updated_data
+	}
+
+	// Map token address to Binance symbol
+	async fn get_token_symbol_for_binance(
+		token_address: &Address,
+		chain_id: u64,
+	) -> Option<String> {
+		// TODO: This should be a configurable mapping or queried from a token registry
+		// For now, we'll use a hardcoded mapping for common tokens
+		match (chain_id, token_address.to_string().to_lowercase().as_str()) {
+			// Ethereum mainnet (chain_id 1)
+			(1, "0xa0b86991c431c44c32c9cdf158e8c6c6a3b7e4ef7") => Some("USDCETH".to_string()), // USDC
+			(1, "0xdac17f958d2ee523a2206206994597c13d831ec7") => Some("USDTETH".to_string()),  // USDT
+			(1, "0x6b175474e89094c44da98b954eedeac495271d0f") => Some("DAIETH".to_string()),   // DAI
+
+			// Arbitrum (chain_id 42161)
+			(42161, "0xaf88d065e77c8cc2239327c5edb3a432268e5831") => Some("USDCETH".to_string()), // USDC
+			(42161, "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9") => Some("USDTETH".to_string()), // USDT
+
+			// Add more mappings as needed
+			_ => {
+				debug!("Unknown token address {} on chain {}", token_address, chain_id);
+				None
+			},
+		}
+	}
+
+	// Calculate exchange rate using Binance API
+	async fn calculate_exchange_rate_with_binance(
+		binance_api: &dyn BinanceApi,
+		token_symbol: &str,
+		token_decimals: u8,
+	) -> Result<u128, String> {
+		let spot_trading_api = SpotTradingApi::new(binance_api);
+
+		// Query price from Binance
+		let price_str = spot_trading_api
+			.get_symbol_price(token_symbol)
+			.await
+			.map_err(|e| format!("Failed to get price for {}: {:?}", token_symbol, e))?;
+
+		let tokens_per_eth: f64 = price_str
+			.parse()
+			.map_err(|e| format!("Failed to parse price '{}': {}", price_str, e))?;
+
+		// Apply fee percentage
+		let tokens_per_eth_with_fee = tokens_per_eth * (1.0 + EXCHANGE_RATE_FEE_PERCENT / 100.0);
+
+		// Calculate exchange rate: tokensPerEth * 10^tokenDecimals
+		let exchange_rate_f64 = tokens_per_eth_with_fee * (10_f64.powi(token_decimals as i32));
+
+		if exchange_rate_f64 <= 0.0 || exchange_rate_f64 >= u128::MAX as f64 {
+			return Err(format!("Exchange rate {} is out of valid range", exchange_rate_f64));
+		}
+
+		Ok(exchange_rate_f64 as u128)
+	}
+
+	// Process ERC20 paymaster data
+	async fn process_erc20_paymaster_data(
+		binance_api: &dyn BinanceApi,
+		paymaster_and_data: &Bytes,
+		chain_id: u64,
+	) -> Result<Option<Bytes>, String> {
+		let data_bytes = paymaster_and_data.as_ref();
+
+		// Try to decode as ERC20 paymaster data
+		if let Some((token_address, original_rate, valid_until, valid_after)) =
+			decode_erc20_paymaster_data(data_bytes)
+		{
+			info!(
+				"Detected ERC20 paymaster with token {} (original rate: {}, valid_until: {}, valid_after: {})",
+				token_address, original_rate, valid_until, valid_after
+			);
+
+			// Get token symbol for Binance API
+			let token_symbol = match get_token_symbol_for_binance(&token_address, chain_id).await {
+				Some(symbol) => symbol,
+				None => {
+					return Err(format!(
+						"Token address {} on chain {} is not supported for price queries",
+						token_address, chain_id
+					));
+				},
+			};
+
+			// TODO: Get token decimals from contract or mapping (for now assume common decimals)
+			let token_decimals = match token_symbol.as_str() {
+				s if s.starts_with("USDC") => 6,
+				s if s.starts_with("USDT") => 6,
+				s if s.starts_with("DAI") => 18,
+				_ => 18, // Default to 18 decimals
+			};
+
+			// Calculate new exchange rate
+			let new_exchange_rate =
+				calculate_exchange_rate_with_binance(binance_api, &token_symbol, token_decimals)
+					.await?;
+
+			info!(
+				"Calculated new exchange rate for {} ({}): {} (was: {})",
+				token_symbol, token_address, new_exchange_rate, original_rate
+			);
+
+			// Set validity window (e.g., valid for 1 hour)
+			let current_time = std::time::SystemTime::now()
+				.duration_since(std::time::UNIX_EPOCH)
+				.unwrap()
+				.as_secs();
+			let new_valid_after = current_time;
+			let new_valid_until = current_time + 3600; // Valid for 1 hour
+
+			// Encode updated paymaster data
+			let updated_data = encode_erc20_paymaster_data(
+				data_bytes,
+				new_exchange_rate,
+				new_valid_until,
+				new_valid_after,
+			);
+
+			return Ok(Some(Bytes::from(updated_data)));
+		}
+
+		// Not an ERC20 paymaster or data doesn't match expected format
+		Ok(None)
+	}
 
 	Ok(aa_contracts_client::PackedUserOperation {
 		sender: Address::from_str(&user_op.sender)
@@ -1822,5 +2089,252 @@ mod tests {
 		// Should return zeros for no paymaster
 		assert_eq!(verification, 0);
 		assert_eq!(post_op, 0);
+	}
+}
+
+#[cfg(test)]
+mod erc20_paymaster_tests {
+	use super::*;
+	use alloy::primitives::Bytes;
+	use binance_api::mocks::MockBinanceApiClient;
+	use mockall::predicate::*;
+
+	#[test]
+	fn test_decode_erc20_paymaster_data_valid() {
+		// Create test paymaster data
+		let mut data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+
+		// Set paymaster address (first 20 bytes)
+		data[0..20].copy_from_slice(&[0x12; 20]);
+
+		// Set verification gas (16 bytes)
+		data[20..36].copy_from_slice(&[0; 16]);
+
+		// Set postop gas (16 bytes)
+		data[36..52].copy_from_slice(&[0; 16]);
+
+		// Set token address (20 bytes starting at offset 52)
+		data[52..72].copy_from_slice(&[0xAB; 20]);
+
+		// Set exchange rate (32 bytes) - representing 2000 * 10^6
+		let exchange_rate = 2000000000u128;
+		let rate_bytes = [0u8; 16]
+			.iter()
+			.chain(&exchange_rate.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		data[72..104].copy_from_slice(&rate_bytes);
+
+		// Set validUntil (32 bytes) - timestamp 1700000000
+		let valid_until_bytes = [0u8; 24]
+			.iter()
+			.chain(&1700000000u64.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		data[104..136].copy_from_slice(&valid_until_bytes);
+
+		// Set validAfter (32 bytes) - timestamp 1600000000
+		let valid_after_bytes = [0u8; 24]
+			.iter()
+			.chain(&1600000000u64.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		data[136..168].copy_from_slice(&valid_after_bytes);
+
+		// Test decoding
+		let result = decode_erc20_paymaster_data(&data);
+		assert!(result.is_some());
+
+		let (token_address, exchange_rate_result, valid_until, valid_after) = result.unwrap();
+		assert_eq!(token_address, Address::from([0xAB; 20]));
+		assert_eq!(exchange_rate_result, 2000000000u128);
+		assert_eq!(valid_until, 1700000000u64);
+		assert_eq!(valid_after, 1600000000u64);
+	}
+
+	#[test]
+	fn test_decode_erc20_paymaster_data_too_short() {
+		let data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH - 1];
+		let result = decode_erc20_paymaster_data(&data);
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_encode_erc20_paymaster_data() {
+		// Create initial paymaster data
+		let mut original_data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+
+		// Fill with some initial values
+		original_data[0..20].copy_from_slice(&[0x12; 20]); // paymaster
+		original_data[20..36].copy_from_slice(&[0; 16]); // verification gas
+		original_data[36..52].copy_from_slice(&[0; 16]); // postop gas
+		original_data[52..72].copy_from_slice(&[0xAB; 20]); // token
+
+		// Test encoding new values
+		let new_exchange_rate = 3000000000u128;
+		let new_valid_until = 1800000000u64;
+		let new_valid_after = 1700000000u64;
+
+		let updated_data = encode_erc20_paymaster_data(
+			&original_data,
+			new_exchange_rate,
+			new_valid_until,
+			new_valid_after,
+		);
+
+		// Verify the updated data contains the new values
+		let result = decode_erc20_paymaster_data(&updated_data);
+		assert!(result.is_some());
+
+		let (token_address, exchange_rate_result, valid_until, valid_after) = result.unwrap();
+		assert_eq!(token_address, Address::from([0xAB; 20])); // Token should remain unchanged
+		assert_eq!(exchange_rate_result, new_exchange_rate);
+		assert_eq!(valid_until, new_valid_until);
+		assert_eq!(valid_after, new_valid_after);
+	}
+
+	#[test]
+	fn test_get_token_symbol_for_binance_ethereum_usdc() {
+		let token_address =
+			Address::from_str("0xa0b86991c431c44c32c9cdf158e8c6c6a3b7e4ef7").unwrap();
+		let rt = tokio::runtime::Runtime::new().unwrap();
+		let result = rt.block_on(get_token_symbol_for_binance(&token_address, 1));
+		assert_eq!(result, Some("USDCETH".to_string()));
+	}
+
+	#[test]
+	fn test_get_token_symbol_for_binance_unknown_token() {
+		let token_address = Address::from([0xFF; 20]);
+		let rt = tokio::runtime::Runtime::new().unwrap();
+		let result = rt.block_on(get_token_symbol_for_binance(&token_address, 1));
+		assert!(result.is_none());
+	}
+
+	#[tokio::test]
+	async fn test_calculate_exchange_rate_with_binance() {
+		let mut mock_api = MockBinanceApiClient::new();
+
+		// Mock the SpotTradingApi call to return "2000.50" as price
+		mock_api
+			.expect_make_public_get_request::<binance_api::spot_trading_api::types::SymbolPrice>()
+			.with(eq("/api/v3/ticker/price"), always())
+			.times(1)
+			.returning(|_, _| {
+				Ok(binance_api::spot_trading_api::types::SymbolPrice {
+					symbol: "USDCETH".to_string(),
+					price: "2000.50".to_string(),
+				})
+			});
+
+		let result = calculate_exchange_rate_with_binance(&mock_api, "USDCETH", 6).await;
+		assert!(result.is_ok());
+
+		// Expected: 2000.50 * 10^6 = 2000500000
+		let expected_rate = 2000500000u128;
+		assert_eq!(result.unwrap(), expected_rate);
+	}
+
+	#[tokio::test]
+	async fn test_calculate_exchange_rate_with_binance_invalid_price() {
+		let mut mock_api = MockBinanceApiClient::new();
+
+		// Mock the SpotTradingApi call to return invalid price
+		mock_api
+			.expect_make_public_get_request::<binance_api::spot_trading_api::types::SymbolPrice>()
+			.with(eq("/api/v3/ticker/price"), always())
+			.times(1)
+			.returning(|_, _| {
+				Ok(binance_api::spot_trading_api::types::SymbolPrice {
+					symbol: "USDCETH".to_string(),
+					price: "invalid".to_string(),
+				})
+			});
+
+		let result = calculate_exchange_rate_with_binance(&mock_api, "USDCETH", 6).await;
+		assert!(result.is_err());
+		assert!(result.unwrap_err().contains("Failed to parse price"));
+	}
+
+	#[tokio::test]
+	async fn test_process_erc20_paymaster_data_success() {
+		let mut mock_api = MockBinanceApiClient::new();
+
+		// Mock successful price query
+		mock_api
+			.expect_make_public_get_request::<binance_api::spot_trading_api::types::SymbolPrice>()
+			.with(eq("/api/v3/ticker/price"), always())
+			.times(1)
+			.returning(|_, _| {
+				Ok(binance_api::spot_trading_api::types::SymbolPrice {
+					symbol: "USDCETH".to_string(),
+					price: "2000.0".to_string(),
+				})
+			});
+
+		// Create test paymaster data with USDC address
+		let mut data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+		data[0..20].copy_from_slice(&[0x12; 20]); // paymaster
+		data[20..36].copy_from_slice(&[0; 16]); // verification gas
+		data[36..52].copy_from_slice(&[0; 16]); // postop gas
+
+		// Set USDC token address
+		let usdc_address =
+			Address::from_str("0xa0b86991c431c44c32c9cdf158e8c6c6a3b7e4ef7").unwrap();
+		data[52..72].copy_from_slice(usdc_address.as_ref());
+
+		// Set some initial exchange rate
+		let initial_rate = 1500000000u128;
+		let rate_bytes = [0u8; 16]
+			.iter()
+			.chain(&initial_rate.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		data[72..104].copy_from_slice(&rate_bytes);
+
+		let paymaster_and_data = Bytes::from(data);
+
+		let result = process_erc20_paymaster_data(&mock_api, &paymaster_and_data, 1).await;
+		assert!(result.is_ok());
+
+		let updated_data = result.unwrap();
+		assert!(updated_data.is_some());
+
+		// Verify the exchange rate was updated
+		let updated_bytes = updated_data.unwrap();
+		let (token_address, new_rate, _, _) = decode_erc20_paymaster_data(&updated_bytes).unwrap();
+		assert_eq!(token_address, usdc_address);
+		assert_eq!(new_rate, 2000000000u128); // 2000 * 10^6
+		assert_ne!(new_rate, initial_rate); // Should be different from initial
+	}
+
+	#[tokio::test]
+	async fn test_process_erc20_paymaster_data_unsupported_token() {
+		let mut mock_api = MockBinanceApiClient::new();
+
+		// Create test paymaster data with unknown token address
+		let mut data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+		data[0..20].copy_from_slice(&[0x12; 20]); // paymaster
+		data[20..36].copy_from_slice(&[0; 16]); // verification gas
+		data[36..52].copy_from_slice(&[0; 16]); // postop gas
+		data[52..72].copy_from_slice(&[0xFF; 20]); // unknown token
+
+		let paymaster_and_data = Bytes::from(data);
+
+		let result = process_erc20_paymaster_data(&mock_api, &paymaster_and_data, 1).await;
+		assert!(result.is_err());
+		assert!(result.unwrap_err().contains("is not supported for price queries"));
+	}
+
+	#[tokio::test]
+	async fn test_process_erc20_paymaster_data_not_erc20_paymaster() {
+		let mut mock_api = MockBinanceApiClient::new();
+
+		// Create paymaster data that's too short (not ERC20 paymaster format)
+		let data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH - 10];
+		let paymaster_and_data = Bytes::from(data);
+
+		let result = process_erc20_paymaster_data(&mock_api, &paymaster_and_data, 1).await;
+		assert!(result.is_ok());
+		assert!(result.unwrap().is_none()); // Should return None for non-ERC20 paymaster
 	}
 }

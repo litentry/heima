@@ -6844,6 +6844,7 @@ version = "0.1.0"
 dependencies = [
  "aa-contracts-client",
  "alloy",
+ "binance-api",
  "chrono",
  "ethereum-rpc",
  "executor-core",
@@ -6862,6 +6863,7 @@ dependencies = [
  "signer-client",
  "subxt",
  "tokio",
+ "tokio-test",
  "tracing",
 ]
 
@@ -8723,6 +8725,7 @@ dependencies = [
  "alloy-signer-local",
  "async-trait",
  "base58",
+ "binance-api",
  "chrono",
  "config-loader",
  "email_address",
@@ -14225,6 +14228,19 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "tokio-test"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2468baabc3311435b55dd935f702f42cd1b8abb7e754fb7dfb16bd36aa88f9f7"
+dependencies = [
+ "async-stream",
+ "bytes",
+ "futures-core",
+ "tokio",
+ "tokio-stream",
 ]
 
 [[package]]

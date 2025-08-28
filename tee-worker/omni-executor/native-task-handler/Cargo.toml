@@ -16,6 +16,7 @@ tracing = { workspace = true }
 
 # Local dependencies
 aa-contracts-client = { workspace = true }
+binance-api = { workspace = true }
 ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
@@ -28,6 +29,10 @@ parentchain-rpc-client = { workspace = true }
 parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
 signer-client = { workspace = true }
+
+[dev-dependencies]
+binance-api = { workspace = true, features = ["mocks"] }
+tokio-test = "0.4.4"
 
 [lints]
 workspace = true
