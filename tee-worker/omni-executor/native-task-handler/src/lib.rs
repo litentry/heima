@@ -212,9 +212,7 @@ async fn get_token_info_for_binance_enhanced(
 						let token_symbol = &symbol[3..]; // Remove "ETH" prefix
 
 						// Try to get decimals from the exchange
-						if let Ok(Some(decimals)) =
-							binance_client.get_exchange_info_for_symbol(&symbol).await
-						{
+						if let Ok(decimals) = binance_client.get_symbol_precision(&symbol).await {
 							info!(
 								"Found potential token {} via dynamic discovery with symbol {} and {} decimals",
 								token_address, token_symbol, decimals

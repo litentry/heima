@@ -45,7 +45,7 @@ pub trait BinanceApi: Send + Sync {
 #[async_trait]
 pub trait BinancePaymasterApi: Send + Sync {
 	async fn get_symbol_price(&self, symbol: &str) -> Result<String, Error>;
-	async fn get_exchange_info_for_symbol(&self, symbol: &str) -> Result<Option<u8>, Error>;
+	async fn get_symbol_precision(&self, symbol: &str) -> Result<u8, Error>;
 	async fn get_all_trading_symbols(&self) -> Result<Vec<String>, Error>;
 }
 
@@ -215,7 +215,7 @@ impl BinancePaymasterApi for BinanceApiClient {
 		Ok(price_info.price)
 	}
 
-	async fn get_exchange_info_for_symbol(&self, symbol: &str) -> Result<Option<u8>, Error> {
+	async fn get_symbol_precision(&self, symbol: &str) -> Result<u8, Error> {
 		use crate::spot_trading_api::types::ExchangeInfo;
 
 		let endpoint = "/api/v3/exchangeInfo";
@@ -226,10 +226,9 @@ impl BinancePaymasterApi for BinanceApiClient {
 			self.make_public_get_request(endpoint, Some(params)).await?;
 
 		// Find the trading pair and return quote asset precision
-		if let Some(symbol_info) = exchange_info.symbols.first() {
-			Ok(Some(symbol_info.quote_asset_precision))
-		} else {
-			Ok(None)
+		match exchange_info.symbols.first() {
+			Some(symbol) => Ok(symbol.quote_asset_precision),
+			None => Err(Error::SymbolNotFound),
 		}
 	}
 
@@ -285,7 +284,7 @@ pub mod mocks {
 		#[async_trait]
 		impl BinancePaymasterApi for BinanceApiClient {
 			async fn get_symbol_price(&self, symbol: &str) -> Result<String, Error>;
-			async fn get_exchange_info_for_symbol(&self, symbol: &str) -> Result<Option<u8>, Error>;
+			async fn get_symbol_precision(&self, symbol: &str) -> Result<u8, Error>;
 			async fn get_all_trading_symbols(&self) -> Result<Vec<String>, Error>;
 		}
 	}
