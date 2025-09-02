@@ -5,7 +5,7 @@ use crate::{
 	ShieldingKey,
 };
 use aa_contracts_client::EntryPointClient;
-use binance_api::BinanceApiClient;
+use binance_api::BinancePaymasterApi;
 use config_loader::ConfigLoader;
 use ethereum_rpc::AlloyRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
@@ -41,7 +41,7 @@ pub(crate) struct RpcContext<
 	// we could save copying client (and other objects) around when P-1527 is done
 	// there could some a single `handler` that wraps up all accessible member variables
 	pub signer_client: Arc<Box<dyn SignerClient>>,
-	pub binance_api_client: Arc<BinanceApiClient>,
+	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	pub wildmeta_backend_ecdsa_pubkey: [u8; 33], // Compressed ECDSA public key for wildmeta backend signature verification
@@ -83,7 +83,7 @@ impl<
 		google_client_secret: String,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		signer_client: Arc<Box<dyn SignerClient>>,
-		binance_api_client: Arc<BinanceApiClient>,
+		binance_api_client: Arc<dyn BinancePaymasterApi>,
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 		wildmeta_backend_ecdsa_pubkey: [u8; 33],
@@ -165,7 +165,7 @@ pub async fn start_server<
 	jwt_rsa_private_key: Vec<u8>,
 	config_loader: &ConfigLoader,
 	signer_client: Arc<Box<dyn SignerClient>>,
-	binance_api_client: Arc<BinanceApiClient>,
+	binance_api_client: Arc<dyn BinancePaymasterApi>,
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	wildmeta_backend_ecdsa_pubkey: [u8; 33],

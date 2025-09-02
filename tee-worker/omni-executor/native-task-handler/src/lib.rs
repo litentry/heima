@@ -4,7 +4,7 @@ mod types;
 use aa_contracts_client::calculate_user_operation_hash;
 use aa_contracts_client::EntryPointClient;
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
-use binance_api::{BinanceApiClient, BinancePaymasterApi};
+use binance_api::BinancePaymasterApi;
 use chrono::{Days, Utc};
 use ethereum_rpc::AlloyRpcProvider;
 use executor_core::{
@@ -420,7 +420,7 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-	pub binance_api_client: Arc<BinanceApiClient>,
+	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
@@ -455,7 +455,7 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-		binance_api_client: Arc<BinanceApiClient>,
+		binance_api_client: Arc<dyn BinancePaymasterApi>,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {

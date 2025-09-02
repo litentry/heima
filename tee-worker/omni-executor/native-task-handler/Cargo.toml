@@ -34,5 +34,8 @@ signer-client = { workspace = true }
 binance-api = { workspace = true, features = ["mocks"] }
 tokio-test = "0.4.4"
 
+[features]
+mocks = []
+
 [lints]
 workspace = true
