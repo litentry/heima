@@ -1078,12 +1078,46 @@ pub async fn handle_native_task<
 						},
 					};
 
-				// Check if UserOperation is signed
+				// Check if UserOperation is signed, if not:
+				// - Process ERC20 paymaster data if present
+				// - Request signature from pumpx signer
 				if packed_user_op.signature.is_empty() {
 					info!(
-						"UserOperation {} is unsigned, requesting signature from pumpx signer",
+						"UserOperation {} is unsigned, processing ERC20 paymaster data first if needed",
 						index
 					);
+
+					// Process ERC20 paymaster data if detected (only for unsigned operations)
+					if !packed_user_op.paymasterAndData.is_empty() {
+						match process_erc20_paymaster_data(
+							ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
+							&packed_user_op.paymasterAndData,
+							chain_id,
+						)
+						.await
+						{
+							Ok(Some(updated_paymaster_data)) => {
+								packed_user_op.paymasterAndData = updated_paymaster_data;
+								info!("Updated ERC20 paymaster data for UserOperation {}", index);
+							},
+							Ok(None) => {
+								// Not an ERC20 paymaster, continue as normal
+								debug!("UserOperation {} does not use ERC20 paymaster", index);
+							},
+							Err(e) => {
+								error!(
+									"Failed to process ERC20 paymaster data for UserOperation {}: {}",
+									index, e
+								);
+								return Err(NativeTaskError::InvalidUserOperation(format!(
+									"ERC20 paymaster processing failed for operation at index {}: {}",
+									index, e
+								)));
+							},
+						}
+					}
+
+					info!("Requesting signature from pumpx signer for UserOperation {}", index);
 
 					// Log UserOp details for debugging
 					info!(
@@ -1134,36 +1168,8 @@ pub async fn handle_native_task<
 					signature_with_prefix.extend_from_slice(&signature);
 					packed_user_op.signature = Bytes::from(signature_with_prefix);
 					info!("UserOperation {} signed successfully", index);
-				}
-
-				// Process ERC20 paymaster data if detected
-				if !packed_user_op.paymasterAndData.is_empty() {
-					match process_erc20_paymaster_data(
-						ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
-						&packed_user_op.paymasterAndData,
-						chain_id,
-					)
-					.await
-					{
-						Ok(Some(updated_paymaster_data)) => {
-							packed_user_op.paymasterAndData = updated_paymaster_data;
-							info!("Updated ERC20 paymaster data for UserOperation {}", index);
-						},
-						Ok(None) => {
-							// Not an ERC20 paymaster, continue as normal
-							debug!("UserOperation {} does not use ERC20 paymaster", index);
-						},
-						Err(e) => {
-							error!(
-								"Failed to process ERC20 paymaster data for UserOperation {}: {}",
-								index, e
-							);
-							return Err(NativeTaskError::InvalidUserOperation(format!(
-								"ERC20 paymaster processing failed for operation at index {}: {}",
-								index, e
-							)));
-						},
-					}
+				} else {
+					info!("UserOperation {} is already signed, skipping processing", index);
 				}
 
 				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
