@@ -5,7 +5,6 @@ version = "0.1.0"
 
 [dependencies]
 alloy = { workspace = true, features = ["node-bindings", "json-rpc"] }
-env_logger = { workspace = true }
 hex = { workspace = true, features = ["std"] }
 log = { workspace = true, features = ["std"] }
 serde_json = { workspace = true, features = ["std"] }
