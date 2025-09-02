@@ -474,7 +474,10 @@ impl Identity {
 			Identity::Email(handle) => {
 				hasher.update(b"email");
 				hasher.update(
-					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
 				);
 			},
 			Identity::Google(handle) => {
@@ -538,7 +541,9 @@ impl Identity {
 				} else if v[0] == "twitter" {
 					return Ok(Identity::Twitter(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "email" {
-					return Ok(Identity::Email(IdentityString::new(v[1].as_bytes().to_vec())));
+					return Ok(Identity::Email(IdentityString::new(
+						v[1].to_lowercase().as_bytes().to_vec(),
+					)));
 				} else if v[0] == "google" {
 					return Ok(Identity::Google(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "pumpx" {
@@ -582,6 +587,7 @@ impl Identity {
 					"email:{}",
 					str::from_utf8(handle.inner_ref())
 						.map_err(|_| "email handle conversion error")?
+						.to_lowercase()
 				),
 				Identity::Google(handle) => format!(
 					"google:{}",
@@ -618,7 +624,7 @@ impl Identity {
 				Identity::Github(IdentityString::new(handle.as_bytes().to_vec()))
 			},
 			Web2IdentityType::Email => {
-				Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
+				Identity::Email(IdentityString::new(handle.to_lowercase().as_bytes().to_vec()))
 			},
 			Web2IdentityType::Google => {
 				Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
@@ -938,10 +944,14 @@ mod tests {
 
 	#[test]
 	fn test_email_did() {
-		let identity = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
+		let identity1 = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
+		let identity2 = Identity::Email(IdentityString::new("TEST@TEST.COM".as_bytes().to_vec()));
+		let identity3 = Identity::Email(IdentityString::new("teST@TEsT.cOm".as_bytes().to_vec()));
 		let did_str = "did:litentry:email:test@test.com";
-		assert_eq!(identity.to_did().unwrap(), did_str);
-		assert_eq!(Identity::from_did(did_str).unwrap(), identity);
+		assert_eq!(identity1.to_did().unwrap(), did_str);
+		assert_eq!(identity2.to_did().unwrap(), did_str);
+		assert_eq!(identity3.to_did().unwrap(), did_str);
+		assert_eq!(Identity::from_did(did_str).unwrap(), identity1); // only to lowercase identity1
 	}
 
 	#[test]
@@ -998,18 +1008,22 @@ mod tests {
 
 	#[test]
 	fn test_email_to_omni_account() {
-		let identity = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
-		let client_id = "test_client";
-		let omni_account = identity.to_omni_account(client_id);
-		assert_eq!(
-			omni_account,
-			AccountId::new(
-				decode_hex("0x8267cb415b1d1fdcd66852a367e933160b84cf3c8f90303d1e6dd5b9be2fc604")
-					.unwrap()
-					.try_into()
-					.unwrap()
-			)
+		let identity1 =
+			Identity::Email(IdentityString::new("hello.world@test.com".as_bytes().to_vec()));
+		let identity2 =
+			Identity::Email(IdentityString::new("HELLO.WORLD@TEST.COM".as_bytes().to_vec()));
+		let identity3 =
+			Identity::Email(IdentityString::new("hELLo.WorLd@teST.COM".as_bytes().to_vec()));
+		let client_id = "wildmeta";
+		let expected = AccountId::new(
+			decode_hex("0x5a0194d421e69bb2fb2fa9659628258d1d9d4f42d12ca74354819e65a14f8fae")
+				.unwrap()
+				.try_into()
+				.unwrap(),
 		);
+		assert_eq!(identity1.to_omni_account(client_id), expected);
+		assert_eq!(identity2.to_omni_account(client_id), expected);
+		assert_eq!(identity3.to_omni_account(client_id), expected);
 	}
 
 	#[test]
