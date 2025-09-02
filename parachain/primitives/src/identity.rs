@@ -541,9 +541,7 @@ impl Identity {
 				} else if v[0] == "twitter" {
 					return Ok(Identity::Twitter(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "email" {
-					return Ok(Identity::Email(IdentityString::new(
-						v[1].to_lowercase().as_bytes().to_vec(),
-					)));
+					return Ok(Identity::Email(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "google" {
 					return Ok(Identity::Google(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "pumpx" {
@@ -624,7 +622,7 @@ impl Identity {
 				Identity::Github(IdentityString::new(handle.as_bytes().to_vec()))
 			},
 			Web2IdentityType::Email => {
-				Identity::Email(IdentityString::new(handle.to_lowercase().as_bytes().to_vec()))
+				Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
 			},
 			Web2IdentityType::Google => {
 				Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
