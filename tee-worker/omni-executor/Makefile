@@ -22,6 +22,11 @@ $(BIN_NAME):
 	cargo build --release --locked --features=$(COMPILATION_FEATURES)
 	cp target/release/executor-worker $(BIN_NAME)
 
+.PHONY: $(BIN_NAME)-test
+$(BIN_NAME)-test:
+	cargo build --release --locked --features=$(COMPILATION_FEATURES),test-endpoints
+	cp target/release/executor-worker $(BIN_NAME)
+
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
@@ -89,7 +94,7 @@ stop-local:
 
 .PHONY: build-docker-test
 build-docker-test:
-	docker build --build-arg CARGO_FEATURES="mock-server" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+	docker build --build-arg CARGO_FEATURES="mock-server,test-endpoints" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-test
 start-test:
