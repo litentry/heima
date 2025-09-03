@@ -60,10 +60,15 @@ const MIN_ERC20_PAYMASTER_DATA_LENGTH: usize = 52 + 20 + 32 + 32 + 32; // 168 by
 const PAYMASTER_DATA_OFFSET: usize = 52; // paymaster address (20) + validation_gas_limit (16) + postop_gas_limit (16)
 const EXCHANGE_RATE_FEE_PERCENT: f64 = 0.0; // 0% fee for now
 
-// Whitelisted paymaster addresses that we support (deployed by heima)
-// If a userOp uses one of these addresses, it **must** be unsigned to allow the worker for processing (e.g. chaning exchange rate)
+// Whitelisted paymaster addresses that we support (deployed by heima), the logic is:
+// - Unsigned userOp: If paymaster specified, **must** be whitelisted
+// - Signed userOp: Only allowed if paymasterAndData is empty (technically we could still relay it, but we are a private bundler and don't want to relay arbitrary userOps)
 //
 // These addresses are assumed to be the same across all EVM chains
+//
+// Note: the SimplePaymaster should be gradually deprecated in favor of the ERC20PaymasterV1.
+//       Theoretically user could construct an unsiged userOp to use SimplePaymaster "freely"
+//
 // TODO: add ERC20 paymaster addresses
 const WHITELISTED_PAYMASTER_ADDRESSES: &[&str] = &[
 	// SimplePaymaster
@@ -1117,17 +1122,28 @@ pub async fn handle_native_task<
 						},
 					};
 
-				// Check if UserOperation is signed, if not:
-				// - Process ERC20 paymaster data if present
-				// - Request signature from pumpx signer
+				// Check userOp signature status and validate paymaster usage
 				if packed_user_op.signature.is_empty() {
-					info!(
-						"UserOperation {} is unsigned, processing ERC20 paymaster data first if needed",
-						index
-					);
-
-					// Process ERC20 paymaster data if detected (only for unsigned operations)
+					// UNSIGNED userOp: If paymaster specified, must be whitelisted
 					if !packed_user_op.paymasterAndData.is_empty() {
+						if let Some(paymaster_address) =
+							extract_paymaster_address(&packed_user_op.paymasterAndData)
+						{
+							if !is_whitelisted_paymaster(
+								&paymaster_address,
+								&ctx.whitelisted_paymaster,
+							) {
+								error!(
+									"UserOperation {} uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
+									index, paymaster_address
+								);
+								return Err(NativeTaskError::InvalidUserOperation(format!(
+									"UserOperation at index {} uses non-whitelisted paymaster {}",
+									index, paymaster_address
+								)));
+							}
+						}
+
 						match process_erc20_paymaster_data(
 							ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
 							&packed_user_op.paymasterAndData,
@@ -1208,32 +1224,18 @@ pub async fn handle_native_task<
 					packed_user_op.signature = Bytes::from(signature_with_prefix);
 					info!("UserOperation {} signed successfully", index);
 				} else {
-					info!("UserOperation {} is already signed, skipping processing", index);
-
-					// IMPORTANT: Validate that signed userOps don't use our whitelisted paymasters
-					// We need unsigned userOps for our paymasters to process exchange rates properly.
-					// This prevents users from submitting pre-signed userOps with our paymaster addresses.
+					// SIGNED userOp: Only allowed if no paymaster specified
 					if !packed_user_op.paymasterAndData.is_empty() {
-						if let Some(paymaster_address) =
-							extract_paymaster_address(&packed_user_op.paymasterAndData)
-						{
-							if is_whitelisted_paymaster(
-								&paymaster_address,
-								&ctx.whitelisted_paymaster,
-							) {
-								error!(
-									"UserOperation {} uses whitelisted paymaster {} but is already signed. \
-									Whitelisted paymasters require unsigned userOps for exchange rate processing.",
-									index, paymaster_address
-								);
-								return Err(NativeTaskError::InvalidUserOperation(format!(
-									"UserOperation at index {} uses whitelisted paymaster {} but is already signed. \
-									Please submit an unsigned userOp to allow automatic exchange rate processing.",
-									index, paymaster_address
-								)));
-							}
-						}
+						error!(
+							"UserOperation {} is signed but has paymaster data. Signed userOps are only allowed without paymaster.",
+							index
+						);
+						return Err(NativeTaskError::InvalidUserOperation(format!(
+							"UserOperation at index {} is signed but specifies a paymaster",
+							index
+						)));
 					}
+					info!("UserOperation {} is signed with no paymaster, processing", index);
 				}
 
 				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
@@ -2688,7 +2690,7 @@ mod paymaster_validation_tests {
 	#[test]
 	fn test_is_whitelisted_paymaster_found() {
 		let paymaster1 = address!("0x1234567890123456789012345678901234567890");
-		let paymaster2 = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef");
+		let paymaster2 = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd");
 		let paymaster3 = address!("0x9999999999999999999999999999999999999999");
 
 		let whitelist = vec![paymaster1, paymaster2];
@@ -2711,18 +2713,18 @@ mod paymaster_validation_tests {
 	}
 
 	#[test]
-	fn test_whitelisted_paymaster_integration() {
-		// Integration test: extract address and check if whitelisted
+	fn test_paymaster_whitelist_validation() {
+		// Test paymaster validation logic:
+		// - Unsigned userOp: paymaster must be whitelisted if specified
+		// - Signed userOp: no paymaster allowed
 		let whitelisted_address = address!("0x1234567890123456789012345678901234567890");
-		let non_whitelisted_address = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef");
+		let non_whitelisted_address = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd");
 
-		// Create paymasterAndData with whitelisted address
 		let mut whitelisted_data = vec![];
 		whitelisted_data.extend_from_slice(whitelisted_address.as_slice());
 		whitelisted_data.extend_from_slice(&[0xff; 32]);
 		let whitelisted_paymaster_and_data = Bytes::from(whitelisted_data);
 
-		// Create paymasterAndData with non-whitelisted address
 		let mut non_whitelisted_data = vec![];
 		non_whitelisted_data.extend_from_slice(non_whitelisted_address.as_slice());
 		non_whitelisted_data.extend_from_slice(&[0xff; 32]);
@@ -2730,12 +2732,32 @@ mod paymaster_validation_tests {
 
 		let whitelist = vec![whitelisted_address];
 
-		// Test whitelisted paymaster
+		// Whitelisted paymaster should be accepted for unsigned userOps
 		let extracted = extract_paymaster_address(&whitelisted_paymaster_and_data).unwrap();
 		assert!(is_whitelisted_paymaster(&extracted, &whitelist));
 
-		// Test non-whitelisted paymaster
+		// Non-whitelisted paymaster should be rejected for unsigned userOps
 		let extracted = extract_paymaster_address(&non_whitelisted_paymaster_and_data).unwrap();
 		assert!(!is_whitelisted_paymaster(&extracted, &whitelist));
+	}
+
+	#[test]
+	fn test_signed_userop_validation_logic() {
+		// Test the new validation logic:
+		// - Signed userOp with paymaster -> should be rejected
+		// - Signed userOp without paymaster -> should be accepted
+		let paymaster_address = address!("0x1234567890123456789012345678901234567890");
+		let mut paymaster_data = vec![];
+		paymaster_data.extend_from_slice(paymaster_address.as_slice());
+		paymaster_data.extend_from_slice(&[0xff; 32]);
+		let paymaster_and_data = Bytes::from(paymaster_data);
+
+		// Test that paymaster address is extracted correctly
+		let extracted = extract_paymaster_address(&paymaster_and_data).unwrap();
+		assert_eq!(extracted, paymaster_address);
+
+		// Empty paymasterAndData should be allowed for signed userOps
+		let empty_paymaster_data = Bytes::new();
+		assert!(extract_paymaster_address(&empty_paymaster_data).is_none());
 	}
 }
