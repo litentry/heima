@@ -60,6 +60,17 @@ const MIN_ERC20_PAYMASTER_DATA_LENGTH: usize = 52 + 20 + 32 + 32 + 32; // 168 by
 const PAYMASTER_DATA_OFFSET: usize = 52; // paymaster address (20) + validation_gas_limit (16) + postop_gas_limit (16)
 const EXCHANGE_RATE_FEE_PERCENT: f64 = 0.0; // 0% fee for now
 
+// Whitelisted paymaster addresses that we support (deployed by heima)
+// If a userOp uses one of these addresses, it **must** be unsigned to allow the worker for processing (e.g. chaning exchange rate)
+//
+// These addresses are assumed to be the same across all EVM chains
+// TODO: add ERC20 paymaster addresses
+const WHITELISTED_PAYMASTER_ADDRESSES: &[&str] = &[
+	// SimplePaymaster
+	"0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912", // staging-v1
+	"0xD4dCB31763CBA7295bA4023E9411CB6db607DE07", // prod-v1
+];
+
 // Decode ERC20 paymaster data from paymasterAndData
 // Format: paymaster_address(20) + validation_gas_limit(16) + postop_gas_limit(16) + token(20) + exchangeRate(32) + validUntil(32) + validAfter(32)
 fn decode_erc20_paymaster_data(paymaster_and_data: &[u8]) -> Option<(Address, u128, u64, u64)> {
@@ -125,6 +136,32 @@ fn encode_erc20_paymaster_data(
 	updated_data[valid_after_start..valid_after_start + 32].copy_from_slice(&valid_after_bytes);
 
 	updated_data
+}
+
+/// Extract paymaster address from paymasterAndData field
+/// Returns None if the data is too short to contain a valid paymaster address
+fn extract_paymaster_address(paymaster_and_data: &Bytes) -> Option<Address> {
+	if paymaster_and_data.len() < 20 {
+		return None;
+	}
+
+	// First 20 bytes contain the paymaster address
+	Some(Address::from_slice(&paymaster_and_data[0..20]))
+}
+
+/// Check if a paymaster address is in our whitelist
+/// If so, the userOp must be unsigned to allow exchange rate processing
+fn is_whitelisted_paymaster(paymaster_address: &Address, whitelisted: &[Address]) -> bool {
+	whitelisted.contains(paymaster_address)
+}
+
+/// Parse whitelisted paymaster addresses from const strings to Address types
+/// Returns empty vec if any address fails to parse (defensive programming)
+fn parse_whitelisted_paymasters() -> Vec<Address> {
+	WHITELISTED_PAYMASTER_ADDRESSES
+		.iter()
+		.filter_map(|addr_str| addr_str.parse().ok())
+		.collect()
 }
 
 // Comprehensive token mapping with expanded support
@@ -420,6 +457,7 @@ pub struct TaskHandlerContext<
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
+	pub whitelisted_paymaster: Arc<Vec<Address>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -469,6 +507,7 @@ impl<
 			pumpx_signer_client,
 			binance_api_client,
 			entry_point_clients,
+			whitelisted_paymaster: Arc::new(parse_whitelisted_paymasters()),
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -1170,6 +1209,31 @@ pub async fn handle_native_task<
 					info!("UserOperation {} signed successfully", index);
 				} else {
 					info!("UserOperation {} is already signed, skipping processing", index);
+
+					// IMPORTANT: Validate that signed userOps don't use our whitelisted paymasters
+					// We need unsigned userOps for our paymasters to process exchange rates properly.
+					// This prevents users from submitting pre-signed userOps with our paymaster addresses.
+					if !packed_user_op.paymasterAndData.is_empty() {
+						if let Some(paymaster_address) =
+							extract_paymaster_address(&packed_user_op.paymasterAndData)
+						{
+							if is_whitelisted_paymaster(
+								&paymaster_address,
+								&ctx.whitelisted_paymaster,
+							) {
+								error!(
+									"UserOperation {} uses whitelisted paymaster {} but is already signed. \
+									Whitelisted paymasters require unsigned userOps for exchange rate processing.",
+									index, paymaster_address
+								);
+								return Err(NativeTaskError::InvalidUserOperation(format!(
+									"UserOperation at index {} uses whitelisted paymaster {} but is already signed. \
+									Please submit an unsigned userOp to allow automatic exchange rate processing.",
+									index, paymaster_address
+								)));
+							}
+						}
+					}
 				}
 
 				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
@@ -2577,5 +2641,101 @@ mod erc20_paymaster_tests {
 		let result_wrong_chain =
 			rt.block_on(get_token_info_for_binance_enhanced(&usdc_arbitrum_address, 1, None));
 		assert!(result_wrong_chain.is_none());
+	}
+}
+
+#[cfg(test)]
+mod paymaster_validation_tests {
+	use super::*;
+	use alloy::primitives::{address, Bytes};
+
+	#[test]
+	fn test_extract_paymaster_address_valid() {
+		// Create paymasterAndData with a valid paymaster address
+		let paymaster_address = address!("0x1234567890123456789012345678901234567890");
+		let mut paymaster_data = vec![];
+		// Add paymaster address (20 bytes)
+		paymaster_data.extend_from_slice(paymaster_address.as_slice());
+		// Add some additional data
+		paymaster_data.extend_from_slice(&[0xff; 32]); // gas limits etc.
+
+		let paymaster_and_data = Bytes::from(paymaster_data);
+		let result = extract_paymaster_address(&paymaster_and_data);
+
+		assert!(result.is_some());
+		assert_eq!(result.unwrap(), paymaster_address);
+	}
+
+	#[test]
+	fn test_extract_paymaster_address_too_short() {
+		// Create paymasterAndData that's too short (less than 20 bytes)
+		let short_data = vec![0x11; 19]; // Only 19 bytes
+		let paymaster_and_data = Bytes::from(short_data);
+		let result = extract_paymaster_address(&paymaster_and_data);
+
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_extract_paymaster_address_empty() {
+		// Empty paymasterAndData
+		let paymaster_and_data = Bytes::from(vec![]);
+		let result = extract_paymaster_address(&paymaster_and_data);
+
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_is_whitelisted_paymaster_found() {
+		let paymaster1 = address!("0x1234567890123456789012345678901234567890");
+		let paymaster2 = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef");
+		let paymaster3 = address!("0x9999999999999999999999999999999999999999");
+
+		let whitelist = vec![paymaster1, paymaster2];
+
+		// Test that whitelisted addresses are found
+		assert!(is_whitelisted_paymaster(&paymaster1, &whitelist));
+		assert!(is_whitelisted_paymaster(&paymaster2, &whitelist));
+
+		// Test that non-whitelisted address is not found
+		assert!(!is_whitelisted_paymaster(&paymaster3, &whitelist));
+	}
+
+	#[test]
+	fn test_is_whitelisted_paymaster_empty_list() {
+		let paymaster = address!("0x1234567890123456789012345678901234567890");
+		let empty_whitelist: Vec<Address> = vec![];
+
+		// Test that no address is found in empty whitelist
+		assert!(!is_whitelisted_paymaster(&paymaster, &empty_whitelist));
+	}
+
+	#[test]
+	fn test_whitelisted_paymaster_integration() {
+		// Integration test: extract address and check if whitelisted
+		let whitelisted_address = address!("0x1234567890123456789012345678901234567890");
+		let non_whitelisted_address = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef");
+
+		// Create paymasterAndData with whitelisted address
+		let mut whitelisted_data = vec![];
+		whitelisted_data.extend_from_slice(whitelisted_address.as_slice());
+		whitelisted_data.extend_from_slice(&[0xff; 32]);
+		let whitelisted_paymaster_and_data = Bytes::from(whitelisted_data);
+
+		// Create paymasterAndData with non-whitelisted address
+		let mut non_whitelisted_data = vec![];
+		non_whitelisted_data.extend_from_slice(non_whitelisted_address.as_slice());
+		non_whitelisted_data.extend_from_slice(&[0xff; 32]);
+		let non_whitelisted_paymaster_and_data = Bytes::from(non_whitelisted_data);
+
+		let whitelist = vec![whitelisted_address];
+
+		// Test whitelisted paymaster
+		let extracted = extract_paymaster_address(&whitelisted_paymaster_and_data).unwrap();
+		assert!(is_whitelisted_paymaster(&extracted, &whitelist));
+
+		// Test non-whitelisted paymaster
+		let extracted = extract_paymaster_address(&non_whitelisted_paymaster_and_data).unwrap();
+		assert!(!is_whitelisted_paymaster(&extracted, &whitelist));
 	}
 }
