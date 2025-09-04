@@ -3,6 +3,7 @@
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX ?= 1
+TEST_BUILD ?= 0
 
 BIN_NAME = omni-executor
 COMPILATION_FEATURES =
@@ -17,14 +18,13 @@ COMPILATION_FEATURES := $(COMPILATION_FEATURES),gramine-quote
 all: $(BIN_NAME).manifest.sgx $(BIN_NAME).sig
 endif
 
+ifeq ($(TEST_BUILD), 1)
+COMPILATION_FEATURES := $(COMPILATION_FEATURES),test-endpoints
+endif
+
 .PHONY: $(BIN_NAME)
 $(BIN_NAME):
 	cargo build --release --locked --features=$(COMPILATION_FEATURES)
-	cp target/release/executor-worker $(BIN_NAME)
-
-.PHONY: $(BIN_NAME)-test
-$(BIN_NAME)-test:
-	cargo build --release --locked --features=$(COMPILATION_FEATURES),test-endpoints
 	cp target/release/executor-worker $(BIN_NAME)
 
 
