@@ -408,6 +408,7 @@ impl<ChainConfig: Config<AccountId = AccountId32, Header = RpcClientHeader>>
 	SubstrateRpcClientFactory<ChainConfig::Header, SubxtClient<ChainConfig>>
 	for SubxtClientFactory<ChainConfig>
 {
+	#[tracing::instrument(skip(self))]
 	async fn new_client(&self) -> Result<SubxtClient<ChainConfig>, Box<dyn Error>> {
 		let rpc_client = subxt::backend::rpc::reconnecting_rpc_client::RpcClient::builder()
 			.build(self.url.clone())

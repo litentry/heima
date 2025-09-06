@@ -64,21 +64,33 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
+use opentelemetry::global;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
 use tracing::{error, info};
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{EnvFilter, Layer};
 use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_config::init_trace;
 mod cli;
+mod tracing_config;
 
 #[tokio::main]
+#[tracing::instrument]
 async fn main() -> Result<(), ()> {
-	let subscriber = FmtSubscriber::builder()
-		.with_env_filter(
-			EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-		)
-		.finish();
+	let tracer = init_trace().unwrap();
+    let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>().with_tracer(tracer);
+
+	let subscriber = tracing_subscriber::Registry::default()
+        .with(telemetry)
+		.with(
+			tracing_subscriber::fmt::layer()
+				.with_filter(
+					EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+				)
+		);
 
 	tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 

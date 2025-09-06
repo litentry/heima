@@ -104,6 +104,11 @@ tower = "0.4.13"
 tower-http = { version = "0.5.2", features = ["auth", "sensitive-headers"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
+opentelemetry = { version = "0.30.0" }
+opentelemetry-otlp = { version="0.30.0",  features = ["grpc-tonic", "metrics"] }
+opentelemetry-semantic-conventions = { version="0.30.0" }
+opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio"] }
+tracing-opentelemetry = "0.31.0"
 url = "2.5.4"
 uuid = "1.16.0"
 

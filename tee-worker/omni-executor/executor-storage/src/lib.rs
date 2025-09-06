@@ -98,6 +98,7 @@ fn set_storage_version(db: &StorageDB, version: u32) -> Result<(), ()> {
 	})
 }
 
+#[tracing::instrument]
 pub async fn init_storage(_ws_rpc_endpoint: &str) -> Result<Arc<StorageDB>, ()> {
 	let db = Arc::new(StorageDB::open_default(STORAGE_DB_PATH).map_err(|e| {
 		error!("Could not open db: {:?}", e);
