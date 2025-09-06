@@ -80,7 +80,7 @@ impl<
 	}
 
 	/// Start syncing. It's a long-running blocking operation - should be started in dedicated thread.
-	#[tracing::instrument(skip(self), fields(listener_id = %self.id), name = "listener", parent = None)]
+	#[tracing::instrument(skip(self), fields(listener_id = %self.id), parent = None, level = "debug")]
 	pub fn sync(&mut self, start_block: u64) {
 		info!("Starting {} network sync, start block: {}", self.id, start_block);
 		let mut block_number_to_sync = if let Some(ref checkpoint) =
@@ -105,8 +105,8 @@ impl<
 		debug!("Starting sync from {:?}", block_number_to_sync);
 
 		'main: loop {
-			let span = span!(tracing::Level::DEBUG, "Block Syncer Loop", block_number = block_number_to_sync);
-			let _enter = span.enter();
+			let span = span!(parent: None, tracing::Level::DEBUG, "Block Syncer Loop", block_number = block_number_to_sync);
+			let enter = span.enter();
 			if self.stop_signal.try_recv().is_ok() {
 				break;
 			}
@@ -206,8 +206,7 @@ impl<
 			} else {
 				trace!("Fast sync skipping 1s wait");
 			}
-
-
+			drop(enter);
 		}
 	}
 }
