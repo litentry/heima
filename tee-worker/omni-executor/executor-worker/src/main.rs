@@ -609,6 +609,7 @@ async fn main() -> Result<(), ()> {
 	Ok(())
 }
 
+#[tracing::instrument(skip(args))]
 async fn listen_to_parentchain(
 	args: RunArgs,
 	storage_db: Arc<StorageDB>,

@@ -80,6 +80,7 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Sync + Send,
 	> EventsFetcher<EventId, BlockEvent> for Fetcher<Header, RpcClient, RpcClientFactory>
 {
+	#[tracing::instrument(skip(self))]
 	async fn get_block_events(&mut self, block_num: u64) -> Result<Vec<BlockEvent>, ()> {
 		self.connect_if_needed().await;
 

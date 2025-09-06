@@ -49,12 +49,13 @@ impl<Checkpoint> InMemoryCheckpointRepository<Checkpoint> {
 
 impl<Checkpoint> CheckpointRepository<Checkpoint> for InMemoryCheckpointRepository<Checkpoint>
 where
-	Checkpoint: Clone,
+	Checkpoint: Clone + Debug,
 {
 	fn get(&self) -> Result<Option<Checkpoint>, ()> {
 		Ok(self.last.clone())
 	}
 
+	#[tracing::instrument(skip(self))]
 	fn save(&mut self, checkpoint: Checkpoint) -> Result<(), ()> {
 		self.last = Some(checkpoint);
 		Ok(())
@@ -104,6 +105,7 @@ where
 		}
 	}
 
+	#[tracing::instrument(skip(self))]
 	fn save(&mut self, checkpoint: Checkpoint) -> Result<(), ()> {
 		trace!("Saving checkpoint: {:?}", checkpoint);
 		let content = checkpoint.encode();

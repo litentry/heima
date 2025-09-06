@@ -79,6 +79,7 @@ impl<
 	}
 
 	/// Start syncing. It's a long-running blocking operation - should be started in dedicated thread.
+	#[tracing::instrument(skip(self), fields(listener_id = %self.id), name = "listener")]
 	pub fn sync(&mut self, start_block: u64) {
 		info!("Starting {} network sync, start block: {}", self.id, start_block);
 		let mut block_number_to_sync = if let Some(ref checkpoint) =
