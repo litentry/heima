@@ -80,6 +80,8 @@ mod tracing_config;
 #[tokio::main]
 #[tracing::instrument]
 async fn main() -> Result<(), ()> {
+	global::set_text_map_propagator(TraceContextPropagator::new());
+	
 	let tracer = init_trace().unwrap();
     let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>().with_tracer(tracer);
 
