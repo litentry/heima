@@ -74,6 +74,7 @@ use tracing_subscriber::{EnvFilter, Layer};
 use tracing_subscriber::FmtSubscriber;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_config::init_trace;
+use tracing_log::LogTracer;
 mod cli;
 mod tracing_config;
 
@@ -81,7 +82,8 @@ mod tracing_config;
 #[tracing::instrument]
 async fn main() -> Result<(), ()> {
 	global::set_text_map_propagator(TraceContextPropagator::new());
-	
+	LogTracer::init().expect("Could not initialize log tracer");
+
 	let tracer = init_trace().unwrap();
     let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>().with_tracer(tracer);
 

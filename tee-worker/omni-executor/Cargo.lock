@@ -4179,6 +4179,7 @@ dependencies = [
  "solana-intent-executor",
  "tokio",
  "tracing",
+ "tracing-log",
  "tracing-opentelemetry",
  "tracing-subscriber",
  "url",
