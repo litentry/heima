@@ -205,14 +205,8 @@ impl BinanceApi for BinanceApiClient {
 #[async_trait]
 impl BinancePaymasterApi for BinanceApiClient {
 	async fn get_symbol_price(&self, symbol: &str) -> Result<String, Error> {
-		use crate::spot_trading_api::types::SymbolPrice;
-
-		let endpoint = "/api/v3/ticker/price";
-		let mut params = HashMap::new();
-		params.insert("symbol".to_string(), symbol.to_string());
-
-		let price_info: SymbolPrice = self.make_public_get_request(endpoint, Some(params)).await?;
-		Ok(price_info.price)
+		use crate::spot_trading_api::SpotTradingApi;
+		SpotTradingApi::new(self).get_symbol_price(symbol).await
 	}
 
 	async fn get_symbol_precision(&self, symbol: &str) -> Result<u8, Error> {
