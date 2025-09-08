@@ -6,4 +6,5 @@ pub enum Error {
 	InvalidParams,
 	MaxRecvWindowExceeded,
 	LimitExceeded,
+	SymbolNotFound,
 }
