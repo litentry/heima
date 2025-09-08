@@ -42,7 +42,7 @@ use pumpx::{
 use signer_client::{ChainType, SignerClient};
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 pub use aes256_key_store::Aes256KeyStore;
 pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
@@ -217,64 +217,14 @@ fn get_supported_tokens() -> std::collections::HashMap<(u64, &'static str), Toke
 	tokens
 }
 
-// Dynamic token discovery using Binance API
-// Fetch all available trading symbols from Binance to potentially expand supported tokens
-async fn discover_tokens_from_binance(
-	binance_api: &dyn BinancePaymasterApi,
-) -> Result<Vec<String>, String> {
-	binance_api
-		.get_all_trading_symbols()
-		.await
-		.map_err(|e| format!("Failed to fetch trading symbols from Binance: {:?}", e))
-}
-
-// Enhanced token lookup that first checks hardcoded list, then attempts dynamic discovery
+// Token lookup using hardcoded mapping only
+// Dynamic discovery was removed because Binance API cannot map token addresses to symbols
 async fn get_token_info_for_binance_enhanced(
 	token_address: &Address,
 	chain_id: u64,
-	binance_api_client: Option<&dyn BinancePaymasterApi>,
+	_binance_api_client: Option<&dyn BinancePaymasterApi>,
 ) -> Option<(String, u8)> {
-	// First try the existing hardcoded lookup
-	if let Some(result) = get_token_info_from_mapping(token_address, chain_id).await {
-		return Some(result);
-	}
-
-	// If not found in hardcoded list and we have a Binance API client, try dynamic discovery
-	if let Some(binance_client) = binance_api_client {
-		info!("Token {} not found in hardcoded list, attempting dynamic discovery", token_address);
-
-		match discover_tokens_from_binance(binance_client).await {
-			Ok(symbols) => {
-				// Look for common patterns that might match our token
-				// This is a heuristic approach - in a real implementation you'd want a more sophisticated
-				// mapping service that knows token symbols across different chains
-				for symbol in symbols {
-					// Look for ETH-based pairs (ETHUSDC, ETHUSDT, etc.)
-					if symbol.starts_with("ETH") && symbol.len() > 3 {
-						let token_symbol = &symbol[3..]; // Remove "ETH" prefix
-
-						// Try to get decimals from the exchange
-						if let Ok(decimals) = binance_client.get_symbol_precision(&symbol).await {
-							info!(
-								"Found potential token {} via dynamic discovery with symbol {} and {} decimals",
-								token_address, token_symbol, decimals
-							);
-							return Some((symbol, decimals));
-						}
-					}
-				}
-				warn!(
-					"Dynamic discovery did not find a suitable match for token {}",
-					token_address
-				);
-			},
-			Err(e) => {
-				warn!("Dynamic token discovery failed: {}", e);
-			},
-		}
-	}
-
-	None
+	get_token_info_from_mapping(token_address, chain_id).await
 }
 
 // Map token address to Binance symbol and return (symbol, decimals) from hardcoded mapping
@@ -2482,36 +2432,6 @@ mod erc20_paymaster_tests {
 		assert_eq!(PAYMASTER_DATA_OFFSET, 52);
 	}
 
-	#[cfg(feature = "mocks")]
-	#[test]
-	fn test_discover_tokens_from_binance() {
-		use binance_api::mocks::MockBinanceApiClient;
-		use binance_api::BinancePaymasterApi;
-
-		let rt = tokio::runtime::Runtime::new().unwrap();
-		let mut mock_client = MockBinanceApiClient::new();
-
-		// Mock the get_all_trading_symbols call
-		mock_client.expect_get_all_trading_symbols().times(1).returning(|| {
-			Ok(vec![
-				"ETHUSDC".to_string(),
-				"ETHUSDT".to_string(),
-				"ETHDAI".to_string(),
-				"BTCUSDT".to_string(), // Should be ignored as it doesn't start with ETH
-			])
-		});
-
-		let result = rt.block_on(discover_tokens_from_binance(&mock_client));
-		assert!(result.is_ok());
-
-		let symbols = result.unwrap();
-		assert_eq!(symbols.len(), 4);
-		assert!(symbols.contains(&"ETHUSDC".to_string()));
-		assert!(symbols.contains(&"ETHUSDT".to_string()));
-		assert!(symbols.contains(&"ETHDAI".to_string()));
-		assert!(symbols.contains(&"BTCUSDT".to_string()));
-	}
-
 	#[test]
 	fn test_paymaster_data_alignment_with_contract() {
 		// This test ensures our format exactly matches ERC20PaymasterV1.sol
@@ -2594,30 +2514,19 @@ mod erc20_paymaster_tests {
 		assert!(result.is_none());
 	}
 
-	#[cfg(feature = "mocks")]
 	#[test]
 	fn test_get_token_info_for_binance_enhanced_unknown_token_with_api() {
-		use binance_api::mocks::MockBinanceApiClient;
-		use binance_api::BinancePaymasterApi;
-
 		let rt = tokio::runtime::Runtime::new().unwrap();
-		let mut mock_client = MockBinanceApiClient::new();
 
-		// Mock the get_all_trading_symbols call to return some example symbols
-		mock_client.expect_get_all_trading_symbols().times(1).returning(|| {
-			Ok(vec!["ETHUSDC".to_string(), "ETHUSDT".to_string(), "ETHDAI".to_string()])
-		});
-
-		// Test unknown token with Binance API client
+		// Test unknown token - should return None since dynamic discovery was removed
 		let unknown_address = Address::from([0xFF; 20]);
 		let result = rt.block_on(get_token_info_for_binance_enhanced(
 			&unknown_address,
 			1,
-			Some(&mock_client as &dyn BinancePaymasterApi),
+			None, // API client is no longer used
 		));
 
-		// Should still return None as dynamic discovery would need actual token contract calls
-		// which are not implemented in this simple mock test
+		// Should return None as we only rely on hardcoded mapping now
 		assert!(result.is_none());
 	}
 
