@@ -82,15 +82,19 @@ pub fn register_request_email_verification_code<
 
 			// Use Wildmeta template for wildmeta client
 			if params.client_id.to_lowercase() == "wildmeta" {
-				send_wildmeta_verification_email(&*mailer, params.user_email.clone(), verification_code)
-					.await
-					.map_err(|e| {
-						error!(
-							"Failed to send Wildmeta verification email for client '{}': {:?}",
-							params.client_id, e
-						);
-						DetailedError::email_service_error(&params.user_email).to_error_object()
-					})?;
+				send_wildmeta_verification_email(
+					&*mailer,
+					params.user_email.clone(),
+					verification_code,
+				)
+				.await
+				.map_err(|e| {
+					error!(
+						"Failed to send Wildmeta verification email for client '{}': {:?}",
+						params.client_id, e
+					);
+					DetailedError::email_service_error(&params.user_email).to_error_object()
+				})?;
 			} else {
 				send_verification_email(&*mailer, params.user_email.clone(), verification_code)
 					.await
