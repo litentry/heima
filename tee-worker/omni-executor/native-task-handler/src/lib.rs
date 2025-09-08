@@ -217,16 +217,6 @@ fn get_supported_tokens() -> std::collections::HashMap<(u64, &'static str), Toke
 	tokens
 }
 
-// Token lookup using hardcoded mapping only
-// Dynamic discovery was removed because Binance API cannot map token addresses to symbols
-async fn get_token_info_for_binance_enhanced(
-	token_address: &Address,
-	chain_id: u64,
-	_binance_api_client: Option<&dyn BinancePaymasterApi>,
-) -> Option<(String, u8)> {
-	get_token_info_from_mapping(token_address, chain_id).await
-}
-
 // Map token address to Binance symbol and return (symbol, decimals) from hardcoded mapping
 async fn get_token_info_from_mapping(
 	token_address: &Address,
@@ -312,11 +302,10 @@ async fn process_erc20_paymaster_data(
 			token_address, original_rate, valid_until, valid_after
 		);
 
-		// Get token symbol and decimals for Binance API (with dynamic discovery fallback)
-		let (token_symbol, token_decimals) = match get_token_info_for_binance_enhanced(
+		// Get token symbol and decimals from hardcoded mapping
+		let (token_symbol, token_decimals) = match get_token_info_from_mapping(
 			&token_address,
 			chain_id,
-			Some(binance_api),
 		)
 		.await
 		{
@@ -2483,75 +2472,6 @@ mod erc20_paymaster_tests {
 		assert_eq!(redecoded.1, rate + 100); // Rate updated
 		assert_eq!(redecoded.2, until + 100); // Until updated
 		assert_eq!(redecoded.3, after + 100); // After updated
-	}
-
-	#[test]
-	fn test_get_token_info_for_binance_enhanced_hardcoded_mapping() {
-		let rt = tokio::runtime::Runtime::new().unwrap();
-
-		// Test USDC on Ethereum mainnet (should be found in hardcoded mapping)
-		// USDC address: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
-		let usdc_address = Address::from([
-			0xa0, 0xb8, 0x69, 0x91, 0xc6, 0x21, 0x8b, 0x36, 0xc1, 0xd1, 0x9d, 0x4a, 0x2e, 0x9e,
-			0xb0, 0xce, 0x36, 0x06, 0xeb, 0x48,
-		]);
-		let result = rt.block_on(get_token_info_for_binance_enhanced(&usdc_address, 1, None));
-
-		assert!(result.is_some());
-		let (symbol, decimals) = result.unwrap();
-		assert_eq!(symbol, "ETHUSDC");
-		assert_eq!(decimals, 6);
-	}
-
-	#[test]
-	fn test_get_token_info_for_binance_enhanced_unknown_token_no_api() {
-		let rt = tokio::runtime::Runtime::new().unwrap();
-
-		// Test unknown token without Binance API client
-		let unknown_address = Address::from([0xFF; 20]);
-		let result = rt.block_on(get_token_info_for_binance_enhanced(&unknown_address, 1, None));
-
-		assert!(result.is_none());
-	}
-
-	#[test]
-	fn test_get_token_info_for_binance_enhanced_unknown_token_with_api() {
-		let rt = tokio::runtime::Runtime::new().unwrap();
-
-		// Test unknown token - should return None since dynamic discovery was removed
-		let unknown_address = Address::from([0xFF; 20]);
-		let result = rt.block_on(get_token_info_for_binance_enhanced(
-			&unknown_address,
-			1,
-			None, // API client is no longer used
-		));
-
-		// Should return None as we only rely on hardcoded mapping now
-		assert!(result.is_none());
-	}
-
-	#[test]
-	fn test_get_token_info_for_binance_enhanced_different_chains() {
-		let rt = tokio::runtime::Runtime::new().unwrap();
-
-		// Test USDC on Arbitrum (should be found in hardcoded mapping)
-		// USDC Arbitrum address: 0xaf88d065e77c8cc2239327c5edb3a432268e5831
-		let usdc_arbitrum_address = Address::from([
-			0xaf, 0x88, 0xd0, 0x65, 0xe7, 0x7c, 0x8c, 0xc2, 0x23, 0x93, 0x27, 0xc5, 0xed, 0xb3,
-			0xa4, 0x32, 0x26, 0x8e, 0x58, 0x31,
-		]);
-		let result =
-			rt.block_on(get_token_info_for_binance_enhanced(&usdc_arbitrum_address, 42161, None));
-
-		assert!(result.is_some());
-		let (symbol, decimals) = result.unwrap();
-		assert_eq!(symbol, "ETHUSDC");
-		assert_eq!(decimals, 6);
-
-		// Test same address on different chain (should return None)
-		let result_wrong_chain =
-			rt.block_on(get_token_info_for_binance_enhanced(&usdc_arbitrum_address, 1, None));
-		assert!(result_wrong_chain.is_none());
 	}
 }
 
