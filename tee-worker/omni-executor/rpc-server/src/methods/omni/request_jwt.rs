@@ -16,6 +16,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -52,6 +53,70 @@ impl RequestJwtParams {
 	}
 }
 
+#[tracing::instrument(skip(params, ctx), fields(
+	client_id = %params.client_id,
+	user_email = %params.user_email,
+	invite_code = ?params.invite_code,
+	language = ?params.language
+))]
+async fn handle_request_jwt_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: RequestJwtParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<RequestJwtResponse, PumpxRpcError> {
+	debug!("Processing omni_requestJwt request");
+
+	let wrapper = params.into_native_task_wrapper();
+
+	if wrapper.task.require_auth() {
+		let Some(ref auth) = wrapper.auth else {
+			error!("Missing auth token");
+			return Err(PumpxRpcError::from(
+				DetailedError::new(REQUIRE_AUTHENTICATION_CODE, "Authentication required")
+					.with_suggestion("Please provide authentication credentials"),
+			));
+		};
+		verify_auth(ctx.clone(), auth).await.map_err(|e| {
+			error!("Failed to verify auth: {:?}, reason: {:?}", wrapper.auth, e);
+			PumpxRpcError::from(
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Authentication verification failed",
+				)
+				.with_suggestion("Please check your authentication credentials"),
+			)
+		})?;
+	}
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response } => {
+			check_omni_api_response(backend_response.clone(), "Request pumpx jwt".into())?;
+			Ok(RequestJwtResponse { access_token, id_token, backend_response })
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Unexpected response type from native task handler"),
+			))
+		},
+	})
+	.await
+}
+
 pub fn register_request_jwt<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -81,47 +146,7 @@ pub fn register_request_jwt<
 				)
 			})?;
 
-			debug!(
-				"Received omni_requestJwt, user_email: {}, client_id: {}",
-				params.user_email, params.client_id
-			);
-
-			let wrapper = params.into_native_task_wrapper();
-
-			if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
-					return Err(PumpxRpcError::from(
-						DetailedError::new(REQUIRE_AUTHENTICATION_CODE, "Authentication required")
-							.with_suggestion("Please provide authentication credentials"),
-					));
-				};
-				verify_auth(ctx.clone(), auth).await.map_err(|e| {
-					error!("Failed to verify auth: {:?}, reason: {:?}", wrapper.auth, e);
-					PumpxRpcError::from(
-						DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"Authentication verification failed",
-						)
-						.with_suggestion("Please check your authentication credentials"),
-					)
-				})?;
-			}
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response } => {
-					check_omni_api_response(backend_response.clone(), "Request pumpx jwt".into())?;
-					Ok(RequestJwtResponse { access_token, id_token, backend_response })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
-			})
-			.await
+			handle_request_jwt_request(params, ctx).await
 		})
 		.expect("Failed to register omni_requestJwt method");
 }

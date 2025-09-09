@@ -20,15 +20,30 @@ use crate::{methods::omni::common::PumpxRpcError, server::RpcContext};
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_primitives::Identity;
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetOmniAccountParams {
 	pub client_id: String,
 	pub user_email: String,
+}
+
+#[tracing::instrument(skip(params), fields(
+	client_id = %params.client_id,
+	user_email = %params.user_email
+))]
+async fn handle_get_omni_account_request(
+	params: GetOmniAccountParams,
+) -> Result<String, ErrorObjectOwned> {
+	debug!("Processing omni_getOmniAccount request");
+
+	let account = Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email)
+		.to_omni_account(&params.client_id);
+	
+	Ok(account.to_hex())
 }
 
 // Directly converts Identity to OmniAccount using 1:1 mapping
@@ -61,10 +76,7 @@ pub fn register_get_omni_account<
 				)
 			})?;
 
-			let account =
-				Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email)
-					.to_omni_account(&params.client_id);
-			Ok::<String, ErrorObject>(account.to_hex())
+			handle_get_omni_account_request(params).await
 		})
 		.expect("Failed to register omni_getOmniAccount method");
 }

@@ -29,6 +29,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +44,100 @@ pub struct SubmitUserOpTestParams {
 #[derive(Serialize, Clone)]
 pub struct SubmitUserOpTestResponse {
 	pub transaction_hash: Option<String>,
+}
+
+#[tracing::instrument(skip(params, ctx), fields(
+	client_id = %params.client_id,
+	omni_account = %params.omni_account,
+	chain_id = %params.chain_id,
+	wallet_index = %params.wallet_index,
+	user_ops_count = %params.user_operations.len()
+))]
+async fn handle_submit_user_op_test_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: SubmitUserOpTestParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<SubmitUserOpTestResponse, PumpxRpcError> {
+	debug!("Processing omni_submitUserOpTest request");
+
+	let address_bytes =
+		hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
+			.map_err(|_| {
+				error!("Failed to decode omni account hex string");
+				PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to decode omni account hex string"),
+				)
+			})?;
+
+	if address_bytes.len() != 32 {
+		error!(
+			"Invalid omni account length: expected 32 bytes, got {}",
+			address_bytes.len()
+		);
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+				"Invalid omni account length: expected 32 bytes, got {}",
+				address_bytes.len()
+			)),
+		));
+	}
+
+	for op in &params.user_operations {
+		op.sender.parse::<Address>().map_err(|e| {
+			error!("Invalid sender address '{}': {}", op.sender, e);
+			PumpxRpcError::from(
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_field("sender")
+					.with_reason(format!("Invalid sender address '{}': {}", op.sender, e)),
+			)
+		})?;
+	}
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::SubmitUserOp(
+			AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
+				error!("Failed to decode AccountId from bytes");
+				PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to decode AccountId from bytes"),
+				)
+			})?,
+			params.user_operations.clone(),
+			params.chain_id,
+			params.wallet_index,
+		),
+		None,
+		None,
+		params.client_id,
+	);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::SubmitUserOp(transaction_hash) => {
+			Ok(SubmitUserOpTestResponse { transaction_hash })
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Unexpected response type from native task handler"),
+			))
+		},
+	})
+	.await
 }
 
 pub fn register_submit_user_op_test<
@@ -74,73 +169,7 @@ pub fn register_submit_user_op_test<
 				)
 			})?;
 
-			debug!("Received omni_submitUserOpTest, params: {:?}", params);
-
-			let address_bytes =
-				hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
-					.map_err(|_| {
-						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Failed to decode omni account hex string"),
-						)
-					})?;
-
-			if address_bytes.len() != 32 {
-				error!(
-					"Invalid omni account length: expected 32 bytes, got {}",
-					address_bytes.len()
-				);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-						"Invalid omni account length: expected 32 bytes, got {}",
-						address_bytes.len()
-					)),
-				));
-			}
-
-			for op in &params.user_operations {
-				op.sender.parse::<Address>().map_err(|e| {
-					error!("Invalid sender address '{}': {}", op.sender, e);
-					PumpxRpcError::from(
-						DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-							.with_field("sender")
-							.with_reason(format!("Invalid sender address '{}': {}", op.sender, e)),
-					)
-				})?;
-			}
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::SubmitUserOp(
-					AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
-						error!("Failed to decode AccountId from bytes");
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Failed to decode AccountId from bytes"),
-						)
-					})?,
-					params.user_operations.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
-				params.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::SubmitUserOp(transaction_hash) => {
-					Ok(SubmitUserOpTestResponse { transaction_hash })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
-			})
-			.await
+			handle_submit_user_op_test_request(params, ctx).await
 		})
 		.expect("Failed to register omni_submitUserOpTest method");
 }

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
 use super::common::{handle_omni_native_task, PumpxRpcError};
 use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
@@ -50,6 +51,86 @@ pub struct EstimateUserOpGasResponse {
 	pub paymaster_post_op_gas_limit: String,
 }
 
+#[tracing::instrument(skip(ctx, params), fields(
+	chain_id = %params.chain_id,
+	wallet_index = %params.wallet_index,
+	omni_account = %params.omni_account,
+	client_id = %params.client_id,
+	sender = %params.user_operation.sender,
+	nonce = %params.user_operation.nonce,
+	pre_verification_gas = %params.user_operation.pre_verification_gas
+))]
+async fn handle_estimate_user_op_gas_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: EstimateUserOpGasParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<EstimateUserOpGasResponse, PumpxRpcError> {
+	debug!("Processing omni_estimateUserOpGas request");
+
+	let account_bytes = validate_omni_account_hex(&params.omni_account, "omni_account")
+		.map_err(PumpxRpcError::from)?;
+	validate_omni_account_length(&account_bytes, "omni_account")
+		.map_err(PumpxRpcError::from)?;
+	let account_id = AccountId::decode(&mut &account_bytes[..]).map_err(|e| {
+		PumpxRpcError::from(DetailedError::account_parse_error(
+			&params.omni_account,
+			&e.to_string(),
+		))
+	})?;
+
+	validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
+		.map_err(PumpxRpcError::from)?;
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::EstimateUserOpGas(
+			account_id,
+			params.user_operation.clone(),
+			params.chain_id,
+			params.wallet_index,
+		),
+		None,
+		None,
+		params.client_id,
+	);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::EstimateUserOpGas {
+			call_gas_limit,
+			verification_gas_limit,
+			pre_verification_gas,
+			paymaster_verification_gas_limit,
+			paymaster_post_op_gas_limit,
+		} => Ok(EstimateUserOpGasResponse {
+			call_gas_limit: call_gas_limit.to_string(),
+			verification_gas_limit: verification_gas_limit.to_string(),
+			pre_verification_gas: pre_verification_gas.to_string(),
+			paymaster_verification_gas_limit: paymaster_verification_gas_limit.to_string(),
+			paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
+		}),
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(DetailedError::unexpected_response_type(
+				"EstimateUserOpGas response",
+				"Unknown response type",
+			)))
+		},
+	})
+	.await
+}
+
 pub fn register_estimate_user_op_gas<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -82,57 +163,7 @@ pub fn register_estimate_user_op_gas<
 				)
 			})?;
 
-			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
-
-			let account_bytes = validate_omni_account_hex(&params.omni_account, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-			validate_omni_account_length(&account_bytes, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-			let account_id = AccountId::decode(&mut &account_bytes[..]).map_err(|e| {
-				PumpxRpcError::from(DetailedError::account_parse_error(
-					&params.omni_account,
-					&e.to_string(),
-				))
-			})?;
-
-			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
-				.map_err(PumpxRpcError::from)?;
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::EstimateUserOpGas(
-					account_id,
-					params.user_operation.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
-				params.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::EstimateUserOpGas {
-					call_gas_limit,
-					verification_gas_limit,
-					pre_verification_gas,
-					paymaster_verification_gas_limit,
-					paymaster_post_op_gas_limit,
-				} => Ok(EstimateUserOpGasResponse {
-					call_gas_limit: call_gas_limit.to_string(),
-					verification_gas_limit: verification_gas_limit.to_string(),
-					pre_verification_gas: pre_verification_gas.to_string(),
-					paymaster_verification_gas_limit: paymaster_verification_gas_limit.to_string(),
-					paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
-				}),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(DetailedError::unexpected_response_type(
-						"EstimateUserOpGas response",
-						"Unknown response type",
-					)))
-				},
-			})
-			.await
+			handle_estimate_user_op_gas_request(params, ctx).await
 		})
 		.expect("Failed to register omni_estimateUserOpGas method");
 }

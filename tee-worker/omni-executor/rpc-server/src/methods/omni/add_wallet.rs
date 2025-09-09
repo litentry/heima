@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
 	detailed_error::DetailedError,
@@ -19,6 +20,59 @@ use tracing::{debug, error};
 #[derive(Serialize, Clone)]
 pub struct RPCAddWalletResponse {
 	pub backend_response: AddWalletResponse,
+}
+
+#[tracing::instrument(skip(ctx, ext), fields(client_id = %user.client_id, omni_account = %user.omni_account))]
+async fn handle_add_wallet_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	user: crate::methods::omni::common::User,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+	ext: jsonrpsee::Extensions,
+) -> Result<RPCAddWalletResponse, PumpxRpcError> {
+	debug!("Processing omni_addWallet request");
+
+	let Ok(address) = Address32::from_hex(&user.omni_account) else {
+		error!("Failed to parse from omni account token");
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Failed to parse omni account from authentication token"),
+		));
+	};
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::PumpxAddWallet(AccountId::from(address)),
+		None,
+		None,
+		user.client_id,
+	);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxAddWallet(response) => {
+			check_omni_api_response(response.clone(), "Add wallet".into())?;
+			Ok(RPCAddWalletResponse { backend_response: response })
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Unexpected response type from native task handler"),
+			))
+		},
+	})
+	.await
 }
 
 pub fn register_add_wallet<
@@ -53,37 +107,7 @@ pub fn register_add_wallet<
 				)
 			})?;
 
-			debug!("Received omni_addWallet");
-
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
-				));
-			};
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxAddWallet(AccountId::from(address)),
-				None,
-				None,
-				user.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxAddWallet(response) => {
-					check_omni_api_response(response.clone(), "Add wallet".into())?;
-					Ok(RPCAddWalletResponse { backend_response: response })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
-			})
-			.await
+			handle_add_wallet_request(user, ctx, ext).await
 		})
 		.expect("Failed to register omni_addWallet method");
 }

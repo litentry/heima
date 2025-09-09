@@ -34,6 +34,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -51,6 +52,74 @@ pub struct SignLimitOrderResponse {
 	pub order_id: u32,
 	pub chain_id: PumpxChainId,
 	pub signed_tx: Vec<Bytes>,
+}
+
+#[tracing::instrument(skip(params, user, ctx), fields(
+	client_id = %user.client_id,
+	omni_account = %user.omni_account,
+	intent_id = %params.intent_id,
+	order_id = %params.order_id,
+	chain_id = ?params.chain_id,
+	wallet_index = ?params.wallet_index,
+	unsigned_tx_count = %params.unsigned_tx.len()
+))]
+async fn handle_sign_limit_order_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: SignLimitOrderParams,
+	user: crate::methods::omni::common::User,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<SignLimitOrderResponse, PumpxRpcError> {
+	debug!("Processing omni_signLimitOrder request");
+
+	let Ok(address) = Address32::from_hex(&user.omni_account) else {
+		error!("Failed to parse from omni account token");
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Failed to parse omni account from authentication token"),
+		));
+	};
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::PumpxSignLimitOrder(
+			AccountId::from(address),
+			params.chain_id,
+			params.wallet_index,
+			params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
+		),
+		None,
+		None,
+		user.client_id,
+	);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxSignLimitOrder(signed_txs) => Ok(SignLimitOrderResponse {
+			intent_id: params.intent_id,
+			order_id: params.order_id,
+			chain_id: params.chain_id,
+			signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
+		}),
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Unexpected response type from native task handler"),
+			))
+		},
+	})
+	.await
 }
 
 pub fn register_sign_limit_order_params<
@@ -93,44 +162,7 @@ pub fn register_sign_limit_order_params<
 				)
 			})?;
 
-			debug!("Received omni_signLimitOrder, params: {:?}", params);
-
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
-				));
-			};
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxSignLimitOrder(
-					AccountId::from(address),
-					params.chain_id,
-					params.wallet_index,
-					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
-				),
-				None,
-				None,
-				user.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxSignLimitOrder(signed_txs) => Ok(SignLimitOrderResponse {
-					intent_id: params.intent_id,
-					order_id: params.order_id,
-					chain_id: params.chain_id,
-					signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
-				}),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
-			})
-			.await
+			handle_sign_limit_order_request(params, user, ctx).await
 		})
 		.expect("Failed to register omni_signLimitOrder method");
 }

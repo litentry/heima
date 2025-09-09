@@ -13,6 +13,7 @@ use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -20,6 +21,68 @@ pub struct NotifyLimitOrderResultParams {
 	pub intent_id: u32,
 	pub result: String,
 	pub message: Option<String>,
+}
+
+#[tracing::instrument(skip(params, ctx, _ext), fields(
+	client_id = %user.client_id,
+	omni_account = %user.omni_account,
+	intent_id = %params.intent_id,
+	result = %params.result,
+	message = ?params.message
+))]
+async fn handle_notify_limit_order_result_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: NotifyLimitOrderResultParams,
+	user: crate::methods::omni::common::User,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+	_ext: jsonrpsee::Extensions,
+) -> Result<(), PumpxRpcError> {
+	debug!("Processing omni_notifyLimitOrderResult request");
+
+	let Ok(address) = Address32::from_hex(&user.omni_account) else {
+		error!("Failed to parse from omni account token");
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Failed to parse omni account from authentication token"),
+		));
+	};
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::PumpxNotifyLimitOrderResult(
+			AccountId::from(address),
+			params.intent_id,
+			params.result,
+			params.message,
+		),
+		None,
+		None,
+		user.client_id,
+	);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Unexpected response type from native task handler"),
+			))
+		},
+	})
+	.await
 }
 
 pub fn register_notify_limit_order_result<
@@ -62,42 +125,7 @@ pub fn register_notify_limit_order_result<
 				)
 			})?;
 
-			debug!(
-				"Received omni_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
-				params.intent_id, params.result, params.message
-			);
-
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
-				));
-			};
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxNotifyLimitOrderResult(
-					AccountId::from(address),
-					params.intent_id,
-					params.result,
-					params.message,
-				),
-				None,
-				None,
-				user.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
-			})
-			.await
+			handle_notify_limit_order_result_request(params, user, ctx, ext).await
 		})
 		.expect("Failed to register omni_notifyLimitOrderResult method");
 }

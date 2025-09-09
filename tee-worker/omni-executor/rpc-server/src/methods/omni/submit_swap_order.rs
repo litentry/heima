@@ -23,7 +23,7 @@ use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -106,6 +106,262 @@ struct BackendResponse {
 	pub market_order_response: Option<SendOrderTxResponse>,
 }
 
+#[tracing::instrument(skip(params, user, ctx), fields(
+	client_id = %user.client_id,
+	omni_account = %user.omni_account,
+	intent_id = %params.intent_id,
+	order_type = ?params.order_type,
+	swap_type = ?params.swap_type,
+	from_chain_id = %params.from_chain_id,
+	to_chain_id = %params.to_chain_id,
+	from_amount = %params.from_amount,
+	wallet_index = %params.wallet_index,
+	is_cross_chain = %(params.from_chain_id != params.to_chain_id)
+))]
+async fn handle_submit_swap_order_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: SubmitSwapOrderParams,
+	user: crate::methods::omni::common::User,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<PumpxSubmitSwapOrderResponse, PumpxRpcError> {
+	debug!("Processing omni_submitSwapOrder request");
+
+	let Ok(omni_account) = AccountId::from_str(&user.omni_account) else {
+		error!("Failed to parse from omni account token");
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Failed to parse omni account from authentication token"),
+		));
+	};
+
+	let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
+		error!("Failed to get from chain asset");
+		PumpxRpcError::from(
+			DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+				.with_suggestion("Invalid method parameters"),
+		)
+	})?;
+	let to_chain_asset = params.try_get_to_chain_asset().map_err(|_| {
+		error!("Failed to get to chain asset");
+		PumpxRpcError::from(
+			DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+				.with_suggestion("Invalid method parameters"),
+		)
+	})?;
+
+	if params.order_type == PumpxOrderType::Limit
+		&& !from_chain_asset.is_same_chain(&to_chain_asset)
+	{
+		error!("Limit order must be on the same chain");
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+				.with_suggestion("Invalid method parameters"),
+		));
+	}
+
+	let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
+		.map_err(|_| {
+			error!("Failed to convert from_amount to BoundedVec");
+			PumpxRpcError::from(
+				DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+					.with_suggestion("Invalid method parameters"),
+			)
+		})?;
+
+	let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+	let Ok(Some(access_token)) =
+		storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+	else {
+		error!("Failed to get access token from storage");
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Failed to get access token from storage"),
+		));
+	};
+
+	let swap_order = SwapOrder {
+		from_asset: from_chain_asset,
+		to_asset: to_chain_asset,
+		from_amount,
+		to_address: None,
+	};
+
+	debug!("Calling pumpx get_user_trade_info");
+	let user_trade_info =
+		ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
+			error!("Failed to get user trade info: {:?}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+					.with_suggestion("Invalid method parameters"),
+			)
+		})?;
+
+	debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
+
+	let gas_type_base = check_and_get_option_user_trade_info_field(
+		user_trade_info.data.gas_type_base,
+		"gas_type_base",
+	)?;
+	let gas_type_bsc = check_and_get_option_user_trade_info_field(
+		user_trade_info.data.gas_type_bsc,
+		"gas_type_bsc",
+	)?;
+	let gas_type_eth = check_and_get_option_user_trade_info_field(
+		user_trade_info.data.gas_type_eth,
+		"gas_type_eth",
+	)?;
+	let gas_type_sol = check_and_get_option_user_trade_info_field(
+		user_trade_info.data.gas_type_sol,
+		"gas_type_sol",
+	)?;
+
+	let is_anti_mev = check_and_get_option_user_trade_info_field(
+		user_trade_info.data.is_anti_mev,
+		"is_anti_mev",
+	)?;
+	let is_auto_slippage = check_and_get_option_user_trade_info_field(
+		user_trade_info.data.is_auto_slippage,
+		"is_auto_slippage",
+	)?;
+	let slippage = check_and_get_option_user_trade_info_field(
+		user_trade_info.data.slippage,
+		"slippage",
+	)?;
+
+	let gas_type = match params.to_chain_id {
+		BASE_CHAIN_ID => gas_type_base.to_number() as u32,
+		ETHEREUM_CHAIN_ID => gas_type_eth.to_number() as u32,
+		BSC_CHAIN_ID => gas_type_bsc.to_number() as u32,
+		SOLANA_CHAIN_ID => gas_type_sol.to_number() as u32,
+		_ => {
+			error!("Unsupported chain id: {}", params.to_chain_id);
+			return Err(PumpxRpcError::from(
+				DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+					.with_suggestion("Invalid method parameters"),
+			));
+		},
+	};
+
+	let omni_config = PumpxConfig {
+		order_type: params.order_type.clone(),
+		swap_type: params.swap_type.to_number() as u32,
+		from_chain_id: params.from_chain_id,
+		from_token_ca: params.from_token_ca.unwrap_or("".to_string()),
+		to_chain_id: params.to_chain_id,
+		to_token_ca: params.to_token_ca.unwrap_or("".to_string()),
+		from_amount: params.from_amount,
+		double_out: params.double_out,
+		is_one_click: params.is_one_click,
+		is_anti_mev,
+		is_auto_slippage,
+		gas_type,
+		slippage,
+		wallet_index: params.wallet_index,
+		token_cap: params.token_cap,
+		price_usd: params.price_usd,
+		usd_worth: params.usd_worth,
+		trailing_percent: params.trailing_percent,
+	};
+	let scs_provider = SingleChainSwapProvider::Pumpx(omni_config);
+	let mut ccs_provider: Option<CrossChainSwapProvider> = None;
+
+	if params.from_chain_id != params.to_chain_id {
+		// TODO: figure out the binance config
+		ccs_provider = Some(CrossChainSwapProvider::Binance(BinanceConfig {}));
+	}
+
+	let intent = Intent::Swap(
+		swap_order,
+		ccs_provider,
+		scs_provider.try_into().map_err(|_| {
+			error!("Failed to convert single chain swap provider");
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Failed to convert single chain swap provider"),
+			)
+		})?,
+	);
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::RequestIntent(omni_account, params.intent_id, Box::new(intent)),
+		None,
+		None,
+		user.client_id,
+	);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::IntentSwapResponse(swap_response) => {
+			if params.order_type == PumpxOrderType::Market {
+				let market_order_response: SendOrderTxResponse =
+					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
+						error!("Failed to decode market order response: {:?}", e);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason(format!(
+									"Failed to decode market order response: {:?}",
+									e
+								)),
+						)
+					})?;
+				check_omni_api_response(
+					market_order_response.clone(),
+					"Market order".into(),
+				)?;
+				let response = PumpxSubmitSwapOrderResponse {
+					backend_response: BackendResponse {
+						limit_order_response: None,
+						market_order_response: Some(market_order_response),
+					},
+				};
+				Ok(response)
+			} else {
+				let limit_order_response: OrderInfoResponse =
+					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
+						error!("Failed to decode limit order response: {:?}", e);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason(format!(
+									"Failed to decode limit order response: {:?}",
+									e
+								)),
+						)
+					})?;
+				check_omni_api_response(
+					limit_order_response.clone(),
+					"Limit order".into(),
+				)?;
+				let response = PumpxSubmitSwapOrderResponse {
+					backend_response: BackendResponse {
+						limit_order_response: Some(limit_order_response),
+						market_order_response: None,
+					},
+				};
+				Ok(response)
+			}
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Unexpected response type from native task handler"),
+			))
+		},
+	})
+	.await
+}
+
 pub fn register_submit_swap_order<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -146,229 +402,7 @@ pub fn register_submit_swap_order<
 				)
 			})?;
 
-			debug!("Received omni_submitSwapOrder, params: {:?}", params);
-
-			let Ok(omni_account) = AccountId::from_str(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
-				));
-			};
-
-			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
-				error!("Failed to get from chain asset");
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-						.with_suggestion("Invalid method parameters"),
-				)
-			})?;
-			let to_chain_asset = params.try_get_to_chain_asset().map_err(|_| {
-				error!("Failed to get to chain asset");
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-						.with_suggestion("Invalid method parameters"),
-				)
-			})?;
-
-			if params.order_type == PumpxOrderType::Limit
-				&& !from_chain_asset.is_same_chain(&to_chain_asset)
-			{
-				error!("Limit order must be on the same chain");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-						.with_suggestion("Invalid method parameters"),
-				));
-			}
-
-			let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
-				.map_err(|_| {
-					error!("Failed to convert from_amount to BoundedVec");
-					PumpxRpcError::from(
-						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-							.with_suggestion("Invalid method parameters"),
-					)
-				})?;
-
-			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
-			else {
-				error!("Failed to get access token from storage");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to get access token from storage"),
-				));
-			};
-
-			let swap_order = SwapOrder {
-				from_asset: from_chain_asset,
-				to_asset: to_chain_asset,
-				from_amount,
-				to_address: None,
-			};
-
-			debug!("Calling pumpx get_user_trade_info");
-			let user_trade_info =
-				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
-					error!("Failed to get user trade info: {:?}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-							.with_suggestion("Invalid method parameters"),
-					)
-				})?;
-
-			debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
-
-			let gas_type_base = check_and_get_option_user_trade_info_field(
-				user_trade_info.data.gas_type_base,
-				"gas_type_base",
-			)?;
-			let gas_type_bsc = check_and_get_option_user_trade_info_field(
-				user_trade_info.data.gas_type_bsc,
-				"gas_type_bsc",
-			)?;
-			let gas_type_eth = check_and_get_option_user_trade_info_field(
-				user_trade_info.data.gas_type_eth,
-				"gas_type_eth",
-			)?;
-			let gas_type_sol = check_and_get_option_user_trade_info_field(
-				user_trade_info.data.gas_type_sol,
-				"gas_type_sol",
-			)?;
-
-			let is_anti_mev = check_and_get_option_user_trade_info_field(
-				user_trade_info.data.is_anti_mev,
-				"is_anti_mev",
-			)?;
-			let is_auto_slippage = check_and_get_option_user_trade_info_field(
-				user_trade_info.data.is_auto_slippage,
-				"is_auto_slippage",
-			)?;
-			let slippage = check_and_get_option_user_trade_info_field(
-				user_trade_info.data.slippage,
-				"slippage",
-			)?;
-
-			let gas_type = match params.to_chain_id {
-				BASE_CHAIN_ID => gas_type_base.to_number() as u32,
-				ETHEREUM_CHAIN_ID => gas_type_eth.to_number() as u32,
-				BSC_CHAIN_ID => gas_type_bsc.to_number() as u32,
-				SOLANA_CHAIN_ID => gas_type_sol.to_number() as u32,
-				_ => {
-					error!("Unsupported chain id: {}", params.to_chain_id);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-							.with_suggestion("Invalid method parameters"),
-					));
-				},
-			};
-
-			let omni_config = PumpxConfig {
-				order_type: params.order_type.clone(),
-				swap_type: params.swap_type.to_number() as u32,
-				from_chain_id: params.from_chain_id,
-				from_token_ca: params.from_token_ca.unwrap_or("".to_string()),
-				to_chain_id: params.to_chain_id,
-				to_token_ca: params.to_token_ca.unwrap_or("".to_string()),
-				from_amount: params.from_amount,
-				double_out: params.double_out,
-				is_one_click: params.is_one_click,
-				is_anti_mev,
-				is_auto_slippage,
-				gas_type,
-				slippage,
-				wallet_index: params.wallet_index,
-				token_cap: params.token_cap,
-				price_usd: params.price_usd,
-				usd_worth: params.usd_worth,
-				trailing_percent: params.trailing_percent,
-			};
-			let scs_provider = SingleChainSwapProvider::Pumpx(omni_config);
-			let mut ccs_provider: Option<CrossChainSwapProvider> = None;
-
-			if params.from_chain_id != params.to_chain_id {
-				// TODO: figure out the binance config
-				ccs_provider = Some(CrossChainSwapProvider::Binance(BinanceConfig {}));
-			}
-
-			let intent = Intent::Swap(
-				swap_order,
-				ccs_provider,
-				scs_provider.try_into().map_err(|_| {
-					error!("Failed to convert single chain swap provider");
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Failed to convert single chain swap provider"),
-					)
-				})?,
-			);
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(omni_account, params.intent_id, Box::new(intent)),
-				None,
-				None,
-				user.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::IntentSwapResponse(swap_response) => {
-					if params.order_type == PumpxOrderType::Market {
-						let market_order_response: SendOrderTxResponse =
-							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
-								error!("Failed to decode market order response: {:?}", e);
-								PumpxRpcError::from(
-									DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-										.with_reason(format!(
-											"Failed to decode market order response: {:?}",
-											e
-										)),
-								)
-							})?;
-						check_omni_api_response(
-							market_order_response.clone(),
-							"Market order".into(),
-						)?;
-						let response = PumpxSubmitSwapOrderResponse {
-							backend_response: BackendResponse {
-								limit_order_response: None,
-								market_order_response: Some(market_order_response),
-							},
-						};
-						Ok(response)
-					} else {
-						let limit_order_response: OrderInfoResponse =
-							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
-								error!("Failed to decode limit order response: {:?}", e);
-								PumpxRpcError::from(
-									DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-										.with_reason(format!(
-											"Failed to decode limit order response: {:?}",
-											e
-										)),
-								)
-							})?;
-						check_omni_api_response(
-							limit_order_response.clone(),
-							"Limit order".into(),
-						)?;
-						let response = PumpxSubmitSwapOrderResponse {
-							backend_response: BackendResponse {
-								limit_order_response: Some(limit_order_response),
-								market_order_response: None,
-							},
-						};
-						Ok(response)
-					}
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
-			})
-			.await
+			handle_submit_swap_order_request(params, user, ctx).await
 		})
 		.expect("Failed to register omni_submitSwapOrder method");
 }

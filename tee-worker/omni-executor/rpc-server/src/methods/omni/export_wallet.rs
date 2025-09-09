@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::common::handle_omni_native_task;
 use crate::{
 	detailed_error::DetailedError,
@@ -49,6 +50,64 @@ impl ExportWalletParams {
 	}
 }
 
+#[tracing::instrument(skip(ctx, ext, params, aes_key), fields(
+	client_id = %user.client_id,
+	omni_account = %user.omni_account,
+	chain_id = %params.chain_id,
+	wallet_index = %params.wallet_index,
+	wallet_address = %params.wallet_address
+))]
+async fn handle_export_wallet_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: ExportWalletParams,
+	aes_key: Aes256Key,
+	user: crate::methods::omni::common::User,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+	ext: jsonrpsee::Extensions,
+) -> Result<SerdeAesOutput, PumpxRpcError> {
+	debug!("Processing omni_exportWallet request");
+
+	let Ok(address) = Address32::from_hex(&user.omni_account) else {
+		error!("Failed to parse from omni account token");
+		return Err(PumpxRpcError::from(DetailedError::new(
+			INTERNAL_ERROR_CODE,
+			"Internal error"
+		).with_reason("Failed to parse omni account from authentication token")));
+	};
+	let omni_account = AccountId::from(address);
+
+	let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxExportWallet(wallet) => {
+			let encrypted_wallet: SerdeAesOutput =
+				aes_encrypt_default(&aes_key, &wallet).into();
+			Ok(encrypted_wallet)
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from(DetailedError::new(
+				INTERNAL_ERROR_CODE,
+				"Internal error"
+			).with_reason("Unexpected response type from native task handler")))
+		},
+	})
+	.await
+}
+
 pub fn register_export_wallet<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -86,17 +145,6 @@ pub fn register_export_wallet<
 				).with_reason("Invalid JSON format or missing required fields"))
 			})?;
 
-			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
-
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(DetailedError::new(
-					INTERNAL_ERROR_CODE,
-					"Internal error"
-				).with_reason("Failed to parse omni account from authentication token")));
-			};
-			let omni_account = AccountId::from(address);
-
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
@@ -116,23 +164,7 @@ pub fn register_export_wallet<
 				).with_field("key").with_reason("The decrypted key is not a valid 256-bit AES key").with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)"))
 			})?;
 
-			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxExportWallet(wallet) => {
-					let encrypted_wallet: SerdeAesOutput =
-						aes_encrypt_default(&aes_key, &wallet).into();
-					Ok(encrypted_wallet)
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(DetailedError::new(
-						INTERNAL_ERROR_CODE,
-						"Internal error"
-					).with_reason("Unexpected response type from native task handler")))
-				},
-			})
-			.await
+			handle_export_wallet_request(params, aes_key, user, ctx, ext).await
 		})
 		.expect("Failed to register omni_exportWallet method");
 }

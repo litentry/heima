@@ -19,6 +19,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -63,6 +64,84 @@ impl TransferWithdrawParams {
 	}
 }
 
+#[tracing::instrument(skip(params, user, ctx), fields(
+	client_id = %user.client_id,
+	omni_account = %user.omni_account,
+	request_id = ?params.request_id,
+	chain_id = %params.chain_id,
+	wallet_index = %params.wallet_index,
+	recipient_address = %params.recipient_address,
+	token_ca = %params.token_ca,
+	amount = %params.amount,
+	lang = ?params.lang
+))]
+async fn handle_transfer_withdraw_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: TransferWithdrawParams,
+	user: crate::methods::omni::common::User,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<TransferWithdrawResponse, PumpxRpcError> {
+	debug!("Processing omni_transferWithdraw request");
+
+	validate_chain_id(params.chain_id, Some("evm")).map_err(PumpxRpcError::from)?;
+
+	validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
+
+	validate_ethereum_address(&params.recipient_address, "recipient_address")
+		.map_err(PumpxRpcError::from)?;
+
+	validate_token_address(&params.token_ca, "token_ca")
+		.map_err(PumpxRpcError::from)?;
+
+	validate_amount(&params.amount, "amount")
+		.map_err(PumpxRpcError::from)?;
+
+	let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
+		.map_err(PumpxRpcError::from)?;
+
+	validate_omni_account_length(&address_bytes, "omni_account")
+		.map_err(PumpxRpcError::from)?;
+
+	let Ok(address) = Address32::from_hex(&user.omni_account) else {
+		error!("Failed to parse from omni account after validation");
+		return Err(DetailedError::account_parse_error(
+			&user.omni_account,
+			"Address32 conversion failed"
+		).into());
+	};
+	let omni_account = AccountId::from(address);
+
+	let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxTransferWithdraw(response) => {
+			check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
+			Ok(TransferWithdrawResponse { backend_response: response })
+		},
+		_ => {
+			error!("Unexpected response type from native task handler");
+			Err(DetailedError::unexpected_response_type(
+				"PumpxTransferWithdraw",
+				"Unknown"
+			).into())
+		},
+	})
+	.await
+}
+
 pub fn register_transfer_withdraw<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -102,53 +181,7 @@ pub fn register_transfer_withdraw<
 				.with_reason(format!("Invalid JSON structure: {}", e)))
 			})?;
 
-			debug!("Received omni_transferWithdraw, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
-		params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
-
-			validate_chain_id(params.chain_id, Some("evm")).map_err(PumpxRpcError::from)?;
-
-			validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
-
-			validate_ethereum_address(&params.recipient_address, "recipient_address")
-				.map_err(PumpxRpcError::from)?;
-
-			validate_token_address(&params.token_ca, "token_ca")
-				.map_err(PumpxRpcError::from)?;
-
-			validate_amount(&params.amount, "amount")
-				.map_err(PumpxRpcError::from)?;
-
-			let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			validate_omni_account_length(&address_bytes, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account after validation");
-				return Err(DetailedError::account_parse_error(
-					&user.omni_account,
-					"Address32 conversion failed"
-				).into());
-			};
-			let omni_account = AccountId::from(address);
-
-			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxTransferWithdraw(response) => {
-					check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
-					Ok(TransferWithdrawResponse { backend_response: response })
-				},
-				_ => {
-					error!("Unexpected response type from native task handler");
-					Err(DetailedError::unexpected_response_type(
-						"PumpxTransferWithdraw",
-						"Unknown"
-					).into())
-				},
-			})
-			.await
+			handle_transfer_withdraw_request(params, user, ctx).await
 		})
 		.expect("Failed to register omni_transferWithdraw method");
 }

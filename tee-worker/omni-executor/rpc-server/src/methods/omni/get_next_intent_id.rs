@@ -19,16 +19,57 @@ use crate::ErrorCode;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_storage::{IntentIdStorage, Storage};
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use std::str::FromStr;
-use tracing::log::error;
+use std::sync::Arc;
+use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct GetNextIntentIdParams {
 	// can be of ss58 or hex format
 	pub omni_account: String,
+}
+
+#[tracing::instrument(skip(params, ctx), fields(
+	omni_account = %params.omni_account
+))]
+async fn handle_get_next_intent_id_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: GetNextIntentIdParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<u32, ErrorObjectOwned> {
+	debug!("Processing omni_getNextIntentId request");
+
+	let account = AccountId::from_str(&params.omni_account).map_err(|e| {
+		error!("Could not parse AccountId: {:?}", e);
+		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InvalidParams)
+	})?;
+
+	let storage = IntentIdStorage::new(ctx.storage_db.clone());
+	let intent_id = storage
+		.get(&account)
+		.map_err(|e| {
+			error!("Could not get IntentId from store: {:?}", e);
+			<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InternalError)
+		})?
+		.unwrap_or_default();
+
+	Ok(intent_id + 1)
 }
 
 pub fn register_get_next_intent_id<
@@ -53,21 +94,7 @@ pub fn register_get_next_intent_id<
 	module
 		.register_async_method("omni_getNextIntentId", |params, ctx, _| async move {
 			let params = params.parse::<GetNextIntentIdParams>()?;
-			let account = AccountId::from_str(&params.omni_account).map_err(|e| {
-				error!("Could not parse AccountId: {:?}", e);
-				<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InvalidParams)
-			})?;
-
-			let storage = IntentIdStorage::new(ctx.storage_db.clone());
-			let intent_id = storage
-				.get(&account)
-				.map_err(|e| {
-					error!("Could not get IntentId from store: {:?}", e);
-					<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
-				})?
-				.unwrap_or_default();
-
-			Ok::<u32, ErrorObject>(intent_id + 1)
+			handle_get_next_intent_id_request(params, ctx).await
 		})
 		.expect("Failed to register getIntentId method");
 }

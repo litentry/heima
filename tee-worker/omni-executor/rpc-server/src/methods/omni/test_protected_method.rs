@@ -3,6 +3,17 @@ use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use tracing::debug;
+
+#[cfg(test)]
+#[tracing::instrument(skip(user), fields(
+	client_id = %user.client_id,
+	omni_account = %user.omni_account
+))]
+fn handle_test_protected_method_request(user: crate::methods::omni::common::User) -> String {
+	debug!("Processing omni_testProtectedMethod request");
+	user.omni_account
+}
 
 #[cfg(test)]
 pub fn register_test_protected_method<
@@ -27,7 +38,7 @@ pub fn register_test_protected_method<
 	module
 		.register_method("omni_testProtectedMethod", |_, _, ext| {
 			if let Ok(user) = check_auth(ext) {
-				return Ok::<String, ErrorObject>(user.omni_account);
+				return Ok::<String, ErrorObject>(handle_test_protected_method_request(user));
 			}
 			panic!("RpcExtensions not found in request extensions");
 		})

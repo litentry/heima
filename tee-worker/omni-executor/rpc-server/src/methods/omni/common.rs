@@ -16,7 +16,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use native_task_handler::{handle_native_task, NativeTaskError, NativeTaskOk};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use tracing::error;
+use tracing::{debug, error, instrument};
 
 #[derive(Serialize, Debug)]
 pub struct PumpxRpcError {
@@ -87,6 +87,10 @@ impl From<Box<DetailedError>> for PumpxRpcError {
 }
 
 /// Process native task and handle response
+#[instrument(skip(ctx, wrapper, task_ok_handler), fields(
+	client_id = %wrapper.client_id,
+	task_name = ?std::mem::discriminant(&wrapper.task)
+))]
 pub async fn handle_omni_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -111,6 +115,7 @@ pub async fn handle_omni_native_task<
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
+	debug!("Processing native task");
 	// We handle the task right here
 	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
@@ -171,6 +176,10 @@ where
 	}
 }
 
+#[instrument(skip(response), fields(
+	api_name = %name,
+	response_code = %response.code
+))]
 pub fn check_omni_api_response<T>(
 	response: ApiResponse<T>,
 	name: String,
@@ -182,9 +191,11 @@ where
 		error!("{} failed: code={}, message={}", name, response.code, response.message);
 		return Err(PumpxRpcError::from_api_response(response));
 	}
+	debug!("{} API call successful", name);
 	Ok(())
 }
 
+#[derive(Debug)]
 pub struct User {
 	pub omni_account: String,
 	pub client_id: String,
@@ -194,12 +205,17 @@ pub struct User {
 /// If the RpcExtensions is not found, it indicates that the request is not authenticated.
 /// If the RpcExtensions is found, it contains the sender's omni account extracted from the JWT.
 /// Check rpc_middleware.rs
+#[instrument(skip(ext), fields(has_extensions))]
 pub fn check_auth(ext: &Extensions) -> Result<User, ()> {
 	if let Some(rpc_extensions) = ext.get::<RpcExtensions>() {
+		tracing::Span::current().record("has_extensions", true);
+		debug!("Authentication successful for client: {}", rpc_extensions.client_id);
 		return Ok(User {
 			omni_account: rpc_extensions.sender.clone(),
 			client_id: rpc_extensions.client_id.clone(),
 		});
 	}
+	tracing::Span::current().record("has_extensions", false);
+	debug!("Authentication failed: RPC extensions not found");
 	Err(())
 }

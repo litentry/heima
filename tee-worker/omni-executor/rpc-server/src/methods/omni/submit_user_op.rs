@@ -33,6 +33,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -45,6 +46,76 @@ pub struct SubmitUserOpParams {
 #[derive(Serialize, Clone)]
 pub struct SubmitUserOpResponse {
 	pub transaction_hash: Option<String>,
+}
+
+#[tracing::instrument(skip(params, user, ctx), fields(
+	client_id = %user.client_id,
+	omni_account = %user.omni_account,
+	chain_id = %params.chain_id,
+	wallet_index = %params.wallet_index,
+	user_ops_count = %params.user_operations.len()
+))]
+async fn handle_submit_user_op_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: SubmitUserOpParams,
+	user: crate::methods::omni::common::User,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<SubmitUserOpResponse, PumpxRpcError> {
+	debug!("Processing omni_submitUserOp request");
+
+	validate_chain_id(params.chain_id as u32, Some("evm")).map_err(PumpxRpcError::from)?;
+
+	validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
+
+	validate_user_operations(&params.user_operations).map_err(PumpxRpcError::from)?;
+
+	let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
+		.map_err(PumpxRpcError::from)?;
+
+	validate_omni_account_length(&address_bytes, "omni_account")
+		.map_err(PumpxRpcError::from)?;
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::SubmitUserOp(
+			AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
+				error!("Failed to decode AccountId from bytes: {:?}", e);
+				PumpxRpcError::from(DetailedError::account_parse_error(
+					&user.omni_account,
+					&format!("Failed to decode account: {:?}", e),
+				))
+			})?,
+			params.user_operations.clone(),
+			params.chain_id,
+			params.wallet_index,
+		),
+		None,
+		None,
+		user.client_id,
+	);
+
+	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::SubmitUserOp(transaction_hash) => {
+			Ok(SubmitUserOpResponse { transaction_hash })
+		},
+		_ => {
+			error!("Unexpected response type from native task handler");
+			Err(DetailedError::unexpected_response_type("SubmitUserOp", "Unknown").into())
+		},
+	})
+	.await
 }
 
 pub fn register_submit_user_op<
@@ -84,48 +155,7 @@ pub fn register_submit_user_op<
 				)
 			})?;
 
-			debug!("Received omni_submitUserOp, params: {:?}", params);
-
-			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(PumpxRpcError::from)?;
-
-			validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
-
-			validate_user_operations(&params.user_operations).map_err(PumpxRpcError::from)?;
-
-			let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			validate_omni_account_length(&address_bytes, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::SubmitUserOp(
-					AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
-						error!("Failed to decode AccountId from bytes: {:?}", e);
-						PumpxRpcError::from(DetailedError::account_parse_error(
-							&user.omni_account,
-							&format!("Failed to decode account: {:?}", e),
-						))
-					})?,
-					params.user_operations.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
-				user.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::SubmitUserOp(transaction_hash) => {
-					Ok(SubmitUserOpResponse { transaction_hash })
-				},
-				_ => {
-					error!("Unexpected response type from native task handler");
-					Err(DetailedError::unexpected_response_type("SubmitUserOp", "Unknown").into())
-				},
-			})
-			.await
+			handle_submit_user_op_request(params, user, ctx).await
 		})
 		.expect("Failed to register omni_submitUserOp method");
 }

@@ -16,8 +16,15 @@
 
 use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use tracing::debug;
+
+#[tracing::instrument]
+async fn handle_get_health_request() -> Result<String, ErrorObjectOwned> {
+	debug!("Processing omni_getHealth request");
+	Ok("OK".to_string())
+}
 
 pub fn register_get_health<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -39,7 +46,9 @@ pub fn register_get_health<
 	>,
 ) {
 	module
-		.register_method("omni_getHealth", |_, _, _| Ok::<String, ErrorObject>("OK".to_string()))
+		.register_async_method("omni_getHealth", |_, _, _| async move {
+			handle_get_health_request().await
+		})
 		.expect("Failed to register getHealth method");
 }
 

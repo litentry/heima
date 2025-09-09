@@ -10,14 +10,61 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskTrait, NativeTaskWrapper};
 use executor_crypto::aes256::{aes_encrypt_default, Aes256Key};
 use jsonrpsee::{
-	types::{ErrorCode, ErrorObject, Params},
+	types::{ErrorCode, ErrorObject, ErrorObjectOwned, Params},
 	RpcModule,
 };
 use native_task_handler::handle_native_task;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
-use tracing::error;
+use tracing::{debug, error};
+
+#[tracing::instrument(skip(params, ctx), fields(
+	client_id,
+	is_encrypted,
+	requires_auth
+))]
+async fn handle_submit_native_task_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: Params<'static>,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<String, ErrorObjectOwned> {
+	debug!("Processing omni_submitNativeTask request");
+
+	let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
+		error!("Failed to parse: {:?}", e);
+		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InternalError)
+	})?;
+
+	// Record tracing fields after parsing
+	tracing::Span::current().record("client_id", &wrapper.client_id);
+	tracing::Span::current().record("is_encrypted", maybe_aes_key.is_some());
+	tracing::Span::current().record("requires_auth", wrapper.task.require_auth());
+
+	// We are directly handling the native task
+	let native_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
+
+	let response = if let Some(aes_key) = maybe_aes_key {
+		aes_encrypt_default(&aes_key, &native_response.encode()).encode()
+	} else {
+		native_response.encode()
+	};
+
+	Ok(hex_encode(response.as_slice()))
+}
 
 pub fn register_submit_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -40,21 +87,7 @@ pub fn register_submit_native_task<
 ) {
 	module
 		.register_async_method("omni_submitNativeTask", |params, ctx, _| async move {
-			let (wrapper, maybe_aes_key) = parse(params, ctx.clone()).await.map_err(|e| {
-				error!("Failed to parse: {:?}", e);
-				ErrorCode::InternalError
-			})?;
-
-			// We are directly handling the native task
-			let native_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
-
-			let response = if let Some(aes_key) = maybe_aes_key {
-				aes_encrypt_default(&aes_key, &native_response.encode()).encode()
-			} else {
-				native_response.encode()
-			};
-
-			Ok::<String, ErrorObject>(hex_encode(response.as_slice()))
+			handle_submit_native_task_request(params, ctx).await
 		})
 		.expect("Failed to register omni_submitNativeTask method");
 }
