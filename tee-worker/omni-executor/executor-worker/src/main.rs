@@ -73,6 +73,7 @@ use tracing::{error, info};
 use tracing_subscriber::{EnvFilter, Layer};
 use tracing_subscriber::FmtSubscriber;
 use tracing_subscriber::layer::SubscriberExt;
+use std::fs::OpenOptions;
 use tracing_config::init_trace;
 use tracing_log::LogTracer;
 mod cli;
@@ -81,27 +82,57 @@ mod tracing_config;
 #[tokio::main]
 #[tracing::instrument]
 async fn main() -> Result<(), ()> {
-	global::set_text_map_propagator(TraceContextPropagator::new());
-	LogTracer::init().expect("Could not initialize log tracer");
-
-	let tracer = init_trace().unwrap();
-    let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>().with_tracer(tracer);
-
-	let subscriber = tracing_subscriber::Registry::default()
-        .with(telemetry)
-		.with(
-			tracing_subscriber::fmt::layer()
-				.with_filter(
-					EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-				)
-		);
-
-	tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-
 	let cli = Cli::parse();
 
 	match cli.cmd {
 		Commands::Run(args) => {
+			// Initialize tracing based on CLI arguments
+			global::set_text_map_propagator(TraceContextPropagator::new());
+			LogTracer::init().expect("Could not initialize log tracer");
+
+			if args.enable_jaeger {
+				// Use Jaeger tracing with OpenTelemetry
+				let tracer = init_trace(args.jaeger_port).unwrap();
+				let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>().with_tracer(tracer);
+
+				let subscriber = tracing_subscriber::Registry::default()
+					.with(telemetry)
+					.with(
+						tracing_subscriber::fmt::layer()
+							.with_filter(
+								EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+							)
+					);
+
+				tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+			} else if args.json_trace_output {
+				// Output structured traces to file for later upload to Jaeger
+				let trace_file = OpenOptions::new()
+					.create(true)
+					.write(true)
+					.truncate(true)
+					.open(&args.json_trace_file)
+					.expect("Failed to create trace file");
+
+				let subscriber = FmtSubscriber::builder()
+					.with_writer(trace_file)
+					.with_env_filter(
+						EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+					)
+					.finish();
+
+				tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+			} else {
+				// Use regular logging without Jaeger
+				let subscriber = FmtSubscriber::builder()
+					.with_env_filter(
+						EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+					)
+					.finish();
+
+				tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+			}
+
 			if args.enable_mock_server {
 				#[cfg(feature = "mock-server")]
 				{
@@ -599,6 +630,15 @@ async fn main() -> Result<(), ()> {
 			}
 		},
 		Commands::GenKey(args) => {
+			// Initialize simple logging for GenKey command
+			let subscriber = FmtSubscriber::builder()
+				.with_env_filter(
+					EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+				)
+				.finish();
+
+			tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+
 			let key_store = Arc::new(SubstrateKeyStore::new(
 				Path::new(&args.local_directory_path)
 					.join("keystore/substrate_key.bin")

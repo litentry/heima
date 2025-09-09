@@ -1,12 +1,13 @@
-use opentelemetry::{trace::{Tracer, TracerProvider}};
+use opentelemetry::trace::TracerProvider;
 use opentelemetry_sdk::trace::{SdkTracer, SdkTracerProvider};
 use opentelemetry_sdk::Resource;
 use opentelemetry_otlp::{SpanExporter, WithExportConfig};
 
-pub fn init_trace() -> Result<SdkTracer, Box<dyn std::error::Error + Send + Sync + 'static>> {
+pub fn init_trace(port: u16) -> Result<SdkTracer, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    let endpoint = format!("http://localhost:{}", port);
     let exporter = SpanExporter::builder()
         .with_tonic()
-        .with_endpoint("http://localhost:4317")
+        .with_endpoint(endpoint)
         .build()?;
 
     let resource = Resource::builder()

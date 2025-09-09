@@ -51,6 +51,14 @@ pub struct RunArgs {
 	pub enable_mock_server: bool,
 	#[arg(long, default_value = "3456", value_name = "mock server port")]
 	pub mock_server_port: u16,
+	#[arg(long, value_name = "enable jaeger tracing")]
+	pub enable_jaeger: bool,
+	#[arg(long, default_value = "4317", value_name = "jaeger port")]
+	pub jaeger_port: u16,
+	#[arg(long, value_name = "output traces to JSON file for later upload to Jaeger")]
+	pub json_trace_output: bool,
+	#[arg(long, default_value = "./traces.json", value_name = "JSON trace output file path")]
+	pub json_trace_file: String,
 }
 
 #[derive(Args)]
