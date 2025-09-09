@@ -63,3 +63,4 @@ workspace = true
 
 [features]
 gramine-quote = []
+test-endpoints = []
