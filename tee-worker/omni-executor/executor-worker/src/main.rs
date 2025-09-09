@@ -237,7 +237,7 @@ async fn main() -> Result<(), ()> {
 				config_loader.pumpx_api_base_url.to_string(),
 			)));
 
-			let binance_api = Arc::new(BinanceApiClient::new(
+			let binance_api: Arc<BinanceApiClient> = Arc::new(BinanceApiClient::new(
 				config_loader.binance_api_key.clone(),
 				config_loader.binance_api_secret.clone(),
 				config_loader.binance_api_base_url.clone(),
@@ -308,7 +308,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
 				storage_db.clone(),
-				binance_api,
+				binance_api.clone(),
 				bsc_client,
 				solana_client,
 				Arc::new(Box::new(evm_accounting_contract_client)),
@@ -548,6 +548,7 @@ async fn main() -> Result<(), ()> {
 				jwt_rsa_private_key,
 				&config_loader,
 				pumpx_signer_client,
+				binance_api,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				wildmeta_backend_ecdsa_pubkey,
