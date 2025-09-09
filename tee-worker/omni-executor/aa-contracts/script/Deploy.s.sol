@@ -6,17 +6,23 @@ import "forge-std/console.sol";
 import "../src/core/EntryPointV1.sol";
 import "../src/accounts/OmniAccountFactoryV1.sol";
 import "../src/core/SimplePaymaster.sol";
+import "../src/core/ERC20PaymasterV1.sol";
 import "./DeploymentHelper.sol";
 
 /**
  * @title Deploy
  * @notice Universal deployment script for Account Abstraction contracts
- * @dev This script deploys EntryPointV1, OmniAccountFactoryV1, and SimplePaymaster contracts on any EVM network
+ * @dev This script can deploy any combination of EntryPointV1, OmniAccountFactoryV1, SimplePaymaster, and ERC20PaymasterV1 contracts on any EVM network
+ *      All contract deployments are configurable via environment variables, allowing for flexible deployment scenarios
  */
 contract Deploy is Script {
     // Configuration - can be overridden via environment variables
     uint256 public paymasterInitialDeposit;
-    bool public shouldInitializePaymaster;
+    bool public shouldDeployEntryPoint;
+    bool public shouldDeployFactory;
+    bool public shouldDeploySimplePaymaster;
+    bool public shouldDeployERC20Paymaster;
+    address public existingEntryPointAddress;
     address public initialBundler;
     bool public saveDeploymentFile;
 
@@ -24,6 +30,7 @@ contract Deploy is Script {
     address public entryPointAddress;
     address public factoryAddress;
     address public paymasterAddress;
+    address public erc20PaymasterAddress;
 
     // Network configuration
     struct NetworkConfig {
@@ -67,14 +74,36 @@ contract Deploy is Script {
         // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy contracts in dependency order
-        deployEntryPoint();
-        deployFactory();
-        deployPaymaster();
+        // Validate dependencies
+        validateDependencies();
 
-        // Initialize paymaster if configured
-        if (shouldInitializePaymaster && paymasterInitialDeposit > 0) {
-            initializePaymaster();
+        // Deploy contracts in dependency order
+        if (shouldDeployEntryPoint) {
+            deployEntryPoint();
+        }
+
+        if (shouldDeployFactory) {
+            deployFactory();
+        }
+
+        // Deploy Simple paymaster if configured
+        if (shouldDeploySimplePaymaster) {
+            deployPaymaster();
+
+            // Initialize simple paymaster if configured
+            if (paymasterInitialDeposit > 0) {
+                initializePaymaster();
+            }
+        }
+
+        // Deploy ERC20 paymaster if configured
+        if (shouldDeployERC20Paymaster) {
+            deployERC20Paymaster();
+
+            // Initialize ERC20 paymaster if configured
+            if (paymasterInitialDeposit > 0) {
+                initializeERC20Paymaster();
+            }
         }
 
         vm.stopBroadcast();
@@ -91,9 +120,22 @@ contract Deploy is Script {
     }
 
     function loadConfiguration() internal {
+        // Load deployment flags (defaults for backward compatibility)
+        shouldDeployEntryPoint = vm.envOr("DEPLOY_ENTRYPOINT", true);
+        shouldDeployFactory = vm.envOr("DEPLOY_FACTORY", true);
+        shouldDeploySimplePaymaster = vm.envOr("DEPLOY_SIMPLE_PAYMASTER", true);
+        shouldDeployERC20Paymaster = vm.envOr("DEPLOY_ERC20_PAYMASTER", false);
+
+        // Load existing EntryPoint address if not deploying new one
+        if (!shouldDeployEntryPoint) {
+            existingEntryPointAddress = vm.envAddress("ENTRYPOINT_ADDRESS");
+            require(existingEntryPointAddress != address(0), "ENTRYPOINT_ADDRESS required when DEPLOY_ENTRYPOINT=false");
+            require(existingEntryPointAddress.code.length > 0, "ENTRYPOINT_ADDRESS must be a deployed contract");
+            entryPointAddress = existingEntryPointAddress;
+        }
+
         // Load paymaster deposit amount (default: 1 ETH, can be 0 to skip initialization)
         paymasterInitialDeposit = vm.envOr("PAYMASTER_INITIAL_DEPOSIT", uint256(1 ether));
-        shouldInitializePaymaster = vm.envOr("INITIALIZE_PAYMASTER", true);
 
         // Load initial bundler (default: deployer address)
         address deployer = msg.sender;
@@ -103,11 +145,27 @@ contract Deploy is Script {
         saveDeploymentFile = vm.envOr("SAVE_DEPLOYMENT_FILE", false);
 
         console.log("Configuration:");
+        console.log("- Deploy EntryPoint:", shouldDeployEntryPoint ? "Yes" : "No");
+        if (!shouldDeployEntryPoint) {
+            console.log("- Existing EntryPoint:", entryPointAddress);
+        }
+        console.log("- Deploy Factory:", shouldDeployFactory ? "Yes" : "No");
+        console.log("- Deploy Simple paymaster:", shouldDeploySimplePaymaster ? "Yes" : "No");
+        console.log("- Deploy ERC20 paymaster:", shouldDeployERC20Paymaster ? "Yes" : "No");
         console.log("- Paymaster initial deposit:", paymasterInitialDeposit / 1e18, "ETH");
-        console.log("- Initialize paymaster:", shouldInitializePaymaster ? "Yes" : "No");
         console.log("- Initial bundler:", initialBundler);
         console.log("- Save deployment file:", saveDeploymentFile ? "Yes" : "No");
         console.log("");
+    }
+
+    function validateDependencies() internal view {
+        // Validate that EntryPoint is available for contracts that depend on it
+        if (
+            (shouldDeployFactory || shouldDeploySimplePaymaster || shouldDeployERC20Paymaster)
+                && !shouldDeployEntryPoint
+        ) {
+            require(entryPointAddress != address(0), "EntryPoint address required for Factory/Paymaster deployment");
+        }
     }
 
     function getNetworkConfig() internal view returns (NetworkConfig memory) {
@@ -177,6 +235,18 @@ contract Deploy is Script {
         console.log("");
     }
 
+    function deployERC20Paymaster() internal {
+        console.log("Deploying ERC20PaymasterV1...");
+
+        ERC20PaymasterV1 erc20Paymaster = new ERC20PaymasterV1(IEntryPoint(entryPointAddress), initialBundler);
+        erc20PaymasterAddress = address(erc20Paymaster);
+
+        console.log("ERC20PaymasterV1 deployed at:", erc20PaymasterAddress);
+        console.log("EntryPoint reference:", entryPointAddress);
+        console.log("Initial bundler:", initialBundler);
+        console.log("");
+    }
+
     function initializePaymaster() internal {
         console.log("Initializing Paymaster with deposit...");
 
@@ -200,13 +270,47 @@ contract Deploy is Script {
         console.log("");
     }
 
+    function initializeERC20Paymaster() internal {
+        console.log("Initializing ERC20 Paymaster with deposit...");
+
+        ERC20PaymasterV1 erc20Paymaster = ERC20PaymasterV1(payable(erc20PaymasterAddress));
+
+        // Add stake and deposit for the ERC20 paymaster - for now all goes in deposit
+        uint256 stakeAmount = 0;
+        uint256 depositAmount = paymasterInitialDeposit;
+
+        if (stakeAmount > 0) {
+            erc20Paymaster.addStake{value: stakeAmount}(1 days);
+            console.log("Added stake:", stakeAmount / 1e18, "ETH");
+        }
+
+        if (depositAmount > 0) {
+            erc20Paymaster.deposit{value: depositAmount}();
+            console.log("Added deposit:", depositAmount / 1e18, "ETH");
+        }
+
+        console.log("ERC20 Paymaster initialized");
+        console.log("");
+    }
+
     function logDeploymentResults(NetworkConfig memory networkConfig) internal view {
         console.log("=== DEPLOYMENT COMPLETE ===");
         console.log("");
         console.log("Contract Addresses:");
-        console.log("EntryPointV1:       ", entryPointAddress);
-        console.log("OmniAccountFactoryV1: ", factoryAddress);
-        console.log("SimplePaymaster:    ", paymasterAddress);
+        if (shouldDeployEntryPoint) {
+            console.log("EntryPointV1:         ", entryPointAddress);
+        } else {
+            console.log("EntryPointV1 (existing):", entryPointAddress);
+        }
+        if (shouldDeployFactory) {
+            console.log("OmniAccountFactoryV1: ", factoryAddress);
+        }
+        if (shouldDeploySimplePaymaster) {
+            console.log("SimplePaymaster:      ", paymasterAddress);
+        }
+        if (shouldDeployERC20Paymaster) {
+            console.log("ERC20PaymasterV1:     ", erc20PaymasterAddress);
+        }
         console.log("");
         console.log("Network:", networkConfig.name);
         console.log("Chain ID:", networkConfig.chainId);
@@ -227,31 +331,76 @@ contract Deploy is Script {
         }
 
         // Create array of deployments with enhanced artifact data
-        DeploymentHelper.ContractDeployment[] memory deployments = new DeploymentHelper.ContractDeployment[](3);
+        uint256 deploymentCount = 0;
+        if (shouldDeployEntryPoint) deploymentCount++;
+        if (shouldDeployFactory) deploymentCount++;
+        if (shouldDeploySimplePaymaster) deploymentCount++;
+        if (shouldDeployERC20Paymaster) deploymentCount++;
 
-        // Add EntryPoint deployment with ABI and bytecode
-        deployments[0] = DeploymentHelper.createContractDeployment(
-            vm,
-            "EntryPointV1",
-            entryPointAddress,
-            "" // No additional metadata for now
-        );
+        require(deploymentCount > 0, "No contracts were deployed");
+        DeploymentHelper.ContractDeployment[] memory deployments =
+            new DeploymentHelper.ContractDeployment[](deploymentCount);
 
-        // Add OmniAccountFactory deployment with ABI and bytecode
-        deployments[1] = DeploymentHelper.createContractDeployment(
-            vm,
-            "OmniAccountFactoryV1",
-            factoryAddress,
-            "" // No additional metadata for now
-        );
+        uint256 currentIndex = 0;
 
-        // Add SimplePaymaster deployment with ABI and bytecode
-        deployments[2] = DeploymentHelper.createContractDeployment(
-            vm,
-            "SimplePaymaster",
-            paymasterAddress,
-            string(abi.encodePacked('{"initialBundler": "', vm.toString(initialBundler), '"}'))
-        );
+        // Add EntryPoint deployment with ABI and bytecode if deployed
+        if (shouldDeployEntryPoint) {
+            deployments[currentIndex] = DeploymentHelper.createContractDeployment(
+                vm,
+                "EntryPointV1",
+                entryPointAddress,
+                "" // No additional metadata for now
+            );
+            currentIndex++;
+        }
+
+        // Add OmniAccountFactory deployment with ABI and bytecode if deployed
+        if (shouldDeployFactory) {
+            deployments[currentIndex] = DeploymentHelper.createContractDeployment(
+                vm,
+                "OmniAccountFactoryV1",
+                factoryAddress,
+                string(abi.encodePacked('{"entryPoint": "', vm.toString(entryPointAddress), '"}'))
+            );
+            currentIndex++;
+        }
+
+        // Add SimplePaymaster deployment with ABI and bytecode if deployed
+        if (shouldDeploySimplePaymaster) {
+            deployments[currentIndex] = DeploymentHelper.createContractDeployment(
+                vm,
+                "SimplePaymaster",
+                paymasterAddress,
+                string(
+                    abi.encodePacked(
+                        '{"initialBundler": "',
+                        vm.toString(initialBundler),
+                        '", "entryPoint": "',
+                        vm.toString(entryPointAddress),
+                        '"}'
+                    )
+                )
+            );
+            currentIndex++;
+        }
+
+        // Add ERC20PaymasterV1 deployment if deployed
+        if (shouldDeployERC20Paymaster) {
+            deployments[currentIndex] = DeploymentHelper.createContractDeployment(
+                vm,
+                "ERC20PaymasterV1",
+                erc20PaymasterAddress,
+                string(
+                    abi.encodePacked(
+                        '{"initialBundler": "',
+                        vm.toString(initialBundler),
+                        '", "entryPoint": "',
+                        vm.toString(entryPointAddress),
+                        '"}'
+                    )
+                )
+            );
+        }
 
         // Save enhanced deployment artifacts with environment support
         DeploymentHelper.saveDeploymentArtifacts(
