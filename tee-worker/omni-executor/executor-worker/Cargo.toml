@@ -47,6 +47,7 @@ wildmeta-api = { workspace = true }
 [features]
 default = []
 mock-server = []
+test-endpoints = ["rpc-server/test-endpoints"]
 
 [lints]
 workspace = true
