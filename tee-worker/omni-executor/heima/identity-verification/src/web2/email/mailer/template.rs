@@ -154,7 +154,7 @@ pub const WILDMETA_EMAIL_VERIFICATION_TEMPLATE: &str = r##"
                 <tr>
                   <td align="center" style="padding-bottom: 20px">
                     <div style="font-size: 36px; font-weight: 300">
-                      <span class="sm-block" style="background: linear-gradient(91.37deg, #DFEAEA 32.76%, #E3FFFE 94.73%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-fill-color: transparent; display: inline">Trade
+                      <span class="sm-block" style="color: #E3FFFE; display: inline">Trade
                       better on</span>
                       <span class="sm-block sm-ml-3" style="display: inline">
                       <img src="https://dex-cdn.wildmeta.io/index/email_hyperliquid.png" alt="Hyperliquid" style="max-width: 100%; display: inline-block; height: 40px; width: auto; vertical-align: middle">
