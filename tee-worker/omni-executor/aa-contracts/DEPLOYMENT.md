@@ -4,10 +4,11 @@ This guide provides comprehensive instructions for deploying Account Abstraction
 
 ## 📋 Overview
 
-The deployment script deploys three core contracts:
-- **EntryPointV1**: The main entry point for ERC-4337 user operations
-- **OmniAccountFactoryV1**: Factory contract for creating OmniAccount smart wallets
-- **SimplePaymaster**: Paymaster contract for sponsoring transactions
+The deployment script can deploy the following contracts:
+- **EntryPointV1**: The main entry point for ERC-4337 user operations (always deployed)
+- **OmniAccountFactoryV1**: Factory contract for creating OmniAccount smart wallets (always deployed)
+- **SimplePaymaster**: Basic paymaster contract for sponsoring transactions (optional, default: enabled)
+- **ERC20PaymasterV1**: Advanced paymaster that accepts ERC20 tokens as payment (optional, default: disabled)
 
 ## 🔧 Prerequisites
 
@@ -53,9 +54,17 @@ Create a `.env` file in the project root:
 PRIVATE_KEY=0x1234567890abcdef...  # Your deployer private key
 RPC_URL=https://your-rpc-endpoint   # Network RPC URL
 
-# Optional
+# Optional - Contract Deployment Configuration
+DEPLOY_ENTRYPOINT=true                         # Deploy EntryPointV1 (default: true)
+DEPLOY_FACTORY=true                            # Deploy OmniAccountFactoryV1 (default: true)
+DEPLOY_SIMPLE_PAYMASTER=true                   # Deploy SimplePaymaster (default: true)
+DEPLOY_ERC20_PAYMASTER=false                   # Deploy ERC20PaymasterV1 (default: false)
+
+# Required when DEPLOY_ENTRYPOINT=false
+ENTRYPOINT_ADDRESS=0x1234567890abcdef...       # Address of existing EntryPoint (required if not deploying new one)
+
+# Optional - Configuration
 PAYMASTER_INITIAL_DEPOSIT=1000000000000000000  # 1 ETH in wei (default: 1 ETH)
-INITIALIZE_PAYMASTER=true                      # Whether to initialize paymaster (default: true)
 INITIAL_BUNDLER=0x1234567890abcdef...          # Initial bundler address (default: deployer)
 SAVE_DEPLOYMENT_FILE=true                      # Save deployment file (default: false, set true for official deployments)
 DEPLOYMENT_ENV=staging                         # Environment subdirectory (e.g., staging, production)
@@ -91,7 +100,7 @@ DEPLOYMENT_ENV=staging  # Optional: staging, production, etc.
 ```
 
 This script will:
-1. Deploy all contracts to the specified network
+1. Deploy all configured contracts to the specified network
 2. Save enhanced artifacts with addresses and bytecode
 3. Automatically enrich artifacts with ABIs from Foundry build outputs
 4. Save to `deployments/[environment]/[network].json`
@@ -113,7 +122,9 @@ forge script script/Deploy.s.sol:Deploy \
 
 After successful deployment, you'll find:
 
-### Console Output
+### Console Output Examples
+
+**Full deployment with both paymasters:**
 ```
 === AA Contracts Deployment ===
 Network: BSC Testnet
@@ -130,14 +141,21 @@ Deployer balance: 1.5 ETH
 🚀 Deploying SimplePaymaster...
 ✅ SimplePaymaster deployed at: 0x...
 
-💰 Initializing Paymaster with deposit...
-✅ Paymaster initialized
+🚀 Deploying ERC20PaymasterV1...
+✅ ERC20PaymasterV1 deployed at: 0x...
+
+💰 Initializing SimplePaymaster with deposit...
+✅ SimplePaymaster initialized
+
+💰 Initializing ERC20PaymasterV1 with deposit...
+✅ ERC20PaymasterV1 initialized
 
 === DEPLOYMENT COMPLETE ===
 📋 Contract Addresses:
 EntryPointV1:          0x...
 OmniAccountFactoryV1:  0x...
 SimplePaymaster:       0x...
+ERC20PaymasterV1:      0x...
 ```
 
 ### JSON File (Enhanced Artifacts)
@@ -164,6 +182,14 @@ Location: `deployments/[environment]/[network].json` (e.g., `deployments/staging
       "metadata": {}
     },
     "SimplePaymaster": {
+      "address": "0x...",
+      "abi": [...],
+      "bytecode": "0x608060...",
+      "metadata": {
+        "initialBundler": "0x..."
+      }
+    },
+    "ERC20PaymasterV1": {
       "address": "0x...",
       "abi": [...],
       "bytecode": "0x608060...",
@@ -236,12 +262,20 @@ forge verify-contract \
     src/accounts/OmniAccountFactoryV1.sol:OmniAccountFactoryV1 \
     --etherscan-api-key $ETHERSCAN_API_KEY
 
-# Verify Paymaster
+# Verify SimplePaymaster
 forge verify-contract \
     --chain-id [CHAIN_ID] \
-    --constructor-args $(cast abi-encode "constructor(address)" [ENTRYPOINT_ADDRESS]) \
-    [PAYMASTER_ADDRESS] \
+    --constructor-args $(cast abi-encode "constructor(address,address)" [ENTRYPOINT_ADDRESS] [INITIAL_BUNDLER]) \
+    [SIMPLE_PAYMASTER_ADDRESS] \
     src/core/SimplePaymaster.sol:SimplePaymaster \
+    --etherscan-api-key $ETHERSCAN_API_KEY
+
+# Verify ERC20PaymasterV1
+forge verify-contract \
+    --chain-id [CHAIN_ID] \
+    --constructor-args $(cast abi-encode "constructor(address,address)" [ENTRYPOINT_ADDRESS] [INITIAL_BUNDLER]) \
+    [ERC20_PAYMASTER_ADDRESS] \
+    src/core/ERC20PaymasterV1.sol:ERC20PaymasterV1 \
     --etherscan-api-key $ETHERSCAN_API_KEY
 ```
 
