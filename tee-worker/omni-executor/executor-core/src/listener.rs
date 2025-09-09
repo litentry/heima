@@ -105,7 +105,7 @@ impl<
 		debug!("Starting sync from {:?}", block_number_to_sync);
 
 		'main: loop {
-			let span = span!(parent: None, tracing::Level::DEBUG, "Block Syncer Loop", block_number = block_number_to_sync);
+			let span = span!(parent: None, tracing::Level::DEBUG, "block_sync", block_number = block_number_to_sync);
 			let enter = span.enter();
 			if self.stop_signal.try_recv().is_ok() {
 				break;
