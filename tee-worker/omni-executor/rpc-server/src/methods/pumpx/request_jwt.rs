@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 use crate::{
 	error_code::*, methods::pumpx::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
@@ -48,6 +49,57 @@ impl RequestJwtParams {
 	}
 }
 
+#[tracing::instrument(skip(ctx, params), fields(client_id = %params.client_id, user_email = %params.user_email, invite_code = %params.invite_code.as_deref().unwrap_or("None"), language = %params.language.as_deref().unwrap_or("None")))]
+async fn handle_request_jwt_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: RequestJwtParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<RequestJwtResponse, PumpxRpcError> {
+	debug!("Processing pumpx_requestJwt request");
+
+	let wrapper = params.into_native_task_wrapper();
+
+	if wrapper.task.require_auth() {
+		let Some(ref auth) = wrapper.auth else {
+			error!("Missing auth");
+			return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				REQUIRE_AUTHENTICATION_CODE,
+			)));
+		};
+		verify_auth(ctx.clone(), auth).await.map_err(|_| {
+			error!("Failed to verify auth: {:?}", wrapper.auth);
+			PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				AUTH_VERIFICATION_FAILED_CODE,
+			))
+		})?;
+	}
+
+	handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response } => {
+			check_pumpx_api_response(backend_response.clone(), "Request pumpx jwt".into())?;
+			Ok(RequestJwtResponse { access_token, id_token, backend_response })
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+		},
+	})
+	.await
+}
+
 pub fn register_request_jwt<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -74,39 +126,7 @@ pub fn register_request_jwt<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!(
-				"Received pumpx_requestJwt, user_email: {}, client_id: {}",
-				params.user_email, params.client_id
-			);
-
-			let wrapper = params.into_native_task_wrapper();
-
-			if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						REQUIRE_AUTHENTICATION_CODE,
-					)));
-				};
-				verify_auth(ctx.clone(), auth).await.map_err(|_| {
-					error!("Failed to verify auth: {:?}", wrapper.auth);
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					))
-				})?;
-			}
-
-			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response } => {
-					check_pumpx_api_response(backend_response.clone(), "Request pumpx jwt".into())?;
-					Ok(RequestJwtResponse { access_token, id_token, backend_response })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			handle_request_jwt_request(params, ctx).await
 		})
 		.expect("Failed to register pumpx_requestJwt method");
 }

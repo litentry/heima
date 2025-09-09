@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
 use super::common::handle_pumpx_native_task;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::pumpx::PumpxRpcError;
@@ -56,6 +57,74 @@ pub struct SignLimitOrderResponse {
 	pub signed_tx: Vec<Bytes>,
 }
 
+#[tracing::instrument(skip(ctx, params), fields(intent_id = %params.intent_id, order_id = %params.order_id, chain_id = %params.chain_id, wallet_index = %params.wallet_index, unsigned_tx_count = %params.unsigned_tx.len()))]
+async fn handle_sign_limit_order_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: SignLimitOrderParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<SignLimitOrderResponse, PumpxRpcError> {
+	debug!("Processing pumpx_signLimitOrder request");
+
+	let (omni_account, client_id) = match verify_auth_token_authentication(
+		&ctx.jwt_rsa_private_key,
+		&params.auth_token,
+		AUTH_TOKEN_ACCESS_TYPE,
+		true,
+	) {
+		Ok(claims) => (claims.sub, claims.aud),
+		Err(_) => {
+			error!("Failed to verify auth token");
+			return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				AUTH_VERIFICATION_FAILED_CODE,
+			)));
+		},
+	};
+
+	let Ok(address) = Address32::from_hex(&omni_account) else {
+		error!("Failed to parse from omni account token");
+		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+	};
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::PumpxSignLimitOrder(
+			AccountId::from(address),
+			params.chain_id,
+			params.wallet_index,
+			params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
+		),
+		None,
+		Some(OmniAuth::AuthToken(params.auth_token)),
+		client_id,
+	);
+
+	handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxSignLimitOrder(signed_txs) => Ok(SignLimitOrderResponse {
+			intent_id: params.intent_id,
+			order_id: params.order_id,
+			chain_id: params.chain_id,
+			signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
+		}),
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+		},
+	})
+	.await
+}
+
 pub fn register_sign_limit_order_params<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -82,53 +151,7 @@ pub fn register_sign_limit_order_params<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received pumpx_signLimitOrder, intent_id: {}, order_id: {}, chain_id: {}, wallet_index: {}", params.intent_id, params.order_id, params.chain_id, params.wallet_index);
-
-           	let (omni_account, client_id) = match verify_auth_token_authentication(
-				&ctx.jwt_rsa_private_key,
-				&params.auth_token,
-				AUTH_TOKEN_ACCESS_TYPE,
-				true,
-			) {
-				Ok(claims) => (claims.sub, claims.aud),
-				Err(_) => {
-					error!("Failed to verify auth token");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					)));
-				},
-			};
-
-			let Ok(address) = Address32::from_hex(&omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			};
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxSignLimitOrder(
-                    AccountId::from(address),
-					params.chain_id,
-					params.wallet_index,
-					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
-				),
-			    None,
-         		Some(OmniAuth::AuthToken(params.auth_token)),
-				client_id,
-			);
-
-			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxSignLimitOrder(signed_txs) => Ok(SignLimitOrderResponse {
-					intent_id: params.intent_id,
-					order_id: params.order_id,
-					chain_id: params.chain_id,
-					signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
-				}),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			handle_sign_limit_order_request(params, ctx).await
 		})
 		.expect("Failed to register pumpx_signLimitOrder method");
 }

@@ -7,7 +7,7 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;
 use serde::Serialize;
-use tracing::error;
+use tracing::{debug, error, instrument};
 
 #[derive(Serialize, Debug)]
 pub struct PumpxRpcError {
@@ -63,6 +63,10 @@ impl From<PumpxRpcError> for ErrorObjectOwned {
 }
 
 /// Process native task and handle response
+#[instrument(skip(ctx, wrapper, task_ok_handler), fields(
+	client_id = %wrapper.client_id,
+	task_name = ?std::mem::discriminant(&wrapper.task)
+))]
 pub async fn handle_pumpx_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -87,6 +91,7 @@ pub async fn handle_pumpx_native_task<
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
+	debug!("Processing native task");
 	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
 	// Process response
@@ -111,6 +116,10 @@ where
 	}
 }
 
+#[instrument(skip(response), fields(
+	api_name = %name,
+	response_code = %response.code
+))]
 pub fn check_pumpx_api_response<T>(
 	response: ApiResponse<T>,
 	name: String,
@@ -122,9 +131,14 @@ where
 		error!("{} failed: code={}, message={}", name, response.code, response.message);
 		return Err(PumpxRpcError::from_api_response(response));
 	}
+	debug!("{} API call successful", name);
 	Ok(())
 }
 
+#[instrument(skip(data), fields(
+	error_code = %code,
+	has_data = %data.is_some()
+))]
 pub fn check_and_get_option_response_data<T>(
 	data: Option<T>,
 	code: i32,

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 use crate::{
 	error_code::*,
@@ -62,6 +63,92 @@ impl TransferWithdrawParams {
 	}
 }
 
+#[tracing::instrument(skip(ctx, params), fields(
+	client_id = %params.client_id,
+	user_id = %params.user_id,
+	user_email = %params.user_email,
+	request_id = %params.request_id.unwrap_or(0),
+	chain_id = %params.chain_id,
+	wallet_index = %params.wallet_index,
+	recipient_address = %params.recipient_address,
+	token_ca = %params.token_ca,
+	amount = %params.amount,
+	lang = %params.lang.as_deref().unwrap_or("None")
+))]
+async fn handle_transfer_withdraw_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: TransferWithdrawParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<TransferWithdrawResponse, PumpxRpcError> {
+	debug!("Processing pumpx_transferWithdraw request");
+
+	// verify user_id and user_email matches
+	debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
+	let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
+		error!("Failed to call get_account_user_id");
+		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+		)));
+	};
+	debug!("Response pumpx get_account_user_id: {:?}", res);
+
+	let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
+
+	if user_id != params.user_id {
+		error!(
+			"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
+			params.user_id,
+			params.user_email,
+			user_id
+		);
+		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			USER_EMAIL_ID_MISMATCH_CODE,
+		)));
+	}
+
+	let wrapper: NativeTaskWrapper<NativeTask> = params.into_native_task_wrapper();
+
+	if wrapper.task.require_auth() {
+		let Some(ref auth) = wrapper.auth else {
+			error!("Missing auth token");
+			return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				REQUIRE_AUTHENTICATION_CODE,
+			)));
+		};
+		verify_auth(ctx.clone(), auth).await.map_err(|_| {
+			error!("Failed to verify auth: {:?}", wrapper.auth);
+			PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				AUTH_VERIFICATION_FAILED_CODE,
+			))
+		})?;
+	}
+
+	handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxTransferWithdraw(response) => {
+			check_pumpx_api_response(response.clone(), "Transfer withdraw".into())?;
+			Ok(TransferWithdrawResponse { backend_response: response })
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+		},
+	})
+	.await
+}
+
 pub fn register_transfer_withdraw<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -87,61 +174,7 @@ pub fn register_transfer_withdraw<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received pumpx_transferWithdraw, user_id: {}, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
-		params.user_id, params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
-
-			// verify user_id and user_email matches
-			debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
-			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
-				error!("Failed to call get_account_user_id");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-			debug!("Response pumpx get_account_user_id: {:?}", res);
-
-			let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
-
-			if user_id != params.user_id {
-				error!(
-					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
-					params.user_id,
-					params.user_email,
-					user_id
-				);
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					USER_EMAIL_ID_MISMATCH_CODE,
-				)));
-			}
-
-			let wrapper: NativeTaskWrapper<NativeTask> = params.into_native_task_wrapper();
-
-            if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						REQUIRE_AUTHENTICATION_CODE,
-					)));
-				};
-		        verify_auth(ctx.clone(), auth).await.map_err(|_| {
-		        	error!("Failed to verify auth: {:?}", wrapper.auth);
-                    PumpxRpcError::from_error_code(ErrorCode::ServerError(
-                        AUTH_VERIFICATION_FAILED_CODE,
-                    ))
-		        })?;
-	        }
-
-			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxTransferWithdraw(response) => {
-					check_pumpx_api_response(response.clone(), "Transfer withdraw".into())?;
-					Ok(TransferWithdrawResponse { backend_response: response })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			handle_transfer_withdraw_request(params, ctx).await
 		})
 		.expect("Failed to register pumpx_transferWithdraw method");
 }

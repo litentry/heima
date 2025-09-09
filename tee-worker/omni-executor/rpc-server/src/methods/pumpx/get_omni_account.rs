@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
 use crate::ErrorCode;
 use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::Identity;
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::{types::{ErrorObject, ErrorObjectOwned}, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -28,6 +29,14 @@ use tracing::error;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetOmniAccountParams {
 	pub user_id: String,
+}
+
+#[tracing::instrument(fields(user_id = %params.user_id))]
+async fn handle_get_omni_account_request(params: GetOmniAccountParams) -> Result<String, PumpxRpcError> {
+	let account =
+		Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
+			.to_omni_account(CLIENT_ID_PUMPX);
+	Ok(account.to_hex())
 }
 
 // Directly converts Identity to OmniAccount using 1:1 mapping
@@ -57,10 +66,7 @@ pub fn register_get_omni_account<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			let account =
-				Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
-					.to_omni_account(CLIENT_ID_PUMPX);
-			Ok::<String, ErrorObject>(account.to_hex())
+			handle_get_omni_account_request(params).await.map_err(|e| -> ErrorObjectOwned { e.into() })
 		})
 		.expect("Failed to register pumpx_getOmniAccount method");
 }

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 use crate::{
 	error_code::*, methods::pumpx::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
@@ -39,6 +40,57 @@ impl AddWalletParams {
 	}
 }
 
+#[tracing::instrument(skip(ctx), fields(user_id = %params.user_id, client_id = %params.client_id))]
+async fn handle_add_wallet_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: AddWalletParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<RPCAddWalletResponse, PumpxRpcError> {
+	debug!("Processing pumpx_addWallet request");
+
+	let wrapper = params.into_native_task_wrapper();
+
+	if wrapper.task.require_auth() {
+		let Some(ref auth) = wrapper.auth else {
+			error!("Missing auth token");
+			return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				REQUIRE_AUTHENTICATION_CODE,
+			)));
+		};
+		verify_auth(ctx.clone(), auth).await.map_err(|_| {
+			error!("Failed to verify auth: {:?}", wrapper.auth);
+			PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				AUTH_VERIFICATION_FAILED_CODE,
+			))
+		})?;
+	}
+
+	handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxAddWallet(response) => {
+			check_pumpx_api_response(response.clone(), "Add wallet".into())?;
+			Ok(RPCAddWalletResponse { backend_response: response })
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+		},
+	})
+	.await
+}
+
 pub fn register_add_wallet<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -65,36 +117,7 @@ pub fn register_add_wallet<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received pumpx_addWallet, user_id: {}", params.user_id);
-
-			let wrapper = params.into_native_task_wrapper();
-
-			if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						REQUIRE_AUTHENTICATION_CODE,
-					)));
-				};
-				verify_auth(ctx.clone(), auth).await.map_err(|_| {
-					error!("Failed to verify auth: {:?}", wrapper.auth);
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					))
-				})?;
-			}
-
-			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxAddWallet(response) => {
-					check_pumpx_api_response(response.clone(), "Add wallet".into())?;
-					Ok(RPCAddWalletResponse { backend_response: response })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			handle_add_wallet_request(params, ctx).await
 		})
 		.expect("Failed to register pumpx_addWallet method");
 }

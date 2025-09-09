@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::common::handle_pumpx_native_task;
 use crate::{
 	error_code::*,
@@ -52,6 +53,83 @@ impl ExportWalletParams {
 	}
 }
 
+#[tracing::instrument(skip(ctx, aes_key), fields(user_id = %params.user_id, client_id = %params.client_id, chain_id = %params.chain_id, wallet_index = %params.wallet_index, wallet_address = %params.wallet_address))]
+async fn handle_export_wallet_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: ExportWalletParams,
+	aes_key: Aes256Key,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<SerdeAesOutput, PumpxRpcError> {
+	debug!("Processing pumpx_exportWallet request");
+
+	// verify user_id and user_email matches
+	debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
+	let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
+		error!("Failed to call get_account_user_id");
+		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+		)));
+	};
+	debug!("Response pumpx get_account_user_id: {:?}", res);
+
+	let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
+
+	if user_id != params.user_id {
+		error!(
+			"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
+			params.user_id,
+			params.user_email,
+			user_id
+		);
+		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+			USER_EMAIL_ID_MISMATCH_CODE,
+		)));
+	}
+
+	let wrapper = params.into_native_task_wrapper();
+
+	if wrapper.task.require_auth() {
+		let Some(ref auth) = wrapper.auth else {
+			error!("Missing auth");
+			return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				REQUIRE_AUTHENTICATION_CODE,
+			)));
+		};
+		verify_auth(ctx.clone(), auth).await.map_err(|_| {
+			error!("Failed to verify auth: {:?}", wrapper.auth);
+			PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				AUTH_VERIFICATION_FAILED_CODE,
+			))
+		})?;
+	}
+
+	handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxExportWallet(wallet) => {
+			let encrypted_wallet: SerdeAesOutput =
+				aes_encrypt_default(&aes_key, &wallet).into();
+			Ok(encrypted_wallet)
+		},
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+		},
+	})
+	.await
+}
+
 pub fn register_export_wallet<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -77,8 +155,6 @@ pub fn register_export_wallet<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!("Received pumpx_exportWallet, user_id: {}, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.user_id, params.chain_id, params.wallet_index, params.wallet_address);
-
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
@@ -98,59 +174,7 @@ pub fn register_export_wallet<
 				)
 			})?;
 
-			// verify user_id and user_email matches
-			debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
-			let Ok(res) = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await else {
-				error!("Failed to call get_account_user_id");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				)));
-			};
-			debug!("Response pumpx get_account_user_id: {:?}", res);
-
-			let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
-
-			if user_id != params.user_id {
-				error!(
-					"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
-					params.user_id,
-					params.user_email,
-					user_id
-				);
-				return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					USER_EMAIL_ID_MISMATCH_CODE,
-				)));
-			}
-
-			let wrapper = params.into_native_task_wrapper();
-
-           	if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						REQUIRE_AUTHENTICATION_CODE,
-					)));
-				};
-				verify_auth(ctx.clone(), auth).await.map_err(|_| {
-					error!("Failed to verify auth: {:?}", wrapper.auth);
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					))
-				})?;
-			}
-
-			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxExportWallet(wallet) => {
-					let encrypted_wallet: SerdeAesOutput =
-						aes_encrypt_default(&aes_key, &wallet).into();
-					Ok(encrypted_wallet)
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			handle_export_wallet_request(params, aes_key, ctx).await
 		})
 		.expect("Failed to register pumpx_exportWallet method");
 }

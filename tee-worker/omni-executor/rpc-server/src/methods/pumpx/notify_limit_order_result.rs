@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::common::handle_pumpx_native_task;
 use crate::methods::pumpx::PumpxRpcError;
 use crate::verify_auth::verify_auth_token_authentication;
@@ -18,6 +19,69 @@ pub struct NotifyLimitOrderResultParams {
 	pub result: String,
 	pub message: Option<String>,
 	pub auth_token: String,
+}
+
+#[tracing::instrument(skip(ctx, params), fields(intent_id = %params.intent_id, result = %params.result, message = %params.message.as_deref().unwrap_or("None")))]
+pub async fn handle_notify_limit_order_result_request<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	params: NotifyLimitOrderResultParams,
+	ctx: Arc<RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>>,
+) -> Result<(), PumpxRpcError> {
+	debug!("Processing pumpx_notifyLimitOrderResult request");
+
+	let (omni_account, client_id) = match verify_auth_token_authentication(
+		&ctx.jwt_rsa_private_key,
+		&params.auth_token,
+		AUTH_TOKEN_ACCESS_TYPE,
+		true,
+	) {
+		Ok(claims) => (claims.sub, claims.aud),
+		Err(_) => {
+			error!("Failed to verify auth token");
+			return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
+				AUTH_VERIFICATION_FAILED_CODE,
+			)));
+		},
+	};
+
+	let Ok(address) = Address32::from_hex(&omni_account) else {
+		error!("Failed to parse from omni account token");
+		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+	};
+
+	let wrapper = NativeTaskWrapper::new(
+		NativeTask::PumpxNotifyLimitOrderResult(
+			AccountId::from(address),
+			params.intent_id,
+			params.result,
+			params.message,
+		),
+		None,
+		Some(OmniAuth::AuthToken(params.auth_token)),
+		client_id,
+	);
+
+	handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
+		NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
+		_ => {
+			error!("Unexpected response type");
+			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+		},
+	})
+	.await
 }
 
 pub fn register_notify_limit_order_result<
@@ -46,51 +110,7 @@ pub fn register_notify_limit_order_result<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			debug!(
-				"Received pumpx_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
-				params.intent_id, params.result, params.message
-			);
-
-			let (omni_account, client_id) = match verify_auth_token_authentication(
-				&ctx.jwt_rsa_private_key,
-				&params.auth_token,
-				AUTH_TOKEN_ACCESS_TYPE,
-				true,
-			) {
-				Ok(claims) => (claims.sub, claims.aud),
-				Err(_) => {
-					error!("Failed to verify auth token");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					)));
-				},
-			};
-
-			let Ok(address) = Address32::from_hex(&omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			};
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxNotifyLimitOrderResult(
-					AccountId::from(address),
-					params.intent_id,
-					params.result,
-					params.message,
-				),
-				None,
-				Some(OmniAuth::AuthToken(params.auth_token)),
-				client_id,
-			);
-
-			handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			handle_notify_limit_order_result_request(params, ctx).await
 		})
 		.expect("Failed to register pumpx_notifyLimitOrderResult method");
 }
