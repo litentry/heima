@@ -54,6 +54,13 @@ where
 	type Future = ResponseFuture<S::Future>;
 
 	fn call(&self, mut req: Request<'a>) -> Self::Future {
+		let span = tracing::info_span!(
+			"rpc_call",
+			method = req.method_name(),
+			request_id = req.id.to_string()
+		);
+		let _enter = span.enter();
+
 		if PROTECTED_METHODS.contains(&req.method_name()) {
 			if let Some(http_extensions) = req.extensions().get::<HttpExtensions>() {
 				let token =
