@@ -387,6 +387,12 @@ async fn main() -> Result<(), ()> {
 					None
 				};
 
+			// Add Base
+			let base_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.base_url,
+				accounting_contract_wallet.clone(),
+			));
+
 			// Create EntryPoint clients
 			let mut entry_point_clients = HashMap::new();
 
@@ -480,6 +486,16 @@ async fn main() -> Result<(), ()> {
 					));
 				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
 			}
+
+			// Add Base (Chain ID: 8453)
+			let base_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					base_rpc,
+					aa_contracts_client::GasPriceConfig::l2(),
+					aa_contracts_client::RetryConfig::l2(),
+				));
+			entry_point_clients.insert(8453, base_entry_point);
 
 			let entry_point_clients = Arc::new(entry_point_clients);
 

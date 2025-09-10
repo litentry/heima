@@ -51,6 +51,7 @@ const DEFAULT_ARBITRUM_URL: &str = "https://arb-mainnet.g.alchemy.com/v2/";
 const DEFAULT_ARBITRUM_TESTNET_URL: &str = "https://arb-sepolia.g.alchemy.com/v2/"; // Optional
 const DEFAULT_HYPEREVM_URL: &str = "https://rpc.hyperevm.org";
 const DEFAULT_HYPEREVM_TESTNET_URL: &str = "https://testnet-rpc.hyperevm.org"; // Optional
+const DEFAULT_BASE_URL: &str = "https://base.drpc.org";
 const DEFAULT_PUMPX_API_BASE_URL: &str = "https://test-dex-api.heima.network";
 const DEFAULT_PUMPX_SIGNER_URL: &str = "https://dev-dex-signer.heima.network";
 const DEFAULT_PUMPX_WORKER_URL: &str = "wss://dev-dex-worker.heima.network";
@@ -98,6 +99,7 @@ pub struct ConfigLoader {
 	pub arbitrum_testnet_url: Option<String>,
 	pub hyperevm_url: String,
 	pub hyperevm_testnet_url: Option<String>,
+	pub base_url: String,
 	pub pumpx_signer_url: String,
 	pub pumpx_api_base_url: String,
 	pub pumpx_worker_url: String,
@@ -234,6 +236,15 @@ impl ConfigLoader {
 				},
 			),
 			(
+				"base_url",
+				EnvVar {
+					env_key: "OE_BASE_URL",
+					default: DEFAULT_BASE_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
 				"pumpx_signer_url",
 				EnvVar {
 					env_key: "OE_PUMPX_SIGNER_URL",
@@ -352,6 +363,7 @@ impl ConfigLoader {
 			arbitrum_testnet_url: get_opt("arbitrum_testnet_url").map(|v| append_key(&v)),
 			hyperevm_url: get("hyperevm_url"),
 			hyperevm_testnet_url: get_opt("hyperevm_testnet_url"),
+			base_url: get("base_url"),
 			pumpx_signer_url: get("pumpx_signer_url"),
 			pumpx_api_base_url: get("pumpx_api_base_url"),
 			pumpx_worker_url: get("pumpx_worker_url"),
