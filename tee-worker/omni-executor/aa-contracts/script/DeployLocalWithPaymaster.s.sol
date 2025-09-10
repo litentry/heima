@@ -7,6 +7,7 @@ import "../src/core/EntryPointV1.sol";
 import "../src/accounts/OmniAccountFactoryV1.sol";
 import "../src/core/SimplePaymaster.sol";
 import "../src/core/DemoPaymaster.sol";
+import "../src/core/ERC20PaymasterV1.sol";
 import "../src/TestToken.sol";
 import "./DeploymentHelper.sol";
 
@@ -27,7 +28,7 @@ contract DeployLocalWithPaymaster is Script {
         bool saveDeploymentFile = vm.envOr("SAVE_DEPLOYMENT_FILE", false);
 
         // Check for paymaster type environment variable
-        string memory paymasterType = "simple"; // default
+        string memory paymasterType = "simple"; // default, options: simple, demo, erc20
         try vm.envString("PAYMASTER_TYPE") returns (string memory envPaymasterType) {
             paymasterType = envPaymasterType;
         } catch {
@@ -59,6 +60,17 @@ contract DeployLocalWithPaymaster is Script {
             (bool success,) = paymasterAddress.call{value: 0.1 ether}("");
             require(success, "Failed to fund paymaster");
             console.log("DemoPaymaster funded with 0.1 ETH");
+        } else if (keccak256(bytes(paymasterType)) == keccak256(bytes("erc20"))) {
+            // Deploy ERC20PaymasterV1
+            ERC20PaymasterV1 paymaster = new ERC20PaymasterV1(entryPoint, omniExecutorSigner);
+            paymasterAddress = address(paymaster);
+            console.log("ERC20PaymasterV1 deployed at:", paymasterAddress);
+
+            // Fund the paymaster with 0.1 ETH for local testing purposes
+            // Note: The paymaster's receive function will automatically deposit to EntryPointV1
+            (bool success,) = paymasterAddress.call{value: 0.1 ether}("");
+            require(success, "Failed to fund ERC20 paymaster");
+            console.log("ERC20PaymasterV1 funded with 0.1 ETH");
         } else {
             // Deploy SimplePaymaster (default)
             SimplePaymaster paymaster = new SimplePaymaster(entryPoint, omniExecutorSigner);
@@ -111,16 +123,29 @@ contract DeployLocalWithPaymaster is Script {
         deployments[1] = DeploymentHelper.createContractDeployment(vm, "OmniAccountFactoryV1", factoryAddress, "");
 
         // Paymaster (with metadata about type and config)
-        string memory paymasterName =
-            keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("demo")) ? "DemoPaymaster" : "SimplePaymaster";
+        string memory paymasterName;
+        string memory paymasterMetadata;
 
-        string memory paymasterMetadata = keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("demo"))
-            ? '{"type": "demo", "initialFunding": "0.1 ETH"}'
-            : string(
+        if (keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("demo"))) {
+            paymasterName = "DemoPaymaster";
+            paymasterMetadata = '{"type": "demo", "initialFunding": "0.1 ETH"}';
+        } else if (keccak256(bytes(deployedPaymasterType)) == keccak256(bytes("erc20"))) {
+            paymasterName = "ERC20PaymasterV1";
+            paymasterMetadata = string(
+                abi.encodePacked(
+                    '{"type": "erc20", "bundler": "',
+                    vm.toString(vm.envAddress("OMNI_EXECUTOR_SIGNER")),
+                    '", "initialFunding": "0.1 ETH"}'
+                )
+            );
+        } else {
+            paymasterName = "SimplePaymaster";
+            paymasterMetadata = string(
                 abi.encodePacked(
                     '{"type": "simple", "bundler": "', vm.toString(vm.envAddress("OMNI_EXECUTOR_SIGNER")), '"}'
                 )
             );
+        }
 
         deployments[2] =
             DeploymentHelper.createContractDeployment(vm, paymasterName, paymasterAddress, paymasterMetadata);

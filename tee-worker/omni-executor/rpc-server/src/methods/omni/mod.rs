@@ -73,7 +73,9 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 #[cfg(test)]
 mod test_protected_method;
 
+#[cfg(feature = "test-endpoints")]
 mod submit_user_op_test;
+#[cfg(feature = "test-endpoints")]
 use submit_user_op_test::*;
 
 pub fn register_omni<
@@ -121,5 +123,6 @@ pub fn register_omni<
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);
 
+	#[cfg(feature = "test-endpoints")]
 	register_submit_user_op_test(module);
 }

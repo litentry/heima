@@ -48,6 +48,7 @@ pub fn register_test_protected_method<
 #[cfg(test)]
 mod test {
 	use crate::{start_server, ShieldingKey};
+	use binance_api::mocks::MockBinanceApiClient;
 	use chrono::{Days, Utc};
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
@@ -89,6 +90,8 @@ mod test {
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
+		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+			Arc::new(MockBinanceApiClient::new());
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
@@ -131,6 +134,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
+			binance_api_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			[0u8; 33], // Test ECDSA public key

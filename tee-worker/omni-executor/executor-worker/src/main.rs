@@ -289,7 +289,7 @@ async fn main() -> Result<(), ()> {
 				config_loader.pumpx_api_base_url.to_string(),
 			)));
 
-			let binance_api = Arc::new(BinanceApiClient::new(
+			let binance_api: Arc<BinanceApiClient> = Arc::new(BinanceApiClient::new(
 				config_loader.binance_api_key.clone(),
 				config_loader.binance_api_secret.clone(),
 				config_loader.binance_api_base_url.clone(),
@@ -360,7 +360,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
 				storage_db.clone(),
-				binance_api,
+				binance_api.clone(),
 				bsc_client,
 				solana_client,
 				Arc::new(Box::new(evm_accounting_contract_client)),
@@ -438,6 +438,12 @@ async fn main() -> Result<(), ()> {
 				} else {
 					None
 				};
+
+			// Add Base
+			let base_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.base_url,
+				accounting_contract_wallet.clone(),
+			));
 
 			// Create EntryPoint clients
 			let mut entry_point_clients = HashMap::new();
@@ -533,6 +539,16 @@ async fn main() -> Result<(), ()> {
 				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
 			}
 
+			// Add Base (Chain ID: 8453)
+			let base_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					base_rpc,
+					aa_contracts_client::GasPriceConfig::l2(),
+					aa_contracts_client::RetryConfig::l2(),
+				));
+			entry_point_clients.insert(8453, base_entry_point);
+
 			let entry_point_clients = Arc::new(entry_point_clients);
 
 			let worker_url =
@@ -600,6 +616,7 @@ async fn main() -> Result<(), ()> {
 				jwt_rsa_private_key,
 				&config_loader,
 				pumpx_signer_client,
+				binance_api,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				wildmeta_backend_ecdsa_pubkey,

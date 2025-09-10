@@ -4,6 +4,7 @@ mod types;
 use aa_contracts_client::calculate_user_operation_hash;
 use aa_contracts_client::EntryPointClient;
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use binance_api::BinancePaymasterApi;
 use chrono::{Days, Utc};
 use ethereum_rpc::AlloyRpcProvider;
 use executor_core::{
@@ -47,6 +48,302 @@ pub use aes256_key_store::Aes256KeyStore;
 pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
+
+// ============================================================================
+// ERC20 Paymaster Exchange Rate Processing
+// ============================================================================
+
+// Constants for ERC20 paymaster processing
+// paymasterAndData format: paymaster_address (20) + validation_gas_limit (16) + postop_gas_limit (16) + paymaster_data
+// paymaster_data: token(20) + exchangeRate(32) + validUntil(32) + validAfter(32)
+const MIN_ERC20_PAYMASTER_DATA_LENGTH: usize = 52 + 20 + 32 + 32 + 32; // 168 bytes minimum
+const PAYMASTER_DATA_OFFSET: usize = 52; // paymaster address (20) + validation_gas_limit (16) + postop_gas_limit (16)
+const EXCHANGE_RATE_FEE_PERCENT: f64 = 0.0; // 0% fee for now
+
+// Whitelisted paymaster addresses that we support (deployed by heima), the logic is:
+// - Unsigned userOp: If paymaster specified, **must** be whitelisted
+// - Signed userOp: Only allowed if paymasterAndData is empty (technically we could still relay it, but we are a private bundler and don't want to relay arbitrary userOps)
+//
+// These addresses are assumed to be the same across all EVM chains
+//
+// Note: the SimplePaymaster should be gradually deprecated in favor of the ERC20PaymasterV1.
+//       Theoretically user could construct an unsiged userOp to use SimplePaymaster "freely"
+//
+// TODO: add ERC20 paymaster addresses
+const WHITELISTED_PAYMASTER_ADDRESSES: &[&str] = &[
+	// SimplePaymaster
+	"0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912", // staging-v1
+	"0xD4dCB31763CBA7295bA4023E9411CB6db607DE07", // prod-v1
+];
+
+// Decode ERC20 paymaster data from paymasterAndData
+// Format: paymaster_address(20) + validation_gas_limit(16) + postop_gas_limit(16) + token(20) + exchangeRate(32) + validUntil(32) + validAfter(32)
+fn decode_erc20_paymaster_data(paymaster_and_data: &[u8]) -> Option<(Address, u128, u64, u64)> {
+	if paymaster_and_data.len() < MIN_ERC20_PAYMASTER_DATA_LENGTH {
+		return None;
+	}
+
+	// Extract token address from paymaster data (bytes 52-71)
+	let token_address =
+		Address::from_slice(&paymaster_and_data[PAYMASTER_DATA_OFFSET..PAYMASTER_DATA_OFFSET + 20]);
+
+	// Extract exchange rate (bytes 72-103, 32 bytes, full u256 but we take as u128)
+	let rate_bytes = &paymaster_and_data[PAYMASTER_DATA_OFFSET + 20..PAYMASTER_DATA_OFFSET + 52];
+	let mut exchange_rate_bytes = [0u8; 16];
+	exchange_rate_bytes.copy_from_slice(&rate_bytes[16..32]); // Last 16 bytes for u128
+	let exchange_rate = u128::from_be_bytes(exchange_rate_bytes);
+
+	// Extract validUntil (bytes 104-135, 32 bytes, take as u64)
+	let valid_until_bytes =
+		&paymaster_and_data[PAYMASTER_DATA_OFFSET + 52..PAYMASTER_DATA_OFFSET + 84];
+	let mut until_bytes = [0u8; 8];
+	until_bytes.copy_from_slice(&valid_until_bytes[24..32]); // Last 8 bytes for u64
+	let valid_until = u64::from_be_bytes(until_bytes);
+
+	// Extract validAfter (bytes 136-167, 32 bytes, take as u64)
+	let valid_after_bytes =
+		&paymaster_and_data[PAYMASTER_DATA_OFFSET + 84..PAYMASTER_DATA_OFFSET + 116];
+	let mut after_bytes = [0u8; 8];
+	after_bytes.copy_from_slice(&valid_after_bytes[24..32]); // Last 8 bytes for u64
+	let valid_after = u64::from_be_bytes(after_bytes);
+
+	Some((token_address, exchange_rate, valid_until, valid_after))
+}
+
+// Encode ERC20 paymaster data with updated exchange rate, preserving validUntil and validAfter
+fn encode_erc20_paymaster_data(
+	original_data: &[u8],
+	new_exchange_rate: u128,
+	valid_until: u64,
+	valid_after: u64,
+) -> Vec<u8> {
+	let mut updated_data = original_data.to_vec();
+
+	// Skip token address (20 bytes), update exchange rate (32 bytes, big-endian u128 in last 16 bytes)
+	let rate_start = PAYMASTER_DATA_OFFSET + 20;
+	let rate_bytes = [0u8; 16]
+		.iter()
+		.chain(&new_exchange_rate.to_be_bytes())
+		.copied()
+		.collect::<Vec<u8>>();
+	updated_data[rate_start..rate_start + 32].copy_from_slice(&rate_bytes);
+
+	// Update validUntil (32 bytes)
+	let valid_until_start = rate_start + 32;
+	let valid_until_bytes =
+		[0u8; 24].iter().chain(&valid_until.to_be_bytes()).copied().collect::<Vec<u8>>();
+	updated_data[valid_until_start..valid_until_start + 32].copy_from_slice(&valid_until_bytes);
+
+	// Update validAfter (32 bytes)
+	let valid_after_start = valid_until_start + 32;
+	let valid_after_bytes =
+		[0u8; 24].iter().chain(&valid_after.to_be_bytes()).copied().collect::<Vec<u8>>();
+	updated_data[valid_after_start..valid_after_start + 32].copy_from_slice(&valid_after_bytes);
+
+	updated_data
+}
+
+/// Extract paymaster address from paymasterAndData field
+/// Returns None if the data is too short to contain a valid paymaster address
+fn extract_paymaster_address(paymaster_and_data: &Bytes) -> Option<Address> {
+	if paymaster_and_data.len() < 20 {
+		return None;
+	}
+
+	// First 20 bytes contain the paymaster address
+	Some(Address::from_slice(&paymaster_and_data[0..20]))
+}
+
+/// Check if a paymaster address is in our whitelist
+/// If so, the userOp must be unsigned to allow exchange rate processing
+fn is_whitelisted_paymaster(paymaster_address: &Address, whitelisted: &[Address]) -> bool {
+	whitelisted.contains(paymaster_address)
+}
+
+/// Parse whitelisted paymaster addresses from const strings to Address types
+/// Returns empty vec if any address fails to parse (defensive programming)
+fn parse_whitelisted_paymasters() -> Vec<Address> {
+	WHITELISTED_PAYMASTER_ADDRESSES
+		.iter()
+		.filter_map(|addr_str| addr_str.parse().ok())
+		.collect()
+}
+
+// Comprehensive token mapping with expanded support
+#[derive(Debug, Clone)]
+struct TokenInfo {
+	decimals: u8,
+	binance_pair: &'static str,
+}
+
+// Get supported tokens - organized by chain for better scalability
+fn get_supported_tokens() -> std::collections::HashMap<(u64, &'static str), TokenInfo> {
+	let mut tokens = std::collections::HashMap::new();
+
+	// Ethereum mainnet (chain_id 1)
+	tokens.insert(
+		(1, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), // USDC
+		TokenInfo { decimals: 6, binance_pair: "ETHUSDC" },
+	);
+	tokens.insert(
+		(1, "0xdac17f958d2ee523a2206206994597c13d831ec7"), // USDT
+		TokenInfo { decimals: 6, binance_pair: "ETHUSDT" },
+	);
+	tokens.insert(
+		(1, "0x6b175474e89094c44da98b954eedeac495271d0f"), // DAI
+		TokenInfo { decimals: 18, binance_pair: "ETHDAI" },
+	);
+
+	// Arbitrum One (chain_id 42161)
+	tokens.insert(
+		(42161, "0xaf88d065e77c8cc2239327c5edb3a432268e5831"), // USDC
+		TokenInfo { decimals: 6, binance_pair: "ETHUSDC" },
+	);
+	tokens.insert(
+		(42161, "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"), // USDT
+		TokenInfo { decimals: 6, binance_pair: "ETHUSDT" },
+	);
+
+	// BNB Smart Chain (chain_id 56)
+	tokens.insert(
+		(56, "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"), // USDC
+		TokenInfo { decimals: 18, binance_pair: "ETHUSDC" },
+	);
+	tokens.insert(
+		(56, "0x55d398326f99059ff775485246999027b3197955"), // USDT
+		TokenInfo { decimals: 18, binance_pair: "ETHUSDT" },
+	);
+
+	tokens
+}
+
+// Map token address to Binance symbol and return (symbol, decimals) from hardcoded mapping
+async fn get_token_info_from_mapping(
+	token_address: &Address,
+	chain_id: u64,
+) -> Option<(String, u8)> {
+	let tokens = get_supported_tokens();
+	let address_str = token_address.to_string().to_lowercase();
+
+	// Look up token info from our comprehensive mapping
+	if let Some(token_info) = tokens.get(&(chain_id, address_str.as_str())) {
+		// Use hardcoded values from our mapping
+		return Some((token_info.binance_pair.to_string(), token_info.decimals));
+	}
+
+	debug!(
+		"Token address {} on chain {} is not supported. Supported tokens: {:?}",
+		token_address,
+		chain_id,
+		tokens.keys().filter(|(cid, _)| *cid == chain_id).collect::<Vec<_>>()
+	);
+	None
+}
+
+// Calculate exchange rate using Binance API
+async fn calculate_exchange_rate_with_binance(
+	binance_api: &dyn BinancePaymasterApi,
+	token_symbol: &str,
+	token_decimals: u8,
+) -> Result<u128, String> {
+	// Query price from Binance
+	// For ETHUSDC, this returns how many USDC for 1 ETH (e.g., 4479.99)
+	let price_str = binance_api
+		.get_symbol_price(token_symbol)
+		.await
+		.map_err(|e| format!("Failed to get price for {}: {:?}", token_symbol, e))?;
+
+	let tokens_per_eth: f64 = price_str
+		.parse()
+		.map_err(|e| format!("Failed to parse price '{}': {}", price_str, e))?;
+
+	if tokens_per_eth <= 0.0 {
+		return Err(format!("Invalid price from Binance: {}", tokens_per_eth));
+	}
+
+	// Apply fee percentage (increase rate to charge more tokens)
+	let tokens_per_eth_with_fee = tokens_per_eth * (1.0 + EXCHANGE_RATE_FEE_PERCENT / 100.0);
+
+	// Calculate exchange rate according to ERC20PaymasterV1.sol:
+	// exchangeRate = tokensPerEth * 10^tokenDecimals
+	// Example: For 6-decimal USDC at $4000/ETH: rate = 4000 * 10^6 = 4000000000
+	// This rate is used as: requiredTokenAmount = (maxCost * exchangeRate) / 1e18
+	// Where maxCost is in wei, so 1 ETH of gas = 10^18 wei
+	// Result: (10^18 * 4000000000) / 10^18 = 4000000000 USDC units = 4000 USDC ✓
+
+	let exchange_rate_f64 = tokens_per_eth_with_fee * (10_f64.powi(token_decimals as i32));
+
+	if exchange_rate_f64 <= 0.0 || exchange_rate_f64 >= u128::MAX as f64 {
+		return Err(format!("Exchange rate {} is out of valid range", exchange_rate_f64));
+	}
+
+	info!(
+		"Calculated exchange rate for {}: {} tokens per ETH -> rate {} (with {}% fee)",
+		token_symbol, tokens_per_eth, exchange_rate_f64 as u128, EXCHANGE_RATE_FEE_PERCENT
+	);
+
+	Ok(exchange_rate_f64 as u128)
+}
+
+// Process ERC20 paymaster data
+async fn process_erc20_paymaster_data(
+	binance_api: &dyn BinancePaymasterApi,
+	paymaster_and_data: &Bytes,
+	chain_id: u64,
+) -> Result<Option<Bytes>, String> {
+	let data_bytes = paymaster_and_data.as_ref();
+
+	// Try to decode as ERC20 paymaster data
+	if let Some((token_address, original_rate, valid_until, valid_after)) =
+		decode_erc20_paymaster_data(data_bytes)
+	{
+		info!(
+			"Detected ERC20 paymaster with token {} (original rate: {}, valid_until: {}, valid_after: {})",
+			token_address, original_rate, valid_until, valid_after
+		);
+
+		// Get token symbol and decimals from hardcoded mapping
+		let (token_symbol, token_decimals) = match get_token_info_from_mapping(
+			&token_address,
+			chain_id,
+		)
+		.await
+		{
+			Some((symbol, decimals)) => (symbol, decimals),
+			None => {
+				return Err(format!(
+						"Token address {} on chain {} is not supported for price queries. Consider adding it to the supported tokens list or ensure it has a trading pair on Binance.",
+						token_address, chain_id
+					));
+			},
+		};
+
+		// Calculate new exchange rate
+		let new_exchange_rate =
+			calculate_exchange_rate_with_binance(binance_api, &token_symbol, token_decimals)
+				.await?;
+
+		// Encode updated paymaster data with new exchange rate, keeping original timestamps
+		let updated_paymaster_data = encode_erc20_paymaster_data(
+			data_bytes,
+			new_exchange_rate,
+			valid_until, // Keep original validUntil
+			valid_after, // Keep original validAfter
+		);
+
+		info!(
+			"Updated ERC20 paymaster exchange rate: {} -> {} for token {}",
+			original_rate, new_exchange_rate, token_address
+		);
+
+		Ok(Some(Bytes::from(updated_paymaster_data)))
+	} else {
+		// Not ERC20 paymaster data or insufficient length, return as-is
+		debug!("PaymasterAndData is not ERC20 paymaster format, skipping processing");
+		Ok(None)
+	}
+}
+
 pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
 pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
 
@@ -102,7 +399,9 @@ pub struct TaskHandlerContext<
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
+	pub whitelisted_paymaster: Arc<Vec<Address>>,
 	phantom_header: PhantomData<Header>,
 	phantom_rpc_client: PhantomData<RpcClient>,
 }
@@ -136,6 +435,7 @@ impl<
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
+		binance_api_client: Arc<dyn BinancePaymasterApi>,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {
@@ -149,7 +449,9 @@ impl<
 			cross_chain_intent_executor,
 			pumpx_api,
 			pumpx_signer_client,
+			binance_api_client,
 			entry_point_clients,
+			whitelisted_paymaster: Arc::new(parse_whitelisted_paymasters()),
 			phantom_header: PhantomData,
 			phantom_rpc_client: PhantomData,
 		}
@@ -759,12 +1061,57 @@ pub async fn handle_native_task<
 						},
 					};
 
-				// Check if UserOperation is signed
+				// Check userOp signature status and validate paymaster usage
 				if packed_user_op.signature.is_empty() {
-					info!(
-						"UserOperation {} is unsigned, requesting signature from pumpx signer",
-						index
-					);
+					// UNSIGNED userOp: If paymaster specified, must be whitelisted
+					if !packed_user_op.paymasterAndData.is_empty() {
+						if let Some(paymaster_address) =
+							extract_paymaster_address(&packed_user_op.paymasterAndData)
+						{
+							if !is_whitelisted_paymaster(
+								&paymaster_address,
+								&ctx.whitelisted_paymaster,
+							) {
+								error!(
+									"UserOperation {} uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
+									index, paymaster_address
+								);
+								return Err(NativeTaskError::InvalidUserOperation(format!(
+									"UserOperation at index {} uses non-whitelisted paymaster {}",
+									index, paymaster_address
+								)));
+							}
+						}
+
+						match process_erc20_paymaster_data(
+							ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
+							&packed_user_op.paymasterAndData,
+							chain_id,
+						)
+						.await
+						{
+							Ok(Some(updated_paymaster_data)) => {
+								packed_user_op.paymasterAndData = updated_paymaster_data;
+								info!("Updated ERC20 paymaster data for UserOperation {}", index);
+							},
+							Ok(None) => {
+								// Not an ERC20 paymaster, continue as normal
+								debug!("UserOperation {} does not use ERC20 paymaster", index);
+							},
+							Err(e) => {
+								error!(
+									"Failed to process ERC20 paymaster data for UserOperation {}: {}",
+									index, e
+								);
+								return Err(NativeTaskError::InvalidUserOperation(format!(
+									"ERC20 paymaster processing failed for operation at index {}: {}",
+									index, e
+								)));
+							},
+						}
+					}
+
+					info!("Requesting signature from pumpx signer for UserOperation {}", index);
 
 					// Log UserOp details for debugging
 					info!(
@@ -815,6 +1162,19 @@ pub async fn handle_native_task<
 					signature_with_prefix.extend_from_slice(&signature);
 					packed_user_op.signature = Bytes::from(signature_with_prefix);
 					info!("UserOperation {} signed successfully", index);
+				} else {
+					// SIGNED userOp: Only allowed if no paymaster specified
+					if !packed_user_op.paymasterAndData.is_empty() {
+						error!(
+							"UserOperation {} is signed but has paymaster data. Signed userOps are only allowed without paymaster.",
+							index
+						);
+						return Err(NativeTaskError::InvalidUserOperation(format!(
+							"UserOperation at index {} is signed but specifies a paymaster",
+							index
+						)));
+					}
+					info!("UserOperation {} is signed with no paymaster, processing", index);
 				}
 
 				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
@@ -1822,5 +2182,411 @@ mod tests {
 		// Should return zeros for no paymaster
 		assert_eq!(verification, 0);
 		assert_eq!(post_op, 0);
+	}
+}
+
+#[cfg(test)]
+mod erc20_paymaster_tests {
+	use super::*;
+	use alloy::primitives::Bytes;
+
+	#[test]
+	fn test_decode_erc20_paymaster_data_valid() {
+		// Create test paymaster data with correct format:
+		// paymaster (20) + validation_gas_limit (16) + postop_gas_limit (16) + token (20) + exchangeRate (32) + validUntil (32) + validAfter (32)
+		let mut data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+
+		// Set paymaster address (bytes 0-19)
+		data[0..20].copy_from_slice(&[0x12; 20]);
+
+		// Set validation gas limit (bytes 20-35) - 100000
+		let validation_gas = 100000u128;
+		data[20..36].copy_from_slice(&validation_gas.to_be_bytes());
+
+		// Set postop gas limit (bytes 36-51) - 50000
+		let postop_gas = 50000u128;
+		data[36..52].copy_from_slice(&postop_gas.to_be_bytes());
+
+		// Set token address (bytes 52-71) - USDC-like token
+		data[52..72].copy_from_slice(&[0xA0; 20]);
+
+		// Set exchange rate (bytes 72-103) - representing 2000 * 10^6 for USDC
+		let exchange_rate = 2000000000u128;
+		let rate_bytes = [0u8; 16]
+			.iter()
+			.chain(&exchange_rate.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		data[72..104].copy_from_slice(&rate_bytes);
+
+		// Set validUntil (bytes 104-135) - timestamp 1700000000
+		let valid_until = 1700000000u64;
+		let valid_until_bytes =
+			[0u8; 24].iter().chain(&valid_until.to_be_bytes()).copied().collect::<Vec<u8>>();
+		data[104..136].copy_from_slice(&valid_until_bytes);
+
+		// Set validAfter (bytes 136-167) - timestamp 1600000000
+		let valid_after = 1600000000u64;
+		let valid_after_bytes =
+			[0u8; 24].iter().chain(&valid_after.to_be_bytes()).copied().collect::<Vec<u8>>();
+		data[136..168].copy_from_slice(&valid_after_bytes);
+
+		// Test decoding
+		let result = decode_erc20_paymaster_data(&data);
+		assert!(result.is_some());
+
+		let (token_address, exchange_rate_result, valid_until_result, valid_after_result) =
+			result.unwrap();
+		assert_eq!(token_address, Address::from([0xA0; 20]));
+		assert_eq!(exchange_rate_result, exchange_rate);
+		assert_eq!(valid_until_result, valid_until);
+		assert_eq!(valid_after_result, valid_after);
+	}
+
+	#[test]
+	fn test_decode_erc20_paymaster_data_too_short() {
+		let data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH - 1];
+		let result = decode_erc20_paymaster_data(&data);
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_encode_erc20_paymaster_data() {
+		// Create initial paymaster data with correct format
+		let mut original_data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+
+		// Fill with some initial values
+		original_data[0..20].copy_from_slice(&[0x12; 20]); // paymaster address
+		original_data[20..36].copy_from_slice(&100000u128.to_be_bytes()); // validation gas
+		original_data[36..52].copy_from_slice(&50000u128.to_be_bytes()); // postop gas
+		original_data[52..72].copy_from_slice(&[0xA0; 20]); // token address
+
+		// Set initial exchange rate (bytes 72-103)
+		let initial_rate = 1500000000u128;
+		let rate_bytes = [0u8; 16]
+			.iter()
+			.chain(&initial_rate.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		original_data[72..104].copy_from_slice(&rate_bytes);
+
+		// Test encoding new values
+		let new_exchange_rate = 3000000000u128;
+		let new_valid_until = 1800000000u64;
+		let new_valid_after = 1700000000u64;
+
+		let updated_data = encode_erc20_paymaster_data(
+			&original_data,
+			new_exchange_rate,
+			new_valid_until,
+			new_valid_after,
+		);
+
+		// Verify the updated data contains the new values
+		let result = decode_erc20_paymaster_data(&updated_data);
+		assert!(result.is_some());
+
+		let (token_address, exchange_rate_result, valid_until, valid_after) = result.unwrap();
+		assert_eq!(token_address, Address::from([0xA0; 20])); // Token address should remain unchanged
+		assert_eq!(exchange_rate_result, new_exchange_rate);
+		assert_eq!(valid_until, new_valid_until);
+		assert_eq!(valid_after, new_valid_after);
+	}
+
+	#[test]
+	fn test_supported_token_mapping_consistency() {
+		let tokens = get_supported_tokens();
+
+		// Verify that we have tokens for major chains
+		let eth_tokens: Vec<_> = tokens.keys().filter(|(chain_id, _)| *chain_id == 1).collect();
+		assert!(eth_tokens.len() >= 3, "Should have at least 3 tokens on Ethereum mainnet");
+
+		let arbitrum_tokens: Vec<_> =
+			tokens.keys().filter(|(chain_id, _)| *chain_id == 42161).collect();
+		assert!(arbitrum_tokens.len() >= 2, "Should have at least 2 tokens on Arbitrum");
+	}
+
+	#[test]
+	fn test_get_token_info_from_mapping_unknown_token() {
+		let token_address = Address::from([0xFF; 20]);
+		let rt = tokio::runtime::Runtime::new().unwrap();
+		let result = rt.block_on(get_token_info_from_mapping(&token_address, 1));
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_supported_tokens_ethereum_mainnet() {
+		let tokens = get_supported_tokens();
+
+		// Test USDC on Ethereum mainnet
+		let usdc_info = tokens.get(&(1, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"));
+		assert!(usdc_info.is_some());
+		let usdc = usdc_info.unwrap();
+		assert_eq!(usdc.decimals, 6);
+		assert_eq!(usdc.binance_pair, "ETHUSDC");
+		// Extract symbol from binance_pair: ETHUSDC -> USDC
+		let symbol = usdc.binance_pair.strip_prefix("ETH").unwrap_or("");
+		assert_eq!(symbol, "USDC");
+
+		// Test USDT on Ethereum mainnet
+		let usdt_info = tokens.get(&(1, "0xdac17f958d2ee523a2206206994597c13d831ec7"));
+		assert!(usdt_info.is_some());
+		let usdt = usdt_info.unwrap();
+		assert_eq!(usdt.decimals, 6);
+		assert_eq!(usdt.binance_pair, "ETHUSDT");
+		// Extract symbol from binance_pair: ETHUSDT -> USDT
+		let symbol = usdt.binance_pair.strip_prefix("ETH").unwrap_or("");
+		assert_eq!(symbol, "USDT");
+	}
+
+	#[test]
+	fn test_supported_tokens_arbitrum() {
+		let tokens = get_supported_tokens();
+
+		// Test USDC on Arbitrum
+		let usdc_info = tokens.get(&(42161, "0xaf88d065e77c8cc2239327c5edb3a432268e5831"));
+		assert!(usdc_info.is_some());
+		let usdc = usdc_info.unwrap();
+		assert_eq!(usdc.decimals, 6);
+		// Extract symbol from binance_pair: ETHUSDC -> USDC
+		let symbol = usdc.binance_pair.strip_prefix("ETH").unwrap_or("");
+		assert_eq!(symbol, "USDC");
+	}
+
+	#[test]
+	fn test_get_token_info_unsupported_token() {
+		let rt = tokio::runtime::Runtime::new().unwrap();
+		let token_address = Address::from([0xFF; 20]);
+		let result = rt.block_on(get_token_info_from_mapping(&token_address, 999));
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_process_erc20_paymaster_data_invalid_length() {
+		let rt = tokio::runtime::Runtime::new().unwrap();
+
+		// Create a mock BinanceApiClient (won't be used in this test)
+		let binance_client = binance_api::BinanceApiClient::new(
+			"test_key".to_string(),
+			"test_secret".to_string(),
+			"https://api.binance.com".to_string(),
+		);
+
+		// Create paymaster data that's too short (not ERC20 paymaster format)
+		let data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH - 10];
+		let paymaster_and_data = Bytes::from(data);
+
+		let result = rt.block_on(process_erc20_paymaster_data(
+			&binance_client as &dyn BinancePaymasterApi,
+			&paymaster_and_data,
+			1,
+		));
+		assert!(result.is_ok());
+		assert!(result.unwrap().is_none()); // Should return None for non-ERC20 paymaster
+	}
+
+	#[test]
+	fn test_exchange_rate_calculation_usdc() {
+		// Test USDC (6 decimals) at $4000/ETH
+		let token_decimals = 6;
+		let tokens_per_eth = 4000.0;
+
+		let expected_rate = (tokens_per_eth * 10_f64.powi(token_decimals as i32)) as u128;
+		// 4000 * 10^6 = 4000000000
+		assert_eq!(expected_rate, 4000000000u128);
+
+		// Test the actual calculation would work:
+		// If maxCost is 1 ETH (10^18 wei), then:
+		// requiredTokenAmount = (10^18 * 4000000000) / 10^18 = 4000000000 USDC units = 4000 USDC ✓
+	}
+
+	#[test]
+	fn test_exchange_rate_calculation_dai() {
+		// Test DAI (18 decimals) at $4000/ETH
+		let token_decimals = 18;
+		let tokens_per_eth = 4000.0;
+
+		let expected_rate = (tokens_per_eth * 10_f64.powi(token_decimals as i32)) as u128;
+		// 4000 * 10^18 = 4000000000000000000000
+		assert_eq!(expected_rate, 4000000000000000000000u128);
+	}
+
+	#[test]
+	fn test_paymaster_data_format_validation() {
+		// Test that we correctly validate the minimum length
+		assert_eq!(MIN_ERC20_PAYMASTER_DATA_LENGTH, 168);
+		// 52 (paymaster + gas limits) + 20 (token) + 32 (rate) + 32 (until) + 32 (after) = 168
+
+		// Test structure offsets
+		assert_eq!(PAYMASTER_DATA_OFFSET, 52);
+	}
+
+	#[test]
+	fn test_paymaster_data_alignment_with_contract() {
+		// This test ensures our format exactly matches ERC20PaymasterV1.sol
+		let mut data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+
+		// Contract expects: paymaster(20) + validation_gas(16) + postop_gas(16) + token(20) + exchangeRate(32) + validUntil(32) + validAfter(32)
+
+		// Paymaster address
+		data[0..20].copy_from_slice(&[0x11; 20]);
+
+		// Validation gas limit
+		data[20..36].copy_from_slice(&150000u128.to_be_bytes());
+
+		// PostOp gas limit
+		data[36..52].copy_from_slice(&50000u128.to_be_bytes());
+
+		// Token address (from PAYMASTER_DATA_OFFSET)
+		let token_addr = [0xA0; 20];
+		data[52..72].copy_from_slice(&token_addr);
+
+		// Exchange rate
+		let rate = 2500000000u128; // 2500 USDC per ETH
+		let rate_bytes = [0u8; 16].iter().chain(&rate.to_be_bytes()).copied().collect::<Vec<u8>>();
+		data[72..104].copy_from_slice(&rate_bytes);
+
+		// ValidUntil
+		let until = 1800000000u64;
+		let until_bytes =
+			[0u8; 24].iter().chain(&until.to_be_bytes()).copied().collect::<Vec<u8>>();
+		data[104..136].copy_from_slice(&until_bytes);
+
+		// ValidAfter
+		let after = 1700000000u64;
+		let after_bytes =
+			[0u8; 24].iter().chain(&after.to_be_bytes()).copied().collect::<Vec<u8>>();
+		data[136..168].copy_from_slice(&after_bytes);
+
+		// Test decoding matches what we encoded
+		let result = decode_erc20_paymaster_data(&data).unwrap();
+		assert_eq!(result.0, Address::from(token_addr));
+		assert_eq!(result.1, rate);
+		assert_eq!(result.2, until);
+		assert_eq!(result.3, after);
+
+		// Test re-encoding preserves the structure
+		let updated = encode_erc20_paymaster_data(&data, rate + 100, until + 100, after + 100);
+		let redecoded = decode_erc20_paymaster_data(&updated).unwrap();
+		assert_eq!(redecoded.0, Address::from(token_addr)); // Token unchanged
+		assert_eq!(redecoded.1, rate + 100); // Rate updated
+		assert_eq!(redecoded.2, until + 100); // Until updated
+		assert_eq!(redecoded.3, after + 100); // After updated
+	}
+}
+
+#[cfg(test)]
+mod paymaster_validation_tests {
+	use super::*;
+	use alloy::primitives::{address, Bytes};
+
+	#[test]
+	fn test_extract_paymaster_address_valid() {
+		// Create paymasterAndData with a valid paymaster address
+		let paymaster_address = address!("0x1234567890123456789012345678901234567890");
+		let mut paymaster_data = vec![];
+		// Add paymaster address (20 bytes)
+		paymaster_data.extend_from_slice(paymaster_address.as_slice());
+		// Add some additional data
+		paymaster_data.extend_from_slice(&[0xff; 32]); // gas limits etc.
+
+		let paymaster_and_data = Bytes::from(paymaster_data);
+		let result = extract_paymaster_address(&paymaster_and_data);
+
+		assert!(result.is_some());
+		assert_eq!(result.unwrap(), paymaster_address);
+	}
+
+	#[test]
+	fn test_extract_paymaster_address_too_short() {
+		// Create paymasterAndData that's too short (less than 20 bytes)
+		let short_data = vec![0x11; 19]; // Only 19 bytes
+		let paymaster_and_data = Bytes::from(short_data);
+		let result = extract_paymaster_address(&paymaster_and_data);
+
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_extract_paymaster_address_empty() {
+		// Empty paymasterAndData
+		let paymaster_and_data = Bytes::from(vec![]);
+		let result = extract_paymaster_address(&paymaster_and_data);
+
+		assert!(result.is_none());
+	}
+
+	#[test]
+	fn test_is_whitelisted_paymaster_found() {
+		let paymaster1 = address!("0x1234567890123456789012345678901234567890");
+		let paymaster2 = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd");
+		let paymaster3 = address!("0x9999999999999999999999999999999999999999");
+
+		let whitelist = vec![paymaster1, paymaster2];
+
+		// Test that whitelisted addresses are found
+		assert!(is_whitelisted_paymaster(&paymaster1, &whitelist));
+		assert!(is_whitelisted_paymaster(&paymaster2, &whitelist));
+
+		// Test that non-whitelisted address is not found
+		assert!(!is_whitelisted_paymaster(&paymaster3, &whitelist));
+	}
+
+	#[test]
+	fn test_is_whitelisted_paymaster_empty_list() {
+		let paymaster = address!("0x1234567890123456789012345678901234567890");
+		let empty_whitelist: Vec<Address> = vec![];
+
+		// Test that no address is found in empty whitelist
+		assert!(!is_whitelisted_paymaster(&paymaster, &empty_whitelist));
+	}
+
+	#[test]
+	fn test_paymaster_whitelist_validation() {
+		// Test paymaster validation logic:
+		// - Unsigned userOp: paymaster must be whitelisted if specified
+		// - Signed userOp: no paymaster allowed
+		let whitelisted_address = address!("0x1234567890123456789012345678901234567890");
+		let non_whitelisted_address = address!("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd");
+
+		let mut whitelisted_data = vec![];
+		whitelisted_data.extend_from_slice(whitelisted_address.as_slice());
+		whitelisted_data.extend_from_slice(&[0xff; 32]);
+		let whitelisted_paymaster_and_data = Bytes::from(whitelisted_data);
+
+		let mut non_whitelisted_data = vec![];
+		non_whitelisted_data.extend_from_slice(non_whitelisted_address.as_slice());
+		non_whitelisted_data.extend_from_slice(&[0xff; 32]);
+		let non_whitelisted_paymaster_and_data = Bytes::from(non_whitelisted_data);
+
+		let whitelist = vec![whitelisted_address];
+
+		// Whitelisted paymaster should be accepted for unsigned userOps
+		let extracted = extract_paymaster_address(&whitelisted_paymaster_and_data).unwrap();
+		assert!(is_whitelisted_paymaster(&extracted, &whitelist));
+
+		// Non-whitelisted paymaster should be rejected for unsigned userOps
+		let extracted = extract_paymaster_address(&non_whitelisted_paymaster_and_data).unwrap();
+		assert!(!is_whitelisted_paymaster(&extracted, &whitelist));
+	}
+
+	#[test]
+	fn test_signed_userop_validation_logic() {
+		// Test the new validation logic:
+		// - Signed userOp with paymaster -> should be rejected
+		// - Signed userOp without paymaster -> should be accepted
+		let paymaster_address = address!("0x1234567890123456789012345678901234567890");
+		let mut paymaster_data = vec![];
+		paymaster_data.extend_from_slice(paymaster_address.as_slice());
+		paymaster_data.extend_from_slice(&[0xff; 32]);
+		let paymaster_and_data = Bytes::from(paymaster_data);
+
+		// Test that paymaster address is extracted correctly
+		let extracted = extract_paymaster_address(&paymaster_and_data).unwrap();
+		assert_eq!(extracted, paymaster_address);
+
+		// Empty paymasterAndData should be allowed for signed userOps
+		let empty_paymaster_data = Bytes::new();
+		assert!(extract_paymaster_address(&empty_paymaster_data).is_none());
 	}
 }

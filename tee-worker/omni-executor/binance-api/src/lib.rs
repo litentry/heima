@@ -41,6 +41,14 @@ pub trait BinanceApi: Send + Sync {
 		T: 'static + serde::de::DeserializeOwned;
 }
 
+// Dyn-compatible trait for ERC20 paymaster operations
+#[async_trait]
+pub trait BinancePaymasterApi: Send + Sync {
+	async fn get_symbol_price(&self, symbol: &str) -> Result<String, Error>;
+	async fn get_symbol_precision(&self, symbol: &str) -> Result<u8, Error>;
+	async fn get_all_trading_symbols(&self) -> Result<Vec<String>, Error>;
+}
+
 #[derive(Debug, Clone)]
 pub struct BinanceApiClient {
 	client: Client,
@@ -194,12 +202,48 @@ impl BinanceApi for BinanceApiClient {
 	}
 }
 
+#[async_trait]
+impl BinancePaymasterApi for BinanceApiClient {
+	async fn get_symbol_price(&self, symbol: &str) -> Result<String, Error> {
+		use crate::spot_trading_api::SpotTradingApi;
+		SpotTradingApi::new(self).get_symbol_price(symbol).await
+	}
+
+	async fn get_symbol_precision(&self, symbol: &str) -> Result<u8, Error> {
+		use crate::spot_trading_api::types::ExchangeInfo;
+
+		let endpoint = "/api/v3/exchangeInfo";
+		let mut params = HashMap::new();
+		params.insert("symbol".to_string(), symbol.to_string());
+
+		let exchange_info: ExchangeInfo =
+			self.make_public_get_request(endpoint, Some(params)).await?;
+
+		// Find the trading pair and return quote asset precision
+		match exchange_info.symbols.first() {
+			Some(symbol) => Ok(symbol.quote_asset_precision),
+			None => Err(Error::SymbolNotFound),
+		}
+	}
+
+	async fn get_all_trading_symbols(&self) -> Result<Vec<String>, Error> {
+		use crate::spot_trading_api::types::ExchangeInfo;
+
+		let endpoint = "/api/v3/exchangeInfo";
+
+		let exchange_info: ExchangeInfo = self.make_public_get_request(endpoint, None).await?;
+
+		// Return all trading symbols
+		Ok(exchange_info.symbols.iter().map(|symbol| symbol.symbol.clone()).collect())
+	}
+}
+
 #[cfg(feature = "mocks")]
 pub mod mocks {
-	use crate::BinanceApi;
 	use crate::Error;
 	use crate::HashMap;
 	use crate::Method;
+	use crate::{BinanceApi, BinancePaymasterApi};
 	use async_trait::async_trait;
 	use mockall::mock;
 
@@ -228,6 +272,14 @@ pub mod mocks {
 			) -> Result<T, Error>
 			where
 				T: 'static + serde::de::DeserializeOwned;
+
+		}
+
+		#[async_trait]
+		impl BinancePaymasterApi for BinanceApiClient {
+			async fn get_symbol_price(&self, symbol: &str) -> Result<String, Error>;
+			async fn get_symbol_precision(&self, symbol: &str) -> Result<u8, Error>;
+			async fn get_all_trading_symbols(&self) -> Result<Vec<String>, Error>;
 		}
 	}
 }

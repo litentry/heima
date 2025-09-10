@@ -43,7 +43,7 @@ CMD ["$BIN_DIR/executor-worker"]
 
 ### Builder Stage - With Gramine (SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:stable-jammy AS sgx-builder
+FROM gramineproject/gramine:1.8-jammy AS sgx-builder
 
 ARG OE_WILDMETA_BACKEND_ECDSA_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
 ENV OE_WILDMETA_BACKEND_ECDSA_PUBKEY=$OE_WILDMETA_BACKEND_ECDSA_PUBKEY
@@ -75,7 +75,7 @@ RUN make SGX=1 SGX_DEBUG=0 SOURCE_DATE_EPOCH=1700000000 CARGO_PROFILE_RELEASE_DE
 
 ### Release image (with SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:stable-jammy AS release
+FROM gramineproject/gramine:1.8-jammy AS release
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ENV HOME=/home/ubuntu
