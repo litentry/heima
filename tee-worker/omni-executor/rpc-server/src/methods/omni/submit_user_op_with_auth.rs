@@ -61,14 +61,16 @@ async fn handle_submit_user_op_with_auth_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: SubmitUserOpWithAuthParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<SubmitUserOpWithAuthResponse, PumpxRpcError> {
 	debug!("Processing omni_submitUserOpWithAuth request");
 
@@ -87,23 +89,18 @@ async fn handle_submit_user_op_with_auth_request<
 		} => {
 			verify_wildmeta_signature_wrapper(agent_address, business_json, signature)?;
 
-			let business_data: serde_json::Value = serde_json::from_str(business_json)
-				.map_err(|e| {
+			let business_data: serde_json::Value =
+				serde_json::from_str(business_json).map_err(|e| {
 					error!("Failed to parse business_json: {:?}", e);
 					PumpxRpcError::from(
-						DetailedError::new(
-							PARSE_ERROR_CODE,
-							"Failed to parse business JSON",
-						)
-						.with_field("business_json")
-						.with_reason(format!("JSON parse error: {}", e)),
+						DetailedError::new(PARSE_ERROR_CODE, "Failed to parse business JSON")
+							.with_field("business_json")
+							.with_reason(format!("JSON parse error: {}", e)),
 					)
 				})?;
 
-			let timestamp = business_data
-				.get("timestamp")
-				.and_then(|v| v.as_u64())
-				.ok_or_else(|| {
+			let timestamp =
+				business_data.get("timestamp").and_then(|v| v.as_u64()).ok_or_else(|| {
 					error!("Missing timestamp in business_json");
 					PumpxRpcError::from(
 						DetailedError::new(
@@ -148,7 +145,9 @@ async fn handle_submit_user_op_with_auth_request<
 					)
 					.with_field("agent_address")
 					.with_received(agent_address.to_string())
-					.with_suggestion("Ensure the agent address is properly linked to the main address"),
+					.with_suggestion(
+						"Ensure the agent address is properly linked to the main address",
+					),
 				));
 			}
 
@@ -169,7 +168,9 @@ async fn handle_submit_user_op_with_auth_request<
 					.with_field("wallet_index")
 					.with_received(params.wallet_index.to_string())
 					.with_expected("1")
-					.with_suggestion("WildmetaBackend authentication requires wallet_index to be exactly 1"),
+					.with_suggestion(
+						"WildmetaBackend authentication requires wallet_index to be exactly 1",
+					),
 				));
 			}
 
@@ -187,7 +188,9 @@ async fn handle_submit_user_op_with_auth_request<
 					.with_field("client_id")
 					.with_received(params.client_id.clone())
 					.with_expected("wildmeta")
-					.with_suggestion("WildmetaBackend authentication requires client_id to be 'wildmeta'"),
+					.with_suggestion(
+						"WildmetaBackend authentication requires client_id to be 'wildmeta'",
+					),
 				));
 			}
 
@@ -195,9 +198,7 @@ async fn handle_submit_user_op_with_auth_request<
 			let entry_point_client =
 				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 					error!("No entry point client found for chain_id: {}", params.chain_id);
-					PumpxRpcError::from(
-						DetailedError::chain_not_supported(params.chain_id),
-					)
+					PumpxRpcError::from(DetailedError::chain_not_supported(params.chain_id))
 				})?;
 
 			let entry_point_address = entry_point_client.entry_point_address();
@@ -216,13 +217,10 @@ async fn handle_submit_user_op_with_auth_request<
 		_ => {
 			error!("Invalid client auth type");
 			return Err(PumpxRpcError::from(
-				DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Invalid client authentication type",
-				)
-				.with_field("client_auth")
-				.with_expected("WildmetaHl or WildmetaBackend")
-				.with_suggestion("Use a supported authentication method"),
+				DetailedError::new(PARSE_ERROR_CODE, "Invalid client authentication type")
+					.with_field("client_auth")
+					.with_expected("WildmetaHl or WildmetaBackend")
+					.with_suggestion("Use a supported authentication method"),
 			));
 		},
 	};
@@ -263,23 +261,17 @@ async fn handle_submit_user_op_with_auth_request<
 				let omni_account = identity.to_omni_account(&params.client_id);
 				let derived_pubkey = ctx
 					.signer_client
-					.request_wallet(
-						ChainType::Evm,
-						params.wallet_index,
-						*omni_account.as_ref(),
-					)
+					.request_wallet(ChainType::Evm, params.wallet_index, *omni_account.as_ref())
 					.await
 					.map_err(|e| {
 						error!("Failed to derive EVM address: {:?}", e);
-						PumpxRpcError::from(
-							DetailedError::signer_service_error(
-								"request_wallet",
-								&format!("Failed to derive wallet: {:?}", e),
-							),
-						)
+						PumpxRpcError::from(DetailedError::signer_service_error(
+							"request_wallet",
+							&format!("Failed to derive wallet: {:?}", e),
+						))
 					})?;
-				let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
-					.map_err(|e| {
+				let derived_address =
+					pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|e| {
 						error!("Failed to convert derived pubkey to address: {:?}", e);
 						PumpxRpcError::from(
 							DetailedError::new(
@@ -288,7 +280,10 @@ async fn handle_submit_user_op_with_auth_request<
 							)
 							.with_field("operation")
 							.with_received("pubkey_to_address conversion")
-							.with_reason(format!("Internal error converting public key to address: {:?}", e)),
+							.with_reason(format!(
+								"Internal error converting public key to address: {:?}",
+								e
+							)),
 						)
 					})?;
 				if derived_address.to_lowercase() != main_addr.to_lowercase() {
@@ -301,7 +296,9 @@ async fn handle_submit_user_op_with_auth_request<
 						.with_field("derived_address")
 						.with_received(derived_address.to_string())
 						.with_expected(main_addr.to_string())
-						.with_suggestion("The derived EVM address must match the authenticated main address"),
+						.with_suggestion(
+							"The derived EVM address must match the authenticated main address",
+						),
 					));
 				}
 			},
@@ -315,13 +312,11 @@ async fn handle_submit_user_op_with_auth_request<
 	for (index, op) in params.user_operations.iter().enumerate() {
 		op.sender.parse::<Address>().map_err(|e| {
 			error!("Invalid sender address '{}': {}", op.sender, e);
-			PumpxRpcError::from(
-				DetailedError::invalid_address_format(
-					&format!("user_operations[{}].sender", index),
-					&op.sender,
-					"0x-prefixed 20-byte Ethereum address (40 hex chars)",
-				),
-			)
+			PumpxRpcError::from(DetailedError::invalid_address_format(
+				&format!("user_operations[{}].sender", index),
+				&op.sender,
+				"0x-prefixed 20-byte Ethereum address (40 hex chars)",
+			))
 		})?;
 	}
 
@@ -373,11 +368,8 @@ pub fn register_submit_user_op_with_auth<
 			let params = params.parse::<SubmitUserOpWithAuthParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from(
-					DetailedError::new(
-						PARSE_ERROR_CODE,
-						"Failed to parse request parameters",
-					)
-					.with_reason(format!("Invalid JSON structure: {}", e)),
+					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
+						.with_reason(format!("Invalid JSON structure: {}", e)),
 				)
 			})?;
 

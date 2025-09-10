@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::common::handle_omni_native_task;
 use crate::{
 	detailed_error::DetailedError,
@@ -18,6 +17,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use rsa::Oaep;
 use sha2::Sha256;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -50,7 +50,7 @@ impl ExportWalletParams {
 	}
 }
 
-#[tracing::instrument(skip(ctx, ext, params, aes_key), fields(
+#[tracing::instrument(skip(ctx, _ext, params, aes_key), fields(
 	client_id = %user.client_id,
 	omni_account = %user.omni_account,
 	chain_id = %params.chain_id,
@@ -68,24 +68,26 @@ async fn handle_export_wallet_request<
 	params: ExportWalletParams,
 	aes_key: Aes256Key,
 	user: crate::methods::omni::common::User,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
-	ext: jsonrpsee::Extensions,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+	_ext: jsonrpsee::Extensions,
 ) -> Result<SerdeAesOutput, PumpxRpcError> {
 	debug!("Processing omni_exportWallet request");
 
 	let Ok(address) = Address32::from_hex(&user.omni_account) else {
 		error!("Failed to parse from omni account token");
-		return Err(PumpxRpcError::from(DetailedError::new(
-			INTERNAL_ERROR_CODE,
-			"Internal error"
-		).with_reason("Failed to parse omni account from authentication token")));
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Failed to parse omni account from authentication token"),
+		));
 	};
 	let omni_account = AccountId::from(address);
 
@@ -93,16 +95,15 @@ async fn handle_export_wallet_request<
 
 	handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
 		NativeTaskOk::PumpxExportWallet(wallet) => {
-			let encrypted_wallet: SerdeAesOutput =
-				aes_encrypt_default(&aes_key, &wallet).into();
+			let encrypted_wallet: SerdeAesOutput = aes_encrypt_default(&aes_key, &wallet).into();
 			Ok(encrypted_wallet)
 		},
 		_ => {
 			error!("Unexpected response type");
-			Err(PumpxRpcError::from(DetailedError::new(
-				INTERNAL_ERROR_CODE,
-				"Internal error"
-			).with_reason("Unexpected response type from native task handler")))
+			Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Unexpected response type from native task handler"),
+			))
 		},
 	})
 	.await
@@ -131,18 +132,21 @@ pub fn register_export_wallet<
 		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from(DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed"
-				).with_suggestion("Please check your authentication credentials"))
+				PumpxRpcError::from(
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_suggestion("Please check your authentication credentials"),
+				)
 			})?;
 
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Parse error"
-				).with_reason("Invalid JSON format or missing required fields"))
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields"),
+				)
 			})?;
 
 			let aes_key = ctx
@@ -151,17 +155,24 @@ pub fn register_export_wallet<
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
 				.map_err(|e| {
 					error!("Failed to decrypt shielded value: {:?}", e);
-					PumpxRpcError::from(DetailedError::new(
-						DECRYPT_REQUEST_FAILED_CODE,
-						"Shielded value decryption failed"
-					).with_field("key").with_reason("The provided RSA-encrypted AES key could not be decrypted").with_suggestion("Ensure the RSA public key matches the encryption key"))
+					PumpxRpcError::from(
+						DetailedError::new(
+							DECRYPT_REQUEST_FAILED_CODE,
+							"Shielded value decryption failed",
+						)
+						.with_field("key")
+						.with_reason("The provided RSA-encrypted AES key could not be decrypted")
+						.with_suggestion("Ensure the RSA public key matches the encryption key"),
+					)
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
 				error!("Failed to convert AesKey");
-				PumpxRpcError::from(DetailedError::new(
-					AES_KEY_CONVERT_FAILED_CODE,
-					"AesKey convert failed"
-				).with_field("key").with_reason("The decrypted key is not a valid 256-bit AES key").with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)"))
+				PumpxRpcError::from(
+					DetailedError::new(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed")
+						.with_field("key")
+						.with_reason("The decrypted key is not a valid 256-bit AES key")
+						.with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)"),
+				)
 			})?;
 
 			handle_export_wallet_request(params, aes_key, user, ctx, ext).await

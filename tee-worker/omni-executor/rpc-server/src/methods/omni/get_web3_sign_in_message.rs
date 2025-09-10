@@ -32,14 +32,16 @@ async fn handle_get_web3_sign_in_message_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: GetWeb3SignInMessageParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<HeimaMessagePayload, ErrorObjectOwned> {
 	debug!("Processing omni_getWeb3SignInMessage request");
 
@@ -47,20 +49,23 @@ async fn handle_get_web3_sign_in_message_request<
 		error!("Could not parse AccountId: {:?}", params.omni_account);
 		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InvalidParams)
 	})?;
-	
+
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let storage_key = omni_account.hash();
-	let message_code = match verification_code_storage.get(&storage_key) {
-		Ok(Some(message_code)) => message_code,
-		Ok(None) => {
-			let message_code = generate_otp(8);
-			verification_code_storage
-				.insert(&storage_key, message_code.clone())
-				.map_err(|_| <ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InternalError))?;
-			message_code
-		},
-		Err(_) => return Err(<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InternalError)),
-	};
+	let message_code =
+		match verification_code_storage.get(&storage_key) {
+			Ok(Some(message_code)) => message_code,
+			Ok(None) => {
+				let message_code = generate_otp(8);
+				verification_code_storage.insert(&storage_key, message_code.clone()).map_err(
+					|_| <ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InternalError),
+				)?;
+				message_code
+			},
+			Err(_) => {
+				return Err(<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InternalError))
+			},
+		};
 
 	Ok(HeimaMessagePayload {
 		message_code,

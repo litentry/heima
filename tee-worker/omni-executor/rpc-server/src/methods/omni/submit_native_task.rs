@@ -19,11 +19,7 @@ use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 use tracing::{debug, error};
 
-#[tracing::instrument(skip(params, ctx), fields(
-	client_id,
-	is_encrypted,
-	requires_auth
-))]
+#[tracing::instrument(skip(params, ctx), fields(client_id, is_encrypted, requires_auth))]
 async fn handle_submit_native_task_request<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -33,14 +29,16 @@ async fn handle_submit_native_task_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: Params<'static>,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<String, ErrorObjectOwned> {
 	debug!("Processing omni_submitNativeTask request");
 

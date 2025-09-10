@@ -73,14 +73,16 @@ async fn handle_sign_limit_order_request<
 >(
 	params: SignLimitOrderParams,
 	user: crate::methods::omni::common::User,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<SignLimitOrderResponse, PumpxRpcError> {
 	debug!("Processing omni_signLimitOrder request");
 

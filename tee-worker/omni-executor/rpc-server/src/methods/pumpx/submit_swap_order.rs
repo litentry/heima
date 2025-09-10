@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::common::{
 	check_and_get_option_response_data, check_pumpx_api_response, handle_pumpx_native_task,
 };
@@ -26,6 +25,7 @@ use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
 use std::str::FromStr;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -133,18 +133,25 @@ async fn handle_submit_swap_order_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: SubmitSwapOrderParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<PumpxSubmitSwapOrderResponse, PumpxRpcError> {
 	debug!("Processing pumpx_submitSwapOrder request");
 
-	let (omni_account, client_id) = match verify_auth_token_authentication(&ctx.jwt_rsa_private_key, &params.auth_token, AUTH_TOKEN_ID_TYPE, false) {
+	let (omni_account, client_id) = match verify_auth_token_authentication(
+		&ctx.jwt_rsa_private_key,
+		&params.auth_token,
+		AUTH_TOKEN_ID_TYPE,
+		false,
+	) {
 		Ok(claims) => {
 			let account_id = AccountId::from_str(&claims.sub).map_err(|_| {
 				error!("Failed to parse account id from auth token");
@@ -157,7 +164,7 @@ async fn handle_submit_swap_order_request<
 			return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 				AUTH_VERIFICATION_FAILED_CODE,
 			)));
-		}
+		},
 	};
 
 	let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
@@ -176,16 +183,14 @@ async fn handle_submit_swap_order_request<
 		return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
 	}
 
-	let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
-		.map_err(|_| {
+	let from_amount =
+		BoundedVec::try_from(params.from_amount.as_bytes().to_vec()).map_err(|_| {
 			error!("Failed to convert from_amount to BoundedVec");
 			PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
 		})?;
 
 	let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-	let Ok(Some(access_token)) =
-		storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
-	else {
+	let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE)) else {
 		error!("Failed to get access token from storage");
 		return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
 	};
@@ -198,18 +203,33 @@ async fn handle_submit_swap_order_request<
 	};
 
 	debug!("Calling pumpx get_user_trade_info, user_id: {}", params.user_id);
-	let user_trade_info =
-		ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
-			error!("Failed to get user trade info: {:?}", e);
-			PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
-		})?;
+	let user_trade_info = ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
+		error!("Failed to get user trade info: {:?}", e);
+		PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
+	})?;
 
 	debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
-	let gas_type_base = check_and_get_option_response_data(user_trade_info.data.gas_type_base, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_base of call get_user_trade_info is none")?;
-	let gas_type_bsc = check_and_get_option_response_data(user_trade_info.data.gas_type_bsc, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_bsc of call get_user_trade_info is none")?;
-	let gas_type_eth = check_and_get_option_response_data(user_trade_info.data.gas_type_eth, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_eth of call get_user_trade_info is none")?;
-	let gas_type_sol = check_and_get_option_response_data(user_trade_info.data.gas_type_sol, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.gas_type_sol of call get_user_trade_info is none")?;
+	let gas_type_base = check_and_get_option_response_data(
+		user_trade_info.data.gas_type_base,
+		PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE,
+		"Response data.gas_type_base of call get_user_trade_info is none",
+	)?;
+	let gas_type_bsc = check_and_get_option_response_data(
+		user_trade_info.data.gas_type_bsc,
+		PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE,
+		"Response data.gas_type_bsc of call get_user_trade_info is none",
+	)?;
+	let gas_type_eth = check_and_get_option_response_data(
+		user_trade_info.data.gas_type_eth,
+		PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE,
+		"Response data.gas_type_eth of call get_user_trade_info is none",
+	)?;
+	let gas_type_sol = check_and_get_option_response_data(
+		user_trade_info.data.gas_type_sol,
+		PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE,
+		"Response data.gas_type_sol of call get_user_trade_info is none",
+	)?;
 
 	let gas_type = match params.to_chain_id {
 		BASE_CHAIN_ID => gas_type_base.to_number() as u32,
@@ -222,9 +242,21 @@ async fn handle_submit_swap_order_request<
 		},
 	};
 
-	let is_anti_mev = check_and_get_option_response_data(user_trade_info.data.is_anti_mev, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_anti_mev of call get_user_trade_info is none")?;
-	let is_auto_slippage = check_and_get_option_response_data(user_trade_info.data.is_auto_slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.is_auto_slippage of call get_user_trade_info is none")?;
-	let slippage = check_and_get_option_response_data(user_trade_info.data.slippage, PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE, "Response data.slippage of call get_user_trade_info is none")?;
+	let is_anti_mev = check_and_get_option_response_data(
+		user_trade_info.data.is_anti_mev,
+		PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE,
+		"Response data.is_anti_mev of call get_user_trade_info is none",
+	)?;
+	let is_auto_slippage = check_and_get_option_response_data(
+		user_trade_info.data.is_auto_slippage,
+		PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE,
+		"Response data.is_auto_slippage of call get_user_trade_info is none",
+	)?;
+	let slippage = check_and_get_option_response_data(
+		user_trade_info.data.slippage,
+		PUMPX_API_GET_USER_TRADE_INFO_FAILED_CODE,
+		"Response data.slippage of call get_user_trade_info is none",
+	)?;
 
 	let pumpx_config = PumpxConfig {
 		order_type: params.order_type.clone(),
@@ -254,16 +286,19 @@ async fn handle_submit_swap_order_request<
 		ccs_provider = Some(CrossChainSwapProvider::Binance(BinanceConfig {}));
 	}
 
-	let intent = Intent::Swap(swap_order, ccs_provider, scs_provider.try_into().map_err(|_| {
-		error!("Failed to convert SingleChainSwapProvider to OnChainSingleChainSwapProvider");
-		PumpxRpcError::from_error_code(ErrorCode::InternalError)
-	})?);
-	let user_identity =
-		Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
+	let intent = Intent::Swap(
+		swap_order,
+		ccs_provider,
+		scs_provider.try_into().map_err(|_| {
+			error!("Failed to convert SingleChainSwapProvider to OnChainSingleChainSwapProvider");
+			PumpxRpcError::from_error_code(ErrorCode::InternalError)
+		})?,
+	);
+	let user_identity = Identity::from_web2_account(&params.user_id, Web2IdentityType::Pumpx);
 	let omni_account = user_identity.to_omni_account(&client_id);
 	let wrapper = NativeTaskWrapper::new(
 		NativeTask::RequestIntent(omni_account, params.intent_id, Box::new(intent)),
-		 None,
+		None,
 		Some(OmniAuth::AuthToken(params.auth_token)),
 		client_id,
 	);
@@ -276,10 +311,7 @@ async fn handle_submit_swap_order_request<
 						error!("Failed to decode market order response: {:?}", e);
 						PumpxRpcError::from_error_code(ErrorCode::InternalError)
 					})?;
-				check_pumpx_api_response(
-					market_order_response.clone(),
-					"Market order".into(),
-				)?;
+				check_pumpx_api_response(market_order_response.clone(), "Market order".into())?;
 				let response = PumpxSubmitSwapOrderResponse {
 					backend_response: BackendResponse {
 						limit_order_response: None,
@@ -293,10 +325,7 @@ async fn handle_submit_swap_order_request<
 						error!("Failed to decode limit order response: {:?}", e);
 						PumpxRpcError::from_error_code(ErrorCode::InternalError)
 					})?;
-				check_pumpx_api_response(
-					limit_order_response.clone(),
-					"Limit order".into(),
-				)?;
+				check_pumpx_api_response(limit_order_response.clone(), "Limit order".into())?;
 				let response = PumpxSubmitSwapOrderResponse {
 					backend_response: BackendResponse {
 						limit_order_response: Some(limit_order_response),

@@ -65,14 +65,16 @@ async fn handle_submit_user_op_request<
 >(
 	params: SubmitUserOpParams,
 	user: crate::methods::omni::common::User,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<SubmitUserOpResponse, PumpxRpcError> {
 	debug!("Processing omni_submitUserOp request");
 
@@ -85,8 +87,7 @@ async fn handle_submit_user_op_request<
 	let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
 		.map_err(PumpxRpcError::from)?;
 
-	validate_omni_account_length(&address_bytes, "omni_account")
-		.map_err(PumpxRpcError::from)?;
+	validate_omni_account_length(&address_bytes, "omni_account").map_err(PumpxRpcError::from)?;
 
 	let wrapper = NativeTaskWrapper::new(
 		NativeTask::SubmitUserOp(

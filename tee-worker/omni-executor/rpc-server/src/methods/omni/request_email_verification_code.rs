@@ -32,21 +32,22 @@ async fn handle_request_email_verification_code_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: RequestEmailVerificationCodeParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<(), ErrorObjectOwned> {
 	debug!("Processing omni_requestEmailVerificationCode request");
 
 	validate_email(&params.user_email).map_err(|e| e.to_error_object())?;
 
-	let email_identity =
-		Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
+	let email_identity = Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
 	let omni_account = email_identity.to_omni_account(&params.client_id);
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let verification_code = generate_verification_code();
@@ -59,26 +60,22 @@ async fn handle_request_email_verification_code_request<
 		})?;
 
 	// Get the appropriate mailer for this client
-	let mailer =
-		ctx.mailer_factory.get_mailer_for_client(&params.client_id).map_err(|e| {
-			error!("Failed to get mailer for client '{}': {}", params.client_id, e);
-			DetailedError::new(
-				crate::error_code::EXTERNAL_API_ERROR_CODE,
-				"Failed to initialize email service",
-			)
-			.with_field("client_id")
-			.with_received(&params.client_id)
-			.with_reason(format!("Error: {}", e))
-			.to_error_object()
-		})?;
+	let mailer = ctx.mailer_factory.get_mailer_for_client(&params.client_id).map_err(|e| {
+		error!("Failed to get mailer for client '{}': {}", params.client_id, e);
+		DetailedError::new(
+			crate::error_code::EXTERNAL_API_ERROR_CODE,
+			"Failed to initialize email service",
+		)
+		.with_field("client_id")
+		.with_received(&params.client_id)
+		.with_reason(format!("Error: {}", e))
+		.to_error_object()
+	})?;
 
 	send_verification_email(&*mailer, params.user_email.clone(), verification_code)
 		.await
 		.map_err(|e| {
-			error!(
-				"Failed to send verification email for client '{}': {:?}",
-				params.client_id, e
-			);
+			error!("Failed to send verification email for client '{}': {:?}", params.client_id, e);
 			DetailedError::email_service_error(&params.user_email).to_error_object()
 		})?;
 

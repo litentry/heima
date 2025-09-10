@@ -60,14 +60,16 @@ async fn handle_user_login_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: UserLoginParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<UserLoginResponse, ErrorObjectOwned> {
 	debug!("Processing omni_userLogin request");
 
@@ -77,7 +79,9 @@ async fn handle_user_login_request<
 	})?;
 	verify_auth(ctx.clone(), &auth).await.map_err(|_| {
 		error!("Failed to verify auth: {:?}", auth);
-		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
+		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(
+			AUTH_VERIFICATION_FAILED_CODE,
+		))
 	})?;
 	let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 		error!("Invalid user ID format");
@@ -91,7 +95,9 @@ async fn handle_user_login_request<
 	)
 	.map_err(|_| {
 		error!("Failed to create access token for user");
-		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
+		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(
+			AUTH_VERIFICATION_FAILED_CODE,
+		))
 	})?;
 	let access_token = create_jwt_for_user(
 		identity.clone(),
@@ -101,7 +107,9 @@ async fn handle_user_login_request<
 	)
 	.map_err(|_| {
 		error!("Failed to create access token for user");
-		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
+		<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(
+			AUTH_VERIFICATION_FAILED_CODE,
+		))
 	})?;
 
 	if params.client_id == CLIENT_ID_WILDMETA {
@@ -111,11 +119,11 @@ async fn handle_user_login_request<
 			client_auth: params.client_auth,
 			heima_login_success: true,
 		};
-		let Ok(backend_response) =
-			ctx.pumpx_api.post_heima_login(&access_token, body).await
-		else {
+		let Ok(backend_response) = ctx.pumpx_api.post_heima_login(&access_token, body).await else {
 			error!("Post_heima_login failed for Wildmeta client");
-			return Err(<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(POST_HEIMA_LOGIN_FAILED_CODE)));
+			return Err(<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::ServerError(
+				POST_HEIMA_LOGIN_FAILED_CODE,
+			)));
 		};
 
 		check_omni_api_response(backend_response.clone(), "Post heima login".into())?;
@@ -126,16 +134,9 @@ async fn handle_user_login_request<
 			.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 			.is_err()
 		{
-			error!(
-				"Failed to insert pumpx_{}_jwt_token into storage",
-				AUTH_TOKEN_ACCESS_TYPE
-			);
+			error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
 		};
-		Ok(UserLoginResponse {
-			access_token,
-			id_token,
-			backend_response,
-		})
+		Ok(UserLoginResponse { access_token, id_token, backend_response })
 	} else {
 		error!("Unsupported client_id: {}", params.client_id);
 		Err(<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InvalidParams))

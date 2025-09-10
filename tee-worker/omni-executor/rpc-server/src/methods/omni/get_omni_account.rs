@@ -42,7 +42,7 @@ async fn handle_get_omni_account_request(
 
 	let account = Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email)
 		.to_omni_account(&params.client_id);
-	
+
 	Ok(account.to_hex())
 }
 

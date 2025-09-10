@@ -44,6 +44,8 @@ use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::Aes256KeyStore;
+use opentelemetry::global;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{
@@ -58,24 +60,22 @@ use rust_decimal::Decimal;
 use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
+use std::fs::OpenOptions;
 use std::net::SocketAddr;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::thread;
 use std::thread::JoinHandle;
-use opentelemetry::global;
-use opentelemetry_sdk::propagation::TraceContextPropagator;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
 use tracing::{error, info};
-use tracing_subscriber::{EnvFilter, Layer};
-use tracing_subscriber::FmtSubscriber;
-use tracing_subscriber::layer::SubscriberExt;
-use std::fs::OpenOptions;
 use tracing_config::init_trace;
 use tracing_log::LogTracer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{EnvFilter, Layer};
 mod cli;
 mod tracing_config;
 
@@ -93,20 +93,20 @@ async fn main() -> Result<(), ()> {
 			if args.enable_jaeger {
 				// Use Jaeger tracing with OpenTelemetry
 				let tracer = init_trace(args.jaeger_port).unwrap();
-				let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>().with_tracer(tracer);
+				let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>()
+					.with_tracer(tracer);
 
-				let subscriber = tracing_subscriber::Registry::default()
-					.with(telemetry)
-					.with(
-						tracing_subscriber::fmt::layer()
-							.with_filter(
-								EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
-							)
-					);
+				let subscriber = tracing_subscriber::Registry::default().with(telemetry).with(
+					tracing_subscriber::fmt::layer().with_filter(
+						EnvFilter::try_from_default_env()
+							.unwrap_or_else(|_| EnvFilter::new("info")),
+					),
+				);
 
-				tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+				tracing::subscriber::set_global_default(subscriber)
+					.expect("setting default subscriber failed");
 			} else if args.json_trace_output {
-				// Output structured traces to file for later upload to Jaeger
+				// Output JSON formatted traces to file for later analysis
 				let trace_file = OpenOptions::new()
 					.create(true)
 					.write(true)
@@ -115,22 +115,27 @@ async fn main() -> Result<(), ()> {
 					.expect("Failed to create trace file");
 
 				let subscriber = FmtSubscriber::builder()
+					.json()
 					.with_writer(trace_file)
 					.with_env_filter(
-						EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+						EnvFilter::try_from_default_env()
+							.unwrap_or_else(|_| EnvFilter::new("info")),
 					)
 					.finish();
 
-				tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+				tracing::subscriber::set_global_default(subscriber)
+					.expect("setting default subscriber failed");
 			} else {
 				// Use regular logging without Jaeger
 				let subscriber = FmtSubscriber::builder()
 					.with_env_filter(
-						EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+						EnvFilter::try_from_default_env()
+							.unwrap_or_else(|_| EnvFilter::new("info")),
 					)
 					.finish();
 
-				tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+				tracing::subscriber::set_global_default(subscriber)
+					.expect("setting default subscriber failed");
 			}
 
 			if args.enable_mock_server {
@@ -633,11 +638,12 @@ async fn main() -> Result<(), ()> {
 			// Initialize simple logging for GenKey command
 			let subscriber = FmtSubscriber::builder()
 				.with_env_filter(
-					EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+					EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
 				)
 				.finish();
 
-			tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+			tracing::subscriber::set_global_default(subscriber)
+				.expect("setting default subscriber failed");
 
 			let key_store = Arc::new(SubstrateKeyStore::new(
 				Path::new(&args.local_directory_path)

@@ -55,14 +55,16 @@ async fn handle_get_smart_wallet_root_signer_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: GetSmartWalletRootSignerParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<String, PumpxRpcError> {
 	debug!("Processing omni_getSmartWalletRootSigner request");
 
@@ -76,11 +78,7 @@ async fn handle_get_smart_wallet_root_signer_request<
 
 	let pubkey = ctx
 		.signer_client
-		.request_wallet(
-			params.chain_type.into(),
-			params.wallet_index,
-			address.as_ref().to_owned(),
-		)
+		.request_wallet(params.chain_type.into(), params.wallet_index, address.as_ref().to_owned())
 		.await
 		.map_err(|_| {
 			error!("Failed to request wallet from signer client");

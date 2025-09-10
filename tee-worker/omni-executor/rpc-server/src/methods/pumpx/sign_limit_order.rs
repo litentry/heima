@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
 use super::common::handle_pumpx_native_task;
 use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::pumpx::PumpxRpcError;
@@ -37,6 +36,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -67,14 +67,16 @@ async fn handle_sign_limit_order_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: SignLimitOrderParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<SignLimitOrderResponse, PumpxRpcError> {
 	debug!("Processing pumpx_signLimitOrder request");
 

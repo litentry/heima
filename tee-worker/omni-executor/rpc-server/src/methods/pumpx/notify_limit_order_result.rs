@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::common::handle_pumpx_native_task;
 use crate::methods::pumpx::PumpxRpcError;
 use crate::verify_auth::verify_auth_token_authentication;
@@ -11,6 +10,7 @@ use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -31,14 +31,16 @@ pub async fn handle_notify_limit_order_result_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: NotifyLimitOrderResultParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<(), PumpxRpcError> {
 	debug!("Processing pumpx_notifyLimitOrderResult request");
 

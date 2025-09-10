@@ -15,20 +15,22 @@ async fn handle_get_shielding_key_request<
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<SerdeRsa3072PubKey, ErrorObjectOwned> {
 	debug!("Processing omni_getShieldingKey request");
 
 	let pubkey = ctx.shielding_key.public_key();
 	let pubkey = Rsa3072PubKey { n: pubkey.n().to_bytes_le(), e: pubkey.e().to_bytes_le() }.into();
-	
+
 	Ok(pubkey)
 }
 

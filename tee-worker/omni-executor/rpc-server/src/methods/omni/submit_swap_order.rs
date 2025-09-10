@@ -128,14 +128,16 @@ async fn handle_submit_swap_order_request<
 >(
 	params: SubmitSwapOrderParams,
 	user: crate::methods::omni::common::User,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<PumpxSubmitSwapOrderResponse, PumpxRpcError> {
 	debug!("Processing omni_submitSwapOrder request");
 
@@ -172,8 +174,8 @@ async fn handle_submit_swap_order_request<
 		));
 	}
 
-	let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
-		.map_err(|_| {
+	let from_amount =
+		BoundedVec::try_from(params.from_amount.as_bytes().to_vec()).map_err(|_| {
 			error!("Failed to convert from_amount to BoundedVec");
 			PumpxRpcError::from(
 				DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
@@ -182,8 +184,7 @@ async fn handle_submit_swap_order_request<
 		})?;
 
 	let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-	let Ok(Some(access_token)) =
-		storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+	let Ok(Some(access_token)) = storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 	else {
 		error!("Failed to get access token from storage");
 		return Err(PumpxRpcError::from(
@@ -200,14 +201,13 @@ async fn handle_submit_swap_order_request<
 	};
 
 	debug!("Calling pumpx get_user_trade_info");
-	let user_trade_info =
-		ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
-			error!("Failed to get user trade info: {:?}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-					.with_suggestion("Invalid method parameters"),
-			)
-		})?;
+	let user_trade_info = ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
+		error!("Failed to get user trade info: {:?}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+				.with_suggestion("Invalid method parameters"),
+		)
+	})?;
 
 	debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
 
@@ -236,10 +236,8 @@ async fn handle_submit_swap_order_request<
 		user_trade_info.data.is_auto_slippage,
 		"is_auto_slippage",
 	)?;
-	let slippage = check_and_get_option_user_trade_info_field(
-		user_trade_info.data.slippage,
-		"slippage",
-	)?;
+	let slippage =
+		check_and_get_option_user_trade_info_field(user_trade_info.data.slippage, "slippage")?;
 
 	let gas_type = match params.to_chain_id {
 		BASE_CHAIN_ID => gas_type_base.to_number() as u32,
@@ -308,17 +306,12 @@ async fn handle_submit_swap_order_request<
 					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 						error!("Failed to decode market order response: {:?}", e);
 						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!(
-									"Failed to decode market order response: {:?}",
-									e
-								)),
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
+								format!("Failed to decode market order response: {:?}", e),
+							),
 						)
 					})?;
-				check_omni_api_response(
-					market_order_response.clone(),
-					"Market order".into(),
-				)?;
+				check_omni_api_response(market_order_response.clone(), "Market order".into())?;
 				let response = PumpxSubmitSwapOrderResponse {
 					backend_response: BackendResponse {
 						limit_order_response: None,
@@ -331,17 +324,12 @@ async fn handle_submit_swap_order_request<
 					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 						error!("Failed to decode limit order response: {:?}", e);
 						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!(
-									"Failed to decode limit order response: {:?}",
-									e
-								)),
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
+								format!("Failed to decode limit order response: {:?}", e),
+							),
 						)
 					})?;
-				check_omni_api_response(
-					limit_order_response.clone(),
-					"Limit order".into(),
-				)?;
+				check_omni_api_response(limit_order_response.clone(), "Limit order".into())?;
 				let response = PumpxSubmitSwapOrderResponse {
 					backend_response: BackendResponse {
 						limit_order_response: Some(limit_order_response),

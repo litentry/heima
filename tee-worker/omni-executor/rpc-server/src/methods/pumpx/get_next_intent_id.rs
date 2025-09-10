@@ -14,16 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
 use crate::ErrorCode;
 use crate::{methods::pumpx::common::PumpxRpcError, server::RpcContext};
 use executor_core::intent_executor::IntentExecutor;
 use executor_storage::{IntentIdStorage, Storage};
 use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::{Identity, Web2IdentityType};
-use jsonrpsee::{types::{ErrorObject, ErrorObjectOwned}, RpcModule};
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
+use std::sync::Arc;
 use tracing::error;
 
 #[derive(Debug, Deserialize)]
@@ -41,18 +41,19 @@ async fn handle_get_next_intent_id_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: GetNextIntentIdParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<u32, PumpxRpcError> {
-	let account =
-		Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
-			.to_omni_account(CLIENT_ID_PUMPX);
+	let account = Identity::from_web2_account(params.user_id.as_str(), Web2IdentityType::Pumpx)
+		.to_omni_account(CLIENT_ID_PUMPX);
 
 	let storage = IntentIdStorage::new(ctx.storage_db.clone());
 	let intent_id = storage
@@ -92,7 +93,9 @@ pub fn register_get_next_intent_id<
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)
 			})?;
 
-			handle_get_next_intent_id_request(params, ctx).await.map_err(|e| -> ErrorObjectOwned { e.into() })
+			handle_get_next_intent_id_request(params, ctx)
+				.await
+				.map_err(|e| -> ErrorObjectOwned { e.into() })
 		})
 		.expect("Failed to register getIntentId method");
 }

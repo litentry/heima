@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::common::handle_pumpx_native_task;
 use crate::{
 	error_code::*,
@@ -18,6 +17,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use rsa::Oaep;
 use sha2::Sha256;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -64,14 +64,16 @@ async fn handle_export_wallet_request<
 >(
 	params: ExportWalletParams,
 	aes_key: Aes256Key,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<SerdeAesOutput, PumpxRpcError> {
 	debug!("Processing pumpx_exportWallet request");
 
@@ -85,14 +87,16 @@ async fn handle_export_wallet_request<
 	};
 	debug!("Response pumpx get_account_user_id: {:?}", res);
 
-	let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
+	let user_id = check_and_get_option_response_data(
+		res.data.user_id,
+		PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+		"Response data.user_id of call get_account_user_id is none",
+	)?;
 
 	if user_id != params.user_id {
 		error!(
 			"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
-			params.user_id,
-			params.user_email,
-			user_id
+			params.user_id, params.user_email, user_id
 		);
 		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 			USER_EMAIL_ID_MISMATCH_CODE,
@@ -110,16 +114,13 @@ async fn handle_export_wallet_request<
 		};
 		verify_auth(ctx.clone(), auth).await.map_err(|_| {
 			error!("Failed to verify auth: {:?}", wrapper.auth);
-			PumpxRpcError::from_error_code(ErrorCode::ServerError(
-				AUTH_VERIFICATION_FAILED_CODE,
-			))
+			PumpxRpcError::from_error_code(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
 		})?;
 	}
 
 	handle_pumpx_native_task(&ctx, wrapper, |task_ok| match task_ok {
 		NativeTaskOk::PumpxExportWallet(wallet) => {
-			let encrypted_wallet: SerdeAesOutput =
-				aes_encrypt_default(&aes_key, &wallet).into();
+			let encrypted_wallet: SerdeAesOutput = aes_encrypt_default(&aes_key, &wallet).into();
 			Ok(encrypted_wallet)
 		},
 		_ => {
@@ -149,7 +150,8 @@ pub fn register_export_wallet<
 		>,
 	>,
 ) {
-	module        .register_async_method("pumpx_exportWallet", |params, ctx, _ext| async move {
+	module
+		.register_async_method("pumpx_exportWallet", |params, ctx, _ext| async move {
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)

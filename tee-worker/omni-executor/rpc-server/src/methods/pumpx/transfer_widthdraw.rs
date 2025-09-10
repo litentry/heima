@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 use crate::{
 	error_code::*,
@@ -16,6 +15,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -84,14 +84,16 @@ async fn handle_transfer_withdraw_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: TransferWithdrawParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<TransferWithdrawResponse, PumpxRpcError> {
 	debug!("Processing pumpx_transferWithdraw request");
 
@@ -105,14 +107,16 @@ async fn handle_transfer_withdraw_request<
 	};
 	debug!("Response pumpx get_account_user_id: {:?}", res);
 
-	let user_id = check_and_get_option_response_data(res.data.user_id, PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE, "Response data.user_id of call get_account_user_id is none")?;
+	let user_id = check_and_get_option_response_data(
+		res.data.user_id,
+		PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+		"Response data.user_id of call get_account_user_id is none",
+	)?;
 
 	if user_id != params.user_id {
 		error!(
 			"Parameter mismatch: user_id {} and user_email {}, expected user_id {}",
-			params.user_id,
-			params.user_email,
-			user_id
+			params.user_id, params.user_email, user_id
 		);
 		return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
 			USER_EMAIL_ID_MISMATCH_CODE,
@@ -130,9 +134,7 @@ async fn handle_transfer_withdraw_request<
 		};
 		verify_auth(ctx.clone(), auth).await.map_err(|_| {
 			error!("Failed to verify auth: {:?}", wrapper.auth);
-			PumpxRpcError::from_error_code(ErrorCode::ServerError(
-				AUTH_VERIFICATION_FAILED_CODE,
-			))
+			PumpxRpcError::from_error_code(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
 		})?;
 	}
 
@@ -168,7 +170,8 @@ pub fn register_transfer_withdraw<
 		>,
 	>,
 ) {
-	module        .register_async_method("pumpx_transferWithdraw", |params, ctx, _ext| async move {
+	module
+		.register_async_method("pumpx_transferWithdraw", |params, ctx, _ext| async move {
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				PumpxRpcError::from_error_code(ErrorCode::ParseError)

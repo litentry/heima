@@ -85,14 +85,16 @@ async fn handle_transfer_withdraw_request<
 >(
 	params: TransferWithdrawParams,
 	user: crate::methods::omni::common::User,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<TransferWithdrawResponse, PumpxRpcError> {
 	debug!("Processing omni_transferWithdraw request");
 
@@ -103,24 +105,22 @@ async fn handle_transfer_withdraw_request<
 	validate_ethereum_address(&params.recipient_address, "recipient_address")
 		.map_err(PumpxRpcError::from)?;
 
-	validate_token_address(&params.token_ca, "token_ca")
-		.map_err(PumpxRpcError::from)?;
+	validate_token_address(&params.token_ca, "token_ca").map_err(PumpxRpcError::from)?;
 
-	validate_amount(&params.amount, "amount")
-		.map_err(PumpxRpcError::from)?;
+	validate_amount(&params.amount, "amount").map_err(PumpxRpcError::from)?;
 
 	let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
 		.map_err(PumpxRpcError::from)?;
 
-	validate_omni_account_length(&address_bytes, "omni_account")
-		.map_err(PumpxRpcError::from)?;
+	validate_omni_account_length(&address_bytes, "omni_account").map_err(PumpxRpcError::from)?;
 
 	let Ok(address) = Address32::from_hex(&user.omni_account) else {
 		error!("Failed to parse from omni account after validation");
 		return Err(DetailedError::account_parse_error(
 			&user.omni_account,
-			"Address32 conversion failed"
-		).into());
+			"Address32 conversion failed",
+		)
+		.into());
 	};
 	let omni_account = AccountId::from(address);
 
@@ -133,10 +133,7 @@ async fn handle_transfer_withdraw_request<
 		},
 		_ => {
 			error!("Unexpected response type from native task handler");
-			Err(DetailedError::unexpected_response_type(
-				"PumpxTransferWithdraw",
-				"Unknown"
-			).into())
+			Err(DetailedError::unexpected_response_type("PumpxTransferWithdraw", "Unknown").into())
 		},
 	})
 	.await
@@ -165,20 +162,18 @@ pub fn register_transfer_withdraw<
 		.register_async_method("omni_transferWithdraw", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from(DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication failed"
+				PumpxRpcError::from(
+					DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication failed")
+						.with_suggestion("Please provide valid authentication credentials"),
 				)
-				.with_suggestion("Please provide valid authentication credentials"))
 			})?;
 
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse request parameters"
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
+						.with_reason(format!("Invalid JSON structure: {}", e)),
 				)
-				.with_reason(format!("Invalid JSON structure: {}", e)))
 			})?;
 
 			handle_transfer_withdraw_request(params, user, ctx).await

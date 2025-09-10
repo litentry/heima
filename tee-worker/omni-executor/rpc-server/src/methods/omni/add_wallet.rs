@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
 	detailed_error::DetailedError,
@@ -15,6 +14,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::add_wallet::AddWalletResponse;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Serialize, Clone)]
@@ -22,7 +22,7 @@ pub struct RPCAddWalletResponse {
 	pub backend_response: AddWalletResponse,
 }
 
-#[tracing::instrument(skip(ctx, ext), fields(client_id = %user.client_id, omni_account = %user.omni_account))]
+#[tracing::instrument(skip(ctx, _ext), fields(client_id = %user.client_id, omni_account = %user.omni_account))]
 async fn handle_add_wallet_request<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -32,15 +32,17 @@ async fn handle_add_wallet_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	user: crate::methods::omni::common::User,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
-	ext: jsonrpsee::Extensions,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+	_ext: jsonrpsee::Extensions,
 ) -> Result<RPCAddWalletResponse, PumpxRpcError> {
 	debug!("Processing omni_addWallet request");
 

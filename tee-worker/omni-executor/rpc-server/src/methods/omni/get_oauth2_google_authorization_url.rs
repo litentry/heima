@@ -25,28 +25,30 @@ async fn handle_get_oauth2_google_authorization_url_request<
 >(
 	google_account: String,
 	redirect_uri: String,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<String, ErrorObjectOwned> {
 	debug!("Processing omni_getOAuth2GoogleAuthorizationUrl request");
 
 	let google_identity = Identity::from_web2_account(&google_account, Web2IdentityType::Google);
 	let authorization_data = google::get_authorize_data(&ctx.google_client_id, &redirect_uri);
 	let storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
-	
+
 	storage
 		.insert(&google_identity.hash(), authorization_data.state.clone())
 		.map_err(|e| {
 			error!("Failed to store OAuth2 state verifier: {:?}", e);
 			<ErrorCode as Into<ErrorObjectOwned>>::into(ErrorCode::InternalError)
 		})?;
-	
+
 	Ok(authorization_data.authorize_url.to_hex())
 }
 

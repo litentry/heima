@@ -62,14 +62,16 @@ async fn handle_submit_user_op_test_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: SubmitUserOpTestParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<SubmitUserOpTestResponse, PumpxRpcError> {
 	debug!("Processing omni_submitUserOpTest request");
 
@@ -84,10 +86,7 @@ async fn handle_submit_user_op_test_request<
 			})?;
 
 	if address_bytes.len() != 32 {
-		error!(
-			"Invalid omni account length: expected 32 bytes, got {}",
-			address_bytes.len()
-		);
+		error!("Invalid omni account length: expected 32 bytes, got {}", address_bytes.len());
 		return Err(PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
 				"Invalid omni account length: expected 32 bytes, got {}",

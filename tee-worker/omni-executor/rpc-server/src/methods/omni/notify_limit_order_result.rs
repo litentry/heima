@@ -40,14 +40,16 @@ async fn handle_notify_limit_order_result_request<
 >(
 	params: NotifyLimitOrderResultParams,
 	user: crate::methods::omni::common::User,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 	_ext: jsonrpsee::Extensions,
 ) -> Result<(), PumpxRpcError> {
 	debug!("Processing omni_notifyLimitOrderResult request");

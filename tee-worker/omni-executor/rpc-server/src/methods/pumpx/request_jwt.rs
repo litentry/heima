@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::common::{check_pumpx_api_response, handle_pumpx_native_task};
 use crate::{
 	error_code::*, methods::pumpx::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
@@ -13,6 +12,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -59,14 +59,16 @@ async fn handle_request_jwt_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: RequestJwtParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<RequestJwtResponse, PumpxRpcError> {
 	debug!("Processing pumpx_requestJwt request");
 
@@ -81,9 +83,7 @@ async fn handle_request_jwt_request<
 		};
 		verify_auth(ctx.clone(), auth).await.map_err(|_| {
 			error!("Failed to verify auth: {:?}", wrapper.auth);
-			PumpxRpcError::from_error_code(ErrorCode::ServerError(
-				AUTH_VERIFICATION_FAILED_CODE,
-			))
+			PumpxRpcError::from_error_code(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
 		})?;
 	}
 

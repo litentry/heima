@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
 use super::common::{handle_omni_native_task, PumpxRpcError};
 use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
@@ -30,6 +29,7 @@ use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -69,21 +69,22 @@ async fn handle_estimate_user_op_gas_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: EstimateUserOpGasParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<EstimateUserOpGasResponse, PumpxRpcError> {
 	debug!("Processing omni_estimateUserOpGas request");
 
 	let account_bytes = validate_omni_account_hex(&params.omni_account, "omni_account")
 		.map_err(PumpxRpcError::from)?;
-	validate_omni_account_length(&account_bytes, "omni_account")
-		.map_err(PumpxRpcError::from)?;
+	validate_omni_account_length(&account_bytes, "omni_account").map_err(PumpxRpcError::from)?;
 	let account_id = AccountId::decode(&mut &account_bytes[..]).map_err(|e| {
 		PumpxRpcError::from(DetailedError::account_parse_error(
 			&params.omni_account,

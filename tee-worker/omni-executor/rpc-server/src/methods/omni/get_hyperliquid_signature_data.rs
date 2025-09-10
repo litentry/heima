@@ -18,11 +18,11 @@ use executor_primitives::{
 };
 use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use std::sync::Arc;
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize, Serializer};
 use signer_client::ChainType;
 use std::convert::TryFrom;
+use std::sync::Arc;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -209,14 +209,16 @@ async fn handle_get_hyperliquid_signature_data_request<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: GetHyperliquidSignatureDataParams,
-	ctx: Arc<RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>>,
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
 ) -> Result<GetHyperliquidSignatureDataResponse, ErrorObjectOwned> {
 	debug!("Processing omni_getHyperliquidSignatureData request");
 
@@ -234,14 +236,13 @@ async fn handle_get_hyperliquid_signature_data_request<
 	// Unified authentication logic
 	let main_address = if let Some(user_auth) = &params.user_auth {
 		// User authentication provided
-		let auth =
-			to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
-				error!("Failed to convert to OmniAuth: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to convert authentication data")
-					.with_field("user_auth")
-					.with_reason(format!("OmniAuth conversion error: {:?}", e))
-					.to_error_object()
-			})?;
+		let auth = to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
+			error!("Failed to convert to OmniAuth: {:?}", e);
+			DetailedError::new(PARSE_ERROR_CODE, "Failed to convert authentication data")
+				.with_field("user_auth")
+				.with_reason(format!("OmniAuth conversion error: {:?}", e))
+				.to_error_object()
+		})?;
 
 		verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 			error!("Failed to verify user authentication: {:?}", e);
@@ -300,23 +301,20 @@ async fn handle_get_hyperliquid_signature_data_request<
 							.to_error_object()
 					})?;
 
-				let timestamp = business_data
-					.get("timestamp")
-					.and_then(|v| v.as_u64())
-					.ok_or_else(|| {
+				let timestamp =
+					business_data.get("timestamp").and_then(|v| v.as_u64()).ok_or_else(|| {
 						error!("Missing timestamp in business_json");
-						DetailedError::new(MISSING_REQUIRED_FIELD_CODE, "Missing required field in business JSON")
-							.with_field("timestamp")
-							.with_expected("Unix timestamp as number")
-							.with_reason("Business JSON must contain a 'timestamp' field")
-							.to_error_object()
+						DetailedError::new(
+							MISSING_REQUIRED_FIELD_CODE,
+							"Missing required field in business JSON",
+						)
+						.with_field("timestamp")
+						.with_expected("Unix timestamp as number")
+						.with_reason("Business JSON must contain a 'timestamp' field")
+						.to_error_object()
 					})?;
 
-				verify_payload_timestamp(
-					&ctx.wildmeta_timestamp_storage,
-					main_address,
-					timestamp,
-				)?;
+				verify_payload_timestamp(&ctx.wildmeta_timestamp_storage, main_address, timestamp)?;
 
 				let linked = ctx
 					.wildmeta_api
@@ -332,23 +330,31 @@ async fn handle_get_hyperliquid_signature_data_request<
 
 				if !linked {
 					error!("Agent and main addresses are not linked");
-					return Err(DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Account linkage verification failed")
-						.with_field("agent_address")
-						.with_expected("Linked to main address")
-						.with_received("Not linked")
-						.with_suggestion("Ensure the agent address is linked to your main address in Hyperliquid")
-						.to_error_object());
+					return Err(DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Account linkage verification failed",
+					)
+					.with_field("agent_address")
+					.with_expected("Linked to main address")
+					.with_received("Not linked")
+					.with_suggestion(
+						"Ensure the agent address is linked to your main address in Hyperliquid",
+					)
+					.to_error_object());
 				}
 
 				main_address.clone()
 			},
 			_ => {
 				error!("Invalid client auth type");
-				return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid client authentication type")
-					.with_field("client_auth")
-					.with_expected("WildmetaHl")
-					.with_suggestion("Use a supported authentication method")
-					.to_error_object());
+				return Err(DetailedError::new(
+					INVALID_PARAMS_CODE,
+					"Invalid client authentication type",
+				)
+				.with_field("client_auth")
+				.with_expected("WildmetaHl")
+				.with_suggestion("Use a supported authentication method")
+				.to_error_object());
 			},
 		}
 	} else {
@@ -387,8 +393,7 @@ async fn handle_get_hyperliquid_signature_data_request<
 				agent_name,
 				nonce,
 			};
-			let signature =
-				generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+			let signature = generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 			(HyperliquidAction::ApproveAgent(action), signature)
 		},
 		HyperliquidActionType::Withdraw3 { amount, destination } => {
@@ -400,8 +405,7 @@ async fn handle_get_hyperliquid_signature_data_request<
 				destination: validate_ethereum_address(&destination, "destination")
 					.map_err(|e| e.to_error_object())?,
 			};
-			let signature =
-				generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+			let signature = generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 			(HyperliquidAction::Withdraw3(action), signature)
 		},
 		HyperliquidActionType::ApproveBuilderFee { max_fee_rate, builder } => {
@@ -413,8 +417,7 @@ async fn handle_get_hyperliquid_signature_data_request<
 					.map_err(|e| e.to_error_object())?,
 				nonce,
 			};
-			let signature =
-				generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+			let signature = generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 			(HyperliquidAction::ApproveBuilderFee(action), signature)
 		},
 	};
