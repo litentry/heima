@@ -17,13 +17,12 @@ library DeploymentHelper {
         string abi;
         string bytecode;
         string metadata;
+        uint256 blockNumber;
     }
 
     struct DeploymentArtifact {
         string network;
         uint256 chainId;
-        uint256 timestamp;
-        uint256 blockNumber;
         address deployer;
         ContractDeployment[] contracts;
     }
@@ -128,6 +127,9 @@ library DeploymentHelper {
                     '      "address": "',
                     vm.toString(deployments[i].addr),
                     '",\n',
+                    '      "blockNumber": ',
+                    vm.toString(deployments[i].blockNumber),
+                    ",\n",
                     '      "abi": ',
                     deployments[i].abi,
                     ",\n",
@@ -154,12 +156,6 @@ library DeploymentHelper {
                 '",\n',
                 '  "chainId": ',
                 vm.toString(chainId),
-                ",\n",
-                '  "timestamp": ',
-                vm.toString(block.timestamp),
-                ",\n",
-                '  "blockNumber": ',
-                vm.toString(block.number),
                 ",\n",
                 '  "deployer": "',
                 vm.toString(msg.sender),
@@ -210,8 +206,17 @@ library DeploymentHelper {
                     // This contract exists! Extract all its properties
                     string memory existingContractObjKey = string(abi.encodePacked("existing_", contractName));
 
-                    // Get the contract properties
+                    // Get the contract properties - in the desired order
                     vm.serializeAddress(existingContractObjKey, "address", contractAddr);
+
+                    // Get blockNumber (second field)
+                    try vm.parseJsonUint(existingJson, string(abi.encodePacked(contractPath, ".blockNumber"))) returns (
+                        uint256 blockNum
+                    ) {
+                        vm.serializeUint(existingContractObjKey, "blockNumber", blockNum);
+                    } catch {
+                        vm.serializeUint(existingContractObjKey, "blockNumber", block.number);
+                    }
 
                     // Get ABI - handle both array format and string format
                     try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".abi"))) returns (
@@ -266,16 +271,17 @@ library DeploymentHelper {
             for (uint256 i = 0; i < newDeployments.length; i++) {
                 string memory contractObjKey = string(abi.encodePacked("newContract_", vm.toString(i)));
 
-                // Build the new contract JSON using Foundry's serialization
+                // Build the new contract JSON using Foundry's serialization - in the desired order
                 vm.serializeAddress(contractObjKey, "address", newDeployments[i].addr);
+                vm.serializeUint(contractObjKey, "blockNumber", newDeployments[i].blockNumber);
                 vm.serializeString(contractObjKey, "abi", newDeployments[i].abi);
+                vm.serializeString(contractObjKey, "bytecode", newDeployments[i].bytecode);
 
                 string memory newContractJson;
                 if (bytes(newDeployments[i].metadata).length > 0) {
-                    vm.serializeString(contractObjKey, "bytecode", newDeployments[i].bytecode);
                     newContractJson = vm.serializeString(contractObjKey, "metadata", newDeployments[i].metadata);
                 } else {
-                    newContractJson = vm.serializeString(contractObjKey, "bytecode", newDeployments[i].bytecode);
+                    newContractJson = vm.serializeUint(contractObjKey, "blockNumber", newDeployments[i].blockNumber);
                 }
 
                 // Add this new contract to the merged contracts object
@@ -286,8 +292,6 @@ library DeploymentHelper {
             string memory deploymentObjKey = "finalDeployment";
             vm.serializeString(deploymentObjKey, "network", networkName);
             vm.serializeUint(deploymentObjKey, "chainId", chainId);
-            vm.serializeUint(deploymentObjKey, "timestamp", block.timestamp);
-            vm.serializeUint(deploymentObjKey, "blockNumber", block.number);
             vm.serializeAddress(deploymentObjKey, "deployer", msg.sender);
 
             return vm.serializeString(deploymentObjKey, "contracts", mergedContractsJson);
@@ -465,7 +469,8 @@ library DeploymentHelper {
             addr: addr,
             abi: getContractAbi(vm, name),
             bytecode: getDeployedBytecode(addr),
-            metadata: metadata
+            metadata: metadata,
+            blockNumber: block.number
         });
     }
 }

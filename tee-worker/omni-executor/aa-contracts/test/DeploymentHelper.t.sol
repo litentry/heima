@@ -29,7 +29,7 @@ contract DeploymentHelperTest is Test {
         // Clean up test files after each test
         try vm.removeDir(BASE_TEST_DIR, true) {} catch {}
     }
-    
+
     // Helper to get unique directory for each test
     function getTestDir(string memory testName) internal pure returns (string memory) {
         return string(abi.encodePacked(BASE_TEST_DIR, "/", testName));
@@ -41,13 +41,7 @@ contract DeploymentHelperTest is Test {
         DeploymentHelper.ContractDeployment[] memory deployments = new DeploymentHelper.ContractDeployment[](1);
         deployments[0] = createMockDeployment("EntryPoint", mockContract1);
 
-        DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            testDir,
-            NETWORK_NAME,
-            CHAIN_ID,
-            deployments
-        );
+        DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, deployments);
 
         // Verify file was created
         string memory filename = string(abi.encodePacked(testDir, "/local.json"));
@@ -60,6 +54,7 @@ contract DeploymentHelperTest is Test {
         assertTrue(contains(content, vm.toString(mockContract1)), "Should contain contract address");
         assertTrue(contains(content, NETWORK_NAME), "Should contain network name");
         assertTrue(contains(content, vm.toString(CHAIN_ID)), "Should contain chain ID");
+        assertTrue(contains(content, "blockNumber"), "Should contain blockNumber per contract");
     }
 
     function test_AppendToExistingFile() public {
@@ -68,20 +63,16 @@ contract DeploymentHelperTest is Test {
         DeploymentHelper.ContractDeployment[] memory initialDeployments = new DeploymentHelper.ContractDeployment[](1);
         initialDeployments[0] = createMockDeployment("EntryPoint", mockContract1);
 
-        DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            testDir,
-            NETWORK_NAME,
-            CHAIN_ID,
-            initialDeployments
-        );
+        DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, initialDeployments);
 
         string memory filename = string(abi.encodePacked(testDir, "/local.json"));
         string memory initialContent = vm.readFile(filename);
-        
+
         // Verify initial deployment
         assertTrue(contains(initialContent, "EntryPoint"), "Initial file should contain EntryPoint");
-        assertTrue(contains(initialContent, vm.toString(mockContract1)), "Initial file should contain EntryPoint address");
+        assertTrue(
+            contains(initialContent, vm.toString(mockContract1)), "Initial file should contain EntryPoint address"
+        );
 
         // Step 2: Append SimpleAccountFactory
         DeploymentHelper.ContractDeployment[] memory newDeployments = new DeploymentHelper.ContractDeployment[](1);
@@ -90,23 +81,19 @@ contract DeploymentHelperTest is Test {
         vm.warp(block.timestamp + 100);
         vm.roll(block.number + 10);
 
-        DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            testDir,
-            NETWORK_NAME,
-            CHAIN_ID,
-            newDeployments
-        );
+        DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, newDeployments);
 
         // Step 3: Verify both contracts are present
         string memory finalContent = vm.readFile(filename);
-        
+
         // Basic content verification
         assertTrue(contains(finalContent, "EntryPoint"), "Final file should contain EntryPoint");
         assertTrue(contains(finalContent, vm.toString(mockContract1)), "Final file should contain EntryPoint address");
         assertTrue(contains(finalContent, "SimpleAccountFactory"), "Final file should contain SimpleAccountFactory");
-        assertTrue(contains(finalContent, vm.toString(mockContract2)), "Final file should contain SimpleAccountFactory address");
-        
+        assertTrue(
+            contains(finalContent, vm.toString(mockContract2)), "Final file should contain SimpleAccountFactory address"
+        );
+
         // Verify the final content is longer than initial (indicating append, not replace)
         assertGt(bytes(finalContent).length, bytes(initialContent).length, "Final file should be larger than initial");
     }
@@ -118,11 +105,11 @@ contract DeploymentHelperTest is Test {
         // First deployment - EntryPoint
         DeploymentHelper.ContractDeployment[] memory deployment1 = new DeploymentHelper.ContractDeployment[](1);
         deployment1[0] = createMockDeployment("EntryPoint", mockContract1);
-        
+
         DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, deployment1);
         string memory content1 = vm.readFile(filename);
         uint256 content1Length = bytes(content1).length;
-        
+
         // Verify first deployment
         assertTrue(contains(content1, "EntryPoint"), "Should contain EntryPoint after first deployment");
         assertTrue(contains(content1, vm.toString(mockContract1)), "Should contain EntryPoint address");
@@ -130,34 +117,38 @@ contract DeploymentHelperTest is Test {
         // Second deployment (append) - SimpleAccountFactory
         DeploymentHelper.ContractDeployment[] memory deployment2 = new DeploymentHelper.ContractDeployment[](1);
         deployment2[0] = createMockDeployment("SimpleAccountFactory", mockContract2);
-        
+
         vm.warp(block.timestamp + 50);
         DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, deployment2);
-        
+
         string memory content2 = vm.readFile(filename);
         uint256 content2Length = bytes(content2).length;
-        
+
         // Verify both contracts exist and content grew
         assertTrue(contains(content2, "EntryPoint"), "Should contain EntryPoint after second deployment");
-        assertTrue(contains(content2, "SimpleAccountFactory"), "Should contain SimpleAccountFactory after second deployment");
+        assertTrue(
+            contains(content2, "SimpleAccountFactory"), "Should contain SimpleAccountFactory after second deployment"
+        );
         assertGt(content2Length, content1Length, "File should grow after second deployment");
 
-        // Third deployment (append) - ERC20Paymaster  
+        // Third deployment (append) - ERC20Paymaster
         DeploymentHelper.ContractDeployment[] memory deployment3 = new DeploymentHelper.ContractDeployment[](1);
         deployment3[0] = createMockDeployment("ERC20Paymaster", mockContract3);
-        
+
         vm.warp(block.timestamp + 50);
         DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, deployment3);
-        
+
         string memory finalContent = vm.readFile(filename);
         uint256 finalContentLength = bytes(finalContent).length;
-        
+
         // Verify all three contracts exist and content grew again
         assertTrue(contains(finalContent, "EntryPoint"), "Should contain EntryPoint in final");
         assertTrue(contains(finalContent, "SimpleAccountFactory"), "Should contain SimpleAccountFactory in final");
         assertTrue(contains(finalContent, "ERC20Paymaster"), "Should contain ERC20Paymaster in final");
         assertTrue(contains(finalContent, vm.toString(mockContract1)), "Should contain EntryPoint address in final");
-        assertTrue(contains(finalContent, vm.toString(mockContract2)), "Should contain SimpleAccountFactory address in final");
+        assertTrue(
+            contains(finalContent, vm.toString(mockContract2)), "Should contain SimpleAccountFactory address in final"
+        );
         assertTrue(contains(finalContent, vm.toString(mockContract3)), "Should contain ERC20Paymaster address in final");
         assertGt(finalContentLength, content2Length, "File should grow after third deployment");
     }
@@ -165,18 +156,11 @@ contract DeploymentHelperTest is Test {
     function test_AppendWithEnvironment() public {
         string memory testDir = getTestDir("environment");
         string memory environment = "staging";
-        
+
         DeploymentHelper.ContractDeployment[] memory deployments = new DeploymentHelper.ContractDeployment[](1);
         deployments[0] = createMockDeployment("EntryPoint", mockContract1);
 
-        DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            testDir,
-            environment,
-            NETWORK_NAME,
-            CHAIN_ID,
-            deployments
-        );
+        DeploymentHelper.saveDeploymentArtifacts(vm, testDir, environment, NETWORK_NAME, CHAIN_ID, deployments);
 
         // Verify file was created in environment subdirectory
         string memory filename = string(abi.encodePacked(testDir, "/", environment, "/local.json"));
@@ -197,20 +181,15 @@ contract DeploymentHelperTest is Test {
             addr: mockContract1,
             abi: "[]",
             bytecode: DeploymentHelper.getDeployedBytecode(mockContract1),
-            metadata: '{"compiler": "solc", "version": "0.8.28"}'
+            metadata: '{"compiler": "solc", "version": "0.8.28"}',
+            blockNumber: block.number
         });
 
-        DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            testDir,
-            NETWORK_NAME,
-            CHAIN_ID,
-            deployments
-        );
+        DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, deployments);
 
         string memory filename = string(abi.encodePacked(testDir, "/local.json"));
         string memory content = vm.readFile(filename);
-        
+
         // Basic verification - check that metadata-related content is present
         assertTrue(contains(content, "EntryPoint"), "Should contain contract name");
         assertTrue(contains(content, vm.toString(mockContract1)), "Should contain contract address");
@@ -225,18 +204,12 @@ contract DeploymentHelperTest is Test {
         string memory filename = string(abi.encodePacked(testDir, "/local.json"));
         try vm.createDir(testDir, true) {} catch {} // Allow creation to fail if directory exists
         vm.writeFile(filename, "{ invalid json structure without proper closing");
-        
+
         DeploymentHelper.ContractDeployment[] memory newDeployments = new DeploymentHelper.ContractDeployment[](1);
         newDeployments[0] = createMockDeployment("TestContract", mockContract1);
 
         // This should not revert but fall back to creating new JSON
-        DeploymentHelper.saveDeploymentArtifacts(
-            vm,
-            testDir,
-            NETWORK_NAME,
-            CHAIN_ID,
-            newDeployments
-        );
+        DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, newDeployments);
 
         string memory content = vm.readFile(filename);
         assertTrue(contains(content, "TestContract"), "Should contain new contract after fallback");
@@ -250,7 +223,7 @@ contract DeploymentHelperTest is Test {
         assertEq(DeploymentHelper.getNetworkFilename(137), "polygon", "Polygon should return polygon");
         assertEq(DeploymentHelper.getNetworkFilename(42161), "arbitrum", "Arbitrum should return arbitrum");
         assertEq(DeploymentHelper.getNetworkFilename(31337), "local", "Local should return local");
-        
+
         // Test unknown chain ID
         uint256 unknownChainId = 999999;
         string memory expected = "chain-999999";
@@ -258,51 +231,51 @@ contract DeploymentHelperTest is Test {
         assertEq(result, expected, "Unknown chain should return chain-{id}");
     }
 
-
     function test_AppendBehaviorBasic() public {
         string memory testDir = getTestDir("basic");
         // Simple test to verify append behavior works at all
-        
+
         // First deployment
         DeploymentHelper.ContractDeployment[] memory deployment1 = new DeploymentHelper.ContractDeployment[](1);
         deployment1[0] = createMockDeployment("EntryPoint", mockContract1);
-        
+
         DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, deployment1);
 
         // Verify first file exists
         string memory filename = string(abi.encodePacked(testDir, "/local.json"));
         assertTrue(vm.exists(filename), "First deployment file should exist");
-        
+
         // Second deployment (should attempt to append)
         DeploymentHelper.ContractDeployment[] memory deployment2 = new DeploymentHelper.ContractDeployment[](1);
         deployment2[0] = createMockDeployment("SimpleAccountFactory", mockContract2);
-        
+
         vm.warp(block.timestamp + 100);
         DeploymentHelper.saveDeploymentArtifacts(vm, testDir, NETWORK_NAME, CHAIN_ID, deployment2);
 
         // Verify file still exists and was updated
         assertTrue(vm.exists(filename), "Deployment file should still exist after append");
-        
+
         string memory finalContent = vm.readFile(filename);
         assertTrue(bytes(finalContent).length > 0, "Final file should not be empty");
-        
+
         // At minimum, the file should contain the second contract
         assertTrue(contains(finalContent, "SimpleAccountFactory"), "Should contain second contract name");
         assertTrue(contains(finalContent, vm.toString(mockContract2)), "Should contain second contract address");
     }
 
     // Helper function to create mock deployments
-    function createMockDeployment(string memory name, address addr) 
-        internal 
-        view 
-        returns (DeploymentHelper.ContractDeployment memory) 
+    function createMockDeployment(string memory name, address addr)
+        internal
+        view
+        returns (DeploymentHelper.ContractDeployment memory)
     {
         return DeploymentHelper.ContractDeployment({
             name: name,
             addr: addr,
             abi: "[]",
             bytecode: DeploymentHelper.getDeployedBytecode(addr),
-            metadata: ""
+            metadata: "",
+            blockNumber: block.number
         });
     }
 
@@ -310,11 +283,11 @@ contract DeploymentHelperTest is Test {
     function contains(string memory str, string memory substr) internal pure returns (bool) {
         bytes memory strBytes = bytes(str);
         bytes memory substrBytes = bytes(substr);
-        
+
         if (substrBytes.length > strBytes.length) {
             return false;
         }
-        
+
         for (uint256 i = 0; i <= strBytes.length - substrBytes.length; i++) {
             bool found = true;
             for (uint256 j = 0; j < substrBytes.length; j++) {
