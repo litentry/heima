@@ -176,9 +176,13 @@ contract Deploy is Script {
         } else if (chainId == 11155111) {
             return NetworkConfig("Ethereum Sepolia", 11155111, 0.01 ether);
         } else if (chainId == 56) {
-            return NetworkConfig("BSC Mainnet", 56, 0.1 ether);
+            return NetworkConfig("BSC Mainnet", 56, 0.01 ether);
         } else if (chainId == 97) {
             return NetworkConfig("BSC Testnet", 97, 0.05 ether);
+        } else if (chainId == 8453) {
+            return NetworkConfig("Base", 8453, 0.01 ether);
+        } else if (chainId == 84532) {
+            return NetworkConfig("Base Sepolia", 84532, 0.05 ether);
         } else if (chainId == 137) {
             return NetworkConfig("Polygon Mainnet", 137, 1 ether);
         } else if (chainId == 80001) {
