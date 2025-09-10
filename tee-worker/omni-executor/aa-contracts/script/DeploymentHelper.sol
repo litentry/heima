@@ -63,20 +63,29 @@ library DeploymentHelper {
         ContractDeployment[] memory deployments
     ) internal {
         // Ensure the deployments directory exists
-        try vm.createDir(deploymentDir, false) {} catch {}
+        try vm.createDir(deploymentDir, true) {} catch {}
 
         // Create environment subdirectory if specified
         string memory targetDir = deploymentDir;
         if (bytes(environment).length > 0) {
             targetDir = string(abi.encodePacked(deploymentDir, "/", environment));
-            try vm.createDir(targetDir, false) {} catch {}
+            try vm.createDir(targetDir, true) {} catch {}
         }
 
         // Create filename based on network
         string memory filename = string(abi.encodePacked(targetDir, "/", getNetworkFilename(chainId), ".json"));
 
-        // Build JSON structure
-        string memory json = buildDeploymentJson(vm, networkName, chainId, deployments);
+        // Check if file already exists and merge if needed
+        string memory json;
+        try vm.readFile(filename) returns (string memory existingContent) {
+            // File exists, merge the new contracts with existing ones
+            json = mergeDeploymentJson(vm, existingContent, networkName, chainId, deployments);
+            console.log("Merging new contracts with existing deployment file:", filename);
+        } catch {
+            // File doesn't exist, create new JSON
+            json = buildDeploymentJson(vm, networkName, chainId, deployments);
+            console.log("Creating new deployment file:", filename);
+        }
 
         // Write to deployment file
         try vm.writeFile(filename, json) {
@@ -161,6 +170,160 @@ library DeploymentHelper {
                 "}"
             )
         );
+    }
+
+    /**
+     * @notice Merges new deployment contracts with existing deployment JSON
+     * Uses Foundry's JSON capabilities for parsing and a cleaner approach
+     * @param vm The Foundry VM instance
+     * @param existingJson The existing JSON content from the file
+     * @param networkName The name of the network
+     * @param chainId The chain ID of the network
+     * @param newDeployments Array of new contract deployments to add
+     * @return The merged JSON string
+     */
+    function mergeDeploymentJson(
+        Vm vm,
+        string memory existingJson,
+        string memory networkName,
+        uint256 chainId,
+        ContractDeployment[] memory newDeployments
+    ) internal returns (string memory) {
+        try vm.parseJson(existingJson, ".contracts") returns (bytes memory) {
+            // Successfully parsed existing contracts section - now rebuild with proper JSON
+
+            // Create a new merged contracts object
+            string memory mergedContractsObjKey = "mergedContracts";
+            string memory mergedContractsJson = "";
+
+            // Parse existing contract names that might exist and add them to merged object
+            string[] memory commonContractNames = getCommonContractNames();
+
+            // Try to extract each existing contract and add to merged object if it exists
+            for (uint256 i = 0; i < commonContractNames.length; i++) {
+                string memory contractName = commonContractNames[i];
+                string memory contractPath = string(abi.encodePacked(".contracts.", contractName));
+
+                try vm.parseJsonAddress(existingJson, string(abi.encodePacked(contractPath, ".address"))) returns (
+                    address contractAddr
+                ) {
+                    // This contract exists! Extract all its properties
+                    string memory existingContractObjKey = string(abi.encodePacked("existing_", contractName));
+
+                    // Get the contract properties
+                    vm.serializeAddress(existingContractObjKey, "address", contractAddr);
+
+                    // Get ABI - handle both array format and string format
+                    try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".abi"))) returns (
+                        string memory abiStr
+                    ) {
+                        vm.serializeString(existingContractObjKey, "abi", abiStr);
+                    } catch {
+                        vm.serializeString(existingContractObjKey, "abi", "[]");
+                    }
+
+                    // Get bytecode
+                    try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".bytecode"))) returns (
+                        string memory bytecode
+                    ) {
+                        vm.serializeString(existingContractObjKey, "bytecode", bytecode);
+                    } catch {
+                        vm.serializeString(existingContractObjKey, "bytecode", "0x");
+                    }
+
+                    // Complete the contract JSON (metadata is optional and often not present)
+                    string memory existingContractJson;
+
+                    // Try to get bytecode first for the final serialization
+                    string memory finalBytecode;
+                    try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".bytecode"))) returns (
+                        string memory bc
+                    ) {
+                        finalBytecode = bc;
+                    } catch {
+                        finalBytecode = "0x";
+                    }
+
+                    // Try to add metadata if it exists, otherwise just finalize with bytecode
+                    try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".metadata"))) returns (
+                        string memory metadata
+                    ) {
+                        existingContractJson = vm.serializeString(existingContractObjKey, "metadata", metadata);
+                    } catch {
+                        // No metadata field exists, just finalize with bytecode
+                        existingContractJson = vm.serializeString(existingContractObjKey, "bytecode", finalBytecode);
+                    }
+
+                    // Add this existing contract to the merged contracts object
+                    mergedContractsJson = vm.serializeString(mergedContractsObjKey, contractName, existingContractJson);
+                } catch {
+                    // Contract doesn't exist, skip it
+                    continue;
+                }
+            }
+
+            // Add new contracts to the merged object
+            for (uint256 i = 0; i < newDeployments.length; i++) {
+                string memory contractObjKey = string(abi.encodePacked("newContract_", vm.toString(i)));
+
+                // Build the new contract JSON using Foundry's serialization
+                vm.serializeAddress(contractObjKey, "address", newDeployments[i].addr);
+                vm.serializeString(contractObjKey, "abi", newDeployments[i].abi);
+
+                string memory newContractJson;
+                if (bytes(newDeployments[i].metadata).length > 0) {
+                    vm.serializeString(contractObjKey, "bytecode", newDeployments[i].bytecode);
+                    newContractJson = vm.serializeString(contractObjKey, "metadata", newDeployments[i].metadata);
+                } else {
+                    newContractJson = vm.serializeString(contractObjKey, "bytecode", newDeployments[i].bytecode);
+                }
+
+                // Add this new contract to the merged contracts object
+                mergedContractsJson = vm.serializeString(mergedContractsObjKey, newDeployments[i].name, newContractJson);
+            }
+
+            // Build the complete deployment JSON with updated metadata
+            string memory deploymentObjKey = "finalDeployment";
+            vm.serializeString(deploymentObjKey, "network", networkName);
+            vm.serializeUint(deploymentObjKey, "chainId", chainId);
+            vm.serializeUint(deploymentObjKey, "timestamp", block.timestamp);
+            vm.serializeUint(deploymentObjKey, "blockNumber", block.number);
+            vm.serializeAddress(deploymentObjKey, "deployer", msg.sender);
+
+            return vm.serializeString(deploymentObjKey, "contracts", mergedContractsJson);
+        } catch {
+            console.log("JSON parsing failed, creating new deployment file");
+            return buildDeploymentJson(vm, networkName, chainId, newDeployments);
+        }
+    }
+
+    /**
+     * @notice Returns common contract names to check for when merging
+     * @return Array of common contract names
+     */
+    function getCommonContractNames() internal pure returns (string[] memory) {
+        string[] memory names = new string[](20);
+        names[0] = "EntryPoint";
+        names[1] = "SimpleAccount";
+        names[2] = "SimpleAccountFactory";
+        names[3] = "SimplePaymaster";
+        names[4] = "ERC20Paymaster";
+        names[5] = "ERC20PaymasterV1";
+        names[6] = "TokenPaymaster";
+        names[7] = "VerifyingPaymaster";
+        names[8] = "StakeManager";
+        names[9] = "OmniAccount";
+        names[10] = "OmniAccountFactory";
+        names[11] = "Multicall";
+        names[12] = "Create2Factory";
+        names[13] = "ProxyFactory";
+        names[14] = "UpgradeableBeacon";
+        names[15] = "Implementation";
+        names[16] = "Proxy";
+        names[17] = "Registry";
+        names[18] = "Forwarder";
+        names[19] = "Aggregator";
+        return names;
     }
 
     /**
