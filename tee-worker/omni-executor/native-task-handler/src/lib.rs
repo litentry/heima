@@ -204,6 +204,12 @@ fn get_supported_tokens() -> std::collections::HashMap<(u64, &'static str), Toke
 		TokenInfo { decimals: 6, binance_pair: "ETHUSDT" },
 	);
 
+	// Arbitrum Sepolia (chain_id 421614)
+	tokens.insert(
+		(421614, "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d"), // USDC
+		TokenInfo { decimals: 6, binance_pair: "ETHUSDC" },
+	);
+
 	// BNB Smart Chain (chain_id 56)
 	tokens.insert(
 		(56, "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"), // USDC
