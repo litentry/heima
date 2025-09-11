@@ -205,7 +205,7 @@ jobs:
           cargo fmt -- --check
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20.x'
 
@@ -570,6 +570,13 @@ jobs:
           build-args: |
             CARGO_FEATURES=mock-server
 
+      - name: Dockerhub login
+        if: needs.set-condition.outputs.rebuild_omni_executor == 'false'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
       - name: Pull omni-executor image optionally
         if: needs.set-condition.outputs.rebuild_omni_executor == 'false'
         run: |
@@ -662,7 +669,7 @@ jobs:
           docker load < heima.tar.gz
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20.x'
 
@@ -794,7 +801,7 @@ jobs:
           docker images
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20.x'
 
@@ -892,7 +899,7 @@ jobs:
           docker images
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20.x'
 
