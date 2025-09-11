@@ -66,6 +66,7 @@ extract_abi "EntryPointV1" "EntryPoint"
 extract_abi "EntryPointV1" "IEntryPoint"  # Also save as IEntryPoint for compatibility
 extract_abi "OmniAccountFactoryV1" "OmniAccountFactory"
 extract_abi "SimplePaymaster" "SimplePaymaster"
+extract_abi "ERC20PaymasterV1" "ERC20PaymasterV1"  # Extract ERC20 paymaster if deployed
 
 # Extract TestToken as StandardERC20
 extract_abi "TestToken" "StandardERC20"
