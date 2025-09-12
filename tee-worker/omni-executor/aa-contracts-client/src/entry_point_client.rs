@@ -513,22 +513,34 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					RpcProviderError::ExecutionReverted { reason, data } => {
 						match data {
 							Some(data) => {
-								// Decode FailedOp from revert data
-								let failed_op: FailedOp =
-									FailedOp::abi_decode(&data).map_err(|e| {
-										let error_msg = format!(
-											"Could not decode FailedOp from revert data: {:?}",
-											e
-										);
-										error!("{}", error_msg);
-										error_msg
-									})?;
-								let error_msg = format!(
-									"Simulation failed, opIndex: {}, reason: {}",
-									failed_op.opIndex, failed_op.reason
-								);
-								error!("{}", error_msg);
-								Err(error_msg)
+								// Try to decode as FailedOpWithRevert first (more specific error)
+								if let Ok(failed_op_with_revert) =
+									FailedOpWithRevert::abi_decode(&data)
+								{
+									let error_msg = format!(
+										"Simulation failed with revert, opIndex: {}, reason: {}, inner: 0x{}",
+										failed_op_with_revert.opIndex,
+										failed_op_with_revert.reason,
+										hex::encode(&failed_op_with_revert.inner)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else if let Ok(failed_op) = FailedOp::abi_decode(&data) {
+									// Fall back to regular FailedOp
+									let error_msg = format!(
+										"Simulation failed, opIndex: {}, reason: {}",
+										failed_op.opIndex, failed_op.reason
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else {
+									let error_msg = format!(
+										"Could not decode simulation error from revert data: 0x{}",
+										hex::encode(&data)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								}
 							},
 							None => {
 								let error_msg = format!("Simulation failed, reason: {:?}", reason);
