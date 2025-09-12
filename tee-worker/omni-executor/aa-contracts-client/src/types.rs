@@ -135,6 +135,8 @@ sol! {
 	}
 
 	error FailedOp(uint256 opIndex, string reason);
+	error FailedOpWithRevert(uint256 opIndex, string reason, bytes inner);
+
 
 	// simulation functions
 	function simulateValidation(PackedUserOperation calldata userOp) external returns (ValidationResult memory);
