@@ -38,6 +38,7 @@ if [ -n "$ETHERSCAN_API_KEY" ]; then
       --broadcast \
       --verify \
       --etherscan-api-key $ETHERSCAN_API_KEY \
+      --confirmations 5 \
       -vvv
 else
     echo "🚀 Running deployment without verification (no ETHERSCAN_API_KEY set)..."
@@ -45,6 +46,7 @@ else
       --rpc-url $RPC_URL \
       --private-key $PRIVATE_KEY \
       --broadcast \
+      --confirmations 5 \
       -vvv
 fi
 
