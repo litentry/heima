@@ -402,7 +402,18 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 		// Build call to simulateValidation
 		let call_data = simulateValidationCall { userOp: user_op }.abi_encode();
-		let tx = build_call_transaction(self.entry_point_address, call_data);
+		// Ensure eth_call originates from our bundler wallet so paymasters
+		// that check tx.origin treat it as an authorized bundler during simulation.
+		let mut tx = build_call_transaction(self.entry_point_address, call_data);
+		match self.rpc_client.get_wallet_address().await {
+			Ok(from_addr) => {
+				tx.from = Some(from_addr);
+				tracing::info!("[EntryPointClient] simulate_validation from={}", from_addr);
+			},
+			Err(_) => {
+				tracing::warn!("[EntryPointClient] simulate_validation could not determine bundler wallet address; proceeding without explicit from");
+			},
+		}
 
 		// Make the call with state override
 		// EntryPointSimulations.simulateValidation() returns ValidationResult on success
@@ -494,7 +505,17 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		// Build call to simulateHandleOps
 		let ops = user_ops.to_vec();
 		let call_data = simulateHandleOpsCall { ops, beneficiary }.abi_encode();
-		let tx = build_call_transaction(self.entry_point_address, call_data);
+		// Important for paymasters that gate on tx.origin: set from to bundler wallet
+		let mut tx = build_call_transaction(self.entry_point_address, call_data);
+		match self.rpc_client.get_wallet_address().await {
+			Ok(from_addr) => {
+				tx.from = Some(from_addr);
+				tracing::info!("[EntryPointClient] simulate_handle_ops from={}", from_addr);
+			},
+			Err(_) => {
+				tracing::warn!("[EntryPointClient] simulate_handle_ops could not determine bundler wallet address; proceeding without explicit from");
+			},
+		}
 
 		// Make the call with state override
 		// EntryPointSimulations.simulateHandleOps() returns ExecutionResult[] on success
