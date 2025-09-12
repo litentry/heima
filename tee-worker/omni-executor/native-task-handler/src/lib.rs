@@ -74,6 +74,8 @@ const WHITELISTED_PAYMASTER_ADDRESSES: &[&str] = &[
 	// SimplePaymaster
 	"0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912", // staging-v1
 	"0xD4dCB31763CBA7295bA4023E9411CB6db607DE07", // prod-v1
+	// ERC20PaymasterV1
+	"0xA8535e013236E04FAD5dc03eCc4c05A464c01f38", // staging
 ];
 
 // Decode ERC20 paymaster data from paymasterAndData
