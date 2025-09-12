@@ -186,11 +186,10 @@ library DeploymentHelper {
         ContractDeployment[] memory newDeployments
     ) internal view returns (string memory) {
         try vm.parseJson(existingJson, ".contracts") returns (bytes memory) {
-            // Successfully parsed - extract existing contracts and append new ones
-
-            // Extract existing contract names - try all known contract names and see which exist
+            // Successfully parsed - extract existing contracts in deployment order
             ContractDeployment[] memory existingDeployments = new ContractDeployment[](0);
 
+            // Use the correct deployment order: EntryPoint -> Factory -> SimplePaymaster -> ERC20Paymaster
             string[] memory allKnownNames = getCommonContractNames();
             for (uint256 i = 0; i < allKnownNames.length; i++) {
                 string memory contractName = allKnownNames[i];
@@ -275,31 +274,23 @@ library DeploymentHelper {
     }
 
     /**
-     * @notice Returns common contract names to check for when merging
-     * @return Array of common contract names
+     * @notice Returns contract names in correct deployment order: EntryPoint -> Factory -> SimplePaymaster -> ERC20Paymaster
+     * @return Array of contract names in deployment order
      */
     function getCommonContractNames() internal pure returns (string[] memory) {
-        string[] memory names = new string[](20);
-        names[0] = "EntryPoint";
-        names[1] = "SimpleAccount";
-        names[2] = "SimpleAccountFactory";
-        names[3] = "SimplePaymaster";
-        names[4] = "ERC20Paymaster";
-        names[5] = "ERC20PaymasterV1";
-        names[6] = "TokenPaymaster";
-        names[7] = "VerifyingPaymaster";
-        names[8] = "StakeManager";
-        names[9] = "OmniAccount";
-        names[10] = "OmniAccountFactory";
-        names[11] = "Multicall";
-        names[12] = "Create2Factory";
-        names[13] = "ProxyFactory";
-        names[14] = "UpgradeableBeacon";
-        names[15] = "Implementation";
-        names[16] = "Proxy";
-        names[17] = "Registry";
-        names[18] = "Forwarder";
-        names[19] = "Aggregator";
+        string[] memory names = new string[](10);
+        // Deployment order for production
+        names[0] = "EntryPointV1";
+        names[1] = "OmniAccountFactoryV1";
+        names[2] = "SimplePaymaster";
+        names[3] = "ERC20PaymasterV1";
+        // Legacy names for backward compatibility and tests - TODO: adjust it
+        names[4] = "EntryPoint";
+        names[5] = "SimpleAccount";
+        names[6] = "SimpleAccountFactory";
+        names[7] = "ERC20Paymaster";
+        names[8] = "TokenPaymaster";
+        names[9] = "VerifyingPaymaster";
         return names;
     }
 
