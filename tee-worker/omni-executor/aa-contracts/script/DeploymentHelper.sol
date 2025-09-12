@@ -17,13 +17,12 @@ library DeploymentHelper {
         string abi;
         string bytecode;
         string metadata;
+        uint256 blockNumber;
     }
 
     struct DeploymentArtifact {
         string network;
         uint256 chainId;
-        uint256 timestamp;
-        uint256 blockNumber;
         address deployer;
         ContractDeployment[] contracts;
     }
@@ -63,20 +62,29 @@ library DeploymentHelper {
         ContractDeployment[] memory deployments
     ) internal {
         // Ensure the deployments directory exists
-        try vm.createDir(deploymentDir, false) {} catch {}
+        try vm.createDir(deploymentDir, true) {} catch {}
 
         // Create environment subdirectory if specified
         string memory targetDir = deploymentDir;
         if (bytes(environment).length > 0) {
             targetDir = string(abi.encodePacked(deploymentDir, "/", environment));
-            try vm.createDir(targetDir, false) {} catch {}
+            try vm.createDir(targetDir, true) {} catch {}
         }
 
         // Create filename based on network
         string memory filename = string(abi.encodePacked(targetDir, "/", getNetworkFilename(chainId), ".json"));
 
-        // Build JSON structure
-        string memory json = buildDeploymentJson(vm, networkName, chainId, deployments);
+        // Check if file already exists and merge if needed
+        string memory json;
+        try vm.readFile(filename) returns (string memory existingContent) {
+            // File exists, try to merge the new contracts with existing ones
+            json = mergeDeploymentJson(vm, existingContent, networkName, chainId, deployments);
+            console.log("Appending new contracts to existing deployment file:", filename);
+        } catch {
+            // File doesn't exist, create new JSON
+            json = buildDeploymentJson(vm, networkName, chainId, deployments);
+            console.log("Creating new deployment file:", filename);
+        }
 
         // Write to deployment file
         try vm.writeFile(filename, json) {
@@ -119,6 +127,9 @@ library DeploymentHelper {
                     '      "address": "',
                     vm.toString(deployments[i].addr),
                     '",\n',
+                    '      "blockNumber": ',
+                    vm.toString(deployments[i].blockNumber),
+                    ",\n",
                     '      "abi": ',
                     deployments[i].abi,
                     ",\n",
@@ -146,12 +157,6 @@ library DeploymentHelper {
                 '  "chainId": ',
                 vm.toString(chainId),
                 ",\n",
-                '  "timestamp": ',
-                vm.toString(block.timestamp),
-                ",\n",
-                '  "blockNumber": ',
-                vm.toString(block.number),
-                ",\n",
                 '  "deployer": "',
                 vm.toString(msg.sender),
                 '",\n',
@@ -164,10 +169,145 @@ library DeploymentHelper {
     }
 
     /**
+     * @notice Merges new deployment contracts with existing deployment JSON
+     * Uses VM methods for JSON parsing but preserves existing contract order and appends new contracts
+     * @param vm The Foundry VM instance
+     * @param existingJson The existing JSON content from the file
+     * @param networkName The name of the network
+     * @param chainId The chain ID of the network
+     * @param newDeployments Array of new contract deployments to add
+     * @return The merged JSON string
+     */
+    function mergeDeploymentJson(
+        Vm vm,
+        string memory existingJson,
+        string memory networkName,
+        uint256 chainId,
+        ContractDeployment[] memory newDeployments
+    ) internal view returns (string memory) {
+        try vm.parseJson(existingJson, ".contracts") returns (bytes memory) {
+            // Successfully parsed - extract existing contracts and append new ones
+
+            // Extract existing contract names - try all known contract names and see which exist
+            ContractDeployment[] memory existingDeployments = new ContractDeployment[](0);
+
+            string[] memory allKnownNames = getCommonContractNames();
+            for (uint256 i = 0; i < allKnownNames.length; i++) {
+                string memory contractName = allKnownNames[i];
+                string memory contractPath = string(abi.encodePacked(".contracts.", contractName));
+
+                try vm.parseJsonAddress(existingJson, string(abi.encodePacked(contractPath, ".address"))) returns (
+                    address contractAddr
+                ) {
+                    // This contract exists! Extract its properties
+                    uint256 blockNum;
+                    try vm.parseJsonUint(existingJson, string(abi.encodePacked(contractPath, ".blockNumber"))) returns (
+                        uint256 bn
+                    ) {
+                        blockNum = bn;
+                    } catch {
+                        blockNum = block.number; // fallback
+                    }
+
+                    string memory abiString;
+                    try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".abi"))) returns (
+                        string memory abiStr
+                    ) {
+                        abiString = abiStr;
+                    } catch {
+                        abiString = "[]"; // fallback
+                    }
+
+                    string memory bytecode;
+                    try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".bytecode"))) returns (
+                        string memory bc
+                    ) {
+                        bytecode = bc;
+                    } catch {
+                        bytecode = "0x"; // fallback
+                    }
+
+                    string memory metadata;
+                    try vm.parseJsonString(existingJson, string(abi.encodePacked(contractPath, ".metadata"))) returns (
+                        string memory md
+                    ) {
+                        metadata = md;
+                    } catch {
+                        metadata = ""; // no metadata
+                    }
+
+                    // Add to existing deployments array
+                    ContractDeployment[] memory newExisting = new ContractDeployment[](existingDeployments.length + 1);
+                    for (uint256 j = 0; j < existingDeployments.length; j++) {
+                        newExisting[j] = existingDeployments[j];
+                    }
+                    newExisting[existingDeployments.length] = ContractDeployment({
+                        name: contractName,
+                        addr: contractAddr,
+                        abi: abiString,
+                        bytecode: bytecode,
+                        metadata: metadata,
+                        blockNumber: blockNum
+                    });
+                    existingDeployments = newExisting;
+                } catch {
+                    // Contract doesn't exist, skip it
+                    continue;
+                }
+            }
+
+            // Now combine existing deployments with new deployments
+            ContractDeployment[] memory allDeployments =
+                new ContractDeployment[](existingDeployments.length + newDeployments.length);
+            for (uint256 i = 0; i < existingDeployments.length; i++) {
+                allDeployments[i] = existingDeployments[i];
+            }
+            for (uint256 i = 0; i < newDeployments.length; i++) {
+                allDeployments[existingDeployments.length + i] = newDeployments[i];
+            }
+
+            // Build final JSON with all contracts (existing first, new last)
+            return buildDeploymentJson(vm, networkName, chainId, allDeployments);
+        } catch {
+            console.log("JSON parsing failed, creating new deployment file");
+            return buildDeploymentJson(vm, networkName, chainId, newDeployments);
+        }
+    }
+
+    /**
+     * @notice Returns common contract names to check for when merging
+     * @return Array of common contract names
+     */
+    function getCommonContractNames() internal pure returns (string[] memory) {
+        string[] memory names = new string[](20);
+        names[0] = "EntryPoint";
+        names[1] = "SimpleAccount";
+        names[2] = "SimpleAccountFactory";
+        names[3] = "SimplePaymaster";
+        names[4] = "ERC20Paymaster";
+        names[5] = "ERC20PaymasterV1";
+        names[6] = "TokenPaymaster";
+        names[7] = "VerifyingPaymaster";
+        names[8] = "StakeManager";
+        names[9] = "OmniAccount";
+        names[10] = "OmniAccountFactory";
+        names[11] = "Multicall";
+        names[12] = "Create2Factory";
+        names[13] = "ProxyFactory";
+        names[14] = "UpgradeableBeacon";
+        names[15] = "Implementation";
+        names[16] = "Proxy";
+        names[17] = "Registry";
+        names[18] = "Forwarder";
+        names[19] = "Aggregator";
+        return names;
+    }
+
+    /**
      * @notice Logs contract addresses to console as fallback
      * @param deployments Array of contract deployments
      */
-    function logContractAddresses(ContractDeployment[] memory deployments) internal view {
+    function logContractAddresses(ContractDeployment[] memory deployments) internal pure {
         console.log("Contract addresses (save manually if needed):");
         for (uint256 i = 0; i < deployments.length; i++) {
             console.log(string(abi.encodePacked(deployments[i].name, ": ")), deployments[i].addr);
@@ -243,11 +383,9 @@ library DeploymentHelper {
 
     /**
      * @notice Reads the ABI from Foundry artifacts
-     * @param vm The Foundry VM instance
-     * @param contractName The name of the contract
      * @return The ABI as a JSON string
      */
-    function getContractAbi(Vm vm, string memory contractName) internal view returns (string memory) {
+    function getContractAbi(Vm, /* vm */ string memory /* contractName */ ) internal pure returns (string memory) {
         // Due to Solidity limitations with JSON parsing, especially for arrays,
         // we'll return a placeholder. In production, use a post-deployment script
         // to enrich the deployment artifacts with ABIs from the Foundry artifacts.
@@ -285,24 +423,203 @@ library DeploymentHelper {
     }
 
     /**
-     * @notice Creates a ContractDeployment struct with all artifact data
+     * @notice Creates a ContractDeployment struct with accurate deployment block from broadcast file
+     * @dev This function attempts to read the actual deployment block from Foundry broadcast files.
+     *      If broadcast files are not available (e.g., local testing), it gracefully falls back to block.number.
      * @param vm The Foundry VM instance
      * @param name The contract name
      * @param addr The deployed contract address
      * @param metadata Optional metadata JSON string
-     * @return The ContractDeployment struct
+     * @return The ContractDeployment struct with accurate block number
      */
     function createContractDeployment(Vm vm, string memory name, address addr, string memory metadata)
         internal
         view
         returns (ContractDeployment memory)
     {
+        // Try to get actual deployment block from broadcast file
+        uint256 actualBlockNumber = getActualDeploymentBlockSafe(vm, addr);
+
         return ContractDeployment({
             name: name,
             addr: addr,
             abi: getContractAbi(vm, name),
             bytecode: getDeployedBytecode(addr),
-            metadata: metadata
+            metadata: metadata,
+            blockNumber: actualBlockNumber
         });
+    }
+
+    /**
+     * @notice Gets the actual deployment block number automatically detecting script and chain
+     * @dev This function tries common script names and uses current chain ID
+     * @param vm The Foundry VM instance
+     * @param contractAddress The deployed contract address
+     * @return The actual block number where the contract was deployed
+     */
+    function getActualDeploymentBlockSafe(Vm vm, address contractAddress) internal view returns (uint256) {
+        // Try common script names in order of likelihood
+        string[5] memory commonScripts =
+            ["Deploy.s.sol", "DeployLocal.s.sol", "DeployLocalWithPaymaster.s.sol", "script.s.sol", "Script.s.sol"];
+
+        uint256 currentChainId = block.chainid;
+
+        for (uint256 i = 0; i < commonScripts.length; i++) {
+            uint256 blockNum = getActualDeploymentBlock(vm, contractAddress, commonScripts[i], currentChainId);
+            if (blockNum != block.number) {
+                // Found actual deployment block (not fallback)
+                return blockNum;
+            }
+        }
+
+        // All attempts failed, use fallback
+        return block.number;
+    }
+
+    /**
+     * @notice Gets the actual deployment block number from broadcast file
+     * @param vm The Foundry VM instance
+     * @param contractAddress The deployed contract address
+     * @param scriptName The script name (e.g., "Deploy.s.sol")
+     * @param chainId The chain ID
+     * @return The actual block number where the contract was deployed
+     */
+    function getActualDeploymentBlock(Vm vm, address contractAddress, string memory scriptName, uint256 chainId)
+        public
+        view
+        returns (uint256)
+    {
+        try vm.projectRoot() returns (string memory root) {
+            string memory broadcastPath =
+                string(abi.encodePacked(root, "/broadcast/", scriptName, "/", vm.toString(chainId), "/run-latest.json"));
+
+            try vm.readFile(broadcastPath) returns (string memory json) {
+                return parseBlockNumberFromBroadcast(vm, json, contractAddress);
+            } catch {
+                console.log("Warning: Could not read broadcast file, using current block number");
+                return block.number;
+            }
+        } catch {
+            console.log("Warning: Could not get project root, using current block number");
+            return block.number;
+        }
+    }
+
+    /**
+     * @notice Parses the actual deployment block from broadcast JSON
+     * @param vm The Foundry VM instance
+     * @param broadcastJson The broadcast JSON content
+     * @param contractAddress The contract address to find
+     * @return The block number where the contract was deployed
+     */
+    function parseBlockNumberFromBroadcast(Vm vm, string memory broadcastJson, address contractAddress)
+        internal
+        view
+        returns (uint256)
+    {
+        // Try to find the deployment transaction for this contract address
+        string memory addressLower = toLowerCase(vm.toString(contractAddress));
+
+        // Parse receipts array length
+        try vm.parseJsonUint(broadcastJson, ".receipts") returns (uint256) {
+            // If .receipts is a uint, it means the structure is different, fall back
+            return block.number;
+        } catch {
+            // .receipts should be an array, try to get its length
+            try vm.parseJson(broadcastJson, ".receipts") returns (bytes memory /* receiptsData */ ) {
+                // Look for transactions that created contracts
+                // We'll check the first few receipts for contract creation (to field is null or empty)
+                for (uint256 i = 0; i < 20; i++) {
+                    // Check up to 20 transactions
+                    try vm.parseJsonString(
+                        broadcastJson, string(abi.encodePacked(".receipts[", vm.toString(i), "].to"))
+                    ) returns (string memory toAddr) {
+                        // If 'to' is null/empty, this is a contract creation transaction
+                        if (bytes(toAddr).length == 0 || keccak256(bytes(toAddr)) == keccak256(bytes("null"))) {
+                            try vm.parseJsonString(
+                                broadcastJson,
+                                string(abi.encodePacked(".receipts[", vm.toString(i), "].contractAddress"))
+                            ) returns (string memory contractAddr) {
+                                if (keccak256(bytes(toLowerCase(contractAddr))) == keccak256(bytes(addressLower))) {
+                                    // Found our contract! Get its block number
+                                    try vm.parseJsonString(
+                                        broadcastJson,
+                                        string(abi.encodePacked(".receipts[", vm.toString(i), "].blockNumber"))
+                                    ) returns (string memory blockHex) {
+                                        return hexStringToUint(blockHex);
+                                    } catch {
+                                        return block.number;
+                                    }
+                                }
+                            } catch {
+                                continue;
+                            }
+                        }
+                    } catch {
+                        // If receipt[i] doesn't exist, we've reached the end
+                        break;
+                    }
+                }
+                return block.number;
+            } catch {
+                return block.number;
+            }
+        }
+    }
+
+    /**
+     * @notice Converts a hex string to uint256
+     * @param hexStr The hex string (with or without 0x prefix)
+     * @return The uint256 value
+     */
+    function hexStringToUint(string memory hexStr) public pure returns (uint256) {
+        bytes memory hexBytes = bytes(hexStr);
+        uint256 startIndex = 0;
+
+        // Skip "0x" prefix if present
+        if (hexBytes.length >= 2 && hexBytes[0] == "0" && (hexBytes[1] == "x" || hexBytes[1] == "X")) {
+            startIndex = 2;
+        }
+
+        uint256 result = 0;
+        for (uint256 i = startIndex; i < hexBytes.length; i++) {
+            result = result * 16;
+            uint8 digit = uint8(hexBytes[i]);
+
+            if (digit >= 48 && digit <= 57) {
+                // 0-9
+                result += digit - 48;
+            } else if (digit >= 65 && digit <= 70) {
+                // A-F
+                result += digit - 55;
+            } else if (digit >= 97 && digit <= 102) {
+                // a-f
+                result += digit - 87;
+            }
+            // Invalid hex characters are ignored
+        }
+
+        return result;
+    }
+
+    /**
+     * @notice Converts a string to lowercase
+     * @param str The input string
+     * @return The lowercase string
+     */
+    function toLowerCase(string memory str) public pure returns (string memory) {
+        bytes memory strBytes = bytes(str);
+        bytes memory result = new bytes(strBytes.length);
+
+        for (uint256 i = 0; i < strBytes.length; i++) {
+            if (strBytes[i] >= 0x41 && strBytes[i] <= 0x5A) {
+                // Convert A-Z to a-z
+                result[i] = bytes1(uint8(strBytes[i]) + 32);
+            } else {
+                result[i] = strBytes[i];
+            }
+        }
+
+        return string(result);
     }
 }
