@@ -13,6 +13,7 @@ import {
     estimateUserOpGasFromWorker,
     buildErc20PaymasterData,
 } from "@/lib/aa-utils";
+import { checkERC20PaymasterReadiness } from "@/lib/erc20-paymaster-utils";
 
 interface TEETokenTransferProps {
     omniAccountAddress: string;
@@ -114,10 +115,9 @@ export function TEETokenTransfer({
         setTokenBalances(balances);
     };
 
-    // Fetch current nonce
+    // Fetch current nonce and update state (for UI); also provide a helper to return fresh nonce for building ops
     const fetchNonce = async () => {
         if (!omniAccountAddress || !publicClient) return;
-
         try {
             const currentNonce = (await publicClient.readContract({
                 address: CONTRACTS.EntryPoint.address,
@@ -129,6 +129,17 @@ export function TEETokenTransfer({
         } catch (error) {
             console.error("Error fetching nonce:", error);
         }
+    };
+
+    // Always read the latest nonce from EntryPoint; do not rely on React state when building UserOps
+    const getFreshNonce = async (): Promise<bigint> => {
+        const currentNonce = (await publicClient!.readContract({
+            address: CONTRACTS.EntryPoint.address,
+            abi: CONTRACTS.EntryPoint.abi,
+            functionName: "getNonce",
+            args: [omniAccountAddress as `0x${string}`, BigInt(0)],
+        })) as bigint;
+        return currentNonce;
     };
 
     // Fetch token allowances for ERC20 paymaster
@@ -202,6 +213,21 @@ export function TEETokenTransfer({
 
         // Check if using ERC20 paymaster and if approval is needed
         if (paymasterType === "erc20") {
+            // Pre-flight check for ERC20 paymaster
+            console.log("Checking ERC20 paymaster readiness...");
+            const readiness = await checkERC20PaymasterReadiness(
+                publicClient!,
+                omniAccountAddress as Address,
+                gasToken
+            );
+            
+            console.log("ERC20 Paymaster readiness:", readiness);
+            
+            if (!readiness.isReady) {
+                setError(`ERC20 Paymaster not ready: ${readiness.issues.join(", ")}`);
+                setIsSubmitting(false);
+                return;
+            }
             const gasTokenInfo = gasToken === "USDC" ? ERC20_TOKENS.USDC : ERC20_TOKENS.USDT;
             const currentAllowance = tokenAllowances[gasToken] || BigInt(0);
             
@@ -212,6 +238,8 @@ export function TEETokenTransfer({
                 setIsSubmitting(true);
                 try {
                     console.log(`Approving ${gasToken} for ERC20 paymaster...`);
+                    console.log(`Current allowance: ${currentAllowance.toString()}`);
+                    console.log(`Required amount: ${estimatedGasAmount.toString()}`);
                     // Build ERC20 paymaster data segment (rate=0 for worker to fill)
                     const nowSec = Math.floor(Date.now() / 1000);
                     const erc20PaymasterData = buildErc20PaymasterData(
@@ -223,12 +251,16 @@ export function TEETokenTransfer({
 
                     // Build approval UserOp with paymaster for gas estimation
                     const approvalAmount = parseUnits("1000", gasTokenInfo.decimals); // Approve 1000 tokens
+                    console.log(`Building approval UserOp for ${approvalAmount.toString()} tokens`);
+                    console.log(`Paymaster data:`, erc20PaymasterData);
+                    // Use a fresh nonce for approval operation
+                    const approvalNonce = await getFreshNonce();
                     const approvalUserOp = buildApprovalUserOp({
                         omniAccountAddress: omniAccountAddress as `0x${string}`,
                         tokenAddress: gasTokenInfo.address,
                         spender: CONTRACTS.ERC20PaymasterV1.address,
                         amount: approvalAmount,
-                        nonce,
+                        nonce: approvalNonce,
                         paymaster: {
                             address: CONTRACTS.ERC20PaymasterV1.address,
                             validationGasLimit: BigInt(100000),
@@ -262,7 +294,7 @@ export function TEETokenTransfer({
                         tokenAddress: gasTokenInfo.address,
                         spender: CONTRACTS.ERC20PaymasterV1.address,
                         amount: approvalAmount,
-                        nonce,
+                        nonce: approvalNonce,
                         gasParams: approvalGasParams,
                         paymaster: finalApprovalPaymaster,
                     });
@@ -295,7 +327,7 @@ export function TEETokenTransfer({
                         console.warn("Waiting for approval receipt failed or timed out:", waitErr);
                     }
 
-                    // Refresh nonce and allowances after approval mined
+                    // Refresh nonce and allowances after approval mined (for UI)
                     await fetchNonce();
                     await fetchTokenAllowances();
                 } catch (err: any) {
@@ -340,12 +372,15 @@ export function TEETokenTransfer({
             }
 
             // Build the initial UserOperation for transfer with minimal gas for estimation
+            // Fetch a fresh nonce right before building the next operation (after potential approval)
+            const opNonce = await getFreshNonce();
+
             const userOpForEstimation = selectedToken === "ETH" ?
                 buildNativeTransferUserOp({
                     omniAccountAddress: omniAccountAddress as `0x${string}`,
                     recipient: recipient as `0x${string}`,
                     amount: amountBigInt,
-                    nonce,
+                    nonce: opNonce,
                     forGasEstimation: true,  // Use dummy signature for gas estimation
                     paymaster,
                     gasParams: {
@@ -401,7 +436,7 @@ export function TEETokenTransfer({
                     omniAccountAddress: omniAccountAddress as `0x${string}`,
                     recipient: recipient as `0x${string}`,
                     amount: amountBigInt,
-                    nonce,
+                    nonce: opNonce,
                     paymaster: finalPaymaster,
                     gasParams,
                 }) :
@@ -410,7 +445,7 @@ export function TEETokenTransfer({
                     tokenAddress: selectedToken === "USDC" ? ERC20_TOKENS.USDC.address : ERC20_TOKENS.USDT.address,
                     recipient: recipient as `0x${string}`,
                     amount: amountBigInt,
-                    nonce,
+                    nonce: opNonce,
                     paymaster: finalPaymaster,
                     gasParams,
                 });

@@ -1038,7 +1038,40 @@ export async function estimateUserOpGasFromWorker(
 
     } catch (error) {
         console.error("[Gas Estimation] Worker gas estimation failed:", error);
-        // Re-throw error - no fallback for now as we're testing worker estimation
-        throw error;
+        console.warn("[Gas Estimation] Using fallback gas values for testing");
+        
+        // Fallback to reasonable default gas values
+        let maxFeePerGas: bigint;
+        let maxPriorityFeePerGas: bigint;
+
+        if (publicClient) {
+            try {
+                const feeData = await publicClient.estimateFeesPerGas();
+                maxFeePerGas = (feeData.maxFeePerGas || BigInt(20000000000)) * BigInt(120) / BigInt(100);
+                maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || BigInt(1000000000);
+            } catch {
+                // Fallback values if fee estimation fails
+                maxFeePerGas = BigInt(30000000000);
+                maxPriorityFeePerGas = BigInt(1500000000);
+            }
+        } else {
+            // Default values if no publicClient provided
+            maxFeePerGas = BigInt(30000000000);
+            maxPriorityFeePerGas = BigInt(1500000000);
+        }
+
+        // Return reasonable default gas parameters
+        const fallbackGasParams = {
+            callGasLimit: BigInt(300000),              // Sufficient for most token transfers
+            verificationGasLimit: BigInt(500000),      // Covers signature validation
+            preVerificationGas: BigInt(100000),        // Covers base transaction costs
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymasterVerificationGasLimit: BigInt(150000),  // For ERC20 paymaster validation
+            paymasterPostOpGasLimit: BigInt(100000),        // For ERC20 paymaster post-op
+        };
+
+        console.log("[Gas Estimation] Using fallback gas estimates:", fallbackGasParams);
+        return fallbackGasParams;
     }
 }
