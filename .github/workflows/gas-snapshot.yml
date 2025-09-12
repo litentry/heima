@@ -1,0 +1,81 @@
+name: Gas Snapshot
+
+on:
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - 'tee-worker/omni-executor/aa-contracts/**'
+  push:
+    branches:
+      - dev
+    paths:
+      - 'tee-worker/omni-executor/aa-contracts/**'
+
+jobs:
+  gas-snapshot:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Generate gas snapshot
+        working-directory: ./tee-worker/omni-executor/aa-contracts
+        run: |
+          forge snapshot --check
+
+      - name: Compare gas snapshots
+        working-directory: ./tee-worker/omni-executor/aa-contracts
+        if: github.event_name == 'pull_request'
+        run: |
+          # Get the base branch snapshot
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }} -- .gas-snapshot 2>/dev/null || echo "No existing snapshot found"
+          
+          # Generate current snapshot
+          forge snapshot --check --diff .gas-snapshot > gas-diff.txt || true
+          
+          if [ -s gas-diff.txt ]; then
+            echo "## ⛽ Gas Usage Changes" > gas-summary.md
+            echo "" >> gas-summary.md
+            echo "Gas usage has changed for the following functions:" >> gas-summary.md
+            echo "" >> gas-summary.md
+            echo '```diff' >> gas-summary.md
+            cat gas-diff.txt >> gas-summary.md
+            echo '```' >> gas-summary.md
+          else
+            echo "## ✅ No Gas Changes" > gas-summary.md
+            echo "Gas usage remains unchanged." >> gas-summary.md
+          fi
+
+      - name: Upload gas snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: gas-snapshot
+          path: |
+            ./tee-worker/omni-executor/aa-contracts/.gas-snapshot
+            ./tee-worker/omni-executor/aa-contracts/gas-summary.md
+            ./tee-worker/omni-executor/aa-contracts/gas-diff.txt
+          if-no-files-found: ignore
+
+      - name: Comment PR with gas changes
+        if: github.event_name == 'pull_request' && hashFiles('./tee-worker/omni-executor/aa-contracts/gas-summary.md') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './tee-worker/omni-executor/aa-contracts/gas-summary.md';
+            if (fs.existsSync(path)) {
+              const gasReport = fs.readFileSync(path, 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: gasReport
+              });
+            }

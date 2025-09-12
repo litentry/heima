@@ -633,6 +633,21 @@ jobs:
           forge b
           forge t
 
+      - name: Generate gas report
+        working-directory: ./tee-worker/omni-executor/aa-contracts
+        run: |
+          echo "## Gas Report for AA Contracts" > gas-report.md
+          echo '```' >> gas-report.md
+          forge test --gas-report >> gas-report.md
+          echo '```' >> gas-report.md
+
+      - name: Upload gas report
+        uses: actions/upload-artifact@v4
+        with:
+          name: aa-contracts-gas-report
+          path: ./tee-worker/omni-executor/aa-contracts/gas-report.md
+          if-no-files-found: error
+
       - name: Check bsc accounting contracts
         working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
         run: |
