@@ -1,11 +1,11 @@
 {
   "network": "Arbitrum Sepolia",
   "chainId": 421614,
-  "timestamp": 1752529355,
   "deployer": "0x6eCd109368A8dF927A3dDE6FD4c1648C346Caec7",
   "contracts": {
     "EntryPoint": {
       "address": "0xf1646af389deE47DC7d45E6616A1bCdc9F2b0140",
+      "blockNumber": 1,
       "abi": [
         {
           "type": "constructor",
@@ -1075,6 +1075,7 @@
     },
     "OmniAccountFactory": {
       "address": "0xca470c1990B1E3DBF24676D8ACDF4B5867CD410e",
+      "blockNumber": 1,
       "abi": [
         {
           "type": "constructor",
@@ -1198,6 +1199,7 @@
     },
     "SimplePaymaster": {
       "address": "0xB529AcA1D832be817Bd8B30c2f2a51490792fcff",
+      "blockNumber": 1,
       "abi": [
         {
           "type": "constructor",
