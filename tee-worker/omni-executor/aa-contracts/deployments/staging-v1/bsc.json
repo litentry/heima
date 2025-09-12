@@ -1,12 +1,11 @@
 {
   "network": "BSC Mainnet",
   "chainId": 56,
-  "timestamp": 1757404938,
-  "blockNumber": 60541852,
   "deployer": "0xD4E40A734b52f6c44e27A40e8d62E7d745A8C3F3",
   "contracts": {
     "EntryPointV1": {
       "address": "0xe6042188857a822DDfcFE5fd9E17118049Ab539a",
+      "blockNumber": 60541852,
       "abi": [
         {
           "type": "constructor",
@@ -1077,6 +1076,7 @@
     },
     "OmniAccountFactoryV1": {
       "address": "0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e",
+      "blockNumber": 60541852,
       "abi": [
         {
           "type": "constructor",
@@ -1201,6 +1201,7 @@
     },
     "SimplePaymaster": {
       "address": "0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912",
+      "blockNumber": 60541852,
       "abi": [
         {
           "type": "constructor",
