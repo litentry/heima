@@ -4,9 +4,10 @@ use opentelemetry_sdk::trace::{SdkTracer, SdkTracerProvider};
 use opentelemetry_sdk::Resource;
 
 pub fn init_trace(
+	host: &str,
 	port: u16,
 ) -> Result<SdkTracer, Box<dyn std::error::Error + Send + Sync + 'static>> {
-	let endpoint = format!("http://localhost:{}", port);
+	let endpoint = format!("http://{}:{}", host, port);
 	let exporter = SpanExporter::builder().with_tonic().with_endpoint(endpoint).build()?;
 
 	let resource = Resource::builder().with_service_name("executor-worker").build();

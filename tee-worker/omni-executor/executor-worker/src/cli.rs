@@ -55,6 +55,8 @@ pub struct RunArgs {
 	pub enable_jaeger: bool,
 	#[arg(long, default_value = "4317", value_name = "jaeger port")]
 	pub jaeger_port: u16,
+	#[arg(long, default_value = "localhost", value_name = "jaeger host")]
+	pub jaeger_host: String,
 	#[arg(long, value_name = "output traces to JSON file for later upload to Jaeger")]
 	pub json_trace_output: bool,
 	#[arg(long, default_value = "./traces.json", value_name = "JSON trace output file path")]

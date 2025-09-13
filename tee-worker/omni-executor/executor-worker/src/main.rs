@@ -92,7 +92,7 @@ async fn main() -> Result<(), ()> {
 
 			if args.enable_jaeger {
 				// Use Jaeger tracing with OpenTelemetry
-				let tracer = init_trace(args.jaeger_port).unwrap();
+				let tracer = init_trace(&args.jaeger_host, args.jaeger_port).unwrap();
 				let telemetry = tracing_opentelemetry::layer::<tracing_subscriber::Registry>()
 					.with_tracer(tracer);
 
