@@ -17,8 +17,8 @@
 use crate::error::{AaContractError, ContractError, RpcError};
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, FailedOp, OwnerType,
-	SenderAddressResult, ValidationResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, FailedOp, FailedOpWithRevert,
+	OwnerType, SenderAddressResult, ValidationResult,
 };
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
@@ -402,7 +402,18 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 		// Build call to simulateValidation
 		let call_data = simulateValidationCall { userOp: user_op }.abi_encode();
-		let tx = build_call_transaction(self.entry_point_address, call_data);
+		// Ensure eth_call originates from our bundler wallet so paymasters
+		// that check tx.origin treat it as an authorized bundler during simulation.
+		let mut tx = build_call_transaction(self.entry_point_address, call_data);
+		match self.rpc_client.get_wallet_address().await {
+			Ok(from_addr) => {
+				tx.from = Some(from_addr);
+				tracing::info!("[EntryPointClient] simulate_validation from={}", from_addr);
+			},
+			Err(_) => {
+				tracing::warn!("[EntryPointClient] simulate_validation could not determine bundler wallet address; proceeding without explicit from");
+			},
+		}
 
 		// Make the call with state override
 		// EntryPointSimulations.simulateValidation() returns ValidationResult on success
@@ -421,22 +432,34 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					RpcProviderError::ExecutionReverted { reason, data } => {
 						match data {
 							Some(data) => {
-								// Decode FailedOp from revert data
-								let failed_op: FailedOp =
-									FailedOp::abi_decode(&data).map_err(|e| {
-										let error_msg = format!(
-											"Could not decode FailedOp from revert data: {:?}",
-											e
-										);
-										error!("{}", error_msg);
-										error_msg
-									})?;
-								let error_msg = format!(
-									"Simulation failed, opIndex: {}, reason: {}",
-									failed_op.opIndex, failed_op.reason
-								);
-								error!("{}", error_msg);
-								Err(error_msg)
+								// Try to decode as FailedOpWithRevert first (more specific error)
+								if let Ok(failed_op_with_revert) =
+									FailedOpWithRevert::abi_decode(&data)
+								{
+									let error_msg = format!(
+										"Simulation failed with revert, opIndex: {}, reason: {}, inner: 0x{}",
+										failed_op_with_revert.opIndex,
+										failed_op_with_revert.reason,
+										hex::encode(&failed_op_with_revert.inner)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else if let Ok(failed_op) = FailedOp::abi_decode(&data) {
+									// Fall back to regular FailedOp
+									let error_msg = format!(
+										"Simulation failed, opIndex: {}, reason: {}",
+										failed_op.opIndex, failed_op.reason
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else {
+									let error_msg = format!(
+										"Could not decode simulation error from revert data: 0x{}",
+										hex::encode(&data)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								}
 							},
 							None => {
 								let error_msg = format!("Simulation failed, reason: {:?}", reason);
@@ -482,7 +505,17 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		// Build call to simulateHandleOps
 		let ops = user_ops.to_vec();
 		let call_data = simulateHandleOpsCall { ops, beneficiary }.abi_encode();
-		let tx = build_call_transaction(self.entry_point_address, call_data);
+		// Important for paymasters that gate on tx.origin: set from to bundler wallet
+		let mut tx = build_call_transaction(self.entry_point_address, call_data);
+		match self.rpc_client.get_wallet_address().await {
+			Ok(from_addr) => {
+				tx.from = Some(from_addr);
+				tracing::info!("[EntryPointClient] simulate_handle_ops from={}", from_addr);
+			},
+			Err(_) => {
+				tracing::warn!("[EntryPointClient] simulate_handle_ops could not determine bundler wallet address; proceeding without explicit from");
+			},
+		}
 
 		// Make the call with state override
 		// EntryPointSimulations.simulateHandleOps() returns ExecutionResult[] on success
@@ -501,22 +534,34 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					RpcProviderError::ExecutionReverted { reason, data } => {
 						match data {
 							Some(data) => {
-								// Decode FailedOp from revert data
-								let failed_op: FailedOp =
-									FailedOp::abi_decode(&data).map_err(|e| {
-										let error_msg = format!(
-											"Could not decode FailedOp from revert data: {:?}",
-											e
-										);
-										error!("{}", error_msg);
-										error_msg
-									})?;
-								let error_msg = format!(
-									"Simulation failed, opIndex: {}, reason: {}",
-									failed_op.opIndex, failed_op.reason
-								);
-								error!("{}", error_msg);
-								Err(error_msg)
+								// Try to decode as FailedOpWithRevert first (more specific error)
+								if let Ok(failed_op_with_revert) =
+									FailedOpWithRevert::abi_decode(&data)
+								{
+									let error_msg = format!(
+										"Simulation failed with revert, opIndex: {}, reason: {}, inner: 0x{}",
+										failed_op_with_revert.opIndex,
+										failed_op_with_revert.reason,
+										hex::encode(&failed_op_with_revert.inner)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else if let Ok(failed_op) = FailedOp::abi_decode(&data) {
+									// Fall back to regular FailedOp
+									let error_msg = format!(
+										"Simulation failed, opIndex: {}, reason: {}",
+										failed_op.opIndex, failed_op.reason
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else {
+									let error_msg = format!(
+										"Could not decode simulation error from revert data: 0x{}",
+										hex::encode(&data)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								}
 							},
 							None => {
 								let error_msg = format!("Simulation failed, reason: {:?}", reason);
