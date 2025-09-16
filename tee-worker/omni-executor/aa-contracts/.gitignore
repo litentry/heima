@@ -18,3 +18,6 @@ broadcast/
 
 # Deployment artifacts
 deployments/local/
+
+# Test deployment directories (created during testing)
+test_deployments/
