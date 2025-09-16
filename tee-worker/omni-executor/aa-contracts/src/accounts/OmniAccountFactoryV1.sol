@@ -36,6 +36,7 @@ contract OmniAccountFactoryV1 {
         require(msg.sender == address(senderCreator), "only callable from SenderCreator");
         address addr = getAddress(oa, oaType, clientId, root);
         uint256 codeSize = addr.code.length;
+        uint256 codeSize2 = addr.code.length;
         if (codeSize > 0) {
             return OmniAccountV1(payable(addr));
         }
