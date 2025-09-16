@@ -3,13 +3,15 @@ use crate::auth_utils::{
 	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
 };
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
+use crate::error_code::{
+	AUTH_VERIFICATION_FAILED_CODE, INVALID_USER_OPERATION_CODE, PARSE_ERROR_CODE,
+};
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::validation_helpers::{
 	validate_chain_id, validate_user_operations, validate_wallet_index,
 };
-use alloy::primitives::Address;
+use alloy::primitives::{hex, Address};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
@@ -23,6 +25,21 @@ use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error};
+
+// Chain ID constants
+const ARBITRUM_MAINNET: ChainId = 42161;
+const ARBITRUM_SEPOLIA: ChainId = 421614;
+const HYPEREVM_MAINNET: ChainId = 999;
+const HYPEREVM_TESTNET: ChainId = 998;
+
+// Contract addresses - These should be moved to configuration in the future
+const ARBITRUM_USDC_ADDRESS: &str = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"; // Arbitrum mainnet USDC
+const ARBITRUM_SEPOLIA_USDC_ADDRESS: &str = "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"; // Arbitrum Sepolia USDC
+const ARB_TO_HYPER_BRIDGE_ADDRESS: &str = "0x2df1c51e09aecf9cacb7bc98cb1742757f163df7";
+const HYPEREVM_CORE_WRITER_ADDRESS: &str = "0x0000000000000000000000000000000000003333";
+
+// ERC20 transfer method signature: transfer(address,uint256)
+const ERC20_TRANSFER_SIGNATURE: [u8; 4] = [0xa9, 0x05, 0x9c, 0xbb];
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitUserOpWithAuthParams {
@@ -38,6 +55,306 @@ pub struct SubmitUserOpWithAuthParams {
 #[derive(Serialize, Clone)]
 pub struct SubmitUserOpWithAuthResponse {
 	pub transaction_hash: Option<String>,
+}
+
+/// Validates USDC transfer call for Arbitrum chains
+fn validate_arbitrum_usdc_transfer(
+	call_data: &str,
+	chain_id: ChainId,
+) -> Result<(), PumpxRpcError> {
+	// Validate chain is supported for Arbitrum USDC validation
+	match chain_id {
+		ARBITRUM_MAINNET | ARBITRUM_SEPOLIA => {},
+		_ => {
+			return Err(PumpxRpcError::from(
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Chain ID is not supported for Arbitrum USDC validation",
+				)
+				.with_field("chain_id")
+				.with_received(chain_id.to_string())
+				.with_expected("42161 or 421614"),
+			));
+		},
+	};
+
+	// Parse calldata - should be USDC.transfer method call
+	let call_bytes =
+		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
+			PumpxRpcError::from(
+				DetailedError::new(
+					// todo: proper error code
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Invalid hex encoding in call data",
+				)
+				.with_field("call_data")
+				.with_reason(format!("Hex decode error: {}", e)),
+			)
+		})?;
+
+	// Check if it's an ERC20 transfer call (method signature 0xa9059cbb)
+	if call_bytes.len() < 4 || &call_bytes[0..4] != &ERC20_TRANSFER_SIGNATURE {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				// todo: proper error code
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data is not an ERC20 transfer function call",
+			)
+			.with_field("method_signature")
+			.with_received(if call_bytes.len() >= 4 {
+				format!("0x{}", hex::encode(&call_bytes[0..4]))
+			} else {
+				"<insufficient data>".to_string()
+			})
+			.with_expected("0xa9059cbb (ERC20.transfer)"),
+		));
+	}
+
+	// Decode the transfer call to get recipient
+	if call_bytes.len() < 68 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				// todo: proper error code
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data too short for ERC20 transfer",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected("68 bytes minimum"),
+		));
+	}
+
+	// Extract recipient address (bytes 4-36, but we need the last 20 bytes)
+	let recipient_bytes = &call_bytes[16..36];
+	let recipient = format!("0x{}", hex::encode(recipient_bytes));
+
+	// Validate recipient is the official arb -> hyper bridge
+	if recipient.to_lowercase() != ARB_TO_HYPER_BRIDGE_ADDRESS.to_lowercase() {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"USDC transfer recipient is not the official Arbitrum to Hyperliquid bridge",
+			)
+			.with_field("recipient")
+			.with_received(recipient)
+			.with_expected(ARB_TO_HYPER_BRIDGE_ADDRESS),
+		));
+	}
+
+	Ok(())
+}
+
+/// Validates core writer call for HyperEVM chains
+fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(), PumpxRpcError> {
+	// Validate chain is HyperEVM
+	if chain_id != HYPEREVM_MAINNET && chain_id != HYPEREVM_TESTNET {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				// todo: proper error code
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Chain ID is not supported for HyperEVM validation",
+			)
+			.with_field("chain_id")
+			.with_received(chain_id.to_string())
+			.with_expected("999 or 998"),
+		));
+	}
+
+	// Parse calldata
+	let call_bytes =
+		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
+			PumpxRpcError::from(
+				DetailedError::new(
+					// todo: proper error code
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Invalid hex encoding in call data",
+				)
+				.with_field("call_data")
+				.with_reason(format!("Hex decode error: {}", e)),
+			)
+		})?;
+
+	// Extract method signature if available
+	if call_bytes.len() < 4 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				// todo: proper error code
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data too short to contain method signature",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected("4 bytes minimum"),
+		));
+	}
+
+	// Proper action_id extraction based on payload format:
+	// [1 byte] → Version (currently 0x01)
+	// [3 bytes] → action_id
+	// [rest] → Action-specific payload (encoded via Solidity ABI rules)
+
+	// The calldata should contain the raw payload as data parameter in method call
+	// First decode the actual payload from the method call parameters
+	if call_bytes.len() < 4 + 32 + 32 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				INVALID_USER_OPERATION_CODE,
+				"Call data too short for payload parameter",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected("68 bytes minimum (4 bytes method + 32 bytes offset + 32 bytes length)"),
+		));
+	}
+
+	// Skip method signature (4 bytes) and offset parameter (32 bytes)
+	// Then read the length of the payload (next 32 bytes)
+	let payload_length_bytes = &call_bytes[36..68];
+	let payload_length = u32::from_be_bytes([
+		payload_length_bytes[28],
+		payload_length_bytes[29],
+		payload_length_bytes[30],
+		payload_length_bytes[31],
+	]) as usize;
+
+	// Ensure we have enough data for the payload
+	if call_bytes.len() < 68 + payload_length {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				INVALID_USER_OPERATION_CODE,
+				"Call data too short for declared payload length",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected(format!("{} bytes", 68 + payload_length)),
+		));
+	}
+
+	// Extract the actual payload
+	let payload = &call_bytes[68..68 + payload_length];
+
+	// Validate payload format: minimum 4 bytes (1 version + 3 action_id)
+	if payload.len() < 4 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				INVALID_USER_OPERATION_CODE,
+				"Payload too short for version and action_id",
+			)
+			.with_field("payload_length")
+			.with_received(payload.len().to_string())
+			.with_expected("4 bytes minimum (1 version + 3 action_id)"),
+		));
+	}
+
+	// Extract version (first byte)
+	let version = payload[0];
+	if version != 0x01 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid payload version")
+				.with_field("version")
+				.with_received(format!("0x{:02x}", version))
+				.with_expected("0x01"),
+		));
+	}
+
+	// Extract action_id (next 3 bytes) and convert to u32
+	let action_id_bytes = [0, payload[1], payload[2], payload[3]];
+	let action_id = u32::from_be_bytes(action_id_bytes);
+
+	// Validate action_id is one of the allowed HyperCore actions
+	let valid_action_ids = [
+		0x000002, // Cancel a perpetual order
+		0x000003, // Spot transfer
+		0x000004, // Stake HLP
+		0x000005, // Vault transfer
+		0x000007, // Other allowed action
+	];
+
+	if !valid_action_ids.contains(&action_id) {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				INVALID_USER_OPERATION_CODE,
+				"Invalid action_id for HyperEVM core writer call",
+			)
+			.with_field("action_id")
+			.with_received(format!("0x{:06x}", action_id))
+			.with_expected("One of: 0x000002, 0x000003, 0x000004, 0x000005, 0x000007"),
+		));
+	}
+
+	Ok(())
+}
+
+/// Validates calldata for wallet_index == 0 backend requests
+fn validate_backend_calldata(
+	user_operations: &[SerializablePackedUserOperation],
+	chain_id: ChainId,
+) -> Result<(), PumpxRpcError> {
+	for (index, user_op) in user_operations.iter().enumerate() {
+		// Parse the target address from sender field
+		let target_address = user_op.sender.parse::<Address>().map_err(|e| {
+			PumpxRpcError::from(
+				DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Invalid sender address format")
+					.with_field(&format!("user_operations[{}].sender", index))
+					.with_received(&user_op.sender)
+					.with_reason(format!("Address parse error: {}", e)),
+			)
+		})?;
+
+		match chain_id {
+			ARBITRUM_MAINNET | ARBITRUM_SEPOLIA => {
+				// For Arbitrum: sender must be USDC contract and calldata must be transfer to bridge
+				let expected_usdc = match chain_id {
+					ARBITRUM_MAINNET => ARBITRUM_USDC_ADDRESS,
+					ARBITRUM_SEPOLIA => ARBITRUM_SEPOLIA_USDC_ADDRESS,
+					_ => unreachable!(),
+				};
+
+				if target_address != expected_usdc.parse::<Address>().unwrap() {
+					return Err(PumpxRpcError::from(
+						DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"For Arbitrum backend requests, target contract must be USDC",
+						)
+						.with_field(&format!("user_operations[{}].sender", index))
+						.with_received(&user_op.sender)
+						.with_expected(expected_usdc),
+					));
+				}
+
+				validate_arbitrum_usdc_transfer(&user_op.call_data, chain_id)?;
+			},
+			HYPEREVM_MAINNET | HYPEREVM_TESTNET => {
+				// For HyperEVM: target must be core writer and calldata must have valid action_id
+				if target_address != HYPEREVM_CORE_WRITER_ADDRESS.parse::<Address>().unwrap() {
+					return Err(PumpxRpcError::from(
+						DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"For HyperEVM backend requests, target contract must be core writer",
+						)
+						.with_field(&format!("user_operations[{}].sender", index))
+						.with_received(&user_op.sender)
+						.with_expected(HYPEREVM_CORE_WRITER_ADDRESS),
+					));
+				}
+
+				validate_hyperevm_core_writer(&user_op.call_data, chain_id)?;
+			},
+			_ => {
+				return Err(PumpxRpcError::from(
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Chain ID not supported for backend wallet_index validation",
+					)
+					.with_field("chain_id")
+					.with_received(chain_id.to_string())
+					.with_expected("42161, 421614, 999, or 998"),
+				));
+			},
+		}
+	}
+
+	Ok(())
 }
 
 pub fn register_submit_user_op_with_auth<
@@ -157,10 +474,10 @@ pub fn register_submit_user_op_with_auth<
 					Some(main_address.clone())
 				},
 				ClientAuth::WildmetaBackend { signature } => {
-					// Validate wallet_index must be 1 for WildmetaBackend
-					if params.wallet_index != 1 {
+					// Validate wallet_index must be 0 or 1 for WildmetaBackend
+					if params.wallet_index != 0 && params.wallet_index != 1 {
 						error!(
-							"WildmetaBackend requires wallet_index to be 1, got: {}",
+							"WildmetaBackend requires wallet_index to be 0 or 1, got: {}",
 							params.wallet_index
 						);
 						return Err(PumpxRpcError::from(
@@ -170,9 +487,14 @@ pub fn register_submit_user_op_with_auth<
 							)
 							.with_field("wallet_index")
 							.with_received(params.wallet_index.to_string())
-							.with_expected("1")
-							.with_suggestion("WildmetaBackend authentication requires wallet_index to be exactly 1"),
+							.with_expected("0 or 1")
+							.with_suggestion("WildmetaBackend authentication requires wallet_index to be 0 or 1"),
 						));
+					}
+
+					// Additional validation for wallet_index == 0
+					if params.wallet_index == 0 {
+						validate_backend_calldata(&params.user_operations, params.chain_id)?;
 					}
 
 					// Validate client_id must be "wildmeta" for WildmetaBackend
@@ -864,5 +1186,320 @@ mod tests {
 		);
 
 		assert!(result.is_err(), "Signature verification with wrong public key should fail");
+	}
+
+	#[test]
+	fn test_validate_arbitrum_usdc_transfer_valid() {
+		// Valid USDC transfer calldata: transfer(address recipient, uint256 amount)
+		// Method signature: 0xa9059cbb
+		// Recipient: ARB_TO_HYPER_BRIDGE_ADDRESS (padded to 32 bytes)
+		// Amount: 1000000 (1 USDC with 6 decimals, padded to 32 bytes)
+		let call_data = format!(
+			"0xa9059cbb000000000000000000000000{}00000000000000000000000000000000000000000000000000000000000f4240",
+			&ARB_TO_HYPER_BRIDGE_ADDRESS[2..]
+		);
+
+		let result = validate_arbitrum_usdc_transfer(&call_data, ARBITRUM_MAINNET);
+		assert!(result.is_ok(), "Valid USDC transfer should succeed");
+
+		let result = validate_arbitrum_usdc_transfer(&call_data, ARBITRUM_SEPOLIA);
+		assert!(result.is_ok(), "Valid USDC transfer should succeed on Arbitrum Sepolia");
+	}
+
+	#[test]
+	fn test_validate_arbitrum_usdc_transfer_invalid_method() {
+		// Invalid method signature (not transfer)
+		let call_data = "0x12345678000000000000000000000000123456789012345678901234567890123456789000000000000000000000000000000000000000000000000000000000000f4240";
+
+		let result = validate_arbitrum_usdc_transfer(call_data, ARBITRUM_MAINNET);
+		assert!(result.is_err(), "Invalid method signature should fail");
+	}
+
+	#[test]
+	fn test_validate_arbitrum_usdc_transfer_invalid_recipient() {
+		// Valid method signature but wrong recipient
+		let call_data = "0xa9059cbb0000000000000000000000001111111111111111111111111111111111111111000000000000000000000000000000000000000000000000000000000000f4240";
+
+		let result = validate_arbitrum_usdc_transfer(call_data, ARBITRUM_MAINNET);
+		assert!(result.is_err(), "Wrong recipient should fail");
+	}
+
+	#[test]
+	fn test_validate_arbitrum_usdc_transfer_invalid_chain() {
+		let call_data = "0xa9059cbb000000000000000000000000123456789012345678901234567890123456789000000000000000000000000000000000000000000000000000000000000f4240";
+
+		let result = validate_arbitrum_usdc_transfer(call_data, 1); // Ethereum mainnet
+		assert!(result.is_err(), "Unsupported chain should fail");
+	}
+
+	#[test]
+	fn test_validate_hyperevm_core_writer_valid() {
+		// Helper function to create valid calldata with proper payload format
+		fn create_test_calldata(action_id: u32, additional_data: &[u8]) -> String {
+			// Create payload: [version:1][action_id:3][additional_data]
+			let mut payload = Vec::new();
+			payload.push(0x01); // version
+			payload.extend_from_slice(&action_id.to_be_bytes()[1..4]); // action_id (3 bytes)
+			payload.extend_from_slice(additional_data);
+
+			// Create calldata: method_sig + offset + length + payload (padded to 32-byte boundaries)
+			let mut calldata = Vec::new();
+			calldata.extend_from_slice(&[0x12, 0x34, 0x56, 0x78]); // method signature
+			calldata.extend_from_slice(&[0u8; 28]); // offset padding
+			calldata.extend_from_slice(&[0, 0, 0, 0x20]); // offset = 32
+			calldata.extend_from_slice(&[0u8; 28]); // length padding
+			calldata.extend_from_slice(&(payload.len() as u32).to_be_bytes()); // payload length
+			calldata.extend_from_slice(&payload); // payload
+
+			// Pad to 32-byte boundary
+			while calldata.len() % 32 != 0 {
+				calldata.push(0);
+			}
+
+			format!("0x{}", hex::encode(calldata))
+		}
+
+		// Test valid action_id = 0x000002
+		let call_data = create_test_calldata(0x000002, &[0x12, 0x34]); // some additional data
+		let result = validate_hyperevm_core_writer(&call_data, HYPEREVM_MAINNET);
+		assert!(result.is_ok(), "Valid action_id 0x000002 should succeed");
+
+		// Test other valid action_ids
+		for action_id in [0x000003, 0x000004, 0x000005, 0x000007] {
+			let call_data = create_test_calldata(action_id, &[0xff, 0xee]);
+			let result = validate_hyperevm_core_writer(&call_data, HYPEREVM_MAINNET);
+			assert!(result.is_ok(), "Action_id 0x{:06x} should be valid", action_id);
+		}
+	}
+
+	#[test]
+	fn test_validate_hyperevm_core_writer_invalid_action_id() {
+		// Helper function to create calldata with proper payload format
+		fn create_test_calldata(action_id: u32, additional_data: &[u8]) -> String {
+			// Create payload: [version:1][action_id:3][additional_data]
+			let mut payload = Vec::new();
+			payload.push(0x01); // version
+			payload.extend_from_slice(&action_id.to_be_bytes()[1..4]); // action_id (3 bytes)
+			payload.extend_from_slice(additional_data);
+
+			// Create calldata: method_sig + offset + length + payload (padded to 32-byte boundaries)
+			let mut calldata = Vec::new();
+			calldata.extend_from_slice(&[0x12, 0x34, 0x56, 0x78]); // method signature
+			calldata.extend_from_slice(&[0u8; 28]); // offset padding
+			calldata.extend_from_slice(&[0, 0, 0, 0x20]); // offset = 32
+			calldata.extend_from_slice(&[0u8; 28]); // length padding
+			calldata.extend_from_slice(&(payload.len() as u32).to_be_bytes()); // payload length
+			calldata.extend_from_slice(&payload); // payload
+
+			// Pad to 32-byte boundary
+			while calldata.len() % 32 != 0 {
+				calldata.push(0);
+			}
+
+			format!("0x{}", hex::encode(calldata))
+		}
+
+		// Invalid action_id = 0x000001 (not in allowed list)
+		let call_data = create_test_calldata(0x000001, &[0x12, 0x34]);
+		let result = validate_hyperevm_core_writer(&call_data, HYPEREVM_MAINNET);
+		assert!(result.is_err(), "Invalid action_id should fail");
+
+		// Test other invalid action_ids
+		for action_id in [0x000000, 0x000006, 0x000008, 0x000999] {
+			let call_data = create_test_calldata(action_id, &[0xff, 0xee]);
+			let result = validate_hyperevm_core_writer(&call_data, HYPEREVM_MAINNET);
+			assert!(result.is_err(), "Invalid action_id 0x{:06x} should fail", action_id);
+		}
+	}
+
+	#[test]
+	fn test_validate_hyperevm_core_writer_invalid_chain() {
+		// Helper function to create calldata with proper payload format
+		fn create_test_calldata(action_id: u32, additional_data: &[u8]) -> String {
+			// Create payload: [version:1][action_id:3][additional_data]
+			let mut payload = Vec::new();
+			payload.push(0x01); // version
+			payload.extend_from_slice(&action_id.to_be_bytes()[1..4]); // action_id (3 bytes)
+			payload.extend_from_slice(additional_data);
+
+			// Create calldata: method_sig + offset + length + payload (padded to 32-byte boundaries)
+			let mut calldata = Vec::new();
+			calldata.extend_from_slice(&[0x12, 0x34, 0x56, 0x78]); // method signature
+			calldata.extend_from_slice(&[0u8; 28]); // offset padding
+			calldata.extend_from_slice(&[0, 0, 0, 0x20]); // offset = 32
+			calldata.extend_from_slice(&[0u8; 28]); // length padding
+			calldata.extend_from_slice(&(payload.len() as u32).to_be_bytes()); // payload length
+			calldata.extend_from_slice(&payload); // payload
+
+			// Pad to 32-byte boundary
+			while calldata.len() % 32 != 0 {
+				calldata.push(0);
+			}
+
+			format!("0x{}", hex::encode(calldata))
+		}
+
+		let call_data = create_test_calldata(0x000002, &[0x12, 0x34]);
+		let result = validate_hyperevm_core_writer(&call_data, ARBITRUM_MAINNET);
+		assert!(result.is_err(), "Wrong chain should fail");
+	}
+
+	#[test]
+	fn test_validate_backend_calldata_arbitrum() {
+		use executor_core::types::SerializablePackedUserOperation;
+
+		let valid_transfer_calldata = format!(
+			"0xa9059cbb000000000000000000000000{}00000000000000000000000000000000000000000000000000000000000f4240",
+			&ARB_TO_HYPER_BRIDGE_ADDRESS[2..]
+		);
+
+		let user_op = SerializablePackedUserOperation {
+			sender: ARBITRUM_USDC_ADDRESS.to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(),
+			call_data: valid_transfer_calldata,
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		let result = validate_backend_calldata(&[user_op], ARBITRUM_MAINNET);
+		assert!(result.is_ok(), "Valid Arbitrum backend calldata should succeed");
+	}
+
+	#[test]
+	fn test_validate_backend_calldata_hyperevm() {
+		use executor_core::types::SerializablePackedUserOperation;
+
+		// Helper function to create calldata with proper payload format
+		fn create_test_calldata(action_id: u32, additional_data: &[u8]) -> String {
+			// Create payload: [version:1][action_id:3][additional_data]
+			let mut payload = Vec::new();
+			payload.push(0x01); // version
+			payload.extend_from_slice(&action_id.to_be_bytes()[1..4]); // action_id (3 bytes)
+			payload.extend_from_slice(additional_data);
+
+			// Create calldata: method_sig + offset + length + payload (padded to 32-byte boundaries)
+			let mut calldata = Vec::new();
+			calldata.extend_from_slice(&[0x12, 0x34, 0x56, 0x78]); // method signature
+			calldata.extend_from_slice(&[0u8; 28]); // offset padding
+			calldata.extend_from_slice(&[0, 0, 0, 0x20]); // offset = 32
+			calldata.extend_from_slice(&[0u8; 28]); // length padding
+			calldata.extend_from_slice(&(payload.len() as u32).to_be_bytes()); // payload length
+			calldata.extend_from_slice(&payload); // payload
+
+			// Pad to 32-byte boundary
+			while calldata.len() % 32 != 0 {
+				calldata.push(0);
+			}
+
+			format!("0x{}", hex::encode(calldata))
+		}
+
+		let valid_core_writer_calldata = create_test_calldata(0x000002, &[0x12, 0x34]);
+
+		let user_op = SerializablePackedUserOperation {
+			sender: HYPEREVM_CORE_WRITER_ADDRESS.to_string(),
+			nonce: 42,
+			init_code: "0x".to_string(),
+			call_data: valid_core_writer_calldata,
+			account_gas_limits:
+				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
+				.to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		let result = validate_backend_calldata(&[user_op], HYPEREVM_MAINNET);
+		assert!(result.is_ok(), "Valid HyperEVM backend calldata should succeed");
+	}
+
+	#[test]
+	fn test_validate_backend_calldata_wrong_contract() {
+		use executor_core::types::SerializablePackedUserOperation;
+
+		let user_op = SerializablePackedUserOperation {
+			sender: "0x1111111111111111111111111111111111111111".to_string(), // Wrong contract
+			nonce: 42,
+			init_code: "0x".to_string(),
+			call_data: "0xa9059cbb000000000000000000000000123456789012345678901234567890123456789000000000000000000000000000000000000000000000000000000000000f4240".to_string(),
+			account_gas_limits: "0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
+			pre_verification_gas: 21000,
+			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0".to_string(),
+			paymaster_and_data: "0x".to_string(),
+			signature: None,
+		};
+
+		let result = validate_backend_calldata(&[user_op], ARBITRUM_MAINNET);
+		assert!(result.is_err(), "Wrong contract address should fail");
+	}
+
+	#[test]
+	fn test_validate_hyperevm_core_writer_invalid_version() {
+		// Helper function to create calldata with specific version
+		fn create_test_calldata_with_version(
+			version: u8,
+			action_id: u32,
+			additional_data: &[u8],
+		) -> String {
+			// Create payload: [version:1][action_id:3][additional_data]
+			let mut payload = Vec::new();
+			payload.push(version); // Custom version
+			payload.extend_from_slice(&action_id.to_be_bytes()[1..4]); // action_id (3 bytes)
+			payload.extend_from_slice(additional_data);
+
+			// Create calldata: method_sig + offset + length + payload (padded to 32-byte boundaries)
+			let mut calldata = Vec::new();
+			calldata.extend_from_slice(&[0x12, 0x34, 0x56, 0x78]); // method signature
+			calldata.extend_from_slice(&[0u8; 28]); // offset padding
+			calldata.extend_from_slice(&[0, 0, 0, 0x20]); // offset = 32
+			calldata.extend_from_slice(&[0u8; 28]); // length padding
+			calldata.extend_from_slice(&(payload.len() as u32).to_be_bytes()); // payload length
+			calldata.extend_from_slice(&payload); // payload
+
+			// Pad to 32-byte boundary
+			while calldata.len() % 32 != 0 {
+				calldata.push(0);
+			}
+
+			format!("0x{}", hex::encode(calldata))
+		}
+
+		// Test invalid version = 0x02 (should be 0x01)
+		let call_data = create_test_calldata_with_version(0x02, 0x000002, &[0x12, 0x34]);
+		let result = validate_hyperevm_core_writer(&call_data, HYPEREVM_MAINNET);
+		assert!(result.is_err(), "Invalid version should fail");
+
+		// Test version = 0x00
+		let call_data = create_test_calldata_with_version(0x00, 0x000002, &[0x12, 0x34]);
+		let result = validate_hyperevm_core_writer(&call_data, HYPEREVM_MAINNET);
+		assert!(result.is_err(), "Version 0x00 should fail");
+	}
+
+	#[test]
+	fn test_validate_hyperevm_core_writer_short_payload() {
+		// Create calldata with payload that's too short (less than 4 bytes)
+		let mut calldata = Vec::new();
+		calldata.extend_from_slice(&[0x12, 0x34, 0x56, 0x78]); // method signature
+		calldata.extend_from_slice(&[0u8; 28]); // offset padding
+		calldata.extend_from_slice(&[0, 0, 0, 0x20]); // offset = 32
+		calldata.extend_from_slice(&[0u8; 28]); // length padding
+		calldata.extend_from_slice(&[0, 0, 0, 3]); // payload length = 3 (too short)
+		calldata.extend_from_slice(&[0x01, 0x00, 0x00]); // only 3 bytes
+
+		// Pad to 32-byte boundary
+		while calldata.len() % 32 != 0 {
+			calldata.push(0);
+		}
+
+		let call_data = format!("0x{}", hex::encode(calldata));
+		let result = validate_hyperevm_core_writer(&call_data, HYPEREVM_MAINNET);
+		assert!(result.is_err(), "Short payload should fail");
 	}
 }
