@@ -633,7 +633,19 @@ jobs:
           forge b
           forge t
 
-      - name: Generate gas report
+      - name: Generate gas report and diff (PR only)
+        if: github.event_name == 'pull_request'
+        uses: Rubilmax/foundry-gas-diff@v3.16
+        with:
+          summaryQuantile: 0.9
+          sortCriteria: avg,max
+          sortOrders: desc,asc
+          ignore: test-foundry/**/*
+          workingDirectory: ./tee-worker/omni-executor/aa-contracts
+        id: gas_diff
+
+      - name: Generate gas report (non-PR)
+        if: github.event_name != 'pull_request'
         working-directory: ./tee-worker/omni-executor/aa-contracts
         run: |
           echo "## Gas Report for AA Contracts" > gas-report.md
@@ -642,6 +654,7 @@ jobs:
           echo '```' >> gas-report.md
 
       - name: Upload gas report
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: aa-contracts-gas-report
