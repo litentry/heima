@@ -93,7 +93,7 @@ fn validate_arbitrum_usdc_transfer(
 		})?;
 
 	// Check if it's an ERC20 transfer call (method signature 0xa9059cbb)
-	if call_bytes.len() < 4 || &call_bytes[0..4] != &ERC20_TRANSFER_SIGNATURE {
+	if call_bytes.len() < 4 || call_bytes[0..4] != ERC20_TRANSFER_SIGNATURE {
 		return Err(PumpxRpcError::from(
 			DetailedError::new(
 				// todo: proper error code
@@ -295,7 +295,7 @@ fn validate_backend_calldata(
 		let target_address = user_op.sender.parse::<Address>().map_err(|e| {
 			PumpxRpcError::from(
 				DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Invalid sender address format")
-					.with_field(&format!("user_operations[{}].sender", index))
+					.with_field(format!("user_operations[{}].sender", index))
 					.with_received(&user_op.sender)
 					.with_reason(format!("Address parse error: {}", e)),
 			)
@@ -316,7 +316,7 @@ fn validate_backend_calldata(
 							AUTH_VERIFICATION_FAILED_CODE,
 							"For Arbitrum backend requests, target contract must be USDC",
 						)
-						.with_field(&format!("user_operations[{}].sender", index))
+						.with_field(format!("user_operations[{}].sender", index))
 						.with_received(&user_op.sender)
 						.with_expected(expected_usdc),
 					));
@@ -332,7 +332,7 @@ fn validate_backend_calldata(
 							AUTH_VERIFICATION_FAILED_CODE,
 							"For HyperEVM backend requests, target contract must be core writer",
 						)
-						.with_field(&format!("user_operations[{}].sender", index))
+						.with_field(format!("user_operations[{}].sender", index))
 						.with_received(&user_op.sender)
 						.with_expected(HYPEREVM_CORE_WRITER_ADDRESS),
 					));
