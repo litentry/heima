@@ -13,6 +13,8 @@ pub const SUPPORTED_EVM_CHAINS: &[u32] = &[
 	1337,     // Local Anvil
 	56,       // Binance Smart Chain
 	97,       // Binance Smart Chain Testnet
+	999,      // HyperEVM mainnet
+	998,      // HyperEVM testnet
 ];
 
 // Maximum wallet index allowed
