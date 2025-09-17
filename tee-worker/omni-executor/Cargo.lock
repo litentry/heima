@@ -6817,6 +6817,7 @@ version = "0.1.0"
 dependencies = [
  "aa-contracts-client",
  "alloy",
+ "async-trait",
  "binance-api",
  "chrono",
  "ethereum-rpc",
@@ -6833,6 +6834,7 @@ dependencies = [
  "parity-scale-codec",
  "pumpx",
  "rand 0.8.5",
+ "serde",
  "signer-client",
  "subxt",
  "tokio",

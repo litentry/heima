@@ -20,6 +20,7 @@ use crate::server::RpcContext;
 use crate::validation_helpers::{
 	validate_ethereum_address, validate_omni_account_hex, validate_omni_account_length,
 };
+use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
@@ -30,6 +31,28 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
+
+/// Format a token amount with decimals to a human-readable string
+fn format_token_amount(amount: u128, decimals: u8) -> String {
+	match format_units(amount, decimals) {
+		Ok(mut value) => {
+			if value.contains('.') {
+				while value.ends_with('0') {
+					value.pop();
+				}
+				if value.ends_with('.') {
+					value.pop();
+				}
+			}
+			if value.is_empty() {
+				"0".to_string()
+			} else {
+				value
+			}
+		},
+		Err(_) => amount.to_string(),
+	}
+}
 
 #[derive(Debug, Deserialize)]
 pub struct EstimateUserOpGasParams {
@@ -42,12 +65,25 @@ pub struct EstimateUserOpGasParams {
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct TokenCostInfo {
+	pub token_address: String,
+	pub amount: String,     // Decimal string
+	pub amount_hex: String, // Hex string
+	pub decimals: u8,
+	pub exchange_rate: String,    // Decimal string
+	pub formatted_amount: String, // Human readable (e.g., "2.5")
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct EstimateUserOpGasResponse {
 	pub call_gas_limit: String,
 	pub verification_gas_limit: String,
 	pub pre_verification_gas: String,
 	pub paymaster_verification_gas_limit: String,
 	pub paymaster_post_op_gas_limit: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub estimated_token_cost: Option<TokenCostInfo>,
 }
 
 pub fn register_estimate_user_op_gas<
@@ -117,13 +153,33 @@ pub fn register_estimate_user_op_gas<
 					pre_verification_gas,
 					paymaster_verification_gas_limit,
 					paymaster_post_op_gas_limit,
-				} => Ok(EstimateUserOpGasResponse {
-					call_gas_limit: call_gas_limit.to_string(),
-					verification_gas_limit: verification_gas_limit.to_string(),
-					pre_verification_gas: pre_verification_gas.to_string(),
-					paymaster_verification_gas_limit: paymaster_verification_gas_limit.to_string(),
-					paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
-				}),
+					estimated_token_cost,
+				} => {
+					// Convert token cost estimate to RPC format if present
+					let token_cost_info = estimated_token_cost.map(|cost| {
+						// Format the amount as a human-readable value
+						let formatted_amount = format_token_amount(cost.amount, cost.decimals);
+
+						TokenCostInfo {
+							token_address: cost.token_address,
+							amount: cost.amount.to_string(),
+							amount_hex: format!("0x{:x}", cost.amount),
+							decimals: cost.decimals,
+							exchange_rate: cost.exchange_rate.to_string(),
+							formatted_amount,
+						}
+					});
+
+					Ok(EstimateUserOpGasResponse {
+						call_gas_limit: call_gas_limit.to_string(),
+						verification_gas_limit: verification_gas_limit.to_string(),
+						pre_verification_gas: pre_verification_gas.to_string(),
+						paymaster_verification_gas_limit: paymaster_verification_gas_limit
+							.to_string(),
+						paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
+						estimated_token_cost: token_cost_info,
+					})
+				},
 				_ => {
 					error!("Unexpected response type");
 					Err(PumpxRpcError::from(DetailedError::unexpected_response_type(
@@ -172,6 +228,26 @@ mod tests {
 		assert_eq!(params.client_id, "test-client-123");
 		assert_eq!(params.user_operation.sender, "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9");
 		assert_eq!(params.user_operation.nonce, 42);
+	}
+
+	#[test]
+	fn test_format_token_amount() {
+		// Test with 6 decimals (USDC)
+		assert_eq!(format_token_amount(1_000_000, 6), "1");
+		assert_eq!(format_token_amount(1_500_000, 6), "1.5");
+		assert_eq!(format_token_amount(1_234_567, 6), "1.234567");
+		assert_eq!(format_token_amount(1_230_000, 6), "1.23");
+		assert_eq!(format_token_amount(500_000, 6), "0.5");
+		assert_eq!(format_token_amount(0, 6), "0");
+
+		// Test with 18 decimals (DAI)
+		assert_eq!(format_token_amount(1_000_000_000_000_000_000, 18), "1");
+		assert_eq!(format_token_amount(1_500_000_000_000_000_000, 18), "1.5");
+		assert_eq!(format_token_amount(500_000_000_000_000_000, 18), "0.5");
+
+		// Test with 0 decimals
+		assert_eq!(format_token_amount(100, 0), "100");
+		assert_eq!(format_token_amount(0, 0), "0");
 	}
 
 	#[test]
