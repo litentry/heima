@@ -1579,16 +1579,65 @@ mod tests {
 	fn test_validate_backend_calldata_arbitrum() {
 		use executor_core::types::SerializablePackedUserOperation;
 
-		let valid_transfer_calldata = format!(
-			"0xa9059cbb000000000000000000000000{}00000000000000000000000000000000000000000000000000000000000f4240",
-			&ARB_TO_HYPER_BRIDGE_ADDRESS[2..]
-		);
+		// Helper function to create ERC20 transfer calldata
+		fn create_erc20_transfer_calldata(recipient: &str, amount: u64) -> String {
+			let recipient_hex = recipient.strip_prefix("0x").unwrap().to_lowercase();
+
+			// Create transfer(recipient, amount) calldata
+			let mut calldata = Vec::new();
+			calldata.extend_from_slice(&[0xa9, 0x05, 0x9c, 0xbb]); // transfer method signature
+
+			// recipient address (32 bytes)
+			calldata.extend_from_slice(&hex::decode(format!("{:0>64}", recipient_hex)).unwrap());
+
+			// amount (32 bytes)
+			calldata.extend_from_slice(&hex::decode(format!("{:0>64x}", amount)).unwrap());
+
+			hex::encode(calldata)
+		}
+
+		// Helper function to create OmniAccount execute calldata
+		fn create_execute_calldata(target_address: &str, inner_calldata: &str) -> String {
+			let target_hex = target_address.strip_prefix("0x").unwrap().to_lowercase();
+			let inner_len = inner_calldata.len() / 2; // Convert hex string length to byte length
+
+			// Create execute(target, 0, inner_calldata) - ABI encoded
+			let mut execute_data = Vec::new();
+			execute_data.extend_from_slice(&[0xb6, 0x1d, 0x27, 0xf6]); // execute method signature
+
+			// target address (32 bytes)
+			execute_data.extend_from_slice(&hex::decode(format!("{:0>64}", target_hex)).unwrap());
+
+			// value = 0 (32 bytes)
+			execute_data.extend_from_slice(&[0u8; 32]);
+
+			// offset to data (32 bytes) = 0x60 = 96 bytes
+			execute_data.extend_from_slice(
+				&hex::decode("0000000000000000000000000000000000000000000000000000000000000060")
+					.unwrap(),
+			);
+
+			// data length (32 bytes)
+			execute_data.extend_from_slice(&hex::decode(format!("{:0>64x}", inner_len)).unwrap());
+
+			// data (padded to 32-byte boundary)
+			execute_data.extend_from_slice(&hex::decode(inner_calldata).unwrap());
+			while execute_data.len() % 32 != 0 {
+				execute_data.push(0);
+			}
+
+			format!("0x{}", hex::encode(execute_data))
+		}
+
+		let transfer_calldata =
+			create_erc20_transfer_calldata(ARB_TO_HYPER_BRIDGE_ADDRESS, 1000000); // 1M units
+		let execute_calldata = create_execute_calldata(ARBITRUM_USDC_ADDRESS, &transfer_calldata);
 
 		let user_op = SerializablePackedUserOperation {
-			sender: ARBITRUM_USDC_ADDRESS.to_string(),
+			sender: "0x1111111111111111111111111111111111111111".to_string(), // OmniAccount address
 			nonce: 42,
 			init_code: "0x".to_string(),
-			call_data: valid_transfer_calldata,
+			call_data: execute_calldata,
 			account_gas_limits:
 				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
 			pre_verification_gas: 21000,
@@ -1616,7 +1665,7 @@ mod tests {
 
 			// Create calldata: method_sig + offset + length + payload (padded to 32-byte boundaries)
 			let mut calldata = Vec::new();
-			calldata.extend_from_slice(&[0x12, 0x34, 0x56, 0x78]); // method signature
+			calldata.extend_from_slice(&[0x17, 0x93, 0x8e, 0x13]); // method signature for HyperEVM
 			calldata.extend_from_slice(&[0u8; 28]); // offset padding
 			calldata.extend_from_slice(&[0, 0, 0, 0x20]); // offset = 32
 			calldata.extend_from_slice(&[0u8; 28]); // length padding
@@ -1628,16 +1677,51 @@ mod tests {
 				calldata.push(0);
 			}
 
-			format!("0x{}", hex::encode(calldata))
+			hex::encode(calldata)
 		}
 
-		let valid_core_writer_calldata = create_test_calldata(0x000002, &[0x12, 0x34]);
+		// Helper function to create OmniAccount execute calldata
+		fn create_execute_calldata(target_address: &str, inner_calldata: &str) -> String {
+			let target_hex = target_address.strip_prefix("0x").unwrap().to_lowercase();
+			let inner_len = inner_calldata.len() / 2; // Convert hex string length to byte length
+
+			// Create execute(target, 0, inner_calldata) - ABI encoded
+			let mut execute_data = Vec::new();
+			execute_data.extend_from_slice(&[0xb6, 0x1d, 0x27, 0xf6]); // execute method signature
+
+			// target address (32 bytes)
+			execute_data.extend_from_slice(&hex::decode(format!("{:0>64}", target_hex)).unwrap());
+
+			// value = 0 (32 bytes)
+			execute_data.extend_from_slice(&[0u8; 32]);
+
+			// offset to data (32 bytes) = 0x60 = 96 bytes
+			execute_data.extend_from_slice(
+				&hex::decode("0000000000000000000000000000000000000000000000000000000000000060")
+					.unwrap(),
+			);
+
+			// data length (32 bytes)
+			execute_data.extend_from_slice(&hex::decode(format!("{:0>64x}", inner_len)).unwrap());
+
+			// data (padded to 32-byte boundary)
+			execute_data.extend_from_slice(&hex::decode(inner_calldata).unwrap());
+			while execute_data.len() % 32 != 0 {
+				execute_data.push(0);
+			}
+
+			format!("0x{}", hex::encode(execute_data))
+		}
+
+		let inner_calldata = create_test_calldata(0x000002, &[0x12, 0x34]);
+		let execute_calldata =
+			create_execute_calldata(HYPEREVM_CORE_WRITER_ADDRESS, &inner_calldata);
 
 		let user_op = SerializablePackedUserOperation {
-			sender: HYPEREVM_CORE_WRITER_ADDRESS.to_string(),
+			sender: "0x1111111111111111111111111111111111111111".to_string(), // OmniAccount address
 			nonce: 42,
 			init_code: "0x".to_string(),
-			call_data: valid_core_writer_calldata,
+			call_data: execute_calldata,
 			account_gas_limits:
 				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
 			pre_verification_gas: 21000,
