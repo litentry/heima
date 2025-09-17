@@ -71,42 +71,56 @@ contract Deploy is Script {
             )
         );
 
-        // Start broadcasting transactions
-        vm.startBroadcast(deployerPrivateKey);
-
         // Validate dependencies
         validateDependencies();
 
-        // Deploy contracts in dependency order
+        // Deploy contracts in dependency order with confirmation between each
         if (shouldDeployEntryPoint) {
+            vm.startBroadcast(deployerPrivateKey);
             deployEntryPoint();
+            vm.stopBroadcast();
+            console.log("Waiting for EntryPoint deployment confirmation...");
+            // Wait for transaction confirmation (forge script handles this automatically when --broadcast is used)
         }
 
         if (shouldDeployFactory) {
+            vm.startBroadcast(deployerPrivateKey);
             deployFactory();
+            vm.stopBroadcast();
+            console.log("Waiting for Factory deployment confirmation...");
         }
 
         // Deploy Simple paymaster if configured
         if (shouldDeploySimplePaymaster) {
+            vm.startBroadcast(deployerPrivateKey);
             deployPaymaster();
+            vm.stopBroadcast();
+            console.log("Waiting for SimplePaymaster deployment confirmation...");
 
             // Initialize simple paymaster if configured
             if (paymasterInitialDeposit > 0) {
+                vm.startBroadcast(deployerPrivateKey);
                 initializePaymaster();
+                vm.stopBroadcast();
+                console.log("Waiting for SimplePaymaster initialization confirmation...");
             }
         }
 
         // Deploy ERC20 paymaster if configured
         if (shouldDeployERC20Paymaster) {
+            vm.startBroadcast(deployerPrivateKey);
             deployERC20Paymaster();
+            vm.stopBroadcast();
+            console.log("Waiting for ERC20Paymaster deployment confirmation...");
 
             // Initialize ERC20 paymaster if configured
             if (paymasterInitialDeposit > 0) {
+                vm.startBroadcast(deployerPrivateKey);
                 initializeERC20Paymaster();
+                vm.stopBroadcast();
+                console.log("Waiting for ERC20Paymaster initialization confirmation...");
             }
         }
-
-        vm.stopBroadcast();
 
         // Log final deployment results
         logDeploymentResults(networkConfig);
