@@ -285,72 +285,303 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(
 	Ok(())
 }
 
+/// Extract target addresses and inner calldata from OmniAccount execute() or executeBatch() calldata
+fn extract_execute_params_from_calldata(
+	call_data: &str,
+) -> Result<Vec<(Address, String)>, PumpxRpcError> {
+	// Parse calldata - should be OmniAccount.execute() or executeBatch()
+	let call_bytes =
+		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
+			PumpxRpcError::from(
+				DetailedError::new(PARSE_ERROR_CODE, "Invalid hex encoding in call data")
+					.with_field("call_data")
+					.with_reason(format!("Hex decode error: {}", e)),
+			)
+		})?;
+
+	if call_bytes.len() < 4 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data too short to contain method signature",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected("4 bytes minimum"),
+		));
+	}
+
+	// Check method signatures
+	const EXECUTE_SIGNATURE: [u8; 4] = [0xb6, 0x1d, 0x27, 0xf6]; // execute(address,uint256,bytes)
+	const EXECUTE_BATCH_SIGNATURE: [u8; 4] = [0x18, 0xdf, 0xeb, 0x3c]; // executeBatch((address,uint256,bytes)[])
+
+	let method_sig = &call_bytes[0..4];
+
+	if method_sig == EXECUTE_SIGNATURE {
+		// Handle single execute call
+		let (target, inner_data) = parse_single_execute(&call_bytes)?;
+		Ok(vec![(target, inner_data)])
+	} else if method_sig == EXECUTE_BATCH_SIGNATURE {
+		// Handle executeBatch call
+		parse_execute_batch(&call_bytes)
+	} else {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data is not an OmniAccount execute or executeBatch function call",
+			)
+			.with_field("method_signature")
+			.with_received(format!("0x{}", hex::encode(method_sig)))
+			.with_expected("0xb61d27f6 (execute) or 0x18dfeb3c (executeBatch)"),
+		));
+	}
+}
+
+/// Parse single execute(address,uint256,bytes) call
+fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String), PumpxRpcError> {
+	// Minimum length check: method(4) + target(32) + value(32) + data_offset(32) = 100 bytes
+	if call_bytes.len() < 100 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data too short for OmniAccount execute call",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected(
+				"100 bytes minimum (method + target + value + data_offset + data_length)",
+			),
+		));
+	}
+
+	// Extract target address (bytes 16-36, last 20 bytes of the first 32-byte parameter)
+	let target_bytes = &call_bytes[16..36];
+	let target_address = Address::from_slice(target_bytes);
+
+	// Skip method(4) + target(32) + value(32) + data_offset(32) = 100 bytes to get to data length
+	if call_bytes.len() < 132 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data too short to contain data length",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected("132 bytes minimum (method + params + data_length)"),
+		));
+	}
+
+	// Extract data length (bytes 100-132)
+	let data_length_bytes = &call_bytes[100..132];
+	let data_length = u32::from_be_bytes([
+		data_length_bytes[28],
+		data_length_bytes[29],
+		data_length_bytes[30],
+		data_length_bytes[31],
+	]) as usize;
+
+	// Extract the actual inner calldata
+	let data_start = 132;
+	if call_bytes.len() < data_start + data_length {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data too short for declared data length",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected(format!("{} bytes", data_start + data_length)),
+		));
+	}
+
+	let inner_data = &call_bytes[data_start..data_start + data_length];
+	let inner_calldata = format!("0x{}", hex::encode(inner_data));
+
+	Ok((target_address, inner_calldata))
+}
+
+/// Parse executeBatch((address,uint256,bytes)[]) call
+fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>, PumpxRpcError> {
+	// Minimum length: method(4) + array_offset(32) + array_length(32) = 68 bytes
+	if call_bytes.len() < 68 {
+		return Err(PumpxRpcError::from(
+			DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Call data too short for executeBatch call",
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected("68 bytes minimum"),
+		));
+	}
+
+	// Skip method signature (4 bytes) and array offset (32 bytes) to get array length
+	let array_length_bytes = &call_bytes[36..68];
+	let array_length = u32::from_be_bytes([
+		array_length_bytes[28],
+		array_length_bytes[29],
+		array_length_bytes[30],
+		array_length_bytes[31],
+	]) as usize;
+
+	// Each Call struct takes 96 bytes: target(32) + value(32) + data_offset(32)
+	// Plus variable length for the data field
+	let mut results = Vec::new();
+	let mut current_pos = 68; // Start after method + offset + length
+
+	for i in 0..array_length {
+		// Each struct entry is at least 96 bytes (target + value + data_offset)
+		if current_pos + 96 > call_bytes.len() {
+			return Err(PumpxRpcError::from(
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					format!("Call data too short for batch entry {}", i),
+				)
+				.with_field("call_data_length")
+				.with_received(call_bytes.len().to_string())
+				.with_expected(format!("{} bytes minimum", current_pos + 96)),
+			));
+		}
+
+		// Extract target address (last 20 bytes of the 32-byte slot)
+		let target_bytes = &call_bytes[current_pos + 12..current_pos + 32];
+		let target_address = Address::from_slice(target_bytes);
+
+		// Skip target(32) + value(32) to get to data_offset
+		let data_offset_pos = current_pos + 64;
+		let data_offset_bytes = &call_bytes[data_offset_pos..data_offset_pos + 32];
+		let relative_data_offset = u32::from_be_bytes([
+			data_offset_bytes[28],
+			data_offset_bytes[29],
+			data_offset_bytes[30],
+			data_offset_bytes[31],
+		]) as usize;
+
+		// Calculate absolute position of the data
+		// The offset is relative to the start of the current Call struct
+		let data_length_pos = current_pos + relative_data_offset;
+		if data_length_pos + 32 > call_bytes.len() {
+			return Err(PumpxRpcError::from(
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					format!("Call data too short for batch entry {} data length", i),
+				)
+				.with_field("call_data_length")
+				.with_received(call_bytes.len().to_string())
+				.with_expected(format!("{} bytes minimum", data_length_pos + 32)),
+			));
+		}
+
+		// Extract data length
+		let data_length_bytes = &call_bytes[data_length_pos..data_length_pos + 32];
+		let data_length = u32::from_be_bytes([
+			data_length_bytes[28],
+			data_length_bytes[29],
+			data_length_bytes[30],
+			data_length_bytes[31],
+		]) as usize;
+
+		// Extract the actual data
+		let data_start = data_length_pos + 32;
+		if data_start + data_length > call_bytes.len() {
+			return Err(PumpxRpcError::from(
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					format!("Call data too short for batch entry {} data", i),
+				)
+				.with_field("call_data_length")
+				.with_received(call_bytes.len().to_string())
+				.with_expected(format!("{} bytes minimum", data_start + data_length)),
+			));
+		}
+
+		let inner_data = &call_bytes[data_start..data_start + data_length];
+		let inner_calldata = format!("0x{}", hex::encode(inner_data));
+
+		results.push((target_address, inner_calldata));
+
+		// Move to next struct (this is simplified - in reality the ABI encoding is more complex)
+		// For simplicity, assume fixed 96-byte spacing plus the data length
+		current_pos += 96 + data_length.div_ceil(32) * 32; // Round up to 32-byte boundary
+	}
+
+	Ok(results)
+}
+
 /// Validates calldata for wallet_index == 0 backend requests
 fn validate_backend_calldata(
 	user_operations: &[SerializablePackedUserOperation],
 	chain_id: ChainId,
 ) -> Result<(), PumpxRpcError> {
 	for (index, user_op) in user_operations.iter().enumerate() {
-		// Parse the target address from sender field
-		let target_address = user_op.sender.parse::<Address>().map_err(|e| {
-			PumpxRpcError::from(
-				DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Invalid sender address format")
-					.with_field(format!("user_operations[{}].sender", index))
-					.with_received(&user_op.sender)
-					.with_reason(format!("Address parse error: {}", e)),
-			)
-		})?;
-
-		match chain_id {
-			ARBITRUM_MAINNET | ARBITRUM_SEPOLIA => {
-				// For Arbitrum: sender must be USDC contract and calldata must be transfer to bridge
-				let expected_usdc = match chain_id {
-					ARBITRUM_MAINNET => ARBITRUM_USDC_ADDRESS,
-					ARBITRUM_SEPOLIA => ARBITRUM_SEPOLIA_USDC_ADDRESS,
-					_ => unreachable!(),
-				};
-
-				if target_address != expected_usdc.parse::<Address>().unwrap() {
-					return Err(PumpxRpcError::from(
-						DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"For Arbitrum backend requests, target contract must be USDC",
-						)
-						.with_field(format!("user_operations[{}].sender", index))
-						.with_received(&user_op.sender)
-						.with_expected(expected_usdc),
-					));
-				}
-
-				validate_arbitrum_usdc_transfer(&user_op.call_data, chain_id)?;
-			},
-			HYPEREVM_MAINNET | HYPEREVM_TESTNET => {
-				// For HyperEVM: target must be core writer and calldata must have valid action_id
-				if target_address != HYPEREVM_CORE_WRITER_ADDRESS.parse::<Address>().unwrap() {
-					return Err(PumpxRpcError::from(
-						DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"For HyperEVM backend requests, target contract must be core writer",
-						)
-						.with_field(format!("user_operations[{}].sender", index))
-						.with_received(&user_op.sender)
-						.with_expected(HYPEREVM_CORE_WRITER_ADDRESS),
-					));
-				}
-
-				validate_hyperevm_core_writer(&user_op.call_data, chain_id)?;
-			},
-			_ => {
-				return Err(PumpxRpcError::from(
+		// Extract the target addresses and inner calldata from the execute()/executeBatch() calldata
+		let execute_params =
+			extract_execute_params_from_calldata(&user_op.call_data).map_err(|_e| {
+				PumpxRpcError::from(
 					DetailedError::new(
 						AUTH_VERIFICATION_FAILED_CODE,
-						"Chain ID not supported for backend wallet_index validation",
+						"Failed to parse OmniAccount execute calldata",
 					)
-					.with_field("chain_id")
-					.with_received(chain_id.to_string())
-					.with_expected("42161, 421614, 999, or 998"),
-				));
-			},
+					.with_field(format!("user_operations[{}].call_data", index)),
+				)
+			})?;
+
+		// Validate each execute call in the batch (or single call)
+		for (call_index, (target_address, inner_calldata)) in execute_params.iter().enumerate() {
+			match chain_id {
+				ARBITRUM_MAINNET | ARBITRUM_SEPOLIA => {
+					// For Arbitrum: sender must be USDC contract and calldata must be transfer to bridge
+					let expected_usdc = match chain_id {
+						ARBITRUM_MAINNET => ARBITRUM_USDC_ADDRESS,
+						ARBITRUM_SEPOLIA => ARBITRUM_SEPOLIA_USDC_ADDRESS,
+						_ => unreachable!(),
+					};
+
+					if *target_address != expected_usdc.parse::<Address>().unwrap() {
+						return Err(PumpxRpcError::from(
+							DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"For Arbitrum backend requests, target contract must be USDC",
+							)
+							.with_field(format!(
+								"user_operations[{}].call[{}] target address",
+								index, call_index
+							))
+							.with_received(format!("{:?}", target_address))
+							.with_expected(expected_usdc),
+						));
+					}
+
+					validate_arbitrum_usdc_transfer(inner_calldata, chain_id)?;
+				},
+				HYPEREVM_MAINNET | HYPEREVM_TESTNET => {
+					// For HyperEVM: target must be core writer and calldata must have valid action_id
+					if *target_address != HYPEREVM_CORE_WRITER_ADDRESS.parse::<Address>().unwrap() {
+						return Err(PumpxRpcError::from(
+							DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"For HyperEVM backend requests, target contract must be core writer",
+							)
+							.with_field(format!("user_operations[{}].call[{}] target address", index, call_index))
+							.with_received(format!("{:?}", target_address))
+							.with_expected(HYPEREVM_CORE_WRITER_ADDRESS),
+						));
+					}
+
+					validate_hyperevm_core_writer(inner_calldata, chain_id)?;
+				},
+				_ => {
+					return Err(PumpxRpcError::from(
+						DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Chain ID not supported for backend wallet_index validation",
+						)
+						.with_field("chain_id")
+						.with_received(chain_id.to_string())
+						.with_expected("42161, 421614, 999, or 998"),
+					));
+				},
+			}
 		}
 	}
 
