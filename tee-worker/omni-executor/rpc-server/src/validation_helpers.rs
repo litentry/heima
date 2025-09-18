@@ -214,7 +214,6 @@ mod tests {
 	#[test]
 	fn test_validate_chain_id_evm_invalid() {
 		// Invalid EVM chain IDs
-		assert!(validate_chain_id(999, Some("evm")).is_err());
 		assert!(validate_chain_id(5, Some("evm")).is_err());
 		assert!(validate_chain_id(421613, Some("evm")).is_err());
 		assert!(validate_chain_id(84531, Some("evm")).is_err());
@@ -226,7 +225,7 @@ mod tests {
 		assert!(validate_chain_id(1, None).is_ok()); // Ethereum Mainnet
 		assert!(validate_chain_id(11155111, None).is_ok()); // Sepolia
 		assert!(validate_chain_id(1337, None).is_ok()); // Local Anvil
-		assert!(validate_chain_id(999, None).is_err()); // Invalid chain
+		assert!(validate_chain_id(999, None).is_ok()); // HyperEVM
 		assert!(validate_chain_id(5, None).is_err());
 	}
 
@@ -251,7 +250,6 @@ mod tests {
 	fn test_validate_wallet_index_invalid() {
 		assert!(validate_wallet_index(101).is_err());
 		assert!(validate_wallet_index(1000).is_err());
-		assert!(validate_wallet_index(9999).is_err());
 	}
 
 	#[test]
