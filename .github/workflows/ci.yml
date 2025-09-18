@@ -631,13 +631,14 @@ jobs:
         working-directory: ./tee-worker/omni-executor/aa-contracts
         run: |
           forge b
-          forge t > gasreport.ansi
+          forge t --gas-report > gasreport.ansi
         env:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
       - name: Compare gas reports
         uses: Rubilmax/foundry-gas-diff@v3
         with:
+          report: ./tee-worker/omni-executor/aa-contracts/gasreport.ansi
           summaryQuantile: 0.9 # only display the 10% most significant gas diffs in the summary (defaults to 20%)
           sortCriteria: avg,max # sort diff rows by criteria
           sortOrders: desc,asc # and directions
