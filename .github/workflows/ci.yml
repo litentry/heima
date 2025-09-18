@@ -636,7 +636,6 @@ jobs:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
       - name: Compare gas reports
-        working-directory: ./tee-worker/omni-executor/aa-contracts
         uses: Rubilmax/foundry-gas-diff@v3
         with:
           summaryQuantile: 0.9 # only display the 10% most significant gas diffs in the summary (defaults to 20%)
