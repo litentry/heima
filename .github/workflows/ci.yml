@@ -631,7 +631,7 @@ jobs:
         working-directory: ./tee-worker/omni-executor/aa-contracts
         run: |
           forge b
-          forge t --gas-report > gasreport.ansi
+          forge t --gas-report > ./../../../gasreport.ansi
         env:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
