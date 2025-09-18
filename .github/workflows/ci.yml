@@ -636,18 +636,18 @@ jobs:
       - name: Generate gas report for PR
         if: github.event_name == 'pull_request'
         working-directory: ./tee-worker/omni-executor/aa-contracts
-        run: forge test --gas-report > ../../../gasreport
+        run: forge test --gas-report > gasreport.ansi
         env:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
       - name: Generate gas report and diff (PR only)
         if: github.event_name == 'pull_request'
+        working-directory: ./tee-worker/omni-executor/aa-contracts
         uses: Rubilmax/foundry-gas-diff@v3.16
         with:
           summaryQuantile: 0.9
           sortCriteria: avg,max
           sortOrders: desc,asc
-          report: gasreport
         id: gas_diff
 
       - name: Generate gas report (non-PR)
