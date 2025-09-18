@@ -631,41 +631,19 @@ jobs:
         working-directory: ./tee-worker/omni-executor/aa-contracts
         run: |
           forge b
-          forge t
-
-      - name: Generate gas report for PR
-        if: github.event_name == 'pull_request'
-        working-directory: ./tee-worker/omni-executor/aa-contracts
-        run: forge test --gas-report > gasreport.ansi
+          forge t > gasreport.ansi
         env:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
-      - name: Generate gas report and diff (PR only)
-        if: github.event_name == 'pull_request'
+      - name: Compare gas reports
         working-directory: ./tee-worker/omni-executor/aa-contracts
-        uses: Rubilmax/foundry-gas-diff@v3.16
+        uses: Rubilmax/foundry-gas-diff@v3
         with:
-          summaryQuantile: 0.9
-          sortCriteria: avg,max
-          sortOrders: desc,asc
+          summaryQuantile: 0.9 # only display the 10% most significant gas diffs in the summary (defaults to 20%)
+          sortCriteria: avg,max # sort diff rows by criteria
+          sortOrders: desc,asc # and directions
+          ignore: test-foundry/**/* # filter out gas reports from specific paths (test/ is included by default)
         id: gas_diff
-
-      - name: Generate gas report (non-PR)
-        if: github.event_name != 'pull_request'
-        working-directory: ./tee-worker/omni-executor/aa-contracts
-        run: |
-          echo "## Gas Report for AA Contracts" > gas-report.md
-          echo '```' >> gas-report.md
-          forge test --gas-report >> gas-report.md
-          echo '```' >> gas-report.md
-
-      - name: Upload gas report
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: aa-contracts-gas-report
-          path: ./tee-worker/omni-executor/aa-contracts/gas-report.md
-          if-no-files-found: error
 
       - name: Check bsc accounting contracts
         working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
