@@ -1650,8 +1650,8 @@ async fn estimate_user_op_gas(
 		estimated_token_cost: None, // Will be updated if ERC20 paymaster is detected
 	};
 
-	// Step 6: Calculate token cost if ERC20 paymaster is present
 	let estimated_token_cost = if !user_op.paymasterAndData.is_empty() {
+		// Step 6: Calculate token cost if ERC20 paymaster is present
 		calculate_erc20_token_cost(
 			binance_api,
 			&user_op.paymasterAndData,
