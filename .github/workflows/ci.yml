@@ -636,7 +636,7 @@ jobs:
       - name: Generate gas report for PR
         if: github.event_name == 'pull_request'
         working-directory: ./tee-worker/omni-executor/aa-contracts
-        run: forge test --gas-report > gasreport.ansi
+        run: forge test --gas-report > ../../../aa-contracts-gasreport.ansi
         env:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
@@ -647,7 +647,7 @@ jobs:
           summaryQuantile: 0.9
           sortCriteria: avg,max
           sortOrders: desc,asc
-          report: ./tee-worker/omni-executor/aa-contracts/gasreport.ansi
+          report: aa-contracts-gasreport.ansi
         id: gas_diff
 
       - name: Generate gas report (non-PR)
