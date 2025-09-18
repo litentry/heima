@@ -638,7 +638,6 @@ jobs:
       - name: Compare gas reports
         uses: Rubilmax/foundry-gas-diff@v3
         with:
-          report: ./tee-worker/omni-executor/aa-contracts/gasreport.ansi
           summaryQuantile: 0.9 # only display the 10% most significant gas diffs in the summary (defaults to 20%)
           sortCriteria: avg,max # sort diff rows by criteria
           sortOrders: desc,asc # and directions
