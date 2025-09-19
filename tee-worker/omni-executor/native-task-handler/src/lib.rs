@@ -1069,7 +1069,8 @@ pub async fn handle_native_task<
 			// Calculate bundler overhead compensation accounting for existing preVerificationGas
 			const BASE_BUNDLER_OVERHEAD_GAS: u128 = 180_000;
 			const OVERHEAD_SAFETY_MULTIPLIER: f64 = 1.15; // 15% buffer for failed UserOps
-			let total_overhead_with_buffer = (BASE_BUNDLER_OVERHEAD_GAS as f64 * OVERHEAD_SAFETY_MULTIPLIER) as u128;
+			let total_overhead_with_buffer =
+				(BASE_BUNDLER_OVERHEAD_GAS as f64 * OVERHEAD_SAFETY_MULTIPLIER) as u128;
 
 			// Calculate how much overhead signed ops already contribute
 			let signed_ops_prevgas_total: u128 = serializable_user_ops
@@ -1078,13 +1079,16 @@ pub async fn handle_native_task<
 				.map(|op| op.pre_verification_gas)
 				.sum();
 
-			let remaining_overhead_needed = total_overhead_with_buffer.saturating_sub(signed_ops_prevgas_total);
+			let remaining_overhead_needed =
+				total_overhead_with_buffer.saturating_sub(signed_ops_prevgas_total);
 
-			let overhead_per_unsigned_op = if unsigned_ops_count > 0 && remaining_overhead_needed > 0 {
-				(remaining_overhead_needed + unsigned_ops_count as u128 - 1) / unsigned_ops_count as u128 // Ceiling division
-			} else {
-				0
-			};
+			let overhead_per_unsigned_op =
+				if unsigned_ops_count > 0 && remaining_overhead_needed > 0 {
+					(remaining_overhead_needed + unsigned_ops_count as u128 - 1)
+						/ unsigned_ops_count as u128 // Ceiling division
+				} else {
+					0
+				};
 
 			if unsigned_ops_count > 0 && remaining_overhead_needed > 0 {
 				info!(
