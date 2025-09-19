@@ -1061,19 +1061,80 @@ pub async fn handle_native_task<
 			// Process each UserOperation in the batch
 			let mut aa_user_ops = Vec::new();
 
+			// Count unsigned and signed operations
+			let unsigned_ops_count =
+				serializable_user_ops.iter().filter(|op| op.signature.is_none()).count();
+			let signed_ops_count = serializable_user_ops.len() - unsigned_ops_count;
+
+			// Calculate bundler overhead compensation accounting for existing preVerificationGas
+			const BASE_BUNDLER_OVERHEAD_GAS: u128 = 180_000;
+			const OVERHEAD_SAFETY_MULTIPLIER: f64 = 1.15; // 15% buffer for failed UserOps
+			let total_overhead_with_buffer = (BASE_BUNDLER_OVERHEAD_GAS as f64 * OVERHEAD_SAFETY_MULTIPLIER) as u128;
+
+			// Calculate how much overhead signed ops already contribute
+			let signed_ops_prevgas_total: u128 = serializable_user_ops
+				.iter()
+				.filter(|op| op.signature.is_some())
+				.map(|op| op.pre_verification_gas)
+				.sum();
+
+			let remaining_overhead_needed = total_overhead_with_buffer.saturating_sub(signed_ops_prevgas_total);
+
+			let overhead_per_unsigned_op = if unsigned_ops_count > 0 && remaining_overhead_needed > 0 {
+				(remaining_overhead_needed + unsigned_ops_count as u128 - 1) / unsigned_ops_count as u128 // Ceiling division
+			} else {
+				0
+			};
+
+			if unsigned_ops_count > 0 && remaining_overhead_needed > 0 {
+				info!(
+					"Adding {} gas overhead per unsigned UserOp (remaining {} overhead / {} unsigned ops). Signed ops already contribute {} gas",
+					overhead_per_unsigned_op, remaining_overhead_needed, unsigned_ops_count, signed_ops_prevgas_total
+				);
+			} else if unsigned_ops_count > 0 {
+				info!(
+					"No additional overhead needed for unsigned ops. Signed ops already cover full {} gas overhead (with {} buffer)",
+					BASE_BUNDLER_OVERHEAD_GAS, total_overhead_with_buffer
+				);
+			}
+
+			if signed_ops_count > 0 {
+				info!(
+					"Found {} signed UserOps contributing {} total preVerificationGas. Remaining overhead: {} gas",
+					signed_ops_count, signed_ops_prevgas_total, remaining_overhead_needed
+				);
+			}
+
 			for (index, serializable_user_op) in serializable_user_ops.iter().enumerate() {
+				// Add bundler overhead compensation only for unsigned UserOps
+				let mut modified_user_op = serializable_user_op.clone();
+				if serializable_user_op.signature.is_none() && overhead_per_unsigned_op > 0 {
+					modified_user_op.pre_verification_gas = modified_user_op
+						.pre_verification_gas
+						.saturating_add(overhead_per_unsigned_op);
+
+					debug!(
+						"UserOperation {} (unsigned): Adding {} gas overhead. Original preVerificationGas: {}, New preVerificationGas: {}",
+						index, overhead_per_unsigned_op, serializable_user_op.pre_verification_gas, modified_user_op.pre_verification_gas
+					);
+				} else if serializable_user_op.signature.is_some() {
+					debug!(
+						"UserOperation {} (signed): Skipping overhead addition to preserve signature validity. preVerificationGas: {}",
+						index, serializable_user_op.pre_verification_gas
+					);
+				}
+
 				// Convert SerializablePackedUserOperation to PackedUserOperation
-				let mut packed_user_op =
-					match convert_to_packed_user_op(serializable_user_op.clone()) {
-						Ok(user_op) => user_op,
-						Err(e) => {
-							error!("Failed to convert UserOperation {}: {}", index, e);
-							return Err(NativeTaskError::InvalidUserOperation(format!(
-								"Invalid user operation at index {}",
-								index
-							)));
-						},
-					};
+				let mut packed_user_op = match convert_to_packed_user_op(modified_user_op) {
+					Ok(user_op) => user_op,
+					Err(e) => {
+						error!("Failed to convert UserOperation {}: {}", index, e);
+						return Err(NativeTaskError::InvalidUserOperation(format!(
+							"Invalid user operation at index {}",
+							index
+						)));
+					},
+				};
 
 				// Check userOp signature status and validate paymaster usage
 				if packed_user_op.signature.is_empty() {
@@ -1204,6 +1265,30 @@ pub async fn handle_native_task<
 					signature: packed_user_op.signature.clone(),
 				};
 				aa_user_ops.push(aa_user_op);
+			}
+
+			// Validate that signed UserOps have enough preVerificationGas to cover remaining overhead
+			if signed_ops_count > 0 && remaining_overhead_needed > 0 {
+				let total_signed_prevgas: u128 = serializable_user_ops
+					.iter()
+					.filter(|op| op.signature.is_some())
+					.map(|op| op.pre_verification_gas)
+					.sum();
+
+				if total_signed_prevgas < remaining_overhead_needed {
+					let shortfall = remaining_overhead_needed - total_signed_prevgas;
+					let err_msg = format!(
+						"Signed UserOps have insufficient preVerificationGas to cover bundler overhead. Total from {} signed ops: {}, needed: {}, shortfall: {} gas",
+						signed_ops_count, total_signed_prevgas, remaining_overhead_needed, shortfall
+					);
+					error!("{}", err_msg);
+					return Err(NativeTaskError::InvalidUserOperation(err_msg));
+				}
+
+				info!(
+					"Signed UserOps validation passed: {} ops with {} total preVerificationGas covers {} remaining overhead",
+					signed_ops_count, total_signed_prevgas, remaining_overhead_needed
+				);
 			}
 
 			// Get beneficiary address from the EntryPoint client's wallet
