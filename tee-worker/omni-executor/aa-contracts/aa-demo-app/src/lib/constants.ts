@@ -3,6 +3,7 @@ import OmniAccountArtifact from "@/contracts/abis/OmniAccount.json";
 import OmniAccountFactoryArtifact from "@/contracts/abis/OmniAccountFactory.json";
 import StandardERC20Artifact from "@/contracts/abis/StandardERC20.json";
 import SimplePaymasterArtifact from "@/contracts/abis/SimplePaymaster.json";
+import ERC20PaymasterV1Artifact from "@/contracts/abis/ERC20PaymasterV1.json";
 
 // Extract ABIs from artifacts
 const EntryPointABI = (EntryPointArtifact as any).abi || EntryPointArtifact;
@@ -10,6 +11,7 @@ const OmniAccountABI = (OmniAccountArtifact as any).abi || OmniAccountArtifact;
 const OmniAccountFactoryABI = (OmniAccountFactoryArtifact as any).abi || OmniAccountFactoryArtifact;
 const StandardERC20ABI = (StandardERC20Artifact as any).abi || StandardERC20Artifact;
 const SimplePaymasterABI = (SimplePaymasterArtifact as any).abi || SimplePaymasterArtifact;
+const ERC20PaymasterV1ABI = (ERC20PaymasterV1Artifact as any).abi || ERC20PaymasterV1Artifact;
 
 // Contract addresses - update these after running deploy-local.sh
 // Default addresses are for chainId 31337 (Hardhat)
@@ -40,6 +42,12 @@ export const CONTRACTS = {
 		address: (process.env.NEXT_PUBLIC_PAYMASTER_ADDRESS ||
 			"0x0000000000000000000000000000000000000000") as `0x${string}`,
 		abi: SimplePaymasterABI,
+	},
+	ERC20Paymaster: {
+		// ERC20 Paymaster for paying gas with tokens
+		address: (process.env.NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS ||
+			"0x0000000000000000000000000000000000000000") as `0x${string}`,
+		abi: ERC20PaymasterV1ABI,
 	},
 } as const;
 
@@ -144,4 +152,30 @@ export const PAYMASTER_CONFIG = {
 	defaultPostOpGasLimit: BigInt(50000),
 	// Whether paymaster is enabled by default
 	enabledByDefault: false,
+	// ERC20 Paymaster configuration
+	erc20PaymasterAvailable: true,
+	defaultPaymentToken: "USDC", // Default token for ERC20 paymaster
+} as const;
+
+// Paymaster types
+export enum PaymasterType {
+	None = "none",
+	Simple = "simple",
+	ERC20 = "erc20",
+}
+
+// UserOperation gas limits
+export const USER_OP_GAS_LIMITS = {
+	// For account deployment operations
+	deployment: {
+		callGasLimit: BigInt(500000),      // Sufficient for contract deployment
+		verificationGasLimit: BigInt(700000), // Enough for verification + init
+		preVerificationGas: BigInt(70000),   // Standard for basic operations
+	},
+	// For regular operations (transfers, calls, etc.)
+	regular: {
+		callGasLimit: BigInt(500000),      // Sufficient for most operations
+		verificationGasLimit: BigInt(1000000), // Higher for complex operations
+		preVerificationGas: BigInt(100000),   // Standard overhead
+	},
 } as const;
