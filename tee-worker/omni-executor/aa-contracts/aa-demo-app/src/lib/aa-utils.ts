@@ -10,7 +10,7 @@ import {
     type Hash,
     type PublicClient,
 } from "viem";
-import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
+import { CONTRACTS, DEFAULT_CLIENT_ID, USER_OP_GAS_LIMITS } from "./constants";
 
 // Dummy signature for gas estimation (66 bytes total for OmniAccount)
 // This is a standard practice in ERC-4337 for gas estimation
@@ -96,6 +96,58 @@ export function calculateOmniAccount(
     });
 
     return result as `0x${string}`;
+}
+
+/**
+ * Calculate OmniAccount from email address
+ * Based on the Rust implementation: sha256(clientId + "email" + email)
+ */
+export function calculateOmniAccountFromEmail(
+    email: string,
+    clientId: string = DEFAULT_CLIENT_ID,
+): `0x${string}` {
+    // Create input array for hashing - order is important: clientId, "email", email
+    const inputs: Uint8Array[] = [];
+
+    // First: clientId as raw bytes
+    const clientIdBytes = new TextEncoder().encode(clientId);
+    inputs.push(clientIdBytes);
+
+    // Second: identity type "email"
+    inputs.push(new TextEncoder().encode("email"));
+
+    // Third: email address
+    inputs.push(new TextEncoder().encode(email));
+
+    const totalLength = inputs.reduce((sum, arr) => sum + arr.length, 0);
+    const combined = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const input of inputs) {
+        combined.set(input, offset);
+        offset += input.length;
+    }
+
+    // Calculate SHA256 hash
+    const hash = sha256.array(combined);
+
+    // Convert to hex string
+    const result = `0x${hash.map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+
+    console.log("Email OmniAccount calculation:", {
+        email,
+        clientId,
+        result,
+    });
+
+    return result as `0x${string}`;
+}
+
+/**
+ * Validate email format
+ */
+export function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
 }
 
 /**
@@ -209,10 +261,11 @@ export async function estimateUserOperationGas(
         const maxFeePerGas = (feeData.maxFeePerGas || BigInt(20000000000)) * BigInt(120) / BigInt(100);
         const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || BigInt(1000000000);
 
-        // Use higher gas limits for deployment
-        const callGasLimit = isDeployment ? BigInt(2000000) : BigInt(500000);
-        const verificationGasLimit = isDeployment ? BigInt(3000000) : BigInt(1000000);
-        const preVerificationGas = BigInt(100000);
+        // Use appropriate gas limits based on operation type
+        const gasLimits = isDeployment ? USER_OP_GAS_LIMITS.deployment : USER_OP_GAS_LIMITS.regular;
+        const callGasLimit = gasLimits.callGasLimit;
+        const verificationGasLimit = gasLimits.verificationGasLimit;
+        const preVerificationGas = gasLimits.preVerificationGas;
 
         return {
             callGasLimit,

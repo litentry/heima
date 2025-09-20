@@ -246,6 +246,26 @@ interface EstimateUserOpGasResponse {
     paymasterPostOpGasLimit: string;
 }
 
+// Get OmniAccount hash from email
+export interface GetOmniAccountParams {
+    client_id: string;
+    user_email: string;
+}
+
+export async function getOmniAccount(
+    clientId: string,
+    email: string
+): Promise<string> {
+    const params: GetOmniAccountParams = {
+        client_id: clientId,
+        user_email: email,
+    };
+
+    console.log("[TEE Worker] Getting OmniAccount for email:", email);
+
+    return makeRpcRequest<string>("omni_getOmniAccount", params);
+}
+
 // Estimate gas for a UserOperation through the TEE worker
 export async function estimateUserOpGas(
     userOperation: SerializablePackedUserOperation,
