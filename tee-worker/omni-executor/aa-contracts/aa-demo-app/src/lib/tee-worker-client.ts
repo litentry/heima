@@ -82,9 +82,12 @@ async function makeRpcRequest<T>(
 
     if (data.error) {
         console.error(`[TEE Worker RPC] Error from ${method}:`, data.error);
-        // Include error code in the error message for better debugging
+        // Include error code and data in the error message for better debugging
+        const errorData = typeof data.error.data === 'object' 
+            ? JSON.stringify(data.error.data)
+            : data.error.data;
         const errorMessage = data.error.data
-            ? `${data.error.message} (${data.error.data})`
+            ? `${data.error.message} (${errorData})`
             : data.error.message || "RPC error";
         throw new Error(errorMessage);
     }
