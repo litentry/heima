@@ -21,7 +21,7 @@ extract_from_deployment() {
         # Extract addresses using jq
         ENTRYPOINT_ADDRESS=$(jq -r '.contracts.EntryPointV1.address // empty' "$DEPLOYMENT_FILE")
         FACTORY_ADDRESS=$(jq -r '.contracts.OmniAccountFactoryV1.address // empty' "$DEPLOYMENT_FILE")
-        PAYMASTER_ADDRESS=$(jq -r '.contracts.SimplePaymaster.address // .contracts.DemoPaymaster.address // empty' "$DEPLOYMENT_FILE")
+        PAYMASTER_ADDRESS=$(jq -r '.contracts.SimplePaymaster.address // .contracts.DemoPaymaster.address // .contracts.ERC20PaymasterV1.address // empty' "$DEPLOYMENT_FILE")
         
         # Extract test token addresses based on metadata
         USDC_ADDRESS=$(jq -r '.contracts | to_entries[] | select(.value.metadata.symbol == "USDC") | .value.address // empty' "$DEPLOYMENT_FILE" | head -1)
@@ -86,8 +86,11 @@ extract_addresses() {
     USDC_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
     USDT_ADDRESS=$(grep -A2 '"contractName": "TestToken"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | tail -1)
     
-    # Extract DemoPaymaster address (try both DemoPaymaster and SimplePaymaster for backwards compatibility)
-    PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    # Extract Paymaster address (try all three types)
+    PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "ERC20PaymasterV1"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    if [ -z "$PAYMASTER_ADDRESS" ]; then
+        PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+    fi
     if [ -z "$PAYMASTER_ADDRESS" ]; then
         PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$broadcast_file" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
     fi
