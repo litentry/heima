@@ -208,7 +208,7 @@ mod tests {
 		assert!(validate_chain_id(80001, Some("evm")).is_ok());
 		assert!(validate_chain_id(84532, Some("evm")).is_ok());
 		assert!(validate_chain_id(97, Some("evm")).is_ok());
-		assert!(validate_chain_id(1337, Some("evm")).is_ok());
+		assert!(validate_chain_id(31337, Some("evm")).is_ok());
 	}
 
 	#[test]
@@ -224,7 +224,7 @@ mod tests {
 		// Any type should check EVM chains
 		assert!(validate_chain_id(1, None).is_ok()); // Ethereum Mainnet
 		assert!(validate_chain_id(11155111, None).is_ok()); // Sepolia
-		assert!(validate_chain_id(1337, None).is_ok()); // Local Anvil
+		assert!(validate_chain_id(31337, None).is_ok()); // Local Anvil
 		assert!(validate_chain_id(999, None).is_ok()); // HyperEVM
 		assert!(validate_chain_id(5, None).is_err());
 	}
