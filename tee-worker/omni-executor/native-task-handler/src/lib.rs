@@ -1084,8 +1084,7 @@ pub async fn handle_native_task<
 
 			let overhead_per_unsigned_op =
 				if unsigned_ops_count > 0 && remaining_overhead_needed > 0 {
-					(remaining_overhead_needed + unsigned_ops_count as u128 - 1)
-						/ unsigned_ops_count as u128 // Ceiling division
+					remaining_overhead_needed.div_ceil(unsigned_ops_count as u128)
 				} else {
 					0
 				};
