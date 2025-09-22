@@ -4,7 +4,9 @@
   "description": "Scripts for AA contracts",
   "type": "commonjs",
   "scripts": {
-    "check-root": "node check-root-signer.js"
+    "check-root": "node check-root-signer.js",
+    "gas-report": "forge test --gas-report",
+    "gas-report-detailed": "forge test --gas-report | tee gas-report.txt"
   },
   "dependencies": {
     "ethers": "^6.9.0"
