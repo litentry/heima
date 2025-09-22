@@ -222,6 +222,12 @@ fn get_supported_tokens() -> std::collections::HashMap<(u64, &'static str), Toke
 		TokenInfo { decimals: 18, binance_pair: "ETHUSDT" },
 	);
 
+	// Base (Chain ID 8453)
+	tokens.insert(
+		(8453, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"), // USDC
+		TokenInfo { decimals: 6, binance_pair: "ETHUSDC" },
+	);
+
 	tokens
 }
 
