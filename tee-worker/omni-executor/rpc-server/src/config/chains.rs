@@ -10,7 +10,7 @@ pub const SUPPORTED_EVM_CHAINS: &[u32] = &[
 	80001,    // Polygon Mumbai
 	8453,     // Base
 	84532,    // Base Sepolia
-	31337,     // Local Anvil
+	31337,    // Local Anvil
 	56,       // Binance Smart Chain
 	97,       // Binance Smart Chain Testnet
 	999,      // HyperEVM mainnet
