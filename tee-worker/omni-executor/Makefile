@@ -96,6 +96,11 @@ stop-local:
 build-docker-test:
 	docker build --build-arg CARGO_FEATURES="mock-server,test-endpoints" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
+.PHONY: rebuild-docker-dev
+rebuild-docker-dev:
+	cargo build --release --features mock-server
+	cd docker/ && docker compose build --no-cache omni-executor
+
 .PHONY: start-test
 start-test:
 	docker compose -f $(OMNI_DIR)/docker/docker-compose.yml -f $(OMNI_DIR)/docker/docker-compose.test.yml up
