@@ -22,7 +22,7 @@
 
 use frame_support::{
 	migration::clear_storage_prefix,
-	traits::{Get, OnRuntimeUpgrade},
+	traits::{Get, GetStorageVersion, OnRuntimeUpgrade},
 	weights::Weight,
 };
 
@@ -38,12 +38,15 @@ use sp_std::vec::Vec;
 
 const TARGET: &str = "runtime::migration::P9251";
 
+/// Check if migration has been executed by looking for a marker value
+const MIGRATION_KEY: &[u8] = b"P9251MigrationExecuted";
+
 /// Migration to remove old bridge pallets storage
 pub struct RemoveOldBridgeStorage<T>(PhantomData<T>);
 
 impl<T> RemoveOldBridgeStorage<T>
 where
-	T: frame_system::Config,
+	T: frame_system::Config + pallet_chain_bridge::Config + pallet_assets_handler::Config,
 {
 	/// Remove all ChainBridge pallet storage
 	fn remove_chain_bridge_storage() -> Weight {
@@ -72,6 +75,12 @@ where
 				core::str::from_utf8(storage_name).unwrap_or("unknown")
 			);
 		}
+
+		// Preserve existing storage version to prevent "new pallet" detection
+		let current_version =
+			<pallet_chain_bridge::Pallet<T> as GetStorageVersion>::in_code_storage_version();
+		current_version.put::<pallet_chain_bridge::Pallet<T>>();
+		weight = weight.saturating_add(T::DbWeight::get().writes(1));
 
 		weight
 	}
@@ -124,6 +133,12 @@ where
 			);
 		}
 
+		// Preserve existing storage version to prevent "new pallet" detection
+		let current_version =
+			<pallet_assets_handler::Pallet<T> as GetStorageVersion>::in_code_storage_version();
+		current_version.put::<pallet_assets_handler::Pallet<T>>();
+		weight = weight.saturating_add(T::DbWeight::get().writes(1));
+
 		weight
 	}
 
@@ -144,7 +159,7 @@ where
 
 impl<T> OnRuntimeUpgrade for RemoveOldBridgeStorage<T>
 where
-	T: frame_system::Config,
+	T: frame_system::Config + pallet_chain_bridge::Config + pallet_assets_handler::Config,
 {
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
@@ -164,6 +179,17 @@ where
 	}
 
 	fn on_runtime_upgrade() -> Weight {
+		if frame_support::storage::migration::get_storage_value::<bool>(
+			b"P9251Migration",
+			MIGRATION_KEY,
+			b"",
+		)
+		.unwrap_or(false)
+		{
+			log::info!(target: TARGET, "⏭️ P9251 migration already executed, skipping");
+			return Weight::zero();
+		}
+
 		log::info!(target: TARGET, "🚀 Starting P9251: Remove old bridge storage");
 
 		let mut weight = Weight::zero();
@@ -171,6 +197,14 @@ where
 		weight = weight.saturating_add(Self::remove_chain_bridge_storage());
 		weight = weight.saturating_add(Self::remove_bridge_transfer_storage());
 		weight = weight.saturating_add(Self::remove_assets_handler_storage());
+
+		frame_support::storage::migration::put_storage_value(
+			b"P9251Migration",
+			MIGRATION_KEY,
+			b"",
+			true,
+		);
+		weight = weight.saturating_add(T::DbWeight::get().writes(1));
 
 		log::info!(target: TARGET, "✅ P9251 migration completed");
 		weight
