@@ -25,13 +25,13 @@ use frame_support::{
 	traits::{Get, OnRuntimeUpgrade},
 	weights::Weight,
 };
+
+#[cfg(feature = "try-runtime")]
+use sp_runtime::DispatchError;
 use sp_std::marker::PhantomData;
 
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::{Decode, Encode};
-
-#[cfg(feature = "try-runtime")]
-use pallet_chain_bridge::{BridgeChainId, DepositNonce};
 
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
@@ -147,7 +147,7 @@ where
 	T: frame_system::Config,
 {
 	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+	fn pre_upgrade() -> Result<Vec<u8>, DispatchError> {
 		log::info!(target: TARGET, "🔍 Pre-upgrade: Checking old bridge storage");
 
 		let chain_bridge_count = Self::count_storage_items(b"ChainBridge");
@@ -177,9 +177,10 @@ where
 	}
 
 	#[cfg(feature = "try-runtime")]
-	fn post_upgrade(state: Vec<u8>) -> Result<(), &'static str> {
+	fn post_upgrade(state: Vec<u8>) -> Result<(), DispatchError> {
 		let (chain_bridge_before, bridge_transfer_before, assets_handler_before): (u32, u32, u32) =
-			Decode::decode(&mut &state[..]).map_err(|_| "Failed to decode pre-upgrade state")?;
+			Decode::decode(&mut &state[..])
+				.map_err(|_| DispatchError::Other("Failed to decode pre-upgrade state"))?;
 
 		log::info!(
 			target: TARGET,
