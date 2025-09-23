@@ -235,7 +235,7 @@ if is_omni_executor_release; then
       match($0, /^[[:space:]]*([^:]+):[[:space:]]*(.*)/, arr)
       field = arr[1]
       value = arr[2]
-      printf "  %-23s: %s\n", field, value
+      printf "  %-27s: %s\n", field, value
       next
     }
     # Skip other lines or pass them through if needed
