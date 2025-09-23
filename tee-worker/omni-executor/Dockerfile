@@ -43,7 +43,10 @@ CMD ["$BIN_DIR/executor-worker"]
 
 ### Builder Stage - With Gramine (SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:stable-jammy AS sgx-builder
+FROM gramineproject/gramine:1.9-jammy AS sgx-builder
+
+ARG OE_WILDMETA_BACKEND_ECDSA_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
+ENV OE_WILDMETA_BACKEND_ECDSA_PUBKEY=$OE_WILDMETA_BACKEND_ECDSA_PUBKEY
 
 RUN apt-get update
 
@@ -72,7 +75,7 @@ RUN make SGX=1 SGX_DEBUG=0 SOURCE_DATE_EPOCH=1700000000 CARGO_PROFILE_RELEASE_DE
 
 ### Release image (with SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:stable-jammy AS release
+FROM gramineproject/gramine:1.9-jammy AS release
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
 
 ENV HOME=/home/ubuntu
@@ -92,7 +95,7 @@ RUN apt-get install -y \
     pkg-config \
     ca-certificates
 
-RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db 
+RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx

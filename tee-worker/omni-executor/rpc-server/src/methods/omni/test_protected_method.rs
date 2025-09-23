@@ -1,9 +1,29 @@
 use crate::methods::omni::common::check_auth;
 use crate::server::RpcContext;
+use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[cfg(test)]
-pub fn register_test_protected_method(module: &mut RpcModule<RpcContext>) {
+pub fn register_test_protected_method<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_method("omni_testProtectedMethod", |_, _, ext| {
 			if let Ok(user) = check_auth(ext) {
@@ -17,8 +37,10 @@ pub fn register_test_protected_method(module: &mut RpcModule<RpcContext>) {
 #[cfg(test)]
 mod test {
 	use crate::{start_server, ShieldingKey};
+	use binance_api::mocks::MockBinanceApiClient;
 	use chrono::{Days, Utc};
 	use config_loader::ConfigLoader;
+	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_crypto::jwt;
 	use executor_primitives::utils::hex::ToHexPrefixed;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
@@ -26,18 +48,21 @@ mod test {
 		auth_token::{AuthOptions, AuthTokenClaims},
 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
 	};
-	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use heima_primitives::{Identity, Web2IdentityType};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use native_task_handler::NativeTaskChannelType;
+	use parentchain_rpc_client::metadata::SubxtMetadataProvider;
+	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
+	use parentchain_signer::key_store::SubstrateKeyStore;
+	use parentchain_signer::TxSigner;
 	use pumpx::PumpxApiClient;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use signer_client::{mocks::MockSignerClient, SignerClient};
+	use std::collections::HashMap;
+	use std::path::Path;
 	use std::sync::Arc;
 	use tempfile::tempdir;
-	use tokio::sync::mpsc;
 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
@@ -45,7 +70,6 @@ mod test {
 		let tmp_dir = tempdir().unwrap();
 		let port = 2004;
 		let shielding_key = ShieldingKey::new();
-		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
 		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 
 		let mut rng = rand::thread_rng();
@@ -55,25 +79,61 @@ mod test {
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-
-		// Create console mailer for test
-		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
+		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+			Arc::new(MockBinanceApiClient::new());
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
 
+		let (solana_intent_executor, _solana_mock_recv) = MockedIntentExecutor::new();
+		let (ethereum_intent_executor, _ethereum_mock_recv) = MockedIntentExecutor::new();
+		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
+
+		let client_factory =
+			SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
+		let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
+		let parentchain_rpc_client_factory = Arc::new(client_factory);
+
+		let aes_key = [0u8; 32];
+		let entry_point_clients = HashMap::new();
+
+		let substrate_key_store = Arc::new(SubstrateKeyStore::new(
+			Path::new("./")
+				.join("keystore/substrate_key.bin")
+				.into_os_string()
+				.into_string()
+				.unwrap(),
+		));
+
+		let signer_account_nonce = 0;
+		let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
+
+		let tx_signer = Arc::new(TxSigner::new(
+			metadata_provider,
+			parentchain_rpc_client_factory.clone(),
+			parentchain_signer.clone(),
+			signer_account_nonce,
+		));
+
 		start_server(
 			port,
 			shielding_key.clone(),
-			Arc::new(sender),
 			Arc::new(Box::new(pumpx_api)),
 			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
+			binance_api_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
-			mailer,
+			[0u8; 33], // Test ECDSA public key
+			Arc::new(ethereum_intent_executor),
+			Arc::new(solana_intent_executor),
+			Arc::new(cross_chain_intent_executor),
+			parentchain_rpc_client_factory,
+			aes_key,
+			tx_signer,
+			Arc::new(entry_point_clients),
 		)
 		.await
 		.unwrap();

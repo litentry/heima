@@ -1,0 +1,182 @@
+use crate::error_code::{
+	ACCOUNT_PARSE_ERROR_CODE, EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE,
+	INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
+	INVALID_HEX_FORMAT_CODE, INVALID_USER_OPERATION_CODE, INVALID_WALLET_INDEX_CODE,
+	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
+	UNEXPECTED_RESPONSE_TYPE_CODE,
+};
+use jsonrpsee::types::ErrorObject;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetailedError {
+	pub code: i32,
+	pub message: String,
+	pub details: ErrorDetails,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorDetails {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub field: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub expected: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub received: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub reason: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub suggestion: Option<String>,
+}
+
+impl DetailedError {
+	pub fn new(code: i32, message: impl Into<String>) -> Self {
+		Self {
+			code,
+			message: message.into(),
+			details: ErrorDetails {
+				field: None,
+				expected: None,
+				received: None,
+				reason: None,
+				suggestion: None,
+			},
+		}
+	}
+
+	pub fn with_field(mut self, field: impl Into<String>) -> Self {
+		self.details.field = Some(field.into());
+		self
+	}
+
+	pub fn with_expected(mut self, expected: impl Into<String>) -> Self {
+		self.details.expected = Some(expected.into());
+		self
+	}
+
+	pub fn with_received(mut self, received: impl Into<String>) -> Self {
+		self.details.received = Some(received.into());
+		self
+	}
+
+	pub fn with_reason(mut self, reason: impl Into<String>) -> Self {
+		self.details.reason = Some(reason.into());
+		self
+	}
+
+	pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
+		self.details.suggestion = Some(suggestion.into());
+		self
+	}
+
+	pub fn to_error_object(&self) -> ErrorObject<'static> {
+		ErrorObject::owned(self.code, self.message.clone(), Some(self.details.clone()))
+	}
+}
+
+impl DetailedError {
+	pub fn invalid_chain_id(chain_id: u64, supported_chains: &[u64]) -> Self {
+		Self::new(INVALID_CHAIN_ID_CODE, "Invalid or unsupported chain ID")
+			.with_field("chain_id")
+			.with_received(chain_id.to_string())
+			.with_expected(format!("One of: {:?}", supported_chains))
+			.with_suggestion("Use a supported chain ID from the list")
+	}
+
+	pub fn invalid_wallet_index(index: u32, max_index: u32) -> Self {
+		Self::new(INVALID_WALLET_INDEX_CODE, "Wallet index out of bounds")
+			.with_field("wallet_index")
+			.with_received(index.to_string())
+			.with_expected(format!("0 to {}", max_index))
+			.with_suggestion(format!("Use a wallet index between 0 and {}", max_index))
+	}
+
+	pub fn invalid_address_format(field: &str, address: &str, expected_format: &str) -> Self {
+		Self::new(INVALID_ADDRESS_FORMAT_CODE, "Invalid address format")
+			.with_field(field)
+			.with_received(address.to_string())
+			.with_expected(expected_format)
+			.with_suggestion("Ensure the address follows the correct format")
+	}
+
+	pub fn invalid_amount(field: &str, amount: &str, reason: &str) -> Self {
+		Self::new(INVALID_AMOUNT_CODE, "Invalid amount value")
+			.with_field(field)
+			.with_received(amount.to_string())
+			.with_expected("Positive number within valid range")
+			.with_suggestion(reason)
+	}
+
+	pub fn invalid_hex_format(field: &str, value: &str, expected_length: Option<usize>) -> Self {
+		let expected = if let Some(len) = expected_length {
+			format!("0x-prefixed hex string of {} bytes", len)
+		} else {
+			"Valid hexadecimal string".to_string()
+		};
+
+		Self::new(INVALID_HEX_FORMAT_CODE, "Invalid hexadecimal format")
+			.with_field(field)
+			.with_received(value.to_string())
+			.with_expected(expected)
+			.with_suggestion("Check that the value is properly hex-encoded")
+	}
+
+	pub fn account_parse_error(account: &str, error: &str) -> Self {
+		Self::new(ACCOUNT_PARSE_ERROR_CODE, "Failed to parse account identifier")
+			.with_field("omni_account")
+			.with_received(account.to_string())
+			.with_expected("Valid 32-byte account identifier")
+			.with_suggestion(format!("Error: {}", error))
+	}
+
+	pub fn unexpected_response_type(expected: &str, received: &str) -> Self {
+		Self::new(UNEXPECTED_RESPONSE_TYPE_CODE, "Unexpected response type from service")
+			.with_expected(expected)
+			.with_received(received)
+			.with_suggestion("This is likely an internal error. Please contact support.")
+	}
+
+	pub fn signer_service_error(operation: &str, error: &str) -> Self {
+		Self::new(SIGNER_SERVICE_ERROR_CODE, format!("Signer service error during {}", operation))
+			.with_suggestion(format!("Signer error: {}", error))
+	}
+
+	pub fn email_service_error(email: &str) -> Self {
+		Self::new(EMAIL_SERVICE_ERROR_CODE, "Email service error")
+			.with_field("email")
+			.with_received(email.to_string())
+			.with_suggestion("Failed to send verification email. Please try again later.")
+	}
+
+	pub fn storage_error(operation: &str) -> Self {
+		Self::new(STORAGE_SERVICE_ERROR_CODE, format!("Storage service error during {}", operation))
+			.with_suggestion("Storage operation failed. Please try again later.")
+	}
+
+	// Native task error factory methods
+	pub fn chain_not_supported(chain_id: u64) -> Self {
+		// Get supported chains from config
+		use crate::config::SUPPORTED_EVM_CHAINS;
+		let supported: Vec<u64> = SUPPORTED_EVM_CHAINS.iter().map(|&c| c as u64).collect();
+
+		Self::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
+			.with_field("chain_id")
+			.with_received(chain_id.to_string())
+			.with_expected(format!("One of: {:?}", supported))
+			.with_suggestion("Please use a supported chain ID")
+	}
+
+	pub fn invalid_user_operation_error(description: &str) -> Self {
+		Self::new(INVALID_USER_OPERATION_CODE, description)
+	}
+
+	pub fn gas_estimation_failed() -> Self {
+		Self::new(GAS_ESTIMATION_FAILED_CODE, "Unable to estimate gas for operation")
+			.with_suggestion("Please check the user operation parameters and try again")
+	}
+
+	pub fn signature_service_unavailable() -> Self {
+		Self::new(SIGNATURE_SERVICE_UNAVAILABLE_CODE, "Signature service temporarily unavailable")
+			.with_suggestion("Please try again in a few moments")
+	}
+}

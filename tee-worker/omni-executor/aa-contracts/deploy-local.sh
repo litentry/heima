@@ -4,8 +4,9 @@
 # This script starts an Anvil node and deploys the Account Abstraction contracts
 #
 # Usage:
-#   ./local-deploy.sh                   # Deploy with SimplePaymaster (default)
+#   ./local-deploy.sh                      # Deploy with SimplePaymaster (default)
 #   PAYMASTER_TYPE=demo ./local-deploy.sh  # Deploy with DemoPaymaster (no bundler restrictions)
+#   PAYMASTER_TYPE=erc20 ./local-deploy.sh # Deploy with ERC20PaymasterV1 (pay gas with tokens)
 
 set -e
 
@@ -23,6 +24,7 @@ OMNI_EXECUTOR_SIGNER="0x90F79bf6EB2c4f870365E785982E1f101E93b906"
 
 # Paymaster configuration
 # Set PAYMASTER_TYPE=demo to deploy DemoPaymaster (no bundler restrictions)
+# Set PAYMASTER_TYPE=erc20 to deploy ERC20PaymasterV1 (pay gas with ERC20 tokens)
 # Default is SimplePaymaster (requires authorized bundlers)
 PAYMASTER_TYPE="${PAYMASTER_TYPE:-simple}"
 
@@ -61,6 +63,8 @@ deploy_contracts() {
     # Show which paymaster is being deployed
     if [ "$PAYMASTER_TYPE" = "demo" ]; then
         echo "🎮 Deploying with DemoPaymaster (no bundler restrictions)"
+    elif [ "$PAYMASTER_TYPE" = "erc20" ]; then
+        echo "💰 Deploying with ERC20PaymasterV1 (pay gas with ERC20 tokens)"
     else
         echo "🔒 Deploying with SimplePaymaster (requires authorized bundlers)"
     fi
@@ -82,9 +86,12 @@ deploy_contracts() {
     if [ -f "$BROADCAST_FILE" ]; then
         ENTRYPOINT_ADDRESS=$(grep -A2 '"contractName": "EntryPointV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         FACTORY_ADDRESS=$(grep -A2 '"contractName": "OmniAccountFactoryV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
-        # Try to find DemoPaymaster first, fall back to SimplePaymaster
-        PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
-        if [ -z "$PAYMASTER_ADDRESS" ]; then
+        # Try to find the appropriate paymaster based on type
+        if [ "$PAYMASTER_TYPE" = "demo" ]; then
+            PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "DemoPaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        elif [ "$PAYMASTER_TYPE" = "erc20" ]; then
+            PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "ERC20PaymasterV1"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
+        else
             PAYMASTER_ADDRESS=$(grep -A2 '"contractName": "SimplePaymaster"' "$BROADCAST_FILE" | grep '"contractAddress"' | sed 's/.*"contractAddress": "\(.*\)".*/\1/' | head -1)
         fi
         

@@ -21,7 +21,7 @@ services:
       - OE_PUMPX_WORKER_URL=ws://omni-executor:2100
       - OE_PUMPX_API_BASE_URL=http://omni-executor:3456/pumpx/
       - OE_PUMPX_SIGNER_URL=http://omni-executor:3456/jsonrpc
-      - OE_MAILER_TYPE=console
+      - OE_MAILER_TYPE_HEIMA=console
       # These should be set in the .env file or overridden as needed:
       # - OE_BSC_URL=
       # - OE_BSC_TESTNET_URL=
@@ -59,7 +59,7 @@ services:
       - "8545:8545"
     networks:
       - litentry-test-network
-      
+
   aa-contracts-deploy:
     build:
       context: ..

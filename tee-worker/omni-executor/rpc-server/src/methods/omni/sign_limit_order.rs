@@ -15,12 +15,13 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::common::handle_omni_native_task;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+use crate::detailed_error::DetailedError;
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
 use ethers::types::Bytes;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::NativeTask;
 use executor_core::native_task::NativeTaskWrapper;
 use executor_core::native_task::PumpxChainId;
@@ -30,6 +31,7 @@ use heima_primitives::Address32;
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::{debug, error};
@@ -51,26 +53,54 @@ pub struct SignLimitOrderResponse {
 	pub signed_tx: Vec<Bytes>,
 }
 
-pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
+pub fn register_sign_limit_order_params<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
+				PumpxRpcError::from(
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_suggestion("Please check your authentication credentials"),
+				)
 			})?;
 
 			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields"),
+				)
 			})?;
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
 			let Ok(address) = Address32::from_hex(&user.omni_account) else {
 				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to parse omni account from authentication token"),
+				));
 			};
 
 			let wrapper = NativeTaskWrapper::new(
@@ -94,7 +124,10 @@ pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
 				}),
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Unexpected response type from native task handler"),
+					))
 				},
 			})
 			.await

@@ -173,13 +173,8 @@ impl RpcProvider for AlloyRpcProvider {
 			.await
 			.map_err(RpcProviderError::from_alloy_error)?;
 
-		// Get transaction hash before waiting for receipt
+		// Get transaction hash and return immediately without waiting for confirmation
 		let tx_hash = pending_tx.tx_hash().to_string();
-
-		// wait for transaction to be included
-		let _ = pending_tx.get_receipt().await.map_err(|e| {
-			RpcProviderError::Transaction(format!("Failed to get transaction receipt: {}", e))
-		})?;
 
 		Ok(tx_hash)
 	}
@@ -252,9 +247,17 @@ impl RpcProvider for AlloyRpcProvider {
 					// Try to extract revert data
 					if let Ok(value) = serde_json::from_str::<String>(data.get()) {
 						if value.starts_with("0x") {
+							let decoded = match hex::decode(value) {
+								Ok(bytes) => Some(bytes),
+								Err(e) => {
+									error!("Could not decode rpc response: {:?}", e);
+									None
+								},
+							};
 							// This is likely revert data, return as execution reverted
 							return RpcProviderError::ExecutionReverted {
 								reason: resp.message.to_string(),
+								data: decoded,
 							};
 						}
 					}
@@ -290,9 +293,17 @@ impl RpcProvider for AlloyRpcProvider {
 							// Try to extract revert data
 							if let Ok(value) = serde_json::from_str::<String>(data.get()) {
 								if value.starts_with("0x") {
+									let decoded = match hex::decode(value) {
+										Ok(bytes) => Some(bytes),
+										Err(e) => {
+											error!("Could not decode rpc response: {:?}", e);
+											None
+										},
+									};
 									// This is likely revert data, return as execution reverted
 									return RpcProviderError::ExecutionReverted {
 										reason: resp.message.to_string(),
+										data: decoded,
 									};
 								}
 							}

@@ -1,10 +1,12 @@
 use super::common::{check_omni_api_response, handle_omni_native_task};
 use crate::{
-	error_code::*,
+	detailed_error::DetailedError,
+	error_code::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE, *},
 	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
-	Decode, Deserialize, ErrorCode,
+	Decode, Deserialize,
 };
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
@@ -16,6 +18,7 @@ use heima_primitives::{
 use heima_utils::decode_hex;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
@@ -103,48 +106,88 @@ struct BackendResponse {
 	pub market_order_response: Option<SendOrderTxResponse>,
 }
 
-pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
+pub fn register_submit_swap_order<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_submitSwapOrder", |params, ctx, ext| async move {
 			let user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
+				PumpxRpcError::from(
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_suggestion("Please check your authentication credentials"),
+				)
 			})?;
 
 			let params = params.parse::<SubmitSwapOrderParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields"),
+				)
 			})?;
 
 			debug!("Received omni_submitSwapOrder, params: {:?}", params);
 
 			let Ok(omni_account) = AccountId::from_str(&user.omni_account) else {
 				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to parse omni account from authentication token"),
+				));
 			};
 
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				error!("Failed to get from chain asset");
-				PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
+				PumpxRpcError::from(
+					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+						.with_suggestion("Invalid method parameters"),
+				)
 			})?;
 			let to_chain_asset = params.try_get_to_chain_asset().map_err(|_| {
 				error!("Failed to get to chain asset");
-				PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
+				PumpxRpcError::from(
+					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+						.with_suggestion("Invalid method parameters"),
+				)
 			})?;
 
 			if params.order_type == PumpxOrderType::Limit
 				&& !from_chain_asset.is_same_chain(&to_chain_asset)
 			{
 				error!("Limit order must be on the same chain");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+						.with_suggestion("Invalid method parameters"),
+				));
 			}
 
 			let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
 				.map_err(|_| {
 					error!("Failed to convert from_amount to BoundedVec");
-					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
+					PumpxRpcError::from(
+						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+							.with_suggestion("Invalid method parameters"),
+					)
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
@@ -152,7 +195,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access token from storage");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to get access token from storage"),
+				));
 			};
 
 			let swap_order = SwapOrder {
@@ -166,7 +212,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
 					error!("Failed to get user trade info: {:?}", e);
-					PumpxRpcError::from_error_code(ErrorCode::InvalidParams)
+					PumpxRpcError::from(
+						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+							.with_suggestion("Invalid method parameters"),
+					)
 				})?;
 
 			debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
@@ -208,7 +257,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				SOLANA_CHAIN_ID => gas_type_sol.to_number() as u32,
 				_ => {
 					error!("Unsupported chain id: {}", params.to_chain_id);
-					return Err(PumpxRpcError::from_error_code(ErrorCode::InvalidParams));
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+							.with_suggestion("Invalid method parameters"),
+					));
 				},
 			};
 
@@ -245,7 +297,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				ccs_provider,
 				scs_provider.try_into().map_err(|_| {
 					error!("Failed to convert single chain swap provider");
-					PumpxRpcError::from_error_code(ErrorCode::InternalError)
+					PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Failed to convert single chain swap provider"),
+					)
 				})?,
 			);
 			let wrapper = NativeTaskWrapper::new(
@@ -261,7 +316,13 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						let market_order_response: SendOrderTxResponse =
 							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 								error!("Failed to decode market order response: {:?}", e);
-								PumpxRpcError::from_error_code(ErrorCode::InternalError)
+								PumpxRpcError::from(
+									DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+										.with_reason(format!(
+											"Failed to decode market order response: {:?}",
+											e
+										)),
+								)
 							})?;
 						check_omni_api_response(
 							market_order_response.clone(),
@@ -278,7 +339,13 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 						let limit_order_response: OrderInfoResponse =
 							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 								error!("Failed to decode limit order response: {:?}", e);
-								PumpxRpcError::from_error_code(ErrorCode::InternalError)
+								PumpxRpcError::from(
+									DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+										.with_reason(format!(
+											"Failed to decode limit order response: {:?}",
+											e
+										)),
+								)
 							})?;
 						check_omni_api_response(
 							limit_order_response.clone(),
@@ -295,7 +362,10 @@ pub fn register_submit_swap_order(module: &mut RpcModule<RpcContext>) {
 				},
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Unexpected response type from native task handler"),
+					))
 				},
 			})
 			.await
@@ -309,8 +379,12 @@ fn check_and_get_option_user_trade_info_field<T>(
 ) -> Result<T, PumpxRpcError> {
 	field_value.ok_or_else(|| {
 		error!("Response data.{} of call get_user_trade_info is none", field_name);
-		PumpxRpcError::from_error_code(ErrorCode::ServerError(
-			PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-		))
+		PumpxRpcError::from(
+			DetailedError::new(
+				PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+				"Failed to get user trade info from API",
+			)
+			.with_suggestion("User trade info retrieval failed. Please try again later."),
+		)
 	})
 }

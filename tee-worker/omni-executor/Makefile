@@ -3,6 +3,7 @@
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX ?= 1
+TEST_BUILD ?= 0
 
 BIN_NAME = omni-executor
 COMPILATION_FEATURES =
@@ -15,6 +16,10 @@ all: $(BIN_NAME) $(BIN_NAME).manifest
 ifeq ($(SGX), 1)
 COMPILATION_FEATURES := $(COMPILATION_FEATURES),gramine-quote
 all: $(BIN_NAME).manifest.sgx $(BIN_NAME).sig
+endif
+
+ifeq ($(TEST_BUILD), 1)
+COMPILATION_FEATURES := $(COMPILATION_FEATURES),test-endpoints
 endif
 
 .PHONY: $(BIN_NAME)
@@ -89,7 +94,12 @@ stop-local:
 
 .PHONY: build-docker-test
 build-docker-test:
-	docker build --build-arg CARGO_FEATURES="mock-server" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+	docker build --build-arg CARGO_FEATURES="mock-server,test-endpoints" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+
+.PHONY: rebuild-docker-dev
+rebuild-docker-dev:
+	cargo build --release --features mock-server
+	cd docker/ && docker compose build --no-cache omni-executor
 
 .PHONY: start-test
 start-test:

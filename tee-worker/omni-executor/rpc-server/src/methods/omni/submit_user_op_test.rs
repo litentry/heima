@@ -15,15 +15,18 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::common::handle_omni_native_task;
+use crate::detailed_error::DetailedError;
+use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
 use alloy::primitives::Address;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
@@ -42,12 +45,33 @@ pub struct SubmitUserOpTestResponse {
 	pub transaction_hash: Option<String>,
 }
 
-pub fn register_submit_user_op_test(module: &mut RpcModule<RpcContext>) {
+pub fn register_submit_user_op_test<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	module
 		.register_async_method("omni_submitUserOpTest", |params, ctx, _ext| async move {
 			let params = params.parse::<SubmitUserOpTestParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields"),
+				)
 			})?;
 
 			debug!("Received omni_submitUserOpTest, params: {:?}", params);
@@ -56,7 +80,10 @@ pub fn register_submit_user_op_test(module: &mut RpcModule<RpcContext>) {
 				hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
 					.map_err(|_| {
 						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from_error_code(ErrorCode::InternalError)
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason("Failed to decode omni account hex string"),
+						)
 					})?;
 
 			if address_bytes.len() != 32 {
@@ -64,13 +91,22 @@ pub fn register_submit_user_op_test(module: &mut RpcModule<RpcContext>) {
 					"Invalid omni account length: expected 32 bytes, got {}",
 					address_bytes.len()
 				);
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+						"Invalid omni account length: expected 32 bytes, got {}",
+						address_bytes.len()
+					)),
+				));
 			}
 
 			for op in &params.user_operations {
 				op.sender.parse::<Address>().map_err(|e| {
 					error!("Invalid sender address '{}': {}", op.sender, e);
-					PumpxRpcError::from_error_code(ErrorCode::ParseError)
+					PumpxRpcError::from(
+						DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+							.with_field("sender")
+							.with_reason(format!("Invalid sender address '{}': {}", op.sender, e)),
+					)
 				})?;
 			}
 
@@ -78,7 +114,10 @@ pub fn register_submit_user_op_test(module: &mut RpcModule<RpcContext>) {
 				NativeTask::SubmitUserOp(
 					AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
 						error!("Failed to decode AccountId from bytes");
-						PumpxRpcError::from_error_code(ErrorCode::InternalError)
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason("Failed to decode AccountId from bytes"),
+						)
 					})?,
 					params.user_operations.clone(),
 					params.chain_id,
@@ -95,7 +134,10 @@ pub fn register_submit_user_op_test(module: &mut RpcModule<RpcContext>) {
 				},
 				_ => {
 					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Unexpected response type from native task handler"),
+					))
 				},
 			})
 			.await

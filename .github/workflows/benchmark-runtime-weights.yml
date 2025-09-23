@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -90,7 +90,7 @@ jobs:
           echo "CHAIN=$chain" >> $GITHUB_ENV
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -99,7 +99,7 @@ jobs:
           docker pull litentry/heima:runtime-benchmarks
 
       - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ env.GOOGLE_CREDENTIALS_JSON }}
 

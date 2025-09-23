@@ -145,7 +145,7 @@ impl From<ethereum_rpc::RpcProviderError> for AaContractError {
 			ethereum_rpc::RpcProviderError::JsonRpc { code, message, .. } => {
 				AaContractError::Rpc(RpcError::Generic { code, message })
 			},
-			ethereum_rpc::RpcProviderError::ExecutionReverted { reason } => {
+			ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } => {
 				AaContractError::Contract(ContractError::ExecutionReverted { reason })
 			},
 			ethereum_rpc::RpcProviderError::Generic(msg) => AaContractError::Generic(msg),

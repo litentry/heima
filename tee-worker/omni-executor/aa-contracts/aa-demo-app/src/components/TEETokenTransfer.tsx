@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react";
 import { usePublicClient, useChainId } from "wagmi";
-import { Send, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
-import { formatUnits, parseUnits, isAddress } from "viem";
+import { Send, AlertCircle, CheckCircle, Loader2, CreditCard } from "lucide-react";
+import { formatUnits, parseUnits, isAddress, Address } from "viem";
 import { ERC20_TOKENS, CONTRACTS, DEFAULT_CLIENT_ID } from "@/lib/constants";
 import { submitUserOpTest } from "@/lib/tee-worker-client";
 import {
     buildTokenTransferUserOp,
+    buildNativeTransferUserOp,
+    buildApprovalUserOp,
     packUserOperation,
     toSerializablePackedUserOperation,
-    estimateUserOperationGas,
+    estimateUserOpGasFromWorker,
+    buildErc20PaymasterData,
 } from "@/lib/aa-utils";
+import { checkERC20PaymasterReadiness } from "@/lib/erc20-paymaster-utils";
 
 interface TEETokenTransferProps {
     omniAccountAddress: string;
@@ -25,6 +29,9 @@ interface TokenBalance {
     address: `0x${string}`;
 }
 
+type PaymasterType = "none" | "simple" | "erc20";
+type GasToken = "USDC" | "USDT";
+
 export function TEETokenTransfer({
     omniAccountAddress,
     omniAccountHash,
@@ -33,7 +40,7 @@ export function TEETokenTransfer({
 }: TEETokenTransferProps) {
     const publicClient = usePublicClient();
     const chainId = useChainId();
-    const [selectedToken, setSelectedToken] = useState<"USDC" | "USDT">("USDC");
+    const [selectedToken, setSelectedToken] = useState<"ETH" | "USDC" | "USDT">("ETH");
     const [recipient, setRecipient] = useState("");
     const [amount, setAmount] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,16 +48,46 @@ export function TEETokenTransfer({
     const [txHash, setTxHash] = useState<string | null>(null);
     const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
     const [nonce, setNonce] = useState<bigint>(BigInt(0));
+    const [paymasterType, setPaymasterType] = useState<PaymasterType>("none");
+    const [gasToken, setGasToken] = useState<GasToken>("USDC");
+    const [tokenAllowances, setTokenAllowances] = useState<Record<string, bigint>>({});
 
-    // Available tokens
-    const availableTokens = [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT];
+    // Available tokens including ETH
+    const availableTokens = [
+        { symbol: "ETH", decimals: 18, address: "0x0000000000000000000000000000000000000000" as `0x${string}`, isNative: true },
+        ERC20_TOKENS.USDC,
+        ERC20_TOKENS.USDT
+    ];
 
     // Fetch token balances
     const fetchBalances = async () => {
         if (!omniAccountAddress || !publicClient) return;
 
         const balances: TokenBalance[] = [];
-        for (const token of availableTokens) {
+
+        // Fetch ETH balance first
+        try {
+            const ethBalance = await publicClient.getBalance({
+                address: omniAccountAddress as `0x${string}`,
+            });
+            balances.push({
+                symbol: "ETH",
+                balance: ethBalance,
+                decimals: 18,
+                address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+            });
+        } catch (error) {
+            console.error("Error fetching ETH balance:", error);
+            balances.push({
+                symbol: "ETH",
+                balance: BigInt(0),
+                decimals: 18,
+                address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+            });
+        }
+
+        // Fetch ERC20 balances
+        for (const token of [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT]) {
             try {
                 const balance = (await publicClient.readContract({
                     address: token.address,
@@ -78,10 +115,9 @@ export function TEETokenTransfer({
         setTokenBalances(balances);
     };
 
-    // Fetch current nonce
+    // Fetch current nonce and update state (for UI); also provide a helper to return fresh nonce for building ops
     const fetchNonce = async () => {
         if (!omniAccountAddress || !publicClient) return;
-
         try {
             const currentNonce = (await publicClient.readContract({
                 address: CONTRACTS.EntryPoint.address,
@@ -95,12 +131,49 @@ export function TEETokenTransfer({
         }
     };
 
+    // Always read the latest nonce from EntryPoint; do not rely on React state when building UserOps
+    const getFreshNonce = async (): Promise<bigint> => {
+        const currentNonce = (await publicClient!.readContract({
+            address: CONTRACTS.EntryPoint.address,
+            abi: CONTRACTS.EntryPoint.abi,
+            functionName: "getNonce",
+            args: [omniAccountAddress as `0x${string}`, BigInt(0)],
+        })) as bigint;
+        return currentNonce;
+    };
+
+    // Fetch token allowances for ERC20 paymaster
+    const fetchTokenAllowances = async () => {
+        if (!omniAccountAddress || !publicClient || CONTRACTS.ERC20PaymasterV1.address === "0x0000000000000000000000000000000000000000") return;
+
+        const allowances: Record<string, bigint> = {};
+        
+        for (const token of [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT]) {
+            try {
+                const allowance = (await publicClient.readContract({
+                    address: token.address,
+                    abi: token.abi,
+                    functionName: "allowance",
+                    args: [omniAccountAddress as `0x${string}`, CONTRACTS.ERC20PaymasterV1.address],
+                })) as bigint;
+                allowances[token.symbol] = allowance;
+            } catch (error) {
+                console.error(`Error fetching ${token.symbol} allowance:`, error);
+                allowances[token.symbol] = BigInt(0);
+            }
+        }
+        
+        setTokenAllowances(allowances);
+    };
+
     useEffect(() => {
         fetchBalances();
         fetchNonce();
+        fetchTokenAllowances();
         const interval = setInterval(() => {
             fetchBalances();
             fetchNonce();
+            fetchTokenAllowances();
         }, 10000);
         return () => clearInterval(interval);
     }, [omniAccountAddress, publicClient]);
@@ -121,7 +194,6 @@ export function TEETokenTransfer({
             return;
         }
 
-        const token = selectedToken === "USDC" ? ERC20_TOKENS.USDC : ERC20_TOKENS.USDT;
         const tokenBalance = tokenBalances.find(tb => tb.symbol === selectedToken);
 
         if (!tokenBalance) {
@@ -129,28 +201,254 @@ export function TEETokenTransfer({
             return;
         }
 
-        const amountBigInt = parseUnits(amount, token.decimals);
+        const decimals = selectedToken === "ETH" ? 18 :
+            selectedToken === "USDC" ? ERC20_TOKENS.USDC.decimals :
+                ERC20_TOKENS.USDT.decimals;
+        const amountBigInt = parseUnits(amount, decimals);
 
         if (amountBigInt > tokenBalance.balance) {
-            setError("Insufficient token balance");
+            setError("Insufficient balance");
             return;
+        }
+
+        // Check if using ERC20 paymaster and if approval is needed
+        if (paymasterType === "erc20") {
+            // Pre-flight check for ERC20 paymaster
+            console.log("Checking ERC20 paymaster readiness...");
+            const readiness = await checkERC20PaymasterReadiness(
+                publicClient!,
+                omniAccountAddress as Address,
+                gasToken
+            );
+            
+            console.log("ERC20 Paymaster readiness:", readiness);
+            
+            if (!readiness.isReady) {
+                setError(`ERC20 Paymaster not ready: ${readiness.issues.join(", ")}`);
+                setIsSubmitting(false);
+                return;
+            }
+            const gasTokenInfo = gasToken === "USDC" ? ERC20_TOKENS.USDC : ERC20_TOKENS.USDT;
+            const currentAllowance = tokenAllowances[gasToken] || BigInt(0);
+            
+            // Estimate required amount for gas (conservative estimate)
+            const estimatedGasAmount = parseUnits("10", gasTokenInfo.decimals); // 10 tokens for gas
+            
+            if (currentAllowance < estimatedGasAmount) {
+                setIsSubmitting(true);
+                try {
+                    console.log(`Approving ${gasToken} for ERC20 paymaster...`);
+                    console.log(`Current allowance: ${currentAllowance.toString()}`);
+                    console.log(`Required amount: ${estimatedGasAmount.toString()}`);
+                    // Build ERC20 paymaster data segment (rate=0 for worker to fill)
+                    const nowSec = Math.floor(Date.now() / 1000);
+                    const erc20PaymasterData = buildErc20PaymasterData(
+                        gasTokenInfo.address,
+                        BigInt(0), // exchangeRate=0 -> worker fills
+                        BigInt(nowSec + 3600), // valid for 1 hour
+                        BigInt(0), // valid immediately
+                    );
+
+                    // Build approval UserOp with paymaster for gas estimation
+                    const approvalAmount = parseUnits("1000", gasTokenInfo.decimals); // Approve 1000 tokens
+                    console.log(`Building approval UserOp for ${approvalAmount.toString()} tokens`);
+                    console.log(`Paymaster data:`, erc20PaymasterData);
+                    // Use a fresh nonce for approval operation
+                    const approvalNonce = await getFreshNonce();
+                    const approvalUserOp = buildApprovalUserOp({
+                        omniAccountAddress: omniAccountAddress as `0x${string}`,
+                        tokenAddress: gasTokenInfo.address,
+                        spender: CONTRACTS.ERC20PaymasterV1.address,
+                        amount: approvalAmount,
+                        nonce: approvalNonce,
+                        paymaster: {
+                            address: CONTRACTS.ERC20PaymasterV1.address,
+                            validationGasLimit: BigInt(100000),
+                            postOpGasLimit: BigInt(50000),
+                            data: erc20PaymasterData,
+                        },
+                        forGasEstimation: true,
+                    });
+                    
+                    // Estimate gas for approval
+                    const approvalGasParams = await estimateUserOpGasFromWorker(
+                        approvalUserOp,
+                        chainId,
+                        0,
+                        omniAccountHash,
+                        DEFAULT_CLIENT_ID,
+                        publicClient
+                    );
+                    
+                    // Rebuild paymaster with worker-estimated paymaster gas limits
+                    const finalApprovalPaymaster = {
+                        address: CONTRACTS.ERC20PaymasterV1.address as Address,
+                        validationGasLimit: approvalGasParams.paymasterVerificationGasLimit || BigInt(100000),
+                        postOpGasLimit: approvalGasParams.paymasterPostOpGasLimit || BigInt(50000),
+                        data: erc20PaymasterData,
+                    };
+
+                    // Rebuild approval with gas estimates and updated paymaster envelope
+                    const finalApprovalOp = buildApprovalUserOp({
+                        omniAccountAddress: omniAccountAddress as `0x${string}`,
+                        tokenAddress: gasTokenInfo.address,
+                        spender: CONTRACTS.ERC20PaymasterV1.address,
+                        amount: approvalAmount,
+                        nonce: approvalNonce,
+                        gasParams: approvalGasParams,
+                        paymaster: finalApprovalPaymaster,
+                    });
+                    
+                    // Submit approval
+                    const approvalPackedOp = packUserOperation(finalApprovalOp);
+                    const approvalSerializable = toSerializablePackedUserOperation(approvalPackedOp);
+                    
+                    const approvalResponse = await submitUserOpTest(
+                        [approvalSerializable],
+                        chainId,
+                        0,
+                        omniAccountHash,
+                        DEFAULT_CLIENT_ID
+                    );
+                    
+                    if (!approvalResponse.transaction_hash) {
+                        throw new Error("Token approval failed");
+                    }
+                    
+                    console.log("Approval successful:", approvalResponse.transaction_hash);
+
+                    // Wait for approval inclusion on-chain before proceeding
+                    try {
+                        await publicClient?.waitForTransactionReceipt({
+                            hash: approvalResponse.transaction_hash as `0x${string}`,
+                            confirmations: 1,
+                        });
+                    } catch (waitErr) {
+                        console.warn("Waiting for approval receipt failed or timed out:", waitErr);
+                    }
+
+                    // Refresh nonce and allowances after approval mined (for UI)
+                    await fetchNonce();
+                    await fetchTokenAllowances();
+                } catch (err: any) {
+                    console.error("Error approving token:", err);
+                    setError(`Failed to approve ${gasToken}: ${err.message}`);
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
         }
 
         setIsSubmitting(true);
 
         try {
-            // Estimate gas parameters for token transfer
-            const gasParams = await estimateUserOperationGas(publicClient!, false);
+            // Prepare paymaster parameter if using paymaster
+            let paymaster: { address: Address; validationGasLimit?: bigint; postOpGasLimit?: bigint; data?: `0x${string}` } | undefined;
+            if (paymasterType === "simple") {
+                // Simple paymaster
+                paymaster = {
+                    address: CONTRACTS.SimplePaymaster.address,
+                    validationGasLimit: BigInt(100000),
+                    postOpGasLimit: BigInt(50000),
+                };
+            } else if (paymasterType === "erc20") {
+                // ERC20 paymaster needs token and exchange rate data
+                const gasTokenInfo = gasToken === "USDC" ? ERC20_TOKENS.USDC : ERC20_TOKENS.USDT;
+                // Build ERC20 paymaster data (rate=0, worker fills)
+                const nowSec = Math.floor(Date.now() / 1000);
+                const erc20PaymasterData = buildErc20PaymasterData(
+                    gasTokenInfo.address,
+                    BigInt(0),
+                    BigInt(nowSec + 3600),
+                    BigInt(0),
+                );
 
-            // Build the UserOperation for token transfer
-            const userOp = buildTokenTransferUserOp({
-                omniAccountAddress: omniAccountAddress as `0x${string}`,
-                tokenAddress: token.address,
-                recipient: recipient as `0x${string}`,
-                amount: amountBigInt,
-                nonce,
-                gasParams,
-            });
+                paymaster = {
+                    address: CONTRACTS.ERC20PaymasterV1.address,
+                    validationGasLimit: BigInt(100000),
+                    postOpGasLimit: BigInt(50000),
+                    data: erc20PaymasterData,
+                };
+            }
+
+            // Build the initial UserOperation for transfer with minimal gas for estimation
+            // Fetch a fresh nonce right before building the next operation (after potential approval)
+            const opNonce = await getFreshNonce();
+
+            const userOpForEstimation = selectedToken === "ETH" ?
+                buildNativeTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce: opNonce,
+                    forGasEstimation: true,  // Use dummy signature for gas estimation
+                    paymaster,
+                    gasParams: {
+                        // Use minimal gas values for estimation to avoid prefund issues
+                        callGasLimit: BigInt(100000),        // Minimal for simulation
+                        verificationGasLimit: BigInt(150000), // Enough for signature validation
+                        preVerificationGas: BigInt(21000),    // Base transaction cost
+                        maxFeePerGas: BigInt(1000000000),     // 1 gwei - minimal for simulation
+                        maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei - minimal
+                    }
+                }) :
+                buildTokenTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    tokenAddress: selectedToken === "USDC" ? ERC20_TOKENS.USDC.address : ERC20_TOKENS.USDT.address,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce,
+                    forGasEstimation: true,  // Use dummy signature for gas estimation
+                    paymaster,
+                    gasParams: {
+                        // Use minimal gas values for estimation to avoid prefund issues
+                        callGasLimit: BigInt(100000),        // Minimal for simulation
+                        verificationGasLimit: BigInt(150000), // Enough for signature validation
+                        preVerificationGas: BigInt(21000),    // Base transaction cost
+                        maxFeePerGas: BigInt(1000000000),     // 1 gwei - minimal for simulation
+                        maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei - minimal
+                    }
+                });
+
+            // Estimate gas using the TEE worker
+            console.log("Attempting to estimate gas using TEE worker...");
+            const gasParams = await estimateUserOpGasFromWorker(
+                userOpForEstimation,
+                chainId,
+                0, // wallet_index
+                omniAccountHash,
+                DEFAULT_CLIENT_ID,
+                publicClient
+            );
+            console.log("Successfully estimated gas using TEE worker:", gasParams);
+
+            // Build the final UserOperation with gas estimates
+            // If using ERC20 paymaster, rebuild paymaster with worker-estimated paymaster gas limits
+            const finalPaymaster = paymaster && {
+                address: paymaster.address,
+                validationGasLimit: gasParams.paymasterVerificationGasLimit || paymaster.validationGasLimit || BigInt(100000),
+                postOpGasLimit: gasParams.paymasterPostOpGasLimit || paymaster.postOpGasLimit || BigInt(50000),
+                data: paymaster.data,
+            };
+
+            const userOp = selectedToken === "ETH" ?
+                buildNativeTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce: opNonce,
+                    paymaster: finalPaymaster,
+                    gasParams,
+                }) :
+                buildTokenTransferUserOp({
+                    omniAccountAddress: omniAccountAddress as `0x${string}`,
+                    tokenAddress: selectedToken === "USDC" ? ERC20_TOKENS.USDC.address : ERC20_TOKENS.USDT.address,
+                    recipient: recipient as `0x${string}`,
+                    amount: amountBigInt,
+                    nonce: opNonce,
+                    paymaster: finalPaymaster,
+                    gasParams,
+                });
 
             // Pack the UserOperation
             const packedOp = packUserOperation(userOp);
@@ -230,7 +528,7 @@ export function TEETokenTransfer({
                 <Send className="mx-auto h-12 w-12 text-blue-500 mb-4" />
                 <h2 className="text-2xl font-bold">Send Token Transfer</h2>
                 <p className="text-gray-600 mt-2">
-                    Transfer USDC or USDT through the TEE worker
+                    Transfer ETH, USDC, or USDT through the TEE worker
                 </p>
             </div>
 
@@ -242,14 +540,18 @@ export function TEETokenTransfer({
                         <div
                             key={tb.symbol}
                             className={`p-3 rounded-lg flex justify-between items-center cursor-pointer transition-colors ${selectedToken === tb.symbol
-                                ? tb.symbol === "USDC"
-                                    ? "bg-blue-100 border-2 border-blue-500"
-                                    : "bg-green-100 border-2 border-green-500"
-                                : tb.symbol === "USDC"
-                                    ? "bg-blue-50 hover:bg-blue-100"
-                                    : "bg-green-50 hover:bg-green-100"
+                                ? tb.symbol === "ETH"
+                                    ? "bg-purple-100 border-2 border-purple-500"
+                                    : tb.symbol === "USDC"
+                                        ? "bg-blue-100 border-2 border-blue-500"
+                                        : "bg-green-100 border-2 border-green-500"
+                                : tb.symbol === "ETH"
+                                    ? "bg-purple-50 hover:bg-purple-100"
+                                    : tb.symbol === "USDC"
+                                        ? "bg-blue-50 hover:bg-blue-100"
+                                        : "bg-green-50 hover:bg-green-100"
                                 }`}
-                            onClick={() => setSelectedToken(tb.symbol as "USDC" | "USDT")}
+                            onClick={() => setSelectedToken(tb.symbol as "ETH" | "USDC" | "USDT")}
                         >
                             <span className="font-medium">{tb.symbol}</span>
                             <span className="font-mono text-sm">
@@ -259,6 +561,111 @@ export function TEETokenTransfer({
                     ))}
                 </div>
             </div>
+
+            {/* Paymaster Selection */}
+            {(CONTRACTS.ERC20PaymasterV1.address !== "0x0000000000000000000000000000000000000000") && (
+                <div className="mb-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">
+                        <CreditCard className="inline-block h-4 w-4 mr-1" />
+                        Gas Payment Method
+                    </h3>
+                    <div className="space-y-2">
+                        <label className="flex items-center p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                            <input
+                                type="radio"
+                                name="paymaster"
+                                value="none"
+                                checked={paymasterType === "none"}
+                                onChange={() => setPaymasterType("none")}
+                                className="mr-3"
+                            />
+                            <div>
+                                <div className="font-medium">Pay with ETH</div>
+                                <div className="text-sm text-gray-500">Traditional gas payment from account</div>
+                            </div>
+                        </label>
+                        
+                        <label className="flex items-center p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                            <input
+                                type="radio"
+                                name="paymaster"
+                                value="simple"
+                                checked={paymasterType === "simple"}
+                                onChange={() => setPaymasterType("simple")}
+                                className="mr-3"
+                            />
+                            <div>
+                                <div className="font-medium">Sponsored Gas</div>
+                                <div className="text-sm text-gray-500">Paymaster covers gas fees</div>
+                            </div>
+                        </label>
+                        
+                        <label className="flex items-center p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                            <input
+                                type="radio"
+                                name="paymaster"
+                                value="erc20"
+                                checked={paymasterType === "erc20"}
+                                onChange={() => setPaymasterType("erc20")}
+                                className="mr-3"
+                            />
+                            <div>
+                                <div className="font-medium">Pay with ERC20 Token</div>
+                                <div className="text-sm text-gray-500">Use USDC or USDT for gas fees</div>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    {/* Gas Token Selection for ERC20 Paymaster */}
+                    {paymasterType === "erc20" && (
+                        <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Select Gas Token</h4>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setGasToken("USDC")}
+                                    className={`flex-1 py-2 px-3 rounded-lg border transition-colors ${
+                                        gasToken === "USDC"
+                                            ? "bg-blue-100 border-blue-500 text-blue-700"
+                                            : "bg-white border-gray-300 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    USDC
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setGasToken("USDT")}
+                                    className={`flex-1 py-2 px-3 rounded-lg border transition-colors ${
+                                        gasToken === "USDT"
+                                            ? "bg-green-100 border-green-500 text-green-700"
+                                            : "bg-white border-gray-300 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    USDT
+                                </button>
+                            </div>
+                            
+                            {/* Show current allowance */}
+                            <div className="mt-3 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Current Allowance:</span>
+                                    <span className="font-mono">
+                                        {formatUnits(
+                                            tokenAllowances[gasToken] || BigInt(0),
+                                            gasToken === "USDC" ? 6 : 6
+                                        )} {gasToken}
+                                    </span>
+                                </div>
+                                {(tokenAllowances[gasToken] || BigInt(0)) < parseUnits("10", 6) && (
+                                    <div className="mt-2 text-yellow-700 text-xs">
+                                        ⚠️ Approval will be requested before transfer
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Transfer Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -341,9 +748,18 @@ export function TEETokenTransfer({
                     <div className="text-sm text-blue-700">
                         <p className="font-medium mb-1">How it works:</p>
                         <ul className="list-disc list-inside space-y-1">
-                            <li>This creates a UserOperation for an ERC20 transfer</li>
+                            <li>This creates a UserOperation for {selectedToken === "ETH" ? "a native ETH" : "an ERC20"} transfer</li>
                             <li>The TEE worker signs and submits the operation</li>
-                            <li>Your Omni Account executes the token transfer</li>
+                            {paymasterType === "simple" && (
+                                <li>The paymaster sponsors your gas fees</li>
+                            )}
+                            {paymasterType === "erc20" && (
+                                <>
+                                    <li>Gas fees are paid with {gasToken} tokens</li>
+                                    <li>TEE worker automatically fetches exchange rates</li>
+                                </>
+                            )}
+                            <li>Your Omni Account executes the transfer</li>
                         </ul>
                     </div>
                 </div>

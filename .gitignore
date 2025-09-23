@@ -24,3 +24,5 @@ rococo-fork.json
 rust-analyzer.json
 
 *.local.md
+
+CLAUDE.md

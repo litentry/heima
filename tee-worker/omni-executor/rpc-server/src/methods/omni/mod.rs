@@ -27,6 +27,7 @@ use get_web3_sign_in_message::*;
 
 mod add_wallet;
 use add_wallet::*;
+use executor_core::intent_executor::IntentExecutor;
 
 mod export_wallet;
 use export_wallet::*;
@@ -55,6 +56,9 @@ use get_smart_wallet_root_signer::*;
 mod submit_user_op;
 use submit_user_op::*;
 
+mod estimate_user_op_gas;
+use estimate_user_op_gas::*;
+
 mod submit_user_op_with_auth;
 use submit_user_op_with_auth::*;
 
@@ -64,13 +68,35 @@ use user_login::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+
 #[cfg(test)]
 mod test_protected_method;
 
+#[cfg(feature = "test-endpoints")]
 mod submit_user_op_test;
+#[cfg(feature = "test-endpoints")]
 use submit_user_op_test::*;
 
-pub fn register_omni(module: &mut RpcModule<RpcContext>) {
+pub fn register_omni<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+) {
 	register_get_health(module);
 	register_get_next_intent_id(module);
 	register_get_shielding_key(module);
@@ -90,11 +116,13 @@ pub fn register_omni(module: &mut RpcModule<RpcContext>) {
 	register_get_omni_account(module);
 	register_get_smart_wallet_root_signer(module);
 	register_submit_user_op(module);
+	register_estimate_user_op_gas(module);
 	register_submit_user_op_with_auth(module);
 	register_get_hyperliquid_signature_data(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);
 
+	#[cfg(feature = "test-endpoints")]
 	register_submit_user_op_test(module);
 }

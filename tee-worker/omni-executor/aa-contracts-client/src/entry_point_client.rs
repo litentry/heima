@@ -17,8 +17,8 @@
 use crate::error::{AaContractError, ContractError, RpcError};
 use crate::types::{
 	createAccountCall, depositToCall, getSenderAddressCall, getUserOpHashCall, handleOpsCall,
-	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, OwnerType, SenderAddressResult,
-	ValidationResult,
+	simulateHandleOpsCall, simulateValidationCall, ExecutionResult, FailedOp, FailedOpWithRevert,
+	OwnerType, SenderAddressResult, ValidationResult,
 };
 use crate::utils::{
 	build_call_transaction, build_payable_transaction, calculate_omni_account_address,
@@ -29,7 +29,7 @@ use alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol_types::{SolCall, SolError, SolValue};
-use ethereum_rpc::RpcProvider;
+use ethereum_rpc::{RpcProvider, RpcProviderError};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{error, info, warn};
@@ -47,6 +47,36 @@ pub struct GasPriceConfig {
 	pub min_priority_fee: u128,
 	/// Maximum priority fee in wei (default: 50 gwei)
 	pub max_priority_fee: u128,
+}
+
+impl GasPriceConfig {
+	/// Validate that the configuration values are reasonable
+	pub fn validate(&self) -> Result<(), String> {
+		if self.min_priority_fee > self.max_priority_fee {
+			return Err("min_priority_fee cannot be greater than max_priority_fee".to_string());
+		}
+
+		if self.gas_price_buffer_percent > 500 {
+			return Err(
+				"gas_price_buffer_percent should not exceed 500% to prevent excessive fees"
+					.to_string(),
+			);
+		}
+
+		// Warn about very high max priority fees (>500 gwei)
+		if self.max_priority_fee > 500_000_000_000 {
+			tracing::warn!("max_priority_fee is very high ({} gwei), this may result in expensive transactions", self.max_priority_fee / 1_000_000_000);
+		}
+
+		// Ensure minimum priority fee is not zero (could cause stuck transactions)
+		if self.min_priority_fee == 0 {
+			return Err(
+				"min_priority_fee should not be zero to prevent stuck transactions".to_string()
+			);
+		}
+
+		Ok(())
+	}
 }
 
 impl Default for GasPriceConfig {
@@ -93,6 +123,40 @@ impl GasPriceConfig {
 			gas_price_buffer_percent: 20,    // Lower buffer due to stable, low fees
 			min_priority_fee: 10_000_000,    // 0.01 gwei
 			max_priority_fee: 1_000_000_000, // 1 gwei
+		}
+	}
+
+	/// Chain-specific gas price configuration
+	pub fn for_chain(chain_id: u64) -> Self {
+		match chain_id {
+			1 => Self::mainnet(),    // Ethereum mainnet
+			137 => Self::l2(),       // Polygon
+			80001 => Self::l2(),     // Polygon Mumbai
+			42161 => Self::l2(),     // Arbitrum One
+			421614 => Self::l2(),    // Arbitrum Sepolia
+			10 => Self::l2(),        // Optimism
+			11155420 => Self::l2(),  // Optimism Sepolia
+			8453 => Self::l2(),      // Base
+			84532 => Self::l2(),     // Base Sepolia
+			56 => Self::bsc(),       // BSC
+			97 => Self::bsc(),       // BSC Testnet
+			999 => Self::hyperevm(), // HyperEVM
+			998 => Self::hyperevm(), // HyperEVM Testnet
+			1337 => Self::l2(),      // Local Anvil
+			// Ethereum testnets use mainnet config but with lower values
+			11155111 => Self {
+				// Sepolia
+				gas_price_buffer_percent: 30,
+				min_priority_fee: 1_000_000_000,  // 1 gwei
+				max_priority_fee: 20_000_000_000, // 20 gwei
+			},
+			17000 => Self {
+				// Holesky
+				gas_price_buffer_percent: 30,
+				min_priority_fee: 1_000_000_000,  // 1 gwei
+				max_priority_fee: 20_000_000_000, // 20 gwei
+			},
+			_ => Self::default(),
 		}
 	}
 }
@@ -166,13 +230,19 @@ impl RetryConfig {
 	pub fn for_chain(chain_id: u64) -> Self {
 		match chain_id {
 			1 => Self::mainnet(),    // Ethereum mainnet
+			11155111 => Self::l2(),  // Sepolia
 			137 => Self::l2(),       // Polygon
+			80001 => Self::l2(),     // Polygon Mumbai
 			42161 => Self::l2(),     // Arbitrum
+			421614 => Self::l2(),    // Arbitrum Sepolia
 			10 => Self::l2(),        // Optimism
+			11155420 => Self::l2(),  // Optimism Sepolia
 			8453 => Self::l2(),      // Base
+			84532 => Self::l2(),     // Base Sepolia
 			56 => Self::bsc(),       // BSC
 			999 => Self::hyperevm(), // HyperEVM
 			998 => Self::hyperevm(), // HyperEVM Testnet
+			1337 => Self::l2(),      // Local Anvil
 			_ => Self::default(),
 		}
 	}
@@ -202,6 +272,12 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		gas_config: GasPriceConfig,
 		retry_config: RetryConfig,
 	) -> Self {
+		// Validate gas configuration
+		if let Err(e) = gas_config.validate() {
+			tracing::error!("Invalid gas configuration: {}", e);
+			panic!("Invalid gas configuration: {}", e);
+		}
+
 		Self { entry_point_address, rpc_client, gas_config, retry_config }
 	}
 
@@ -227,9 +303,28 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 					.unwrap_or(U256::from(eip1559_estimate.max_fee_per_gas));
 
 				// Use the EIP-1559 priority fee with bounds
-				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
+				let mut priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
 					.max(U256::from(self.gas_config.min_priority_fee))
 					.min(U256::from(self.gas_config.max_priority_fee));
+
+				// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+				if priority_fee > max_fee_per_gas {
+					tracing::warn!(
+						"Priority fee ({} gwei) exceeds max fee per gas ({} gwei), capping to max fee",
+						priority_fee / U256::from(1_000_000_000),
+						max_fee_per_gas / U256::from(1_000_000_000)
+					);
+					priority_fee = max_fee_per_gas;
+				}
+
+				tracing::debug!(
+					"EIP-1559 gas fees calculated: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), buffer={}%",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					self.gas_config.gas_price_buffer_percent
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -251,9 +346,29 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 
 				// Calculate priority fee (tip) with bounds
 				// Use 10% of current gas price as priority fee, bounded by min/max
-				let priority_fee = U256::from(current_gas_price / 10)
+				let mut priority_fee = U256::from(current_gas_price / 10)
 					.max(U256::from(self.gas_config.min_priority_fee))
 					.min(U256::from(self.gas_config.max_priority_fee));
+
+				// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+				if priority_fee > max_fee_per_gas {
+					tracing::warn!(
+						"Priority fee ({} gwei) exceeds max fee per gas ({} gwei), capping to max fee",
+						priority_fee / U256::from(1_000_000_000),
+						max_fee_per_gas / U256::from(1_000_000_000)
+					);
+					priority_fee = max_fee_per_gas;
+				}
+
+				tracing::debug!(
+					"Legacy gas fees calculated: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), buffer={}%, base_price={} gwei",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					self.gas_config.gas_price_buffer_percent,
+					current_gas_price / 1_000_000_000
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -265,48 +380,100 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	pub async fn simulate_validation(
 		&self,
 		user_op: PackedUserOperation,
-	) -> Result<ValidationResult, ()> {
+	) -> Result<ValidationResult, String> {
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
 		state_override.insert(
 			self.entry_point_address,
 			AccountOverride {
-				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				code: Some(
+					hex::decode(SIMULATION_BYTECODE.trim())
+						.map_err(|e| {
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
+						})?
+						.into(),
+				),
 				..Default::default()
 			},
 		);
 
 		// Build call to simulateValidation
 		let call_data = simulateValidationCall { userOp: user_op }.abi_encode();
-		let tx = build_call_transaction(self.entry_point_address, call_data);
+		// Ensure eth_call originates from our bundler wallet so paymasters
+		// that check tx.origin treat it as an authorized bundler during simulation.
+		let mut tx = build_call_transaction(self.entry_point_address, call_data);
+		match self.rpc_client.get_wallet_address().await {
+			Ok(from_addr) => {
+				tx.from = Some(from_addr);
+				tracing::info!("[EntryPointClient] simulate_validation from={}", from_addr);
+			},
+			Err(_) => {
+				tracing::warn!("[EntryPointClient] simulate_validation could not determine bundler wallet address; proceeding without explicit from");
+			},
+		}
 
 		// Make the call with state override
 		// EntryPointSimulations.simulateValidation() returns ValidationResult on success
 		match self.rpc_client.call_with_state_override(tx, state_override).await {
 			Ok(result) => {
 				// Decode the ValidationResult from the successful response
-				ValidationResult::abi_decode(&result).map_err(|_| {
-					error!("Could not decode ValidationResult from response");
+				ValidationResult::abi_decode(&result).map_err(|e| {
+					let error_msg =
+						format!("Could not decode ValidationResult from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(err) => {
-				// Check if this is an execution reverted error with data
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
-					// Try to extract revert data from the reason string
-					if reason.contains("0x") {
-						// Extract hex data after "0x"
-						if let Some(start) = reason.find("0x") {
-							let hex_data = &reason[start..];
-							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
-								return ValidationResult::abi_decode(&revert_data).map_err(|_| {
-									error!("Could not decode ValidationResult from revert data");
-								});
-							}
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Try to decode as FailedOpWithRevert first (more specific error)
+								if let Ok(failed_op_with_revert) =
+									FailedOpWithRevert::abi_decode(&data)
+								{
+									let error_msg = format!(
+										"Simulation failed with revert, opIndex: {}, reason: {}, inner: 0x{}",
+										failed_op_with_revert.opIndex,
+										failed_op_with_revert.reason,
+										hex::encode(&failed_op_with_revert.inner)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else if let Ok(failed_op) = FailedOp::abi_decode(&data) {
+									// Fall back to regular FailedOp
+									let error_msg = format!(
+										"Simulation failed, opIndex: {}, reason: {}",
+										failed_op.opIndex, failed_op.reason
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else {
+									let error_msg = format!(
+										"Could not decode simulation error from revert data: 0x{}",
+										hex::encode(&data)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								}
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
 						}
-					}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
 				}
-				error!("Simulation failed: {:?}", err);
-				Err(())
 			},
 		}
 	}
@@ -315,13 +482,22 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		&self,
 		user_ops: &[PackedUserOperation],
 		beneficiary: Address,
-	) -> Result<Vec<ExecutionResult>, ()> {
+	) -> Result<Vec<ExecutionResult>, String> {
 		// Create state override to deploy simulation contract at EntryPoint address
 		let mut state_override = HashMap::new();
 		state_override.insert(
 			self.entry_point_address,
 			AccountOverride {
-				code: Some(hex::decode(SIMULATION_BYTECODE.trim()).map_err(|_| ())?.into()),
+				code: Some(
+					hex::decode(SIMULATION_BYTECODE.trim())
+						.map_err(|e| {
+							let error_msg =
+								format!("Could not decode simulation bytecode: {:?}", e);
+							error!("{}", error_msg);
+							error_msg
+						})?
+						.into(),
+				),
 				..Default::default()
 			},
 		);
@@ -329,36 +505,77 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		// Build call to simulateHandleOps
 		let ops = user_ops.to_vec();
 		let call_data = simulateHandleOpsCall { ops, beneficiary }.abi_encode();
-		let tx = build_call_transaction(self.entry_point_address, call_data);
+		// Important for paymasters that gate on tx.origin: set from to bundler wallet
+		let mut tx = build_call_transaction(self.entry_point_address, call_data);
+		match self.rpc_client.get_wallet_address().await {
+			Ok(from_addr) => {
+				tx.from = Some(from_addr);
+				tracing::info!("[EntryPointClient] simulate_handle_ops from={}", from_addr);
+			},
+			Err(_) => {
+				tracing::warn!("[EntryPointClient] simulate_handle_ops could not determine bundler wallet address; proceeding without explicit from");
+			},
+		}
 
 		// Make the call with state override
 		// EntryPointSimulations.simulateHandleOps() returns ExecutionResult[] on success
 		match self.rpc_client.call_with_state_override(tx, state_override).await {
 			Ok(result) => {
 				// Decode the ExecutionResult[] from the successful response
-				Vec::<ExecutionResult>::abi_decode(&result).map_err(|_| {
-					error!("Could not decode ExecutionResult[] from response");
+				Vec::<ExecutionResult>::abi_decode(&result).map_err(|e| {
+					let error_msg =
+						format!("Could not decode ExecutionResult[] from response: {:?}", e);
+					error!("{}", error_msg);
+					error_msg
 				})
 			},
-			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
-					if reason.contains("0x") {
-						if let Some(start) = reason.find("0x") {
-							let hex_data = &reason[start..];
-							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
-								return Vec::<ExecutionResult>::abi_decode(&revert_data).map_err(
-									|_| {
-										error!(
-											"Could not decode ExecutionResult[] from revert data"
-										);
-									},
-								);
-							}
+			Err(error) => {
+				match error {
+					RpcProviderError::ExecutionReverted { reason, data } => {
+						match data {
+							Some(data) => {
+								// Try to decode as FailedOpWithRevert first (more specific error)
+								if let Ok(failed_op_with_revert) =
+									FailedOpWithRevert::abi_decode(&data)
+								{
+									let error_msg = format!(
+										"Simulation failed with revert, opIndex: {}, reason: {}, inner: 0x{}",
+										failed_op_with_revert.opIndex,
+										failed_op_with_revert.reason,
+										hex::encode(&failed_op_with_revert.inner)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else if let Ok(failed_op) = FailedOp::abi_decode(&data) {
+									// Fall back to regular FailedOp
+									let error_msg = format!(
+										"Simulation failed, opIndex: {}, reason: {}",
+										failed_op.opIndex, failed_op.reason
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								} else {
+									let error_msg = format!(
+										"Could not decode simulation error from revert data: 0x{}",
+										hex::encode(&data)
+									);
+									error!("{}", error_msg);
+									Err(error_msg)
+								}
+							},
+							None => {
+								let error_msg = format!("Simulation failed, reason: {:?}", reason);
+								error!("{}", error_msg);
+								Err(error_msg)
+							},
 						}
-					}
+					},
+					_ => {
+						let error_msg = format!("Simulation failed: {:?}", error);
+						error!("{}", error_msg);
+						Err(error_msg)
+					},
 				}
-				error!("Simulation failed: {:?}", err);
-				Err(())
 			},
 		}
 	}
@@ -463,7 +680,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason } = &err {
+				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } = &err {
 					if reason.contains("0x") {
 						if let Some(start) = reason.find("0x") {
 							let hex_data = &reason[start..];
@@ -683,7 +900,18 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				// Use the EIP-1559 priority fee with bounds
 				let priority_fee = U256::from(eip1559_estimate.max_priority_fee_per_gas)
 					.max(U256::from(self.gas_config.min_priority_fee))
-					.min(U256::from(self.gas_config.max_priority_fee));
+					.min(U256::from(self.gas_config.max_priority_fee))
+					// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+					.min(max_fee_per_gas);
+
+				tracing::debug!(
+					"EIP-1559 gas fees with buffer: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), total_buffer={}%",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					total_buffer
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -707,7 +935,19 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 				// Calculate priority fee (tip) with bounds
 				let priority_fee = U256::from(current_gas_price / 10)
 					.max(U256::from(self.gas_config.min_priority_fee))
-					.min(U256::from(self.gas_config.max_priority_fee));
+					.min(U256::from(self.gas_config.max_priority_fee))
+					// Ensure priority fee doesn't exceed max fee per gas (EIP-1559 requirement)
+					.min(max_fee_per_gas);
+
+				tracing::debug!(
+					"Legacy gas fees with buffer: max_fee={} wei ({} gwei), priority_fee={} wei ({} gwei), total_buffer={}%, base_price={} gwei",
+					max_fee_per_gas,
+					max_fee_per_gas / U256::from(1_000_000_000),
+					priority_fee,
+					priority_fee / U256::from(1_000_000_000),
+					total_buffer,
+					current_gas_price / 1_000_000_000
+				);
 
 				Ok((max_fee_per_gas, priority_fee))
 			},
@@ -725,7 +965,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 			ethereum_rpc::RpcProviderError::NoWallet => {
 				AaContractError::Validation("No wallet configured for signing".to_string())
 			},
-			ethereum_rpc::RpcProviderError::ExecutionReverted { reason } => {
+			ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } => {
 				AaContractError::Contract(ContractError::ExecutionReverted { reason })
 			},
 			ethereum_rpc::RpcProviderError::JsonRpc { code, message, data } => {
@@ -874,10 +1114,10 @@ pub fn create_account_gas_limits(
 
 pub fn create_gas_fees(max_fee_per_gas: U256, max_priority_fee_per_gas: U256) -> FixedBytes<32> {
 	let mut gas_fees = [0u8; 32];
-	// First 16 bytes: max priority fee per gas
-	gas_fees[0..16].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes::<32>()[16..]);
-	// Last 16 bytes: max fee per gas
-	gas_fees[16..32].copy_from_slice(&max_fee_per_gas.to_be_bytes::<32>()[16..]);
+	// First 16 bytes: max fee per gas (EIP-4337 specification)
+	gas_fees[0..16].copy_from_slice(&max_fee_per_gas.to_be_bytes::<32>()[16..]);
+	// Last 16 bytes: max priority fee per gas (EIP-4337 specification)
+	gas_fees[16..32].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes::<32>()[16..]);
 	FixedBytes::from(gas_fees)
 }
 
@@ -919,7 +1159,7 @@ pub mod test {
 				)
 				.unwrap();
 				let reason = format!("execution reverted: 0x{}", hex::encode(&revert_data));
-				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason })
+				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data: None })
 			});
 
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
@@ -1662,6 +1902,7 @@ pub mod test {
 		mock_client.expect_send_transaction().times(1).returning(|_| {
 			Err(ethereum_rpc::RpcProviderError::ExecutionReverted {
 				reason: "Contract error".to_string(),
+				data: None,
 			})
 		});
 

@@ -39,6 +39,25 @@ export interface ExportWalletParams {
     wallet_address: string;
 }
 
+export interface SubmitUserOpParams {
+    user_op: {
+        sender: string;
+        nonce: string;
+        initCode: string;
+        callData: string;
+        accountGasLimits: string;
+        preVerificationGas: string;
+        gasFees: string;
+        paymasterAndData: string;
+        signature: string;
+    };
+}
+
+export interface GetSmartWalletRootSignerParams {
+    omni_account: string;
+    chain_type: string;
+    wallet_index: number;
+}
 export interface TransferWithdrawParams {
     request_id?: number;
     chain_id: number;
@@ -80,4 +99,22 @@ export interface NotifyLimitOrderResultParams {
     intent_id: number;
     result: string;
     message?: string;
+}
+
+export interface SubmitUserOpTestParams {
+    user_operations: Array<{
+        sender: string;
+        nonce: number;
+        init_code: string;
+        call_data: string;
+        account_gas_limits: string;
+        pre_verification_gas: number;
+        gas_fees: string;
+        paymaster_and_data: string;
+        signature?: string;
+    }>;
+    chain_id: number;
+    wallet_index: number;
+    omni_account: string;
+    client_id: string;
 }

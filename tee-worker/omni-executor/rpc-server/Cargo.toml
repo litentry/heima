@@ -9,6 +9,7 @@ alloy = { workspace = true }
 async-trait = { workspace = true }
 base58 = { workspace = true }
 chrono = { workspace = true }
+email_address = { workspace = true }
 ethers = { workspace = true }
 hex = { workspace = true }
 http = { workspace = true }
@@ -27,6 +28,7 @@ tracing = { workspace = true }
 
 # Local dependencies
 aa-contracts-client = { workspace = true }
+binance-api = { workspace = true }
 config-loader = { workspace = true }
 ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
@@ -47,6 +49,8 @@ wildmeta-api = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
+parentchain-signer = { workspace = true }
+subxt = { workspace = true }
 signer-client = { workspace = true, features = ["mocks"] }
 wildmeta-api = { workspace = true, features = ["mocks"] }
 executor-storage = { workspace = true }
@@ -59,3 +63,4 @@ workspace = true
 
 [features]
 gramine-quote = []
+test-endpoints = []

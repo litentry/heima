@@ -203,6 +203,9 @@ pub enum ClientAuth {
 		signature: String,
 		login_type: u32,
 	},
+	WildmetaBackend {
+		signature: String, // EVM signature with 0x prefix
+	},
 }
 
 /// Convert UserAuth + UserId + client_id into OmniAuth
@@ -284,6 +287,15 @@ mod tests {
 			google_code: Some("123".to_string()),
 			invite_code: Some("456".to_string()),
 		};
+		assert_eq!(deserialized, expected);
+	}
+
+	#[test]
+	fn test_wildmeta_backend_client_auth_serde() {
+		let json =
+			r#"{"type": "wildmeta_backend", "value": { "signature": "0x1234567890abcdef" }}"#;
+		let deserialized: ClientAuth = serde_json::from_str(json).unwrap();
+		let expected = ClientAuth::WildmetaBackend { signature: "0x1234567890abcdef".to_string() };
 		assert_eq!(deserialized, expected);
 	}
 

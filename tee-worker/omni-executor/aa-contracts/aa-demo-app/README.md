@@ -7,7 +7,7 @@ A Next.js application demonstrating Account Abstraction (ERC-4337) functionality
 This application demonstrates:
 - **Account Abstraction (AA)**: Create smart contract wallets (OmniAccounts) that can be controlled by multiple signers
 - **Multi-Signer Management**: Add and remove authorized signers to control the smart account
-- **ERC20 Token Transfers**: Send USDC and USDT through the TEE worker using UserOperations
+- **Token Transfers**: Send ETH, USDC, and USDT through the TEE worker using UserOperations
 - **Real Token Support**: Use actual deployed tokens instead of test tokens
 - **Non-Custodial Flow**: Users maintain full control of their accounts while enabling delegated operations
 - **ERC-4337 Integration**: Implements the ERC-4337 standard for account abstraction
@@ -17,7 +17,7 @@ This application demonstrates:
 ## Key Features
 
 - **Separated Funding Flow**: Fund with ETH first for gas
-- **Multi-Token Support**: Send USDC and USDT transfers through TEE worker
+- **Multi-Token Support**: Send ETH, USDC, and USDT transfers through TEE worker
 - **Signer Management**: View, add, and remove authorized signers through the UI
 - **Token Balance Display**: Monitor all token balances in real-time
 - **TEE Worker Integration**: Execute token transfers securely through TEE worker
@@ -235,8 +235,8 @@ pnpm dev
    - Enables secure delegated transaction execution
    - The worker address will be tagged in the signers list
 
-5. **Send Token Transfer**: Transfer USDC or USDT through the TEE worker
-   - Select the token you want to transfer (USDC or USDT)
+5. **Send Token Transfer**: Transfer ETH, USDC, or USDT through the TEE worker
+   - Select the token you want to transfer (ETH, USDC, or USDT)
    - Enter recipient address and amount
    - The transfer is executed through a UserOperation signed by the TEE worker
    - Monitor transaction status in real-time
@@ -287,7 +287,7 @@ aa-demo-app/
 │   │   ├── AuthorizedSigners.tsx    # Manage authorized signers (direct calls, no execute wrapper)
 │   │   ├── AuthorizeTEEWorker.tsx   # TEE worker authorization flow (uses Owner signer type)
 │   │   ├── FundingGuide.tsx         # ETH funding guide
-│   │   ├── TEETokenTransfer.tsx     # Token transfer through TEE worker
+│   │   ├── TEETokenTransfer.tsx     # ETH and token transfers through TEE worker
 │   │   ├── CreateOmniAccount.tsx    # Smart account creation flow with paymaster option
 │   │   └── WalletConnect.tsx        # Wallet connection component
 │   ├── contracts/        # Contract ABIs (auto-synced from V1 contracts)
@@ -324,9 +324,9 @@ Parent directory scripts:
 
 ### Token Operations
 - Make sure USDC and USDT addresses are set in .env.local
-- Ensure you have ETH for gas fees before sending token transfers
-- Token transfers require TEE worker to be authorized
-- Check that your Omni Account has sufficient token balance
+- Ensure you have ETH for gas fees before sending any transfers
+- All transfers (ETH and tokens) require TEE worker to be authorized
+- Check that your Omni Account has sufficient balance for the transfer
 
 ### Anvil Errors
 You might see errors like `execution reverted` for `symbol()` or `decimals()` calls. These are harmless - they're from wallets trying to detect if addresses are ERC20 tokens.
@@ -452,6 +452,7 @@ The app integrates paymaster functionality for gas sponsorship:
 ### Key Utility Functions
 
 - `buildTokenTransferUserOp()`: Creates UserOperation for ERC20 token transfers
+- `buildNativeTransferUserOp()`: Creates UserOperation for native ETH transfers
 - `buildERC20TransferCallData()`: Encodes ERC20 transfer function call
 - `toSerializablePackedUserOperation()`: Converts PackedUserOperation to serializable format
 - `submitUserOpTest()`: Submits UserOperations through TEE worker RPC

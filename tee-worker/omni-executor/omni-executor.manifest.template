@@ -62,9 +62,14 @@ loader.env.OE_BINANCE_API_KEY = { passthrough = true }
 loader.env.OE_BINANCE_API_SECRET = { passthrough = true }
 loader.env.OE_BINANCE_API_BASE_URL = { passthrough = true }
 loader.env.OE_RPC_SERVER_MAX_CONNECTIONS = { passthrough = true }
-loader.env.OE_SENDGRID_API_KEY = { passthrough = true }
-loader.env.OE_SENDGRID_FROM_EMAIL = { passthrough = true }
-loader.env.OE_SENDGRID_FROM_NAME = { passthrough = true }
+loader.env.OE_MAILER_TYPE_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_API_KEY_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_FROM_EMAIL_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_FROM_NAME_HEIMA = { passthrough = true }
+loader.env.OE_MAILER_TYPE_WILDMETA = { passthrough = true }
+loader.env.OE_MAILER_API_KEY_WILDMETA = { passthrough = true }
+loader.env.OE_MAILER_FROM_EMAIL_WILDMETA = { passthrough = true }
+loader.env.OE_MAILER_FROM_NAME_WILDMETA = { passthrough = true }
 loader.env.OE_GOOGLE_CLIENT_ID = { passthrough = true }
 loader.env.OE_GOOGLE_CLIENT_SECRET = { passthrough = true }
 loader.env.OE_PARENTCHAIN_URL = { passthrough = true }
@@ -82,6 +87,7 @@ loader.env.OE_HYPEREVM_TESTNET_URL = { passthrough = true }
 loader.env.OE_OMNI_FACTORY_ADDRESS = { passthrough = true }
 loader.env.OE_ENTRY_POINT_ADDRESS = { passthrough = true }
 loader.env.OE_WILDMETA_API_URL = { passthrough = true }
+loader.env.OE_WILDMETA_BACKEND_ECDSA_PUBKEY = "{{ env.get('OE_WILDMETA_BACKEND_ECDSA_PUBKEY', '020000000000000000000000000000000000000000000000000000000000000000') }}"
 
 # This key is a workaround because gramine-direct doesn't provide _sgx_mrsigner key
 {{'' if env.get('SGX', '0') == '1' else 'fs.insecure__keys.fake_sgx_mrsigner = "ffeeddccbbaa99887766554433221100"'}}

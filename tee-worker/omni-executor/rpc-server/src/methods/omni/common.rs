@@ -4,9 +4,18 @@ use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;
 use serde::Serialize;
 
-use crate::{error_code::*, middlewares::RpcExtensions, oneshot, server::RpcContext, Decode};
+use crate::{
+	detailed_error::DetailedError,
+	error_code::{
+		INTENT_NONCE_MISMATCH_ERROR_CODE, INVALID_CHAIN_ID_CODE, UNAUTHORIZED_SENDER_CODE, *,
+	},
+	middlewares::RpcExtensions,
+	server::RpcContext,
+};
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
-use native_task_handler::{NativeTaskError, NativeTaskOk, NativeTaskResponse};
+use native_task_handler::{handle_native_task, NativeTaskError, NativeTaskOk};
+use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::error;
 
 #[derive(Serialize, Debug)]
@@ -43,7 +52,7 @@ impl PumpxRpcError {
 		T: Codec,
 	{
 		Self {
-			code: ErrorCode::InternalError.code(),
+			code: INTERNAL_ERROR_CODE,
 			message: ErrorCode::InternalError.message().to_string(),
 			data: Some(PumpxRpcErrorData {
 				backend_response: Some(PumpxRpcErrorBackendResponse {
@@ -61,49 +70,103 @@ impl From<PumpxRpcError> for ErrorObjectOwned {
 	}
 }
 
+impl From<DetailedError> for PumpxRpcError {
+	fn from(error: DetailedError) -> Self {
+		Self {
+			code: error.code,
+			message: error.message,
+			data: Some(PumpxRpcErrorData { backend_response: None }),
+		}
+	}
+}
+
+impl From<Box<DetailedError>> for PumpxRpcError {
+	fn from(error: Box<DetailedError>) -> Self {
+		Self::from(*error)
+	}
+}
+
 /// Process native task and handle response
-pub async fn handle_omni_native_task<F, R>(
-	ctx: &RpcContext,
+pub async fn handle_omni_native_task<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	F,
+	R,
+>(
+	ctx: &RpcContext<
+		Header,
+		RpcClient,
+		RpcClientFactory,
+		EthereumIntentExecutor,
+		SolanaIntentExecutor,
+		CrossChainIntentExecutor,
+	>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 	task_ok_handler: F,
 ) -> Result<R, PumpxRpcError>
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
-	// Create channel for response
-	let (response_sender, response_receiver) = oneshot::channel();
-
-	// Send task to executor
-	ctx.native_task_sender.send((wrapper, response_sender)).await.map_err(|_| {
-		error!("Failed to send request to native call executor");
-		PumpxRpcError::from_error_code(ErrorCode::InternalError)
-	})?;
-
-	// Receive response
-	let response = response_receiver.await.map_err(|e| {
-		error!("Failed to receive response from native call handler: {:?}", e);
-		PumpxRpcError::from_error_code(ErrorCode::InternalError)
-	})?;
-
-	// Decode response
-	let native_task_response: NativeTaskResponse = Decode::decode(&mut response.as_slice())
-		.map_err(|_| {
-			error!("Failed to decode native task response");
-			PumpxRpcError::from_error_code(ErrorCode::InternalError)
-		})?;
+	// We handle the task right here
+	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
 	// Process response
 	match native_task_response {
 		Ok(task_ok) => task_ok_handler(task_ok),
-		Err(NativeTaskError::InternalError) => {
+		Err(NativeTaskError::InternalError(message)) => {
 			error!("Internal error in native task");
-			Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+			match message {
+				Some(msg) => Err(PumpxRpcError::from_code_and_message(
+					get_native_task_error_code(&NativeTaskError::InternalError(Some(msg.clone()))),
+					msg,
+				)),
+				None => Err(PumpxRpcError::from_error_code(ErrorCode::InternalError)),
+			}
 		},
 		Err(native_task_error) => {
-			error!("Failed to execute native task: {:?}", native_task_error);
-			Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(get_native_task_error_code(
-				&native_task_error,
-			))))
+			error!("Native task error: {:?}", native_task_error);
+
+			let detailed_error = match native_task_error {
+				NativeTaskError::ChainNotSupported(chain_id) => {
+					DetailedError::chain_not_supported(chain_id)
+				},
+				NativeTaskError::InvalidUserOperation(desc) => {
+					DetailedError::invalid_user_operation_error(&desc)
+				},
+				NativeTaskError::GasEstimationFailed => DetailedError::gas_estimation_failed(),
+				NativeTaskError::SignatureServiceUnavailable => {
+					DetailedError::signature_service_unavailable()
+				},
+				NativeTaskError::InternalError(_) => {
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("An internal error occurred")
+						.with_suggestion("Please try again later")
+				},
+				NativeTaskError::UnauthorizedSender => {
+					DetailedError::new(UNAUTHORIZED_SENDER_CODE, "Unauthorized sender")
+						.with_suggestion("Please check your authentication credentials")
+				},
+				NativeTaskError::UnsupportedChain => {
+					DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
+						.with_suggestion("Please use a supported blockchain network")
+				},
+				NativeTaskError::IntentNonceMismatch => {
+					DetailedError::new(INTENT_NONCE_MISMATCH_ERROR_CODE, "Intent nonce mismatch")
+						.with_suggestion("Please retry the operation")
+				},
+				_ => {
+					// For other errors, use the existing error code mapping
+					let error_code = get_native_task_error_code(&native_task_error);
+					DetailedError::new(error_code, "Operation failed")
+						.with_suggestion("Please try again")
+				},
+			};
+
+			Err(PumpxRpcError::from(detailed_error))
 		},
 	}
 }

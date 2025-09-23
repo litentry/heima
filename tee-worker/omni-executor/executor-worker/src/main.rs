@@ -24,7 +24,7 @@ use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
 use cli::{Cli, Commands, RunArgs};
-use config_loader::{ConfigLoader, MailerType};
+use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
@@ -40,13 +40,10 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
-use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer, Mailer};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use native_task_handler::{
-	run_native_task_handler, Aes256KeyStore, TaskHandlerContext, MAX_CONCURRENT_TASKS,
-};
+use native_task_handler::Aes256KeyStore;
 use parentchain_attestation::perform_attestation;
 use parentchain_rpc_client::metadata::SubxtMetadataProvider;
 use parentchain_rpc_client::{
@@ -70,8 +67,7 @@ use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
 use tokio::sync::oneshot;
-use tracing::info;
-use tracing::log::error;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
 mod cli;
@@ -241,7 +237,7 @@ async fn main() -> Result<(), ()> {
 				config_loader.pumpx_api_base_url.to_string(),
 			)));
 
-			let binance_api = Arc::new(BinanceApiClient::new(
+			let binance_api: Arc<BinanceApiClient> = Arc::new(BinanceApiClient::new(
 				config_loader.binance_api_key.clone(),
 				config_loader.binance_api_secret.clone(),
 				config_loader.binance_api_base_url.clone(),
@@ -312,7 +308,7 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
 				storage_db.clone(),
-				binance_api,
+				binance_api.clone(),
 				bsc_client,
 				solana_client,
 				Arc::new(Box::new(evm_accounting_contract_client)),
@@ -390,6 +386,12 @@ async fn main() -> Result<(), ()> {
 				} else {
 					None
 				};
+
+			// Add Base
+			let base_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+				&config_loader.base_url,
+				accounting_contract_wallet.clone(),
+			));
 
 			// Create EntryPoint clients
 			let mut entry_point_clients = HashMap::new();
@@ -485,24 +487,17 @@ async fn main() -> Result<(), ()> {
 				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
 			}
 
-			let entry_point_clients = Arc::new(entry_point_clients);
+			// Add Base (Chain ID: 8453)
+			let base_entry_point =
+				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					entry_point_address,
+					base_rpc,
+					aa_contracts_client::GasPriceConfig::l2(),
+					aa_contracts_client::RetryConfig::l2(),
+				));
+			entry_point_clients.insert(8453, base_entry_point);
 
-			let task_handler_context = TaskHandlerContext::new(
-				parentchain_rpc_client_factory.clone(),
-				tx_signer.clone(),
-				storage_db.clone(),
-				jwt_rsa_private_key.clone(),
-				aes256_key,
-				Arc::new(ethereum_intent_executor),
-				Arc::new(solana_intent_executor),
-				Arc::new(cross_chain_intent_executor),
-				pumpx_api.clone(),
-				pumpx_signer_client.clone(),
-				entry_point_clients,
-			);
-			// TODO: make buffer size configurable
-			let native_task_sender =
-				run_native_task_handler(MAX_CONCURRENT_TASKS, Arc::new(task_handler_context)).await;
+			let entry_point_clients = Arc::new(entry_point_clients);
 
 			let worker_url =
 				url::Url::parse(&config_loader.pumpx_worker_url).expect("Invalid worker url");
@@ -524,7 +519,7 @@ async fn main() -> Result<(), ()> {
 			.expect("Could not serialize shielding public key");
 
 			let _ = perform_attestation(
-				parentchain_rpc_client_factory,
+				parentchain_rpc_client_factory.clone(),
 				parentchain_signer,
 				tx_signer.clone(),
 				worker_url.as_str(),
@@ -542,35 +537,44 @@ async fn main() -> Result<(), ()> {
 			let wildmeta_timestamp_storage =
 				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
 
-			// Create mailer instance based on config_loader only
-			let mailer: Box<dyn MailerTrait + Send + Sync> = match config_loader.mailer_type {
-				MailerType::Console => {
-					info!("Using Console Mailer - verification codes will be printed to logs");
-					Box::new(ConsoleMailer::new())
-				},
-				MailerType::Sendgrid => {
-					info!("Using SendGrid Mailer - verification codes will be sent via email");
-					Box::new(Mailer::new(
-						config_loader.mailer_api_host.clone(),
-						config_loader.mailer_api_key.clone(),
-						config_loader.mailer_from_email.clone(),
-						config_loader.mailer_from_name.clone(),
-					))
-				},
+			// Parse wildmeta backend ECDSA public key from hex
+			let wildmeta_backend_ecdsa_pubkey = {
+				use executor_primitives::utils::hex::decode_hex;
+				let pubkey_hex = &config_loader.wildmeta_backend_ecdsa_pubkey;
+				let pubkey_bytes = decode_hex(pubkey_hex).map_err(|e| {
+					error!("Failed to decode wildmeta backend ECDSA public key: {:?}", e);
+				})?;
+				if pubkey_bytes.len() != 33 {
+					error!(
+						"Invalid wildmeta backend ECDSA public key length: expected 33 bytes, got {}",
+						pubkey_bytes.len()
+					);
+					return Err(());
+				}
+				let mut pubkey_array = [0u8; 33];
+				pubkey_array.copy_from_slice(&pubkey_bytes);
+				pubkey_array
 			};
 
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
-				Arc::new(native_task_sender),
 				pumpx_api,
 				storage_db.clone(),
 				jwt_rsa_private_key,
 				&config_loader,
 				pumpx_signer_client,
+				binance_api,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
-				mailer,
+				wildmeta_backend_ecdsa_pubkey,
+				Arc::new(ethereum_intent_executor),
+				Arc::new(solana_intent_executor),
+				Arc::new(cross_chain_intent_executor),
+				parentchain_rpc_client_factory.clone(),
+				aes256_key,
+				tx_signer,
+				entry_point_clients,
 			)
 			.await
 			.map_err(|e| {
