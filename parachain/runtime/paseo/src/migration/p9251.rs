@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Migration P9251: Remove old bridge pallets storage
+//! Migration p9251: Remove old bridge pallets storage
 //!
 //! This migration safely removes all on-chain storage for the legacy bridge implementation
 //! (ChainBridge, BridgeTransfer, AssetsHandler) after migration to omni-bridge.
