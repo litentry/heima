@@ -155,7 +155,7 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 pub type Migrations = (
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-	// P9251: Remove old bridge storage after switching to omni-bridge
+	// p9251: Remove old bridge storage after switching to omni-bridge
 	migration::p9251::RemoveOldBridgeStorage<Runtime>,
 );
 

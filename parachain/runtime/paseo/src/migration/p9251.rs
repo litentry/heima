@@ -36,7 +36,7 @@ use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "try-runtime")]
 use sp_std::vec::Vec;
 
-const TARGET: &str = "runtime::migration::P9251";
+const TARGET: &str = "runtime::migration::p9251";
 
 /// Check if migration has been executed by looking for a marker value
 const MIGRATION_KEY: &[u8] = b"P9251MigrationExecuted";
@@ -186,7 +186,7 @@ where
 		)
 		.unwrap_or(false)
 		{
-			log::info!(target: TARGET, "⏭️ P9251 migration already executed, skipping");
+			log::info!(target: TARGET, "⏭️ p9251 migration already executed, skipping");
 			return Weight::zero();
 		}
 
