@@ -21,8 +21,9 @@ use frame_support::{
 	traits::{Get, OnRuntimeUpgrade},
 	Blake2_256, Twox64Concat,
 };
-use pallet_assets_handler::{AssetInfo, ExternalBalances, MaximumIssuance, ResourceToAssetInfo};
+use pallet_assets_handler::{ExternalBalances, MaximumIssuance, ResourceToAssetInfo};
 use pallet_balances::AccountData;
+use pallet_bridge_common::AssetInfo;
 use pallet_chain_bridge::{BridgeChainId, ResourceId};
 use sp_std::{marker::PhantomData, vec::Vec};
 
