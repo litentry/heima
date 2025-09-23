@@ -159,7 +159,7 @@ pub type Migrations = (
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 	// P9251: Remove old bridge storage after switching to omni-bridge
-	migration::P9251::RemoveOldBridgeStorage<Runtime>,
+	migration::p9251::RemoveOldBridgeStorage<Runtime>,
 );
 
 /// Executive: handles dispatch to the various modules.
