@@ -1,5 +1,5 @@
 # Migrate to remove old bridge pallets storage
-p9151.rs
+p9251.rs
 This migration safely removes all on-chain storage for the legacy bridge implementation (ChainBridge, BridgeTransfer, AssetsHandler) after migration to omni-bridge.
 The pallets are completely independent with no shared storage.
 

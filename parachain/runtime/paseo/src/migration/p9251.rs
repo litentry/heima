@@ -190,7 +190,7 @@ where
 			return Weight::zero();
 		}
 
-		log::info!(target: TARGET, "🚀 Starting P9251: Remove old bridge storage");
+		log::info!(target: TARGET, "🚀 Starting p9251: Remove old bridge storage");
 
 		let mut weight = Weight::zero();
 
@@ -206,7 +206,7 @@ where
 		);
 		weight = weight.saturating_add(T::DbWeight::get().writes(1));
 
-		log::info!(target: TARGET, "✅ P9251 migration completed");
+		log::info!(target: TARGET, "✅ p9251 migration completed");
 		weight
 	}
 
