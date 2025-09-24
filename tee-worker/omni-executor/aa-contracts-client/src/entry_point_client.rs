@@ -680,12 +680,14 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data } = &err {
-					if let Some(data) = data {
-						let result = SenderAddressResult::abi_decode(data)
-							.map_err(|_| error!("Could not decode SenderAddressResult"))?;
-						return Ok(result.sender);
-					}
+				if let ethereum_rpc::RpcProviderError::ExecutionReverted {
+					reason: _,
+					data: Some(data),
+				} = &err
+				{
+					let result = SenderAddressResult::abi_decode(data)
+						.map_err(|_| error!("Could not decode SenderAddressResult"))?;
+					return Ok(result.sender);
 				}
 				error!("Failed to get sender address: {:?}", err);
 				Err(())
