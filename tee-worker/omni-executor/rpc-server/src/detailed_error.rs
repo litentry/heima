@@ -167,8 +167,7 @@ impl DetailedError {
 	}
 
 	pub fn invalid_user_operation_error(description: &str) -> Self {
-		Self::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
-			.with_suggestion(description)
+		Self::new(INVALID_USER_OPERATION_CODE, description)
 	}
 
 	pub fn gas_estimation_failed() -> Self {

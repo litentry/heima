@@ -158,6 +158,8 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 pub type Migrations = (
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+	// p9251: Remove old bridge storage after switching to omni-bridge
+	migration::p9251::RemoveOldBridgeStorage<Runtime>,
 );
 
 /// Executive: handles dispatch to the various modules.
@@ -248,7 +250,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9250,
+	spec_version: 9251,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
