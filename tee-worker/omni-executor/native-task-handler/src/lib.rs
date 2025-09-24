@@ -1542,7 +1542,10 @@ async fn estimate_user_op_gas(
 	})?;
 
 	let max_priority_fee_per_gas = max_priority_fee_per_gas.try_into().map_err(|_| {
-		format!("Max priority fee per gas {} exceeds maximum supported value", max_priority_fee_per_gas)
+		format!(
+			"Max priority fee per gas {} exceeds maximum supported value",
+			max_priority_fee_per_gas
+		)
 	})?;
 
 	let response = NativeTaskOk::EstimateUserOpGas {
