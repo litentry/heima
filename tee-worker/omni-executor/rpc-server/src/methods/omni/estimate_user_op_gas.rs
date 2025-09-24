@@ -48,6 +48,8 @@ pub struct EstimateUserOpGasResponse {
 	pub pre_verification_gas: String,
 	pub paymaster_verification_gas_limit: String,
 	pub paymaster_post_op_gas_limit: String,
+	pub max_fee_per_gas: String,
+	pub max_priority_fee_per_gas: String,
 }
 
 pub fn register_estimate_user_op_gas<
@@ -117,12 +119,16 @@ pub fn register_estimate_user_op_gas<
 					pre_verification_gas,
 					paymaster_verification_gas_limit,
 					paymaster_post_op_gas_limit,
+					max_fee_per_gas,
+					max_priority_fee_per_gas,
 				} => Ok(EstimateUserOpGasResponse {
 					call_gas_limit: call_gas_limit.to_string(),
 					verification_gas_limit: verification_gas_limit.to_string(),
 					pre_verification_gas: pre_verification_gas.to_string(),
 					paymaster_verification_gas_limit: paymaster_verification_gas_limit.to_string(),
 					paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
+					max_fee_per_gas: max_fee_per_gas.to_string(),
+					max_priority_fee_per_gas: max_priority_fee_per_gas.to_string(),
 				}),
 				_ => {
 					error!("Unexpected response type");
