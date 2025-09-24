@@ -247,6 +247,8 @@ interface EstimateUserOpGasResponse {
     preVerificationGas: string;
     paymasterVerificationGasLimit: string;
     paymasterPostOpGasLimit: string;
+    maxFeePerGas: string;
+    maxPriorityFeePerGas: string;
 }
 
 // Get OmniAccount hash from email
