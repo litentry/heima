@@ -680,16 +680,11 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		let tx = build_call_transaction(self.entry_point_address, call_data);
 		match self.rpc_client.call(tx).await {
 			Err(err) => {
-				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason, .. } = &err {
-					if reason.contains("0x") {
-						if let Some(start) = reason.find("0x") {
-							let hex_data = &reason[start..];
-							if let Ok(revert_data) = hex::decode(&hex_data[2..]) {
-								let result = SenderAddressResult::abi_decode(&revert_data)
-									.map_err(|_| error!("Could not decode SenderAddressResult"))?;
-								return Ok(result.sender);
-							}
-						}
+				if let ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data } = &err {
+					if let Some(data) = data {
+						let result = SenderAddressResult::abi_decode(data)
+							.map_err(|_| error!("Could not decode SenderAddressResult"))?;
+						return Ok(result.sender);
 					}
 				}
 				error!("Failed to get sender address: {:?}", err);
@@ -1154,12 +1149,8 @@ pub mod test {
 			.with(mockall::predicate::always())
 			.times(1)
 			.returning(|_| {
-				let revert_data = hex::decode(
-					"0x6ca7b8060000000000000000000000005dfec187c82986cf670f4e2ed6de1cd001cee5be",
-				)
-				.unwrap();
-				let reason = format!("execution reverted: 0x{}", hex::encode(&revert_data));
-				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data: None })
+				let reason = "execution reverted: custom error 0x6ca7b806: 0000000000000000000000005dfec187c82986cf670f4e2ed6de1cd001cee5be".to_string();
+				Err(ethereum_rpc::RpcProviderError::ExecutionReverted { reason, data: Some(hex::decode("0x6ca7b8060000000000000000000000005dfec187c82986cf670f4e2ed6de1cd001cee5be").unwrap()) })
 			});
 
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
