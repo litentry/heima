@@ -10,6 +10,7 @@ chrono = { workspace = true }
 hex = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
+serde = { workspace = true }
 subxt = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
@@ -31,6 +32,7 @@ pumpx = { workspace = true }
 signer-client = { workspace = true }
 
 [dev-dependencies]
+async-trait = { workspace = true }
 binance-api = { workspace = true, features = ["mocks"] }
 tokio-test = "0.4.4"
 
