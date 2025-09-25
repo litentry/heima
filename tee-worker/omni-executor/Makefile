@@ -116,3 +116,12 @@ get-metadata:
 .PHONY: generate-api-interface
 generate-api-interface: get-metadata
 	subxt codegen --file parentchain/api-interface/artifacts/metadata.scale | rustfmt > parentchain/api-interface/src/interface.rs
+
+.PHONY: fmt-solidity
+fmt-solidity:
+	@if ! command -v forge > /dev/null 2>&1; then \
+		echo "Forge not found. Please install Foundry using:"; \
+		echo "curl -L https://foundry.paradigm.xyz | bash"; \
+		exit 1; \
+	fi
+	@cd aa-contracts && forge fmt
