@@ -6,13 +6,11 @@ This script receives SendGrid webhook POST requests and sends formatted notifica
 Run this alongside your RPC server to handle SendGrid webhooks.
 
 Usage:
-    python3 sendgrid_webhook_listener.py --port 8081 --env staging
-    python3 sendgrid_webhook_listener.py --port 8081 --env prod
+    python3 sendgrid_webhook_listener.py --port 8081
 
 Features:
 - Receives SendGrid webhook HTTP POST requests
 - Sends formatted notifications to Slack for critical events
-- Environment-aware (staging/prod)
 - Simple health check endpoint
 """
 
@@ -37,8 +35,6 @@ logger = logging.getLogger(__name__)
 # Slack webhook URL - REPLACE THIS WITH YOUR ACTUAL SLACK WEBHOOK URL
 SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
 
-# Global environment variable
-ENVIRONMENT = "staging"
 
 def send_to_slack(message):
     """Send formatted message to Slack"""
@@ -85,7 +81,6 @@ def format_slack_message(event_type, email, additional_message, timestamp):
     # Format the message with code block to preserve spacing in Slack
     message = f"""{emoji} SendGrid Email Event
 ```
-🌍 Env    : {ENVIRONMENT}
 📧 Email  : {email}
 📊 Status : {event_type.upper()}
 ⏰ Time   : {formatted_time}
@@ -205,18 +200,11 @@ class SendGridWebhookHandler(BaseHTTPRequestHandler):
         pass
 
 def main():
-    global ENVIRONMENT
-
     parser = argparse.ArgumentParser(description='SendGrid Webhook Handler with Slack Integration')
     parser.add_argument('--port', type=int, default=8081, help='Port to listen on (default: 8081)')
     parser.add_argument('--host', default='0.0.0.0', help='Host to bind to (default: 0.0.0.0)')
-    parser.add_argument('--env', choices=['staging', 'prod'], required=True,
-                       help='Environment type: staging or prod')
 
     args = parser.parse_args()
-
-    # Set the global environment variable
-    ENVIRONMENT = args.env
 
     # Validate Slack webhook URL
     if SLACK_WEBHOOK_URL == "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK":
@@ -226,7 +214,6 @@ def main():
     try:
         server = HTTPServer((args.host, args.port), SendGridWebhookHandler)
         logger.info("[SENDGRID_WEBHOOK] Webhook server starting...")
-        logger.info("[SENDGRID_WEBHOOK] Environment: %s", ENVIRONMENT.upper())
         logger.info("[SENDGRID_WEBHOOK] Listening on %s:%d", args.host, args.port)
         logger.info("[SENDGRID_WEBHOOK] SendGrid webhook URL: http://%s:%d/sendgrid-webhook", args.host, args.port)
         logger.info("[SENDGRID_WEBHOOK] Health check: GET http://%s:%d/sendgrid-webhook", args.host, args.port)
