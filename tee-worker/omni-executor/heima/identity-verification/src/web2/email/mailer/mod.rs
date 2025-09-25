@@ -66,17 +66,16 @@ impl MailerTrait for Mailer {
 		match &result {
 			Ok(_) => {
 				info!("[EMAIL_LIFECYCLE] SendGrid API success for {} ({:?})", mail.to, duration);
+				Ok(())
 			},
 			Err(e) => {
 				error!(
 					"[EMAIL_LIFECYCLE] SendGrid API failed for {} ({:?}): {:?}",
 					mail.to, duration, e
 				);
+				Err(Error::SendEmailFailed)
 			},
 		}
-
-		result.map_err(|_| Error::SendEmailFailed)?;
-		Ok(())
 	}
 }
 
