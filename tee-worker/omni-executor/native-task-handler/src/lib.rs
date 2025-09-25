@@ -2557,6 +2557,8 @@ mod erc20_paymaster_tests {
 			pre_verification_gas: 50000,
 			paymaster_verification_gas_limit: 100000,
 			paymaster_post_op_gas_limit: 50000,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
 			estimated_token_cost: None,
 		};
 
@@ -2667,6 +2669,8 @@ mod erc20_paymaster_tests {
 			pre_verification_gas: 0,
 			paymaster_verification_gas_limit: 0,
 			paymaster_post_op_gas_limit: 0,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
 			estimated_token_cost: None,
 		};
 
@@ -2746,6 +2750,8 @@ mod erc20_paymaster_tests {
 			pre_verification_gas: 50000,
 			paymaster_verification_gas_limit: 100000,
 			paymaster_post_op_gas_limit: 50000,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
 			estimated_token_cost: None,
 		};
 
@@ -2825,6 +2831,8 @@ mod erc20_paymaster_tests {
 			pre_verification_gas: 50000,
 			paymaster_verification_gas_limit: 100000,
 			paymaster_post_op_gas_limit: 50000,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
 			estimated_token_cost: None,
 		};
 
