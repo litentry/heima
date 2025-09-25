@@ -877,7 +877,7 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 	}
 
 	/// Calculate gas fees with additional buffer percentage
-	async fn calculate_gas_fees_with_buffer(
+	pub async fn calculate_gas_fees_with_buffer(
 		&self,
 		additional_buffer_percent: u64,
 	) -> Result<(U256, U256), AaContractError> {

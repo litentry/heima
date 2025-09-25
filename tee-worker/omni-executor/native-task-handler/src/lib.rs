@@ -1518,6 +1518,12 @@ async fn estimate_user_op_gas(
 	let (paymaster_verification_gas_limit, paymaster_post_op_gas_limit) =
 		extract_paymaster_gas_limits(&user_op.paymasterAndData);
 
+	// Step 6: Calculate gas fees with buffer
+	let (max_fee_per_gas, max_priority_fee_per_gas) = entry_point_client
+		.calculate_gas_fees_with_buffer(10) // Use 10% additional buffer for estimation
+		.await
+		.map_err(|e| format!("Failed to calculate gas fees: {:?}", e))?;
+
 	// Convert to u128 for response, ensuring values are within bounds
 	let call_gas_limit = call_gas_limit.try_into().map_err(|_| {
 		format!("Call gas limit {} exceeds maximum supported value", call_gas_limit)
@@ -1531,12 +1537,25 @@ async fn estimate_user_op_gas(
 		format!("Pre-verification gas {} exceeds maximum supported value", pre_verification_gas)
 	})?;
 
+	let max_fee_per_gas = max_fee_per_gas.try_into().map_err(|_| {
+		format!("Max fee per gas {} exceeds maximum supported value", max_fee_per_gas)
+	})?;
+
+	let max_priority_fee_per_gas = max_priority_fee_per_gas.try_into().map_err(|_| {
+		format!(
+			"Max priority fee per gas {} exceeds maximum supported value",
+			max_priority_fee_per_gas
+		)
+	})?;
+
 	let response = NativeTaskOk::EstimateUserOpGas {
 		call_gas_limit,
 		verification_gas_limit,
 		pre_verification_gas,
 		paymaster_verification_gas_limit,
 		paymaster_post_op_gas_limit,
+		max_fee_per_gas,
+		max_priority_fee_per_gas,
 	};
 
 	info!("Gas estimation complete: {:?}", response);
