@@ -366,6 +366,12 @@ jobs:
       - name: Download all artefacts
         uses: actions/download-artifact@v5
 
+      - name: Dockerhub login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
       - name: Generate release notes
         run: |
           ./parachain/scripts/generate-release-notes.sh ${{ github.workspace }}/.github/release_notes.md ${{ needs.set-release-type.outputs.release_type }} ${{ env.DIFF_TAG }}

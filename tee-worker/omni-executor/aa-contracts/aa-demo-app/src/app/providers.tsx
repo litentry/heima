@@ -5,6 +5,7 @@ import { WagmiProvider } from 'wagmi'
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { config } from '@/lib/wagmi'
 import { SolanaWalletProvider } from '@/lib/solana'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 import '@rainbow-me/rainbowkit/styles.css'
 
@@ -22,7 +23,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <SolanaWalletProvider>
-            {children}
+            <AuthProvider>
+              {children}
+            </AuthProvider>
           </SolanaWalletProvider>
         </RainbowKitProvider>
       </QueryClientProvider>

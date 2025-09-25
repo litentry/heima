@@ -82,6 +82,8 @@ pub struct EstimateUserOpGasResponse {
 	pub pre_verification_gas: String,
 	pub paymaster_verification_gas_limit: String,
 	pub paymaster_post_op_gas_limit: String,
+	pub max_fee_per_gas: String,
+	pub max_priority_fee_per_gas: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub estimated_token_cost: Option<TokenCostInfo>,
 }
@@ -153,6 +155,8 @@ pub fn register_estimate_user_op_gas<
 					pre_verification_gas,
 					paymaster_verification_gas_limit,
 					paymaster_post_op_gas_limit,
+					max_fee_per_gas,
+					max_priority_fee_per_gas,
 					estimated_token_cost,
 				} => {
 					// Convert token cost estimate to RPC format if present
@@ -177,6 +181,8 @@ pub fn register_estimate_user_op_gas<
 						paymaster_verification_gas_limit: paymaster_verification_gas_limit
 							.to_string(),
 						paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
+						max_fee_per_gas: max_fee_per_gas.to_string(),
+						max_priority_fee_per_gas: max_priority_fee_per_gas.to_string(),
 						estimated_token_cost: token_cost_info,
 					})
 				},

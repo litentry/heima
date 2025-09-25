@@ -10,7 +10,7 @@ import {
     type Hash,
     type PublicClient,
 } from "viem";
-import { CONTRACTS, DEFAULT_CLIENT_ID } from "./constants";
+import { CONTRACTS, DEFAULT_CLIENT_ID, USER_OP_GAS_LIMITS } from "./constants";
 
 // Dummy signature for gas estimation (66 bytes total for OmniAccount)
 // This is a standard practice in ERC-4337 for gas estimation
@@ -96,6 +96,58 @@ export function calculateOmniAccount(
     });
 
     return result as `0x${string}`;
+}
+
+/**
+ * Calculate OmniAccount from email address
+ * Based on the Rust implementation: sha256(clientId + "email" + email)
+ */
+export function calculateOmniAccountFromEmail(
+    email: string,
+    clientId: string = DEFAULT_CLIENT_ID,
+): `0x${string}` {
+    // Create input array for hashing - order is important: clientId, "email", email
+    const inputs: Uint8Array[] = [];
+
+    // First: clientId as raw bytes
+    const clientIdBytes = new TextEncoder().encode(clientId);
+    inputs.push(clientIdBytes);
+
+    // Second: identity type "email"
+    inputs.push(new TextEncoder().encode("email"));
+
+    // Third: email address
+    inputs.push(new TextEncoder().encode(email));
+
+    const totalLength = inputs.reduce((sum, arr) => sum + arr.length, 0);
+    const combined = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const input of inputs) {
+        combined.set(input, offset);
+        offset += input.length;
+    }
+
+    // Calculate SHA256 hash
+    const hash = sha256.array(combined);
+
+    // Convert to hex string
+    const result = `0x${hash.map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+
+    console.log("Email OmniAccount calculation:", {
+        email,
+        clientId,
+        result,
+    });
+
+    return result as `0x${string}`;
+}
+
+/**
+ * Validate email format
+ */
+export function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
 }
 
 /**
@@ -209,10 +261,11 @@ export async function estimateUserOperationGas(
         const maxFeePerGas = (feeData.maxFeePerGas || BigInt(20000000000)) * BigInt(120) / BigInt(100);
         const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || BigInt(1000000000);
 
-        // Use higher gas limits for deployment
-        const callGasLimit = isDeployment ? BigInt(2000000) : BigInt(500000);
-        const verificationGasLimit = isDeployment ? BigInt(3000000) : BigInt(1000000);
-        const preVerificationGas = BigInt(100000);
+        // Use appropriate gas limits based on operation type
+        const gasLimits = isDeployment ? USER_OP_GAS_LIMITS.deployment : USER_OP_GAS_LIMITS.regular;
+        const callGasLimit = gasLimits.callGasLimit;
+        const verificationGasLimit = gasLimits.verificationGasLimit;
+        const preVerificationGas = gasLimits.preVerificationGas;
 
         return {
             callGasLimit,
@@ -748,6 +801,126 @@ export function buildERC20TransferCallData(
 }
 
 /**
+ * Build only the ERC20 paymaster data segment used by ERC20PaymasterV1
+ * Layout: token(20) | exchangeRate(32) | validUntil(32) | validAfter(32)
+ */
+export function buildErc20PaymasterData(
+    tokenAddress: Address,
+    exchangeRate: bigint,
+    validUntil: bigint,
+    validAfter: bigint,
+): `0x${string}` {
+    return encodePacked(
+        ['address', 'uint256', 'uint256', 'uint256'],
+        [tokenAddress, exchangeRate, validUntil, validAfter]
+    ) as `0x${string}`;
+}
+
+/**
+ * Encode ERC20 paymaster data for use with ERC20PaymasterV1
+ * This encodes the specific format expected by ERC20PaymasterV1 contract
+ * @param paymasterAddress The ERC20PaymasterV1 contract address
+ * @param validationGasLimit Gas limit for paymaster validation
+ * @param postOpGasLimit Gas limit for paymaster postOp
+ * @param tokenAddress The ERC20 token address to use for payment
+ * @param exchangeRate Exchange rate (0 to let TEE worker fill it)
+ * @param validUntil Timestamp until when this rate is valid
+ * @param validAfter Timestamp after which this rate is valid
+ * @returns Encoded paymasterAndData field for ERC20PaymasterV1
+ */
+export function encodeERC20PaymasterData(
+    paymasterAddress: Address,
+    validationGasLimit: bigint = BigInt(100000),
+    postOpGasLimit: bigint = BigInt(50000),
+    tokenAddress: Address,
+    exchangeRate: bigint = BigInt(0), // 0 means TEE worker will fill this
+    validUntil: bigint = BigInt(Math.floor(Date.now() / 1000) + 3600), // Valid for 1 hour by default
+    validAfter: bigint = BigInt(0), // Valid immediately by default
+): `0x${string}` {
+    if (!paymasterAddress || paymasterAddress === "0x0000000000000000000000000000000000000000") {
+        throw new Error("Invalid paymaster address");
+    }
+    if (!tokenAddress || tokenAddress === "0x0000000000000000000000000000000000000000") {
+        throw new Error("Invalid token address - ERC20PaymasterV1 requires a valid token");
+    }
+
+    const encoded = encodePacked(
+        ['address', 'uint128', 'uint128', 'address', 'uint256', 'uint256', 'uint256'],
+        [paymasterAddress, validationGasLimit, postOpGasLimit, tokenAddress, exchangeRate, validUntil, validAfter]
+    );
+    
+    console.log("Encoded ERC20 paymaster data:", {
+        paymasterAddress,
+        tokenAddress,
+        validationGasLimit: validationGasLimit.toString(),
+        postOpGasLimit: postOpGasLimit.toString(),
+        exchangeRate: exchangeRate.toString(),
+        validUntil: validUntil.toString(),
+        validAfter: validAfter.toString(),
+        encoded,
+    });
+
+    return encoded;
+}
+
+/**
+ * Build UserOperation for ERC20 approve transaction
+ * Used to approve the ERC20PaymasterV1 to spend tokens for gas
+ */
+export function buildApprovalUserOp(params: {
+    omniAccountAddress: Address;
+    tokenAddress: Address;
+    spender: Address;
+    amount: bigint;
+    nonce: bigint;
+    gasParams?: {
+        callGasLimit: bigint;
+        verificationGasLimit: bigint;
+        preVerificationGas: bigint;
+        maxFeePerGas: bigint;
+        maxPriorityFeePerGas: bigint;
+    };
+    paymaster?: {
+        address: Address;
+        validationGasLimit?: bigint;
+        postOpGasLimit?: bigint;
+        data?: `0x${string}`;
+    };
+    forGasEstimation?: boolean;
+}): UserOperation {
+    // Build approve calldata
+    const approveCallData = encodeFunctionData({
+        abi: [{
+            name: 'approve',
+            type: 'function',
+            inputs: [
+                { name: 'spender', type: 'address' },
+                { name: 'amount', type: 'uint256' }
+            ],
+            outputs: [{ name: '', type: 'bool' }]
+        }],
+        functionName: 'approve',
+        args: [params.spender, params.amount]
+    });
+
+    // Build execute calldata for OmniAccount
+    const callData = encodeFunctionData({
+        abi: CONTRACTS.OmniAccountImplementation.abi,
+        functionName: "execute",
+        args: [params.tokenAddress, BigInt(0), approveCallData],
+    });
+
+    return createUserOperation({
+        sender: params.omniAccountAddress,
+        nonce: params.nonce,
+        callData,
+        gasParams: params.gasParams,
+        paymaster: params.paymaster,
+        forGasEstimation: params.forGasEstimation,
+    });
+}
+
+/**
  * Build UserOperation for token transfer through OmniAccount
  */
 export function buildTokenTransferUserOp(params: {
@@ -918,8 +1091,40 @@ export async function estimateUserOpGasFromWorker(
 
     } catch (error) {
         console.error("[Gas Estimation] Worker gas estimation failed:", error);
-        // Re-throw error - no fallback for now as we're testing worker estimation
-        throw error;
+        console.warn("[Gas Estimation] Using fallback gas values for testing");
+        
+        // Fallback to reasonable default gas values
+        let maxFeePerGas: bigint;
+        let maxPriorityFeePerGas: bigint;
+
+        if (publicClient) {
+            try {
+                const feeData = await publicClient.estimateFeesPerGas();
+                maxFeePerGas = (feeData.maxFeePerGas || BigInt(20000000000)) * BigInt(120) / BigInt(100);
+                maxPriorityFeePerGas = feeData.maxPriorityFeePerGas || BigInt(1000000000);
+            } catch {
+                // Fallback values if fee estimation fails
+                maxFeePerGas = BigInt(30000000000);
+                maxPriorityFeePerGas = BigInt(1500000000);
+            }
+        } else {
+            // Default values if no publicClient provided
+            maxFeePerGas = BigInt(30000000000);
+            maxPriorityFeePerGas = BigInt(1500000000);
+        }
+
+        // Return reasonable default gas parameters
+        const fallbackGasParams = {
+            callGasLimit: BigInt(300000),              // Sufficient for most token transfers
+            verificationGasLimit: BigInt(500000),      // Covers signature validation
+            preVerificationGas: BigInt(100000),        // Covers base transaction costs
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            paymasterVerificationGasLimit: BigInt(150000),  // For ERC20 paymaster validation
+            paymasterPostOpGasLimit: BigInt(100000),        // For ERC20 paymaster post-op
+        };
+
+        console.log("[Gas Estimation] Using fallback gas estimates:", fallbackGasParams);
+        return fallbackGasParams;
     }
 }
-

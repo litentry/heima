@@ -82,9 +82,12 @@ async function makeRpcRequest<T>(
 
     if (data.error) {
         console.error(`[TEE Worker RPC] Error from ${method}:`, data.error);
-        // Include error code in the error message for better debugging
+        // Include error code and data in the error message for better debugging
+        const errorData = typeof data.error.data === 'object' 
+            ? JSON.stringify(data.error.data)
+            : data.error.data;
         const errorMessage = data.error.data
-            ? `${data.error.message} (${data.error.data})`
+            ? `${data.error.message} (${errorData})`
             : data.error.message || "RPC error";
         throw new Error(errorMessage);
     }
@@ -244,6 +247,28 @@ interface EstimateUserOpGasResponse {
     preVerificationGas: string;
     paymasterVerificationGasLimit: string;
     paymasterPostOpGasLimit: string;
+    maxFeePerGas: string;
+    maxPriorityFeePerGas: string;
+}
+
+// Get OmniAccount hash from email
+export interface GetOmniAccountParams {
+    client_id: string;
+    user_email: string;
+}
+
+export async function getOmniAccount(
+    clientId: string,
+    email: string
+): Promise<string> {
+    const params: GetOmniAccountParams = {
+        client_id: clientId,
+        user_email: email,
+    };
+
+    console.log("[TEE Worker] Getting OmniAccount for email:", email);
+
+    return makeRpcRequest<string>("omni_getOmniAccount", params);
 }
 
 // Estimate gas for a UserOperation through the TEE worker

@@ -51,6 +51,8 @@ pub enum NativeTaskOk {
 		pre_verification_gas: u128,
 		paymaster_verification_gas_limit: u128,
 		paymaster_post_op_gas_limit: u128,
+		max_fee_per_gas: u128,
+		max_priority_fee_per_gas: u128,
 		estimated_token_cost: Option<TokenCostEstimate>,
 	},
 }

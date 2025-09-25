@@ -223,6 +223,12 @@ fn get_supported_tokens() -> std::collections::HashMap<(u64, &'static str), Toke
 		TokenInfo { decimals: 18, binance_pair: "ETHUSDT" },
 	);
 
+	// Base (Chain ID 8453)
+	tokens.insert(
+		(8453, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"), // USDC
+		TokenInfo { decimals: 6, binance_pair: "ETHUSDC" },
+	);
+
 	tokens
 }
 
@@ -1627,6 +1633,12 @@ async fn estimate_user_op_gas(
 	let (paymaster_verification_gas_limit, paymaster_post_op_gas_limit) =
 		extract_paymaster_gas_limits(&user_op.paymasterAndData);
 
+	// Step 6: Calculate gas fees with buffer
+	let (max_fee_per_gas, max_priority_fee_per_gas) = entry_point_client
+		.calculate_gas_fees_with_buffer(10) // Use 10% additional buffer for estimation
+		.await
+		.map_err(|e| format!("Failed to calculate gas fees: {:?}", e))?;
+
 	// Convert to u128 for response, ensuring values are within bounds
 	let call_gas_limit = call_gas_limit.try_into().map_err(|_| {
 		format!("Call gas limit {} exceeds maximum supported value", call_gas_limit)
@@ -1640,6 +1652,17 @@ async fn estimate_user_op_gas(
 		format!("Pre-verification gas {} exceeds maximum supported value", pre_verification_gas)
 	})?;
 
+	let max_fee_per_gas = max_fee_per_gas.try_into().map_err(|_| {
+		format!("Max fee per gas {} exceeds maximum supported value", max_fee_per_gas)
+	})?;
+
+	let max_priority_fee_per_gas = max_priority_fee_per_gas.try_into().map_err(|_| {
+		format!(
+			"Max priority fee per gas {} exceeds maximum supported value",
+			max_priority_fee_per_gas
+		)
+	})?;
+
 	// Build initial response with gas estimates
 	let gas_response = NativeTaskOk::EstimateUserOpGas {
 		call_gas_limit,
@@ -1647,11 +1670,13 @@ async fn estimate_user_op_gas(
 		pre_verification_gas,
 		paymaster_verification_gas_limit,
 		paymaster_post_op_gas_limit,
+		max_fee_per_gas,
+		max_priority_fee_per_gas,
 		estimated_token_cost: None, // Will be updated if ERC20 paymaster is detected
 	};
 
 	let estimated_token_cost = if !user_op.paymasterAndData.is_empty() {
-		// Step 6: Calculate token cost if ERC20 paymaster is present
+		// Step 7: Calculate token cost if ERC20 paymaster is present
 		calculate_erc20_token_cost(
 			binance_api,
 			&user_op.paymasterAndData,
@@ -1671,6 +1696,8 @@ async fn estimate_user_op_gas(
 		pre_verification_gas,
 		paymaster_verification_gas_limit,
 		paymaster_post_op_gas_limit,
+		max_fee_per_gas,
+		max_priority_fee_per_gas,
 		estimated_token_cost,
 	};
 

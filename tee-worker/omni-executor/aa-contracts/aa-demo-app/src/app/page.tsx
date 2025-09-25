@@ -10,12 +10,17 @@ import { AuthorizedSigners } from "@/components/AuthorizedSigners";
 import { AuthorizeTEEWorker } from "@/components/AuthorizeTEEWorker";
 import { TEETokenTransfer } from "@/components/TEETokenTransfer";
 import { ClientOnly } from "@/components/ClientOnly";
-import { ChevronRight, Check } from "lucide-react";
+import { Check, Mail } from "lucide-react";
 import { getTEEWorkerAddress } from "@/lib/tee-worker-client";
+import { useAuth } from "@/contexts/AuthContext";
+import { calculateOmniAccount } from "@/lib/aa-utils";
+import { DEFAULT_CLIENT_ID } from "@/lib/constants";
 
 function HomeContent() {
-    const { address: evmAddress, chain, isConnected } = useAccount();
+    const { address: evmAddress, chain } = useAccount();
     const publicClient = usePublicClient();
+    const { authType, identifier, omniAccountHash: authOmniHash } = useAuth();
+
     const [omniAccountAddress, setOmniAccountAddress] = useState<string>("");
     const [omniAccountHash, setOmniAccountHash] = useState<string>("");
     const [currentStep, setCurrentStep] = useState(1);
@@ -26,18 +31,33 @@ function HomeContent() {
     const [teeWorkerAddress, setTeeWorkerAddress] = useState<string | null>(null);
     const [isTeeWorkerAuthorized, setIsTeeWorkerAuthorized] = useState(false);
 
+    // Check if authenticated
+    const isAuthenticated = (authType === "wallet" && evmAddress) || (authType === "email" && identifier);
+
+    // Update OmniAccount hash and address based on auth type
+    useEffect(() => {
+        if (authType === "wallet" && evmAddress) {
+            const hash = calculateOmniAccount(evmAddress, DEFAULT_CLIENT_ID, "evm");
+            setOmniAccountHash(hash);
+        } else if (authType === "email" && authOmniHash) {
+            setOmniAccountHash(authOmniHash);
+        }
+    }, [authType, evmAddress, authOmniHash]);
 
     // Debug logging
     useEffect(() => {
         console.log("HomeContent Debug:", {
+            authType,
+            identifier,
             evmAddress,
             chainId: chain?.id,
             chainName: chain?.name,
-            isConnected,
+            isAuthenticated,
             omniAccountAddress,
+            omniAccountHash,
             publicClientChainId: publicClient?.chain?.id,
         });
-    }, [evmAddress, chain, isConnected, omniAccountAddress, publicClient]);
+    }, [authType, identifier, evmAddress, chain, isAuthenticated, omniAccountAddress, omniAccountHash, publicClient]);
 
     // Check if Omni Account contract exists
     useEffect(() => {
@@ -241,32 +261,37 @@ function HomeContent() {
 
     // Update current step based on completion status
     useEffect(() => {
-        if (authorizedSigners.length > 0) {
+        // Set isAuthorized based on contract deployment, not just signers
+        if (hasContract && authorizedSigners.length > 0) {
             setIsAuthorized(true);
+        } else {
+            setIsAuthorized(false);
         }
 
-        if (!evmAddress) {
+        if (!isAuthenticated) {
             setCurrentStep(1);
         } else if (!omniAccountAddress) {
             // Stay on step 1 until we have the omni account address
             setCurrentStep(1);
         } else if (!isFunded) {
             setCurrentStep(2);
-        } else if (!isAuthorized) {
+        } else if (!hasContract) {
+            // Stay on step 3 until contract is deployed
             setCurrentStep(3);
-        } else if (!isTeeWorkerAuthorized) {
+        } else if (!isTeeWorkerAuthorized && authType === "wallet") {
+            // Email accounts have TEE worker auto-authorized
             setCurrentStep(4);
         } else {
             setCurrentStep(5);
         }
-    }, [evmAddress, omniAccountAddress, isFunded, isAuthorized, authorizedSigners, isTeeWorkerAuthorized]);
+    }, [authType, isAuthenticated, omniAccountAddress, isFunded, hasContract, authorizedSigners, isTeeWorkerAuthorized]);
 
     const steps = [
         {
             id: 1,
-            title: "Connect Wallet",
-            description: "Connect your EVM or Solana wallet",
-            completed: !!evmAddress,
+            title: authType === "email" ? "Email Account" : "Connect Wallet",
+            description: authType === "email" ? "Using email for authentication" : "Connect your EVM or Solana wallet",
+            completed: !!isAuthenticated,
         },
         {
             id: 2,
@@ -278,13 +303,13 @@ function HomeContent() {
             id: 3,
             title: "Create Omni Account",
             description: "Deploy your smart account contract",
-            completed: isAuthorized,
+            completed: hasContract,
         },
         {
             id: 4,
-            title: "Authorize TEE Worker",
-            description: "Add TEE worker as authorized signer",
-            completed: isTeeWorkerAuthorized,
+            title: authType === "email" ? "TEE Worker Ready" : "Authorize TEE Worker",
+            description: authType === "email" ? "TEE worker is auto-authorized" : "Add TEE worker as authorized signer",
+            completed: isTeeWorkerAuthorized || (authType === "email" && hasContract),
         },
         {
             id: 5,
@@ -312,6 +337,12 @@ function HomeContent() {
                             </p>
                         </div>
                         <div className="text-sm text-gray-500">
+                            {authType === "email" && (
+                                <div className="flex items-center gap-2">
+                                    <Mail className="w-4 h-4" />
+                                    <span className="font-medium">{identifier}</span>
+                                </div>
+                            )}
                             Step {currentStep} of {allSteps.length}
                         </div>
                     </div>
@@ -343,68 +374,44 @@ function HomeContent() {
                                                     : "bg-gray-300 text-gray-600"
                                                 }`}
                                         >
-                                            {step.completed ? <Check className="w-4 h-4" /> : step.id}
+                                            {step.completed ? (
+                                                <Check className="w-4 h-4" />
+                                            ) : (
+                                                step.id
+                                            )}
                                         </div>
-                                        <div>
-                                            <h3
-                                                className={`font-medium ${step.completed
-                                                    ? "text-green-700"
-                                                    : step.id === currentStep
-                                                        ? "text-blue-700"
-                                                        : "text-gray-700"
-                                                    }`}
-                                            >
+                                        <div className="flex-1">
+                                            <h3 className="font-medium text-gray-900">
                                                 {step.title}
                                             </h3>
                                             <p className="text-sm text-gray-600 mt-1">
                                                 {step.description}
                                             </p>
                                         </div>
-                                        {step.id === currentStep && (
-                                            <ChevronRight className="w-5 h-5 text-blue-500 ml-auto" />
-                                        )}
                                     </div>
                                 ))}
-                            </div>
-
-                            {/* Demo Info */}
-                            <div className="mt-8 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                                <h3 className="font-medium text-purple-800 mb-2">
-                                    Demo Features
-                                </h3>
-                                <ul className="text-sm text-purple-700 space-y-1">
-                                    <li>• Multi-chain wallet support</li>
-                                    <li>• ERC20 token support (USDC, USDT)</li>
-                                    <li>• Multiple signer management</li>
-                                    <li>• View authorized signers list</li>
-                                    <li>• Test token minting</li>
-                                    <li>• Token balance monitoring</li>
-                                    <li>• Root key delegation</li>
-                                    <li>• Worker integration ready</li>
-                                </ul>
                             </div>
                         </div>
                     </div>
 
-                    {/* Main Content */}
+                    {/* Main Content Area */}
                     <div className="lg:col-span-2">
-                        <div className="space-y-8">
-                            {/* Step Content */}
-                            {currentStep === 1 && (
+                        <div className="bg-white rounded-lg shadow-lg p-8">
+                            {/* Main Content */}
+                            {currentStep === 1 && !isAuthenticated && (
                                 <div>
                                     <h2 className="text-xl font-semibold mb-4">
-                                        Step 1: Connect Your Wallet
+                                        Step 1: Connect Your Account
                                     </h2>
                                     <p className="text-gray-600 mb-6">
-                                        Connect your EVM wallet (MetaMask, etc.) or Solana wallet
-                                        (Phantom, etc.) to get started.
+                                        Connect your EVM wallet, Solana wallet, or use your email address to get started.
                                     </p>
                                     <WalletConnect />
                                 </div>
                             )}
 
-                            {/* Show Omni Account details when wallet is connected */}
-                            {isConnected && evmAddress && (
+                            {/* Show Omni Account details when authenticated */}
+                            {isAuthenticated && (
                                 <div className="mb-8">
                                     <AccountsDashboard
                                         onAddressCalculated={setOmniAccountAddress}
@@ -445,59 +452,61 @@ function HomeContent() {
                                     </p>
                                     <CreateOmniAccount
                                         omniAccountAddress={omniAccountAddress}
-                                        isFunded={!!isFunded}
+                                        isFunded={isFunded}
                                         onAccountCreated={() => {
-                                            setIsAuthorized(true);
+                                            console.log("Account created callback triggered");
+                                            setHasContract(true);
                                             fetchSigners();
                                         }}
                                     />
                                 </div>
                             )}
 
-                            {/* Show authorized signers only after account is funded and deployed */}
-                            {isFunded && hasContract && omniAccountAddress && (
-                                <div className="mt-8">
-                                    <AuthorizedSigners
-                                        omniAccountAddress={omniAccountAddress}
-                                        isDeployed={hasContract}
-                                        signers={authorizedSigners}
-                                        isLoading={isLoadingSigners}
-                                        refreshSigners={fetchSigners}
-                                        teeWorkerAddress={teeWorkerAddress}
-                                    />
-                                </div>
-                            )}
-
-                            {currentStep >= 4 && currentStep <= 4 && (
+                            {currentStep >= 4 && currentStep <= 4 && authType === "wallet" && (
                                 <div>
                                     <h2 className="text-xl font-semibold mb-4">
                                         Step 4: Authorize TEE Worker
                                     </h2>
                                     <p className="text-gray-600 mb-6">
-                                        Authorize the TEE worker to execute transactions on behalf of your Omni Account.
+                                        Add the TEE Worker as an authorized signer to enable secure transaction execution.
                                     </p>
                                     <AuthorizeTEEWorker
                                         omniAccountAddress={omniAccountAddress}
                                         omniAccountHash={omniAccountHash}
-                                        isDeployed={hasContract}
-                                        onWorkerAuthorized={(address) => {
-                                            setTeeWorkerAddress(address);
+                                        onWorkerAuthorized={(workerAddress) => {
+                                            console.log("TEE Worker authorized:", workerAddress);
+                                            setTeeWorkerAddress(workerAddress);
                                             setIsTeeWorkerAuthorized(true);
-                                        }}
-                                        onComplete={() => {
-                                            fetchSigners();
+                                            fetchSigners(); // Refresh signers list
                                         }}
                                     />
                                 </div>
                             )}
 
-                            {currentStep >= 5 && currentStep <= 5 && (
+                            {currentStep >= 4 && currentStep <= 4 && authType === "email" && (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                                    <div className="flex items-start space-x-3">
+                                        <Check className="w-6 h-6 text-green-600 flex-shrink-0" />
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-green-900">
+                                                TEE Worker Auto-Authorized
+                                            </h3>
+                                            <p className="text-green-700 mt-2">
+                                                For email accounts, the TEE worker is automatically authorized as the primary signer.
+                                                You can proceed to send transactions.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentStep >= 5 && (
                                 <div>
                                     <h2 className="text-xl font-semibold mb-4">
                                         Step 5: Send Token Transfer
                                     </h2>
                                     <p className="text-gray-600 mb-6">
-                                        Transfer ETH, USDC, or USDT through the TEE worker using UserOperations.
+                                        Transfer ETH, USDC, or USDT through your Omni Account using the TEE worker.
                                     </p>
                                     <TEETokenTransfer
                                         omniAccountAddress={omniAccountAddress}
@@ -508,83 +517,22 @@ function HomeContent() {
                                 </div>
                             )}
 
-
-                            {/* Always show completed steps in collapsed form */}
-                            <div className="space-y-4">
-                                {currentStep > 1 && (
-                                    <div className="bg-white rounded-lg shadow p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <Check className="w-4 h-4 text-white" />
-                                                </div>
-                                                <span className="font-medium text-green-700">
-                                                    Wallet Connected
-                                                </span>
-                                            </div>
-                                            <span className="text-sm text-gray-500">
-                                                {evmAddress &&
-                                                    `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}`}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {currentStep > 2 && isFunded && (
-                                    <div className="bg-white rounded-lg shadow p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <Check className="w-4 h-4 text-white" />
-                                                </div>
-                                                <span className="font-medium text-green-700">
-                                                    Omni Account Funded
-                                                </span>
-                                            </div>
-                                            <span className="text-sm text-gray-500">
-                                                {(Number(ethBalance) / 1e18).toFixed(6)} ETH
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {isAuthorized && (
-                                    <div className="bg-white rounded-lg shadow p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <Check className="w-4 h-4 text-white" />
-                                                </div>
-                                                <span className="font-medium text-green-700">
-                                                    Omni Account Created
-                                                </span>
-                                            </div>
-                                            <span className="text-sm text-gray-500">
-                                                Account deployed
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {isTeeWorkerAuthorized && (
-                                    <div className="bg-white rounded-lg shadow p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <Check className="w-4 h-4 text-white" />
-                                                </div>
-                                                <span className="font-medium text-green-700">
-                                                    TEE Worker Authorized
-                                                </span>
-                                            </div>
-                                            <span className="text-sm text-gray-500">
-                                                {teeWorkerAddress && `${teeWorkerAddress.slice(0, 6)}...${teeWorkerAddress.slice(-4)}`}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                            </div>
+                            {/* Authorized Signers - Always visible after account creation */}
+                            {isAuthorized && authorizedSigners.length > 0 && currentStep >= 4 && (
+                                <div className="mt-8 pt-8 border-t">
+                                    <AuthorizedSigners
+                                        omniAccountAddress={omniAccountAddress}
+                                        isDeployed={hasContract}
+                                        signers={authorizedSigners}
+                                        isLoading={isLoadingSigners}
+                                        teeWorkerAddress={teeWorkerAddress}
+                                        refreshSigners={() => {
+                                            console.log("Signers updated, refreshing list");
+                                            fetchSigners();
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
