@@ -7,6 +7,10 @@ use pumpx::*;
 
 mod omni;
 use omni::*;
+
+mod sendgrid;
+use sendgrid::*;
+
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub const PROTECTED_METHODS: [&str; 8] = [
@@ -41,4 +45,5 @@ pub fn register_methods<
 ) {
 	register_omni(module);
 	register_pumpx(module);
+	register_sendgrid_webhook_methods(module);
 }
