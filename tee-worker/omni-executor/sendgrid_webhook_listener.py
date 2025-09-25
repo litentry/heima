@@ -82,16 +82,15 @@ def format_slack_message(event_type, email, additional_message, timestamp):
 
     emoji = emoji_map.get(event_type, '📧')
 
-    # Format the message with clear structure
-    message = f"""
-{emoji} **SendGrid Email Event**
-
-🌍 **Environment:** {ENVIRONMENT.upper()}
-📧 **Email:** {email}
-📊 **Status:** {event_type.upper()}
-⏰ **Time:** {formatted_time}
-💬 **Details:** {additional_message}
-    """.strip()
+    # Format the message with code block to preserve spacing in Slack
+    message = f"""{emoji} SendGrid Email Event
+```
+🌍 Env    : {ENVIRONMENT}
+📧 Email  : {email}
+📊 Status : {event_type.upper()}
+⏰ Time   : {formatted_time}
+💬 Details: {additional_message}
+```"""
 
     return message
 
