@@ -6738,6 +6738,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "hex",
+ "libsecp256k1 0.7.2",
  "log",
  "serde_json",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7163,11 +7164,14 @@ dependencies = [
 name = "omni-cli"
 version = "0.1.0"
 dependencies = [
+ "aa-contracts-client",
  "alloy",
  "anyhow",
  "clap",
+ "ethereum-rpc",
  "executor-core",
  "executor-primitives",
+ "heima-primitives",
  "hex",
  "reqwest 0.12.23",
  "serde",
