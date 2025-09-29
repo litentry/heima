@@ -12,6 +12,7 @@ chrono = { workspace = true }
 email_address = { workspace = true }
 ethers = { workspace = true }
 hex = { workspace = true }
+hyperliquid_rust_sdk = { workspace = true }
 http = { workspace = true }
 jsonrpsee = { workspace = true }
 parity-scale-codec = { workspace = true }
@@ -49,6 +50,7 @@ wildmeta-api = { workspace = true }
 [dev-dependencies]
 tempfile = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
+binance-api = { workspace = true, features = ["mocks"] }
 parentchain-signer = { workspace = true }
 subxt = { workspace = true }
 signer-client = { workspace = true, features = ["mocks"] }

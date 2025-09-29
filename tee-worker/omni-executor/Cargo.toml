@@ -59,6 +59,7 @@ ethers = "2.0"
 frame-metadata = { version = "23.0.0", features = ["decode"], default-features = false }
 frame-support = { version = "39.0.0", features = ["std"] }
 futures = "0.3.31"
+hyperliquid_rust_sdk = { git = "https://github.com/silva-fj/hyperliquid-rust-sdk", branch = "eip712-public-trait" }
 hex = "0.4"
 hex-literal = "0.4"
 hmac = "0.12.1"

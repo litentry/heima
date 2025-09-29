@@ -6,20 +6,16 @@ use crate::{
 	validation_helpers::validate_ethereum_address,
 	verify_auth::verify_auth,
 };
-use alloy::{
-	dyn_abi::Eip712Domain,
-	primitives::{keccak256, Address, B256},
-	sol_types::{eip712_domain, SolValue},
-};
 use chrono::Utc;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
+use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, Withdraw3};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::pubkey_to_address;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use std::convert::TryFrom;
 use tracing::{debug, error};
@@ -58,42 +54,9 @@ pub struct HyperliquidSignatureData {
 #[derive(Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HyperliquidAction {
-	ApproveAgent(ApproveAgentAction),
-	Withdraw3(Withdraw3Action),
-	ApproveBuilderFee(ApproveBuilderFeeAction),
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ApproveAgentAction {
-	#[serde(serialize_with = "serialize_hex")]
-	pub signature_chain_id: u64,
-	pub hyperliquid_chain: String,
-	pub agent_address: Address,
-	pub agent_name: Option<String>,
-	pub nonce: u64,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Withdraw3Action {
-	#[serde(serialize_with = "serialize_hex")]
-	pub signature_chain_id: u64,
-	pub hyperliquid_chain: String,
-	pub amount: String,
-	pub time: u64,
-	pub destination: Address,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ApproveBuilderFeeAction {
-	#[serde(serialize_with = "serialize_hex")]
-	pub signature_chain_id: u64,
-	pub hyperliquid_chain: String,
-	pub max_fee_rate: String,
-	pub builder: Address,
-	pub nonce: u64,
+	ApproveAgent(ApproveAgent),
+	Withdraw3(Withdraw3),
+	ApproveBuilderFee(ApproveBuilderFee),
 }
 
 fn is_testnet_chain(chain_id: ChainId) -> bool {
@@ -116,80 +79,6 @@ fn is_testnet_chain(chain_id: ChainId) -> bool {
 			// Default to mainnet for unknown chain IDs
 			false
 		},
-	}
-}
-
-trait HyperliquidEip712Signature {
-	fn signature_chain_id(&self) -> u64;
-	fn struct_hash(&self) -> B256;
-
-	fn domain(&self) -> Eip712Domain {
-		eip712_domain! {
-			name: "HyperliquidSignTransaction",
-			version: "1",
-			chain_id: self.signature_chain_id(),
-			verifying_contract: Address::ZERO,
-		}
-	}
-
-	fn eip712_signing_hash(&self) -> B256 {
-		let mut digest_input = [0u8; 2 + 32 + 32];
-		digest_input[0] = 0x19;
-		digest_input[1] = 0x01;
-		digest_input[2..34].copy_from_slice(&self.domain().hash_struct()[..]);
-		digest_input[34..66].copy_from_slice(&self.struct_hash()[..]);
-		keccak256(digest_input)
-	}
-}
-
-impl HyperliquidEip712Signature for ApproveAgentAction {
-	fn signature_chain_id(&self) -> u64 {
-		self.signature_chain_id
-	}
-
-	fn struct_hash(&self) -> B256 {
-		let items = (
-			keccak256("HyperliquidTransaction:ApproveAgent(string hyperliquidChain,address agentAddress,string agentName,uint64 nonce)"),
-			keccak256(&self.hyperliquid_chain),
-			&self.agent_address,
-			keccak256(self.agent_name.as_deref().unwrap_or("")),
-			&self.nonce
-		);
-		keccak256(items.abi_encode())
-	}
-}
-
-impl HyperliquidEip712Signature for Withdraw3Action {
-	fn signature_chain_id(&self) -> u64 {
-		self.signature_chain_id
-	}
-
-	fn struct_hash(&self) -> B256 {
-		let items = (
-			keccak256("HyperliquidTransaction:Withdraw3(string hyperliquidChain,string amount,uint64 time,address destination)"),
-			keccak256(&self.hyperliquid_chain),
-			keccak256(&self.amount),
-			&self.time,
-			&self.destination
-		);
-		keccak256(items.abi_encode())
-	}
-}
-
-impl HyperliquidEip712Signature for ApproveBuilderFeeAction {
-	fn signature_chain_id(&self) -> u64 {
-		self.signature_chain_id
-	}
-
-	fn struct_hash(&self) -> B256 {
-		let items = (
-			keccak256("HyperliquidTransaction:ApproveBuilderFee(string hyperliquidChain,string maxFeeRate,address builder,uint64 nonce)"),
-			keccak256(&self.hyperliquid_chain),
-			keccak256(&self.max_fee_rate),
-			&self.builder,
-			&self.nonce
-		);
-		keccak256(items.abi_encode())
 	}
 }
 
@@ -382,7 +271,7 @@ pub fn register_get_hyperliquid_signature_data<
 
 			let (action, signature) = match params.action_type {
 				HyperliquidActionType::ApproveAgent { agent_address, agent_name } => {
-					let action = ApproveAgentAction {
+					let action = ApproveAgent {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						agent_address: validate_ethereum_address(&agent_address, "agent_address")
@@ -395,20 +284,21 @@ pub fn register_get_hyperliquid_signature_data<
 					(HyperliquidAction::ApproveAgent(action), signature)
 				},
 				HyperliquidActionType::Withdraw3 { amount, destination } => {
-					let action = Withdraw3Action {
+                    let _ = validate_ethereum_address(&destination, "destination")
+							.map_err(|e| e.to_error_object())?;
+					let action = Withdraw3 {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						amount,
 						time: nonce,
-						destination: validate_ethereum_address(&destination, "destination")
-							.map_err(|e| e.to_error_object())?,
+						destination,
 					};
 					let signature =
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::Withdraw3(action), signature)
 				},
 				HyperliquidActionType::ApproveBuilderFee { max_fee_rate, builder } => {
-					let action = ApproveBuilderFeeAction {
+					let action = ApproveBuilderFee {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						max_fee_rate,
@@ -430,13 +320,6 @@ pub fn register_get_hyperliquid_signature_data<
 		.expect("Failed to register omni_getHyperliquidSignatureData method");
 }
 
-fn serialize_hex<S>(val: &u64, s: S) -> Result<S::Ok, S::Error>
-where
-	S: Serializer,
-{
-	s.serialize_str(&format!("0x{val:x}"))
-}
-
 async fn generate_eip712_signature<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -444,7 +327,7 @@ async fn generate_eip712_signature<
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
-	T: HyperliquidEip712Signature,
+	T: Eip712 + Send + Sync,
 >(
 	ctx: &RpcContext<
 		Header,
@@ -477,12 +360,13 @@ async fn generate_eip712_signature<
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use alloy::primitives::Address;
 	use executor_primitives::VerificationCode;
 	use std::str::FromStr;
 
 	#[test]
 	fn test_approve_agent_action_signature() {
-		let action = ApproveAgentAction {
+		let action = ApproveAgent {
 			signature_chain_id: 1,
 			hyperliquid_chain: "Mainnet".to_string(),
 			agent_address: Address::from_str("0x1234567890123456789012345678901234567890").unwrap(),
@@ -507,12 +391,12 @@ mod tests {
 
 	#[test]
 	fn test_withdraw_action_signature() {
-		let action = Withdraw3Action {
+		let action = Withdraw3 {
 			signature_chain_id: 1,
 			hyperliquid_chain: "Mainnet".to_string(),
 			amount: "100.0".to_string(),
 			time: 1234567890,
-			destination: Address::from_str("0x1234567890123456789012345678901234567890").unwrap(),
+			destination: "0x1234567890123456789012345678901234567890".to_string(),
 		};
 
 		// Test domain generation
@@ -532,7 +416,7 @@ mod tests {
 
 	#[test]
 	fn test_approve_builder_fee_action_signature() {
-		let action = ApproveBuilderFeeAction {
+		let action = ApproveBuilderFee {
 			signature_chain_id: 1,
 			hyperliquid_chain: "Mainnet".to_string(),
 			max_fee_rate: "0.01".to_string(),
