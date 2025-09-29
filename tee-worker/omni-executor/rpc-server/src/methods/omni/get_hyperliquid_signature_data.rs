@@ -80,9 +80,9 @@ pub struct Withdraw3Action {
 	#[serde(serialize_with = "serialize_hex")]
 	pub signature_chain_id: u64,
 	pub hyperliquid_chain: String,
+	pub destination: String,
 	pub amount: String,
 	pub time: u64,
-	pub destination: Address,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -401,7 +401,8 @@ pub fn register_get_hyperliquid_signature_data<
 						amount,
 						time: nonce,
 						destination: validate_ethereum_address(&destination, "destination")
-							.map_err(|e| e.to_error_object())?,
+							.map_err(|e| e.to_error_object())?
+							.to_string(),
 					};
 					let signature =
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
@@ -512,7 +513,9 @@ mod tests {
 			hyperliquid_chain: "Mainnet".to_string(),
 			amount: "100.0".to_string(),
 			time: 1234567890,
-			destination: Address::from_str("0x1234567890123456789012345678901234567890").unwrap(),
+			destination: Address::from_str("0x1234567890123456789012345678901234567890")
+				.unwrap()
+				.to_string(),
 		};
 
 		// Test domain generation
