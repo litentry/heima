@@ -1,10 +1,40 @@
+use aa_contracts_client::{
+	calculate_omni_account_address, create_paymaster_and_data, prepare_factory_init_code, OwnerType,
+};
+use alloy::primitives::{Address, FixedBytes, TxKind, U256};
+use alloy::rpc::types::{TransactionInput, TransactionRequest};
+use alloy::sol;
+use alloy::sol_types::SolCall;
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
+use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::ChainId;
+use executor_primitives::{ChainId, Web2IdentityType};
+use heima_primitives::Identity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
+
+sol! {
+	// Owner type enum from aa-contracts-client
+	enum OwnerTypeEnum {
+		Pumpx,
+		Email,
+		Twitter,
+		Discord,
+		Github,
+		Substrate,
+		Evm,
+		Bitcoin,
+		Solana,
+		Google,
+		Passkey
+	}
+
+	// OmniAccountFactory interface
+	function getAddress(bytes32 oa, OwnerTypeEnum oaType, bytes memory clientId, address root) public view returns (address);
+	function accountImplementation() public view returns (address);
+}
 
 #[derive(Debug, Clone, ValueEnum, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -242,6 +272,87 @@ enum Commands {
 		#[arg(long, default_value = "0")]
 		wallet_index: u32,
 	},
+
+	/// Generate OmniAccount (AA) address from omni-account bytes and owner type
+	GenerateAAAddress {
+		#[arg(long, help = "32-byte omni-account identifier in hex format (0x-prefixed)")]
+		oa_bytes: String,
+
+		#[arg(
+			long,
+			help = "Owner type: Email, Evm, Substrate, Bitcoin, Solana, Twitter, Discord, Github, Google, Pumpx, Passkey"
+		)]
+		oa_type: String,
+
+		#[arg(long)]
+		client_id: String,
+
+		#[arg(long)]
+		factory_address: String,
+
+		#[arg(long)]
+		root_address: String,
+
+		#[arg(long, default_value = "http://localhost:8545")]
+		rpc_url: String,
+
+		#[arg(
+			long,
+			help = "Account implementation address (if not provided, will try to get from factory)"
+		)]
+		account_implementation: Option<String>,
+	},
+
+	/// Generate user operation init code from omni-account bytes and owner type
+	GenerateInitCode {
+		#[arg(long, help = "32-byte omni-account identifier in hex format (0x-prefixed)")]
+		oa_bytes: String,
+
+		#[arg(
+			long,
+			help = "Owner type: Email, Evm, Substrate, Bitcoin, Solana, Twitter, Discord, Github, Google, Pumpx, Passkey"
+		)]
+		oa_type: String,
+
+		#[arg(long)]
+		client_id: String,
+
+		#[arg(long)]
+		factory_address: String,
+
+		#[arg(long)]
+		root_address: String,
+	},
+
+	/// Generate paymaster and data for user operations
+	GeneratePaymasterData {
+		#[arg(long)]
+		paymaster_address: String,
+
+		#[arg(long, default_value = "50000")]
+		verification_gas_limit: u64,
+
+		#[arg(long, default_value = "50000")]
+		post_op_gas_limit: u64,
+	},
+
+	/// Get OmniAccount identifier from email/identity and client_id
+	GetOmniAccount {
+		#[arg(long)]
+		email: String,
+
+		#[arg(long)]
+		client_id: String,
+	},
+
+	/// Pack two gas limits into accountGasLimits format for PackedUserOperation
+	PackGasLimits {
+		#[arg(long, help = "Gas limit for account verification (decimal)")]
+		verification_gas: u64,
+
+		#[arg(long, help = "Gas limit for call execution (decimal)")]
+		call_gas: u64,
+	},
 }
 
 struct RpcClient {
@@ -320,6 +431,23 @@ fn parse_hex_to_array<const N: usize>(hex_str: &str) -> Result<[u8; N]> {
 	let mut array = [0u8; N];
 	array.copy_from_slice(&bytes);
 	Ok(array)
+}
+
+fn parse_owner_type(oa_type_str: &str) -> Result<OwnerType> {
+	match oa_type_str.to_lowercase().as_str() {
+		"email" => Ok(OwnerType::Email),
+		"evm" => Ok(OwnerType::Evm),
+		"substrate" => Ok(OwnerType::Substrate),
+		"bitcoin" => Ok(OwnerType::Bitcoin),
+		"solana" => Ok(OwnerType::Solana),
+		"twitter" => Ok(OwnerType::Twitter),
+		"discord" => Ok(OwnerType::Discord),
+		"github" => Ok(OwnerType::Github),
+		"google" => Ok(OwnerType::Google),
+		"pumpx" => Ok(OwnerType::Pumpx),
+		"passkey" => Ok(OwnerType::Passkey),
+		_ => anyhow::bail!("Invalid owner type '{}'. Valid types are: Email, Evm, Substrate, Bitcoin, Solana, Twitter, Discord, Github, Google, Pumpx, Passkey", oa_type_str),
+	}
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -560,6 +688,230 @@ async fn handle_get_smart_wallet_root_signer(
 	Ok(())
 }
 
+async fn handle_generate_aa_address(
+	oa_bytes_hex: String,
+	oa_type_str: String,
+	client_id: String,
+	factory_address: String,
+	root_address: String,
+	rpc_url: String,
+	account_implementation: Option<String>,
+) -> Result<()> {
+	// Parse OmniAccount bytes from hex
+	let oa_bytes = parse_hex_to_array::<32>(&oa_bytes_hex)?;
+
+	// Parse owner type
+	let oa_type = parse_owner_type(&oa_type_str)?;
+
+	// Parse addresses
+	let factory_addr = factory_address
+		.parse::<Address>()
+		.map_err(|e| anyhow::anyhow!("Invalid factory address '{}': {}", factory_address, e))?;
+
+	let root_addr = root_address
+		.parse::<Address>()
+		.map_err(|e| anyhow::anyhow!("Invalid root address '{}': {}", root_address, e))?;
+
+	info!("Debug info:");
+	info!("  OA bytes: 0x{}", hex::encode(oa_bytes));
+	info!("  OA type: {}", oa_type_str);
+	info!("  Client ID: {}", client_id);
+	info!("  Factory address: {}", factory_address);
+	info!("  Root address: {}", root_address);
+	info!("  RPC URL: {}", rpc_url);
+
+	// Create RPC provider
+	let provider = AlloyRpcProvider::new(&rpc_url);
+
+	// Check if the contract exists
+	info!("Checking if contract exists at {}", factory_address);
+	match provider.get_code_at(factory_addr).await {
+		Ok(code) => {
+			if code.is_empty() {
+				return Err(anyhow::anyhow!("No contract deployed at address {}", factory_address));
+			}
+			info!("Contract exists, code length: {} bytes", code.len());
+		},
+		Err(e) => {
+			return Err(anyhow::anyhow!("Failed to check contract code: {}", e));
+		},
+	}
+
+	// Get account implementation address - either from parameter or from factory contract
+	let account_impl_addr = if let Some(impl_addr_str) = account_implementation {
+		info!("Using provided account implementation address: {}", impl_addr_str);
+		impl_addr_str.parse::<Address>().map_err(|e| {
+			anyhow::anyhow!("Invalid account implementation address '{}': {}", impl_addr_str, e)
+		})?
+	} else {
+		info!("Getting account implementation address from factory...");
+		let impl_call = accountImplementationCall {};
+		let impl_tx = TransactionRequest {
+			to: Some(TxKind::Call(factory_addr)),
+			input: TransactionInput {
+				data: Some(impl_call.abi_encode().into()),
+				..Default::default()
+			},
+			..Default::default()
+		};
+
+		let impl_result = provider.call(impl_tx).await
+			.map_err(|e| anyhow::anyhow!("Failed to get account implementation from factory (you can provide --account-implementation manually): {}", e))?;
+
+		let addr = if impl_result.len() >= 32 {
+			Address::from_slice(&impl_result[12..32])
+		} else {
+			return Err(anyhow::anyhow!("Invalid implementation address response length: expected at least 32 bytes, got {}", impl_result.len()));
+		};
+
+		info!("Retrieved account implementation address: 0x{}", hex::encode(addr.as_slice()));
+		addr
+	};
+
+	// Now calculate the address locally using the same logic as the contract
+	let aa_address = calculate_omni_account_address(
+		factory_addr,
+		account_impl_addr,
+		FixedBytes::from_slice(&oa_bytes),
+		oa_type,
+		client_id.as_bytes(),
+		root_addr,
+	);
+
+	info!(
+		"Generated AA address for oa_bytes '0x{}' with oa_type '{}', client_id '{}', factory '{}', root '{}': 0x{}",
+		hex::encode(oa_bytes),
+		oa_type_str,
+		client_id,
+		factory_address,
+		root_address,
+		hex::encode(aa_address.as_slice())
+	);
+
+	println!("AA Address: 0x{}", hex::encode(aa_address.as_slice()));
+
+	Ok(())
+}
+
+fn handle_generate_init_code(
+	oa_bytes_hex: String,
+	oa_type_str: String,
+	client_id: String,
+	factory_address: String,
+	root_address: String,
+) -> Result<()> {
+	// Parse OmniAccount bytes from hex
+	let oa_bytes = parse_hex_to_array::<32>(&oa_bytes_hex)?;
+
+	// Parse owner type
+	let oa_type = parse_owner_type(&oa_type_str)?;
+
+	// Parse addresses
+	let factory_addr = factory_address
+		.parse::<Address>()
+		.map_err(|e| anyhow::anyhow!("Invalid factory address '{}': {}", factory_address, e))?;
+
+	let root_addr = root_address
+		.parse::<Address>()
+		.map_err(|e| anyhow::anyhow!("Invalid root address '{}': {}", root_address, e))?;
+
+	// Generate init code using the specified owner type
+	let init_code =
+		prepare_factory_init_code(factory_addr, oa_bytes, oa_type, client_id.as_bytes(), root_addr);
+
+	// Convert to hex string
+	let init_code_hex = hex::encode(&init_code);
+
+	info!(
+		"Generated init code for oa_bytes '0x{}' with oa_type '{}', client_id '{}', factory '{}', root '{}': 0x{}",
+		hex::encode(oa_bytes), oa_type_str, client_id, factory_address, root_address, init_code_hex
+	);
+
+	println!("Init Code: 0x{}", init_code_hex);
+
+	Ok(())
+}
+
+fn handle_generate_paymaster_data(
+	paymaster_address: String,
+	verification_gas_limit: u64,
+	post_op_gas_limit: u64,
+) -> Result<()> {
+	// Parse paymaster address
+	let paymaster_addr = paymaster_address
+		.parse::<Address>()
+		.map_err(|e| anyhow::anyhow!("Invalid paymaster address '{}': {}", paymaster_address, e))?;
+
+	// Generate paymaster and data
+	let paymaster_and_data = create_paymaster_and_data(
+		paymaster_addr,
+		U256::from(verification_gas_limit),
+		U256::from(post_op_gas_limit),
+	);
+
+	// Convert to hex string
+	let paymaster_data_hex = hex::encode(&paymaster_and_data);
+
+	info!(
+		"Generated paymaster data for address '{}', verification_gas: {}, post_op_gas: {}: 0x{}",
+		paymaster_address, verification_gas_limit, post_op_gas_limit, paymaster_data_hex
+	);
+
+	println!("Paymaster Data: 0x{}", paymaster_data_hex);
+
+	Ok(())
+}
+
+fn handle_get_omni_account(email: String, client_id: String) -> Result<()> {
+	// Create Identity from email
+	let identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
+
+	// Generate OmniAccount
+	let omni_account = identity.to_omni_account(&client_id);
+	let oa_bytes: [u8; 32] = omni_account.into();
+
+	// Convert to hex string
+	let omni_account_hex = hex::encode(oa_bytes);
+
+	info!(
+		"Generated OmniAccount for email '{}' with client_id '{}': 0x{}",
+		email, client_id, omni_account_hex
+	);
+
+	println!("OmniAccount: 0x{}", omni_account_hex);
+
+	Ok(())
+}
+
+fn handle_pack_gas_limits(verification_gas: u64, call_gas: u64) -> Result<()> {
+	// Pack the gas limits into a 32-byte (256-bit) value
+	// Higher 128 bits = verification_gas, lower 128 bits = call_gas
+
+	// Create the packed value as two 128-bit parts
+	let verification_part = verification_gas as u128;
+	let call_part = call_gas as u128;
+
+	// Since we need 256 bits total, we'll use a byte array approach
+	let mut packed_bytes = [0u8; 32];
+
+	// Put verification_gas in the higher 16 bytes (128 bits)
+	packed_bytes[16..32].copy_from_slice(&verification_part.to_be_bytes());
+	// Put call_gas in the lower 16 bytes (128 bits)
+	packed_bytes[0..16].copy_from_slice(&call_part.to_be_bytes());
+
+	// Convert to hex string
+	let packed_hex = format!("0x{}", hex::encode(packed_bytes));
+
+	info!(
+		"Packed gas limits: verification={}, call={} -> {}",
+		verification_gas, call_gas, packed_hex
+	);
+
+	println!("Packed Gas Limits: {}", packed_hex);
+
+	Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
 	tracing_subscriber::fmt::init();
@@ -655,6 +1007,52 @@ async fn main() -> Result<()> {
 		Commands::GetSmartWalletRootSigner { omni_account, chain_type, wallet_index } => {
 			handle_get_smart_wallet_root_signer(&client, omni_account, chain_type, wallet_index)
 				.await?;
+		},
+		Commands::GenerateAAAddress {
+			oa_bytes,
+			oa_type,
+			client_id,
+			factory_address,
+			root_address,
+			rpc_url,
+			account_implementation,
+		} => {
+			handle_generate_aa_address(
+				oa_bytes,
+				oa_type,
+				client_id,
+				factory_address,
+				root_address,
+				rpc_url,
+				account_implementation,
+			)
+			.await?;
+		},
+		Commands::GenerateInitCode {
+			oa_bytes,
+			oa_type,
+			client_id,
+			factory_address,
+			root_address,
+		} => {
+			handle_generate_init_code(oa_bytes, oa_type, client_id, factory_address, root_address)?;
+		},
+		Commands::GeneratePaymasterData {
+			paymaster_address,
+			verification_gas_limit,
+			post_op_gas_limit,
+		} => {
+			handle_generate_paymaster_data(
+				paymaster_address,
+				verification_gas_limit,
+				post_op_gas_limit,
+			)?;
+		},
+		Commands::GetOmniAccount { email, client_id } => {
+			handle_get_omni_account(email, client_id)?;
+		},
+		Commands::PackGasLimits { verification_gas, call_gas } => {
+			handle_pack_gas_limits(verification_gas, call_gas)?;
 		},
 	}
 

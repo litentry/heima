@@ -21,7 +21,8 @@ mod types;
 mod utils;
 
 pub use entry_point_client::{
-	prepare_factory_init_code, EntryPointClient, GasPriceConfig, RetryConfig,
+	create_paymaster_and_data, prepare_factory_init_code, EntryPointClient, GasPriceConfig,
+	RetryConfig,
 };
 pub use error::{AaContractError, ContractError, RpcError};
 pub use omni_account_client::OmniAccountClient;
