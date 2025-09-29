@@ -2,7 +2,7 @@ pub mod template;
 
 use async_trait::async_trait;
 use sendgrid::v3::{Content, Email, Message, Personalization, Sender};
-use tracing::error;
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub enum Error {
@@ -44,6 +44,8 @@ impl Mailer {
 #[async_trait]
 impl MailerTrait for Mailer {
 	async fn send(&self, mail: Mail) -> Result<(), Error> {
+		info!("[EMAIL_LIFECYCLE] Sending email to: {} via SendGrid", mail.to);
+
 		let from_email = Email::new(&self.from_email).set_name(&self.from_name);
 		let personalization = Personalization::new(Email::new(&mail.to));
 		let content = Content::new().set_content_type(&mail.content_type).set_value(&mail.body);
@@ -51,17 +53,29 @@ impl MailerTrait for Mailer {
 			.set_subject(&mail.subject)
 			.add_content(content)
 			.add_personalization(personalization);
+
 		let mut sender = Sender::new(self.api_key.clone(), None);
-		// for mocking purpose
 		if let Some(api_host) = &self.api_host {
 			sender.set_host(api_host.to_string());
 		}
-		sender.send(&message).await.map_err(|e| {
-			error!("Failed to send email: {:?}", e);
-			Error::SendEmailFailed
-		})?;
 
-		Ok(())
+		let start_time = std::time::Instant::now();
+		let result = sender.send(&message).await;
+		let duration = start_time.elapsed();
+
+		match &result {
+			Ok(_) => {
+				info!("[EMAIL_LIFECYCLE] SendGrid API success for {} ({:?})", mail.to, duration);
+				Ok(())
+			},
+			Err(e) => {
+				error!(
+					"[EMAIL_LIFECYCLE] SendGrid API failed for {} ({:?}): {:?}",
+					mail.to, duration, e
+				);
+				Err(Error::SendEmailFailed)
+			},
+		}
 	}
 }
 
