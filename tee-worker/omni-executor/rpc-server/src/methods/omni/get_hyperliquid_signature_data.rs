@@ -167,10 +167,10 @@ impl HyperliquidEip712Signature for Withdraw3Action {
 	fn struct_hash(&self) -> B256 {
 		let items = (
 			keccak256("HyperliquidTransaction:Withdraw(string hyperliquidChain,string destination,string amount,uint64 time)"),
-			keccak256(&self.hyperliquid_chain),
-			keccak256(&self.amount),
-			&self.time,
-			&self.destination
+            keccak256(&self.hyperliquid_chain),
+            keccak256(&self.destination),
+            keccak256(&self.amount),
+            &self.time,
 		);
 		keccak256(items.abi_encode())
 	}
