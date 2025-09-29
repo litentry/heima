@@ -77,7 +77,7 @@ services:
     image: ghcr.io/foundry-rs/foundry
     container_name: fund-eth-account
     command:
-      - "cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x370Cd7A68F5762bdB4c922930445a58F39c46C3b --value 10ether -r http://ethereum-node:8545"
+      - "cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x63a1FdC2e52008c98a5C8EEa182F5cB2612F21EC --value 10ether -r http://ethereum-node:8545"
     depends_on:
       ethereum-node:
         condition: service_started
