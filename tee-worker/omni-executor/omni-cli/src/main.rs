@@ -11,7 +11,6 @@ use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{ChainId, Web2IdentityType};
 use heima_primitives::Identity;
-use hex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
@@ -714,7 +713,7 @@ async fn handle_generate_aa_address(
 		.map_err(|e| anyhow::anyhow!("Invalid root address '{}': {}", root_address, e))?;
 
 	info!("Debug info:");
-	info!("  OA bytes: 0x{}", hex::encode(&oa_bytes));
+	info!("  OA bytes: 0x{}", hex::encode(oa_bytes));
 	info!("  OA type: {}", oa_type_str);
 	info!("  Client ID: {}", client_id);
 	info!("  Factory address: {}", factory_address);
@@ -781,7 +780,7 @@ async fn handle_generate_aa_address(
 
 	info!(
 		"Generated AA address for oa_bytes '0x{}' with oa_type '{}', client_id '{}', factory '{}', root '{}': 0x{}",
-		hex::encode(&oa_bytes),
+		hex::encode(oa_bytes),
 		oa_type_str,
 		client_id,
 		factory_address,
@@ -825,7 +824,7 @@ fn handle_generate_init_code(
 
 	info!(
 		"Generated init code for oa_bytes '0x{}' with oa_type '{}', client_id '{}', factory '{}', root '{}': 0x{}",
-		hex::encode(&oa_bytes), oa_type_str, client_id, factory_address, root_address, init_code_hex
+		hex::encode(oa_bytes), oa_type_str, client_id, factory_address, root_address, init_code_hex
 	);
 
 	println!("Init Code: 0x{}", init_code_hex);
@@ -872,7 +871,7 @@ fn handle_get_omni_account(email: String, client_id: String) -> Result<()> {
 	let oa_bytes: [u8; 32] = omni_account.into();
 
 	// Convert to hex string
-	let omni_account_hex = hex::encode(&oa_bytes);
+	let omni_account_hex = hex::encode(oa_bytes);
 
 	info!(
 		"Generated OmniAccount for email '{}' with client_id '{}': 0x{}",
