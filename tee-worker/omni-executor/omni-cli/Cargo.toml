@@ -4,11 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+aa-contracts-client = { workspace = true }
 alloy = { workspace = true }
 anyhow = "1.0"
 clap = { workspace = true, features = ["derive"] }
+ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-primitives = { workspace = true }
+heima-primitives = { workspace = true }
 hex = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
