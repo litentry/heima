@@ -284,7 +284,7 @@ pub fn register_get_hyperliquid_signature_data<
 					(HyperliquidAction::ApproveAgent(action), signature)
 				},
 				HyperliquidActionType::Withdraw3 { amount, destination } => {
-                    validate_ethereum_address(&destination, "destination")
+                    let _ = validate_ethereum_address(&destination, "destination")
 							.map_err(|e| e.to_error_object())?;
 					let action = Withdraw3 {
 						signature_chain_id: params.chain_id,
