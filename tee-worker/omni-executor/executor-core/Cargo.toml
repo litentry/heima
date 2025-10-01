@@ -19,7 +19,6 @@ uuid = { workspace = true, features = ["v4"] }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 heima-authentication = { workspace = true }
-sp-core = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

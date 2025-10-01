@@ -3949,7 +3949,6 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
  "tracing",
  "uuid 1.18.1",
@@ -4000,7 +3999,6 @@ dependencies = [
  "executor-primitives",
  "parity-scale-codec",
  "rocksdb",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing",
  "tracing-subscriber",
 ]

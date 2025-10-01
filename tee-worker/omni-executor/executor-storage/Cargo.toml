@@ -12,7 +12,6 @@ tracing = { workspace = true }
 # Local dependencies
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
-sp-core = { workspace = true }
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true }

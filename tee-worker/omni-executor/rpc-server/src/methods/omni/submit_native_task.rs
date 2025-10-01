@@ -35,8 +35,7 @@ pub fn register_submit_native_task<
 			})?;
 
 			// We are directly handling the native task
-			let native_response =
-				handle_native_task(ctx.to_task_handler_context(), wrapper, None).await;
+			let native_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
 			let response = if let Some(aes_key) = maybe_aes_key {
 				aes_encrypt_default(&aes_key, &native_response.encode()).encode()

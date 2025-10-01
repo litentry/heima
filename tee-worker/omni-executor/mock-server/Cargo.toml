@@ -9,7 +9,7 @@ hex = { workspace = true, features = ["std"] }
 libsecp256k1 = { workspace = true }
 log = { workspace = true, features = ["std"] }
 serde_json = { workspace = true, features = ["std"] }
-sp-core = { workspace = true }
+sp-core = { workspace = true, features = ["std"] }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 warp = "0.3.7"

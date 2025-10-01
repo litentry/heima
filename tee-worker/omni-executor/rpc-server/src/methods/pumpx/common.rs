@@ -76,8 +76,7 @@ pub async fn handle_pumpx_native_task<
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
-	let native_task_response =
-		handle_native_task(ctx.to_task_handler_context(), wrapper, None).await;
+	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
 	// Process response - since parachain functionality is removed, this will always be an error
 	match native_task_response {
