@@ -28,9 +28,6 @@ services:
     depends_on:
       ethereum-node:
         condition: service_started
-      heima-node:
-        condition: service_healthy
-        restart: true
       aa-contracts-deploy:
         condition: service_completed_successfully
     entrypoint: ["/entrypoint.sh"]

@@ -974,7 +974,6 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - set-condition
-      - parachain-build
       - omni-executor-build
     strategy:
       fail-fast: false
@@ -991,15 +990,10 @@ jobs:
 
       - uses: actions/download-artifact@v5
         with:
-          name: heima
-
-      - uses: actions/download-artifact@v5
-        with:
           name: litentry-omni
 
       - name: Load docker image
         run: |
-          docker load < heima.tar.gz
           docker load < litentry-omni.tar.gz
           docker images
 
