@@ -32,7 +32,7 @@
         "add": "^2.0.6",
         "bitcoinjs-lib": "^6.1.5",
         "bitcoinjs-message": "^2.2.0",
-        "chai": "^6.0.1",
+        "chai": "^6.2.0",
         "colors": "^1.4.0",
         "ecpair": "^3.0.0",
         "globals": "^16.4.0",
@@ -45,7 +45,7 @@
         "tweetnacl": "^1.0.3",
         "websocket-as-promised": "^3.0.1",
         "ws": "^8.18.3",
-        "zx": "^8.8.3"
+        "zx": "^8.8.4"
     },
     "devDependencies": {
         "@ethersproject/providers": "^5.7.2",
@@ -53,9 +53,9 @@
         "@types/mocha": "^10.0.10",
         "@types/node": "^20.4.4",
         "@types/ws": "^8.18.1",
-        "@typescript-eslint/eslint-plugin": "^8.44.1",
-        "@typescript-eslint/parser": "^8.44.1",
-        "cross-env": "^10.0.0",
+        "@typescript-eslint/eslint-plugin": "^8.45.0",
+        "@typescript-eslint/parser": "^8.45.0",
+        "cross-env": "^10.1.0",
         "dotenv": "^17.2.2",
         "eslint": "^9.36.0",
         "ethers": "^5.7.2",
