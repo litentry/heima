@@ -22,19 +22,9 @@ pub fn register_submit_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	module
@@ -45,7 +35,8 @@ pub fn register_submit_native_task<
 			})?;
 
 			// We are directly handling the native task
-			let native_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
+			let native_response =
+				handle_native_task(ctx.to_task_handler_context(), wrapper, None).await;
 
 			let response = if let Some(aes_key) = maybe_aes_key {
 				aes_encrypt_default(&aes_key, &native_response.encode()).encode()
@@ -64,21 +55,9 @@ async fn parse<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	params: Params<'static>,
-	ctx: Arc<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
-	>,
+	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
 ) -> ParseResult<'static> {
 	let Ok(hex_request) = params.one::<String>() else {
 		error!("Failed to parse params: {:?}", params);

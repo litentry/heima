@@ -23,7 +23,7 @@ use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
-use cli::{Cli, Commands, RunArgs};
+use cli::{Cli, Commands};
 use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
@@ -36,9 +36,8 @@ use executor_core::wallet_metrics::Wallet;
 use executor_core::wallet_metrics::{
 	start_wallet_metrics, WalletBalanceFetcher, WalletId, WalletMetrics, WalletNetworkType,
 };
-use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
-use executor_storage::{init_storage, StorageDB};
+use executor_storage::init_storage;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
@@ -54,11 +53,8 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::thread;
-use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
-use tokio::sync::oneshot;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
@@ -471,12 +467,6 @@ async fn main() -> Result<(), ()> {
 			);
 
 			let shielding_key = shielding_key_store.read().expect("Could not read shielding key");
-			let shielding_pubkey = shielding_key.public_key();
-			let shielding_pubkey_vec = serde_json::to_vec(&Rsa3072PubKey {
-				n: shielding_pubkey.n().to_bytes_le(),
-				e: shielding_pubkey.e().to_bytes_le(),
-			})
-			.expect("Could not serialize shielding public key");
 
 			// Create wildmeta API client and timestamp storage
 			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> = Arc::new(Box::new(

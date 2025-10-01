@@ -7,7 +7,8 @@ use serde::Serialize;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{
-		INTENT_NONCE_MISMATCH_ERROR_CODE, INVALID_CHAIN_ID_CODE, UNAUTHORIZED_SENDER_CODE, *,
+		INTENT_NONCE_MISMATCH_ERROR_CODE, INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE,
+		UNAUTHORIZED_SENDER_CODE, *,
 	},
 	middlewares::RpcExtensions,
 	server::RpcContext,
@@ -90,32 +91,29 @@ pub async fn handle_omni_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	F,
 	R,
 >(
-	ctx: &RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>,
+	ctx: &RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	wrapper: NativeTaskWrapper<NativeTask>,
-	task_ok_handler: F,
+	_task_ok_handler: F,
 ) -> Result<R, PumpxRpcError>
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
 	// We handle the task right here
-	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
+	let native_task_response =
+		handle_native_task(ctx.to_task_handler_context(), wrapper, None).await;
 
-	// Process response
+	// Process response - since parachain functionality is removed, this will always be an error
 	match native_task_response {
-		Ok(task_ok) => task_ok_handler(task_ok),
+		Ok(_raw_response) => {
+			// This shouldn't happen since we removed parachain functionality
+			Err(PumpxRpcError::from_code_and_message(
+				INTERNAL_ERROR_CODE,
+				"Unexpected success from removed parachain functionality".to_string(),
+			))
+		},
 		Err(NativeTaskError::InternalError(message)) => {
 			error!("Internal error in native task");
 			match message {

@@ -18,6 +18,7 @@ use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
 use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
+#[cfg(test)]
 use native_task_handler::convert_to_packed_user_op;
 use native_task_handler::NativeTaskOk;
 use pumpx::pubkey_to_address;
@@ -592,19 +593,9 @@ pub fn register_submit_user_op_with_auth<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	module

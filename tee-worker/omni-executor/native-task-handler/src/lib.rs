@@ -24,6 +24,7 @@ pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 
 /// Maximum allowed paymaster gas to prevent abuse
+#[allow(dead_code)]
 const MAX_PAYMASTER_GAS: u128 = 5_000_000;
 
 pub struct TaskHandlerContext<
@@ -38,6 +39,7 @@ pub struct TaskHandlerContext<
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
+	#[allow(dead_code)]
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,

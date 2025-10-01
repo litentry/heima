@@ -16,7 +16,7 @@ use native_task_handler::TaskHandlerContext;
 use pumpx::PumpxApi;
 use signer_client::SignerClient;
 use std::collections::HashMap;
-use std::marker::PhantomData;
+// Removed unused PhantomData import
 use std::marker::{Send, Sync};
 use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
