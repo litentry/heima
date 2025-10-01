@@ -9,7 +9,6 @@ use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]

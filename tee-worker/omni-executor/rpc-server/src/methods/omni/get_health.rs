@@ -17,7 +17,6 @@
 use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub fn register_get_health<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -53,8 +52,6 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use parentchain_signer::key_store::SubstrateKeyStore;
 	use parentchain_signer::TxSigner;
 	use pumpx::PumpxApiClient;

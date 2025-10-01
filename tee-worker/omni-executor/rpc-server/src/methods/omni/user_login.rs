@@ -18,7 +18,6 @@ use heima_authentication::{
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
 use tracing::error;
 

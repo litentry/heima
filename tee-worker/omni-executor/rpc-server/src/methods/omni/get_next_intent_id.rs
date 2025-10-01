@@ -20,7 +20,6 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
 use executor_storage::{IntentIdStorage, Storage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use std::str::FromStr;
 use tracing::log::error;

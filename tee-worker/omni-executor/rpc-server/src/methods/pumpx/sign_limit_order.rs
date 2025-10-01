@@ -33,7 +33,6 @@ use heima_primitives::Address32;
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::{debug, error};

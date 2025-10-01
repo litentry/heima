@@ -68,8 +68,6 @@ use user_login::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-
 #[cfg(test)]
 mod test_protected_method;
 

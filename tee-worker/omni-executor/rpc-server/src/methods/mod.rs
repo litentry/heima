@@ -8,8 +8,6 @@ use pumpx::*;
 mod omni;
 use omni::*;
 
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-
 pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",
 	"omni_addWallet",

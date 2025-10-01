@@ -14,7 +14,6 @@ use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use rsa::Oaep;
 use sha2::Sha256;
 use tracing::{debug, error};

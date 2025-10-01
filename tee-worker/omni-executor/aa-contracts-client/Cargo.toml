@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 alloy = { workspace = true, features = ["contract", "rpc-types"] }
 ciborium = { workspace = true }
-heima-primitives = { workspace = true }
 rand = { workspace = true }
 regex = { workspace = true }
 thiserror = { workspace = true }

@@ -7,7 +7,6 @@ use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub fn register_get_oauth2_google_authorization_url<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,

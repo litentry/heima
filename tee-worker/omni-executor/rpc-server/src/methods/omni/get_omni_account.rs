@@ -21,7 +21,6 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 

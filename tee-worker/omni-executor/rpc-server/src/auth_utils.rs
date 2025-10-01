@@ -1,6 +1,5 @@
 use crate::{error_code::AUTH_VERIFICATION_FAILED_CODE, ErrorCode};
 use aa_contracts_client::calculate_user_operation_hash;
-use alloy::primitives::Address;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_crypto::ecdsa;
 use executor_primitives::{

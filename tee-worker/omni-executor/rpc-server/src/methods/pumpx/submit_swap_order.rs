@@ -19,7 +19,6 @@ use heima_primitives::{
 use heima_utils::decode_hex;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;

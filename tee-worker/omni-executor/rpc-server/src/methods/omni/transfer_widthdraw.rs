@@ -16,7 +16,6 @@ use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
 use serde::Serialize;
 use tracing::{debug, error};

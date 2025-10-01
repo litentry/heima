@@ -13,7 +13,6 @@ use executor_primitives::{
 };
 use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, Withdraw3};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;

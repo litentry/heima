@@ -7,7 +7,6 @@ use heima_authentication::web3::HeimaMessagePayload;
 use heima_identity_verification::helpers::generate_otp;
 use heima_primitives::{AccountId, Hashable};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use std::str::FromStr;
 use tracing::error;

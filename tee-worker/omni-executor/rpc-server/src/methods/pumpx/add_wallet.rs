@@ -9,7 +9,6 @@ use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::methods::add_wallet::AddWalletResponse;
 use serde::Serialize;
 use tracing::{debug, error};

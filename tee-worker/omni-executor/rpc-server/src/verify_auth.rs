@@ -12,7 +12,6 @@ use heima_authentication::{
 };
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use std::{fmt::Display, sync::Arc};
 
 #[derive(Debug, PartialEq)]

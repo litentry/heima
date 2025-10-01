@@ -2,7 +2,6 @@ use crate::methods::omni::common::check_auth;
 use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[cfg(test)]
 pub fn register_test_protected_method<
@@ -52,8 +51,6 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use parentchain_signer::key_store::SubstrateKeyStore;
 	use parentchain_signer::TxSigner;
 	use pumpx::PumpxApiClient;

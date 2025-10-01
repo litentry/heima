@@ -8,7 +8,6 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::FromHexPrefixed;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::pubkey_to_address;
 use serde::Deserialize;
 use signer_client::ChainType;

@@ -14,7 +14,6 @@ use jsonrpsee::{
 	RpcModule,
 };
 use native_task_handler::handle_native_task;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 use tracing::error;

@@ -15,7 +15,6 @@ use crate::{
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use native_task_handler::{handle_native_task, NativeTaskError, NativeTaskOk};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::error;
 
 #[derive(Serialize, Debug)]

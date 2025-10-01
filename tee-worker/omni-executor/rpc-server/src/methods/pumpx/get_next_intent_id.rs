@@ -21,7 +21,6 @@ use executor_storage::{IntentIdStorage, Storage};
 use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::Deserialize;
 use tracing::error;
 

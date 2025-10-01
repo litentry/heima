@@ -30,7 +30,6 @@ use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};

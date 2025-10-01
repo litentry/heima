@@ -9,7 +9,6 @@ use heima_identity_verification::web2::email::{
 	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
 };
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::{error, info};
 
 #[derive(Debug, Deserialize)]
