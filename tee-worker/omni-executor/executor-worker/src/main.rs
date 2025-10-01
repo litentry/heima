@@ -556,7 +556,6 @@ async fn main() -> Result<(), ()> {
 				pubkey_array
 			};
 
-			// Parse bundler key export authorized ECDSA public key from hex
 			let bundler_key_export_authorized_pubkey =
 				{
 					use executor_primitives::utils::hex::decode_hex;
