@@ -71,22 +71,16 @@ pub async fn handle_pumpx_native_task<
 >(
 	ctx: &RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	wrapper: NativeTaskWrapper<NativeTask>,
-	_task_ok_handler: F,
+	task_ok_handler: F,
 ) -> Result<R, PumpxRpcError>
 where
 	F: FnOnce(NativeTaskOk) -> Result<R, PumpxRpcError>,
 {
 	let native_task_response = handle_native_task(ctx.to_task_handler_context(), wrapper).await;
 
-	// Process response - since parachain functionality is removed, this will always be an error
+	// Process response
 	match native_task_response {
-		Ok(_raw_response) => {
-			// This shouldn't happen since we removed parachain functionality
-			Err(PumpxRpcError::from_code_and_message(
-				INTERNAL_ERROR_CODE,
-				"Unexpected success from removed parachain functionality".to_string(),
-			))
-		},
+		Ok(task_ok) => task_ok_handler(task_ok),
 		Err(NativeTaskError::InternalError(message)) => {
 			error!("Internal error in native task");
 			match message {
