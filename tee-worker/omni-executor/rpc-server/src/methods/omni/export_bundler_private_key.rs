@@ -1,17 +1,25 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE},
+	error_code::{
+		AES_KEY_CONVERT_FAILED_CODE, AUTH_VERIFICATION_FAILED_CODE, DECRYPT_REQUEST_FAILED_CODE,
+		PARSE_ERROR_CODE,
+	},
 	methods::omni::PumpxRpcError,
 	server::RpcContext,
 	Deserialize,
 };
 use alloy::primitives::keccak256;
 use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::ecdsa;
-use executor_primitives::utils::hex::{decode_hex, hex_encode};
+use executor_crypto::{
+	aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput},
+	ecdsa,
+};
+use executor_primitives::utils::hex::decode_hex;
 use executor_storage::{Storage, WildmetaTimestampStorage};
 use jsonrpsee::RpcModule;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use rsa::Oaep;
+use sha2::Sha256;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
@@ -20,6 +28,7 @@ use tracing::{debug, error};
 pub struct ExportBundlerPrivateKeyParams {
 	pub timestamp: u64,
 	pub signature: String, // ECDSA signature over the timestamp, in 0x-hex-string
+	pub key: String, // RSA-encrypted AES key to encrypt the bundler private key, in 0x-hex-string
 }
 
 const BUNDLER_KEY_EXPORT_STORAGE_KEY: &str = "bundler_key_export";
@@ -189,6 +198,42 @@ pub fn register_export_bundler_private_key<
 				params.timestamp
 			);
 
+			let key_bytes = decode_hex(&params.key).map_err(|e| {
+				error!("Failed to decode key hex: {:?}", e);
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_field("key")
+						.with_reason("The key could not be decoded from hex"),
+				)
+			})?;
+
+			let aes_key = ctx
+				.shielding_key
+				.private_key()
+				.decrypt(Oaep::new::<Sha256>(), &key_bytes)
+				.map_err(|e| {
+					error!("Failed to decrypt shielded value: {:?}", e);
+					PumpxRpcError::from(
+						DetailedError::new(
+							DECRYPT_REQUEST_FAILED_CODE,
+							"Shielded value decryption failed",
+						)
+						.with_field("key")
+						.with_reason("The provided RSA-encrypted AES key could not be decrypted")
+						.with_suggestion("Ensure the RSA public key matches the encryption key"),
+					)
+				})?;
+
+			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
+				error!("Failed to convert AesKey");
+				PumpxRpcError::from(
+					DetailedError::new(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed")
+						.with_field("key")
+						.with_reason("The decrypted key is not a valid 256-bit AES key")
+						.with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)"),
+				)
+			})?;
+
 			verify_signature(
 				params.timestamp,
 				&params.signature,
@@ -198,8 +243,9 @@ pub fn register_export_bundler_private_key<
 
 			debug!("Signature verified successfully, returning bundler private key");
 
-			let private_key_hex = hex_encode(&ctx.bundler_private_key);
-			Ok::<String, PumpxRpcError>(private_key_hex)
+			let encrypted_key: SerdeAesOutput =
+				aes_encrypt_default(&aes_key, &ctx.bundler_private_key).into();
+			Ok::<SerdeAesOutput, PumpxRpcError>(encrypted_key)
 		})
 		.expect("Failed to register omni_exportBundlerPrivateKey method");
 }
@@ -212,7 +258,6 @@ mod tests {
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_crypto::{ecdsa, PairTrait};
-	use executor_primitives::utils::hex::decode_hex;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
 	use parentchain_rpc_client::{
@@ -225,6 +270,8 @@ mod tests {
 	use std::{collections::HashMap, path::Path, sync::Arc};
 	use tempfile::tempdir;
 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
+
+	const TEST_AES_KEY: Aes256Key = [42u8; 32];
 
 	fn create_test_keypair() -> ([u8; 32], [u8; 33]) {
 		let (pair, seed) = ecdsa::Pair::generate();
@@ -241,13 +288,36 @@ mod tests {
 		hex_encode(&signature.0)
 	}
 
+	fn generate_and_encrypt_aes_key(shielding_key: &ShieldingKey) -> (Aes256Key, String) {
+		use rsa::Oaep;
+		use sha2::Sha256;
+		let aes_key = TEST_AES_KEY;
+		let encrypted_key = shielding_key
+			.public_key()
+			.encrypt(&mut rand::thread_rng(), Oaep::new::<Sha256>(), &aes_key)
+			.expect("Failed to encrypt AES key");
+		(aes_key, hex_encode(&encrypted_key))
+	}
+
+	fn decrypt_response(encrypted: &SerdeAesOutput, aes_key: &Aes256Key) -> Vec<u8> {
+		use executor_crypto::aes256::{aes_decrypt, Aes256KeyNonce, AesOutput};
+		let nonce: Aes256KeyNonce =
+			encrypted.nonce.to_vec().try_into().expect("Invalid nonce length");
+		let mut aes_output = AesOutput {
+			ciphertext: encrypted.ciphertext.to_vec(),
+			aad: encrypted.aad.to_vec(),
+			nonce,
+		};
+		aes_decrypt(aes_key, &mut aes_output).expect("Failed to decrypt response")
+	}
+
 	async fn setup_test_server(
 		port: u16,
 		bundler_key: [u8; 32],
 		authorized_pubkey: [u8; 33],
 		storage_db: Arc<StorageDB>,
+		shielding_key: ShieldingKey,
 	) {
-		let shielding_key = ShieldingKey::new();
 		let mut rng = rand::thread_rng();
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
@@ -271,7 +341,7 @@ mod tests {
 		let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
 		let parentchain_rpc_client_factory = Arc::new(client_factory);
 
-		let aes_key = [0u8; 32];
+		let aes_key = TEST_AES_KEY;
 		let entry_point_clients = HashMap::new();
 
 		let substrate_key_store = Arc::new(SubstrateKeyStore::new(
@@ -326,7 +396,10 @@ mod tests {
 		let (seed, authorized_pubkey) = create_test_keypair();
 		let bundler_key = [42u8; 32];
 
-		setup_test_server(port, bundler_key, authorized_pubkey, db).await;
+		let shielding_key = ShieldingKey::new();
+		let (aes_key, encrypted_key) = generate_and_encrypt_aes_key(&shielding_key);
+
+		setup_test_server(port, bundler_key, authorized_pubkey, db, shielding_key).await;
 
 		let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
@@ -335,13 +408,16 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		let response: String = client
-			.request("omni_exportBundlerPrivateKey", rpc_params![current_time, signature])
+		let response: SerdeAesOutput = client
+			.request(
+				"omni_exportBundlerPrivateKey",
+				rpc_params![current_time, signature, encrypted_key],
+			)
 			.await
 			.unwrap();
 
-		let expected_hex = hex_encode(&bundler_key);
-		assert_eq!(response, expected_hex);
+		let decrypted = decrypt_response(&response, &aes_key);
+		assert_eq!(decrypted, bundler_key.to_vec());
 	}
 
 	#[tokio::test]
@@ -354,7 +430,10 @@ mod tests {
 		let (_, authorized_pubkey_b) = create_test_keypair();
 		let bundler_key = [42u8; 32];
 
-		setup_test_server(port, bundler_key, authorized_pubkey_b, db).await;
+		let shielding_key = ShieldingKey::new();
+		let (_, encrypted_key) = generate_and_encrypt_aes_key(&shielding_key);
+
+		setup_test_server(port, bundler_key, authorized_pubkey_b, db, shielding_key).await;
 
 		let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
@@ -363,8 +442,11 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		let result: Result<String, _> = client
-			.request("omni_exportBundlerPrivateKey", rpc_params![current_time, signature])
+		let result: Result<SerdeAesOutput, _> = client
+			.request(
+				"omni_exportBundlerPrivateKey",
+				rpc_params![current_time, signature, encrypted_key],
+			)
 			.await;
 
 		assert!(result.is_err());
@@ -379,7 +461,10 @@ mod tests {
 		let (seed, authorized_pubkey) = create_test_keypair();
 		let bundler_key = [42u8; 32];
 
-		setup_test_server(port, bundler_key, authorized_pubkey, db).await;
+		let shielding_key = ShieldingKey::new();
+		let (_, encrypted_key) = generate_and_encrypt_aes_key(&shielding_key);
+
+		setup_test_server(port, bundler_key, authorized_pubkey, db, shielding_key).await;
 
 		let old_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
 			as u64 - (6 * 60 * 1000);
@@ -389,8 +474,11 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		let result: Result<String, _> = client
-			.request("omni_exportBundlerPrivateKey", rpc_params![old_timestamp, signature])
+		let result: Result<SerdeAesOutput, _> = client
+			.request(
+				"omni_exportBundlerPrivateKey",
+				rpc_params![old_timestamp, signature, encrypted_key],
+			)
 			.await;
 
 		assert!(result.is_err());
@@ -405,7 +493,10 @@ mod tests {
 		let (seed, authorized_pubkey) = create_test_keypair();
 		let bundler_key = [42u8; 32];
 
-		setup_test_server(port, bundler_key, authorized_pubkey, db).await;
+		let shielding_key = ShieldingKey::new();
+		let (_, encrypted_key) = generate_and_encrypt_aes_key(&shielding_key);
+
+		setup_test_server(port, bundler_key, authorized_pubkey, db, shielding_key).await;
 
 		let future_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
 			as u64 + (2 * 60 * 1000);
@@ -415,8 +506,11 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		let result: Result<String, _> = client
-			.request("omni_exportBundlerPrivateKey", rpc_params![future_timestamp, signature])
+		let result: Result<SerdeAesOutput, _> = client
+			.request(
+				"omni_exportBundlerPrivateKey",
+				rpc_params![future_timestamp, signature, encrypted_key],
+			)
 			.await;
 
 		assert!(result.is_err());
@@ -431,7 +525,10 @@ mod tests {
 		let (seed, authorized_pubkey) = create_test_keypair();
 		let bundler_key = [42u8; 32];
 
-		setup_test_server(port, bundler_key, authorized_pubkey, db).await;
+		let shielding_key = ShieldingKey::new();
+		let (_, encrypted_key) = generate_and_encrypt_aes_key(&shielding_key);
+
+		setup_test_server(port, bundler_key, authorized_pubkey, db, shielding_key).await;
 
 		let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
 
@@ -440,13 +537,19 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		let first_result: Result<String, _> = client
-			.request("omni_exportBundlerPrivateKey", rpc_params![current_time, signature.clone()])
+		let first_result: Result<SerdeAesOutput, _> = client
+			.request(
+				"omni_exportBundlerPrivateKey",
+				rpc_params![current_time, signature.clone(), encrypted_key.clone()],
+			)
 			.await;
 		assert!(first_result.is_ok());
 
-		let second_result: Result<String, _> = client
-			.request("omni_exportBundlerPrivateKey", rpc_params![current_time, signature])
+		let second_result: Result<SerdeAesOutput, _> = client
+			.request(
+				"omni_exportBundlerPrivateKey",
+				rpc_params![current_time, signature, encrypted_key],
+			)
 			.await;
 
 		assert!(second_result.is_err());
