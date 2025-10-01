@@ -19,6 +19,7 @@ dependencies = [
  "alloy",
  "ciborium",
  "ethereum-rpc",
+ "heima-primitives",
  "mockall",
  "rand 0.8.5",
  "regex",

@@ -41,13 +41,10 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use parentchain_signer::key_store::SubstrateKeyStore;
-	use parentchain_signer::TxSigner;
 	use pumpx::PumpxApiClient;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use signer_client::{mocks::MockSignerClient, SignerClient};
 	use std::collections::HashMap;
-	use std::path::Path;
 	use std::sync::Arc;
 	use tempfile::tempdir;
 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
@@ -75,32 +72,8 @@ mod test {
 		let (solana_intent_executor, _solana_mock_recv) = MockedIntentExecutor::new();
 		let (ethereum_intent_executor, _ethereum_mock_recv) = MockedIntentExecutor::new();
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
-
-		let client_factory =
-			SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
-		let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
-		let parentchain_rpc_client_factory = Arc::new(client_factory);
-
 		let aes_key = [0u8; 32];
 		let entry_point_clients = HashMap::new();
-
-		let substrate_key_store = Arc::new(SubstrateKeyStore::new(
-			Path::new("./")
-				.join("keystore/substrate_key.bin")
-				.into_os_string()
-				.into_string()
-				.unwrap(),
-		));
-
-		let signer_account_nonce = 0;
-		let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
-
-		let tx_signer = Arc::new(TxSigner::new(
-			metadata_provider,
-			parentchain_rpc_client_factory.clone(),
-			parentchain_signer.clone(),
-			signer_account_nonce,
-		));
 
 		start_server(
 			port,
@@ -117,9 +90,7 @@ mod test {
 			Arc::new(ethereum_intent_executor),
 			Arc::new(solana_intent_executor),
 			Arc::new(cross_chain_intent_executor),
-			parentchain_rpc_client_factory,
 			aes_key,
-			tx_signer,
 			Arc::new(entry_point_clients),
 		)
 		.await
