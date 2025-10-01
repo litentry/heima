@@ -78,7 +78,7 @@ async fn main() -> Result<(), ()> {
 				#[cfg(feature = "mock-server")]
 				{
 					let mock_server_port = args.mock_server_port;
-					thread::spawn(move || {
+					std::thread::spawn(move || {
 						mock_server::run(mock_server_port).expect("Mock server failed to start");
 					});
 				}
