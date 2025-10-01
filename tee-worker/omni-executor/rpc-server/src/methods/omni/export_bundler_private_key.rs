@@ -253,7 +253,7 @@ pub fn register_export_bundler_private_key<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{start_server, ShieldingKey};
+	use crate::{hex_encode, start_server, ShieldingKey};
 	use binance_api::mocks::MockBinanceApiClient;
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
