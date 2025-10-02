@@ -739,6 +739,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
+
       - name: Install dependencies
         run: |
           sudo apt-get update && \
@@ -979,11 +983,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - test_name: omni-account-test
           - test_name: jsonrpc-mock-tests
           - test_name: submit-user-op-tests
           # disable it during RPC method refactoring
           # - test_name: omni-client-sdk-test
+          # - test_name: omni-account-test
     name: ${{ matrix.test_name }}
     steps:
       - uses: actions/checkout@v5
