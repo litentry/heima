@@ -244,7 +244,7 @@ For even faster development, you can run the omni-executor directly without Dock
 
 3. Run omni-executor:
    ```bash
-   ./target/release/executor-worker run --enable-mock-server --parentchain-sync
+   ./target/release/executor-worker run --enable-mock-server
    ```
 
 ## Account Funding and EntryPoint Deposits
