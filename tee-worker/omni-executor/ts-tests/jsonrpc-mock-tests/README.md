@@ -21,7 +21,6 @@ This project contains TypeScript-based integration tests for the Omni Executor J
     - Deploy all Account Abstraction contracts
     - Start Anvil (Ethereum node) on port 8545
     - Start Omni Executor with mock server on port 2100
-    - Start Heima node on port 9944
     - Set up all required environment variables
 
 2. **Run all tests:**
