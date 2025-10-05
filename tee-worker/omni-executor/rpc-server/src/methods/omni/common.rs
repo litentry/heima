@@ -203,3 +203,17 @@ pub fn check_auth(ext: &Extensions) -> Result<User, ()> {
 	}
 	Err(())
 }
+
+pub fn get_rp_id_for_client(client_id: &str) -> &str {
+	match client_id {
+		"wildmeta" => "wildmeta.io",
+		_ => "localhost", // Development/testing
+	}
+}
+
+pub fn get_origin_for_client(client_id: &str) -> &str {
+	match client_id {
+		"wildmeta" => "https://wildmeta.io",
+		_ => "http://localhost:3000", // Development/testing
+	}
+}

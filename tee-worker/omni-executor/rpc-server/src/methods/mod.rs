@@ -5,7 +5,7 @@ use jsonrpsee::RpcModule;
 mod pumpx;
 use pumpx::*;
 
-mod omni;
+pub mod omni;
 use omni::*;
 
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};

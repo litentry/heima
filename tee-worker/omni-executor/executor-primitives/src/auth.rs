@@ -181,8 +181,8 @@ pub struct OAuth2Data {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PasskeyData {
 	pub user_id: String,
+	pub client_id: String,
 	pub credential_id: String,
-	pub pubkey: String, // uncompressed, compressed, or COSE-encoded - have to figure out what authenticator sends
 	pub signature: String, // raw 64 byte, or DER encoded - have to figure out what authenticator sends
 	pub auth_data: String,
 	pub client_data_json: String,

@@ -1,0 +1,5 @@
+# Test database directories created by RocksDB during testing
+test_passkey_*/
+test_passkey_integration_*/
+test_passkey_challenge_storage_*/
+test_passkey_storage_*/

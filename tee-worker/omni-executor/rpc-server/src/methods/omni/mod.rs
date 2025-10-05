@@ -1,7 +1,7 @@
 use crate::server::RpcContext;
 use jsonrpsee::RpcModule;
 
-mod common;
+pub mod common;
 use common::*;
 
 mod get_health;
@@ -68,6 +68,15 @@ use user_login::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
+mod attach_passkey;
+use attach_passkey::*;
+
+mod remove_passkey;
+use remove_passkey::*;
+
+mod request_passkey_challenge;
+use request_passkey_challenge::*;
+
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 #[cfg(test)]
@@ -105,6 +114,9 @@ pub fn register_omni<
 	register_get_oauth2_google_authorization_url(module);
 	register_get_web3_sign_in_message(module);
 	register_user_login(module);
+	register_request_passkey_challenge(module);
+	register_attach_passkey(module);
+	register_remove_passkey(module);
 
 	register_request_jwt(module);
 	register_export_wallet(module);

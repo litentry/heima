@@ -1,10 +1,13 @@
-use crate::server::RpcContext;
+use crate::{detailed_error::DetailedError, server::RpcContext};
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
 };
-use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
+use executor_storage::{
+	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
+	VerificationCodeStorage,
+};
 use heima_authentication::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,
@@ -22,6 +25,7 @@ pub enum AuthenticationError {
 	InvalidVerificationCode,
 	OAuth2Error(String),
 	AuthTokenError(AuthTokenError),
+	PasskeyError(String),
 }
 
 impl Display for AuthenticationError {
@@ -42,6 +46,77 @@ impl Display for AuthenticationError {
 			AuthenticationError::AuthTokenError(err) => {
 				write!(f, "Auth token error: {:?}", err)
 			},
+			AuthenticationError::PasskeyError(msg) => {
+				write!(f, "Passkey error: {}", msg)
+			},
+		}
+	}
+}
+
+impl AuthenticationError {
+	/// Convert AuthenticationError to DetailedError with proper error codes and context
+	pub fn to_detailed_error(&self) -> DetailedError {
+		use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+		match self {
+			AuthenticationError::PasskeyError(msg) => {
+				// Try to match specific passkey error types for better error messages
+				if msg.contains("Challenge not found")
+					|| msg.contains("Challenge") && msg.contains("not found")
+				{
+					DetailedError::passkey_challenge_not_found()
+				} else if msg.contains("Challenge expired") {
+					DetailedError::passkey_challenge_expired()
+				} else if msg.contains("Invalid challenge") {
+					DetailedError::passkey_invalid_challenge(msg)
+				} else if msg.contains("Passkey not found") {
+					// Extract credential_id if present in message
+					DetailedError::passkey_not_found("")
+				} else if msg.contains("signature verification failed")
+					|| msg.contains("Invalid signature")
+				{
+					DetailedError::passkey_signature_invalid(msg)
+				} else if msg.contains("Failed to parse") {
+					DetailedError::passkey_parse_error("", msg)
+				} else if msg.contains("RP ID") {
+					// Try to extract RP ID info from message
+					let client_id = msg
+						.split("client_id: '")
+						.nth(1)
+						.and_then(|s| s.split('\'').next())
+						.unwrap_or("");
+					let expected_rp_id = msg
+						.split("Expected RP ID: '")
+						.nth(1)
+						.and_then(|s| s.split('\'').next())
+						.unwrap_or("");
+					DetailedError::passkey_rp_id_mismatch(expected_rp_id, client_id)
+				} else if msg.contains("Replay attack detected") {
+					// Extract counter if present
+					let counter = msg
+						.split("counter (")
+						.nth(1)
+						.and_then(|s| s.split(')').next())
+						.and_then(|s| s.parse::<u32>().ok())
+						.unwrap_or(0);
+					DetailedError::passkey_replay_attack(counter)
+				} else if msg.contains("Counter validation failed")
+					|| msg.contains("cloned or downgraded")
+				{
+					DetailedError::passkey_counter_validation_failed()
+				} else if msg.contains("User presence flag") {
+					DetailedError::passkey_user_verification_failed("user_presence")
+				} else if msg.contains("User verification flag") {
+					DetailedError::passkey_user_verification_failed("user_verification")
+				} else {
+					// Generic passkey error
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Passkey authentication failed",
+					)
+					.with_reason(msg)
+				}
+			},
+			_ => DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, self.to_string()),
 		}
 	}
 }
@@ -83,8 +158,8 @@ pub async fn verify_auth<
 			false,
 		)
 		.map(|_| ()),
-		OmniAuth::Passkey(ref _passkey_data) => {
-			todo!()
+		OmniAuth::Passkey(ref passkey_data) => {
+			verify_passkey_authentication(ctx, passkey_data).map(|_| ())
 		},
 	}
 }
@@ -236,6 +311,130 @@ async fn verify_google_oauth2<
 		true => Ok(()),
 		false => Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string())),
 	}
+}
+
+pub fn verify_passkey_authentication<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	Header: Send + Sync + 'static,
+	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
+	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		RpcContext<
+			Header,
+			RpcClient,
+			RpcClientFactory,
+			EthereumIntentExecutor,
+			SolanaIntentExecutor,
+			CrossChainIntentExecutor,
+		>,
+	>,
+	passkey_data: &PasskeyData,
+) -> Result<(), AuthenticationError> {
+	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
+	use executor_storage::PasskeyStorage;
+
+	let passkey_identity =
+		Identity::from_web2_account(&passkey_data.user_id, Web2IdentityType::Passkey);
+	let omni_account = passkey_identity.to_omni_account(&passkey_data.client_id);
+	let client_data: ClientData =
+		PasskeyVerifier::parse_client_data_json(&passkey_data.client_data_json).map_err(|e| {
+			AuthenticationError::PasskeyError(format!("Failed to parse client data: {}", e))
+		})?;
+
+	// Verify challenge
+	let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
+	challenge_storage
+		.verify_and_consume_challenge(&client_data.challenge, &omni_account)
+		.map_err(|e| {
+			use executor_storage::PasskeyChallengeError;
+			match e {
+				PasskeyChallengeError::ChallengeNotFound => {
+					AuthenticationError::PasskeyError("Challenge not found".to_string())
+				},
+				PasskeyChallengeError::ChallengeExpired => {
+					AuthenticationError::PasskeyError("Challenge expired".to_string())
+				},
+				PasskeyChallengeError::InvalidChallenge => {
+					AuthenticationError::PasskeyError("Invalid challenge".to_string())
+				},
+				_ => AuthenticationError::PasskeyError("Challenge verification failed".to_string()),
+			}
+		})?;
+
+	// Look up the stored passkey record using omni_account + credential_id
+	let passkey_record = PasskeyStorage::new(ctx.storage_db.clone())
+		.get_passkey(&omni_account, &passkey_data.credential_id)
+		.map_err(|_| AuthenticationError::PasskeyError("Storage error".to_string()))?
+		.ok_or_else(|| {
+			AuthenticationError::PasskeyError(
+				"Passkey not found for this account and credential".to_string(),
+			)
+		})?;
+	let public_key = PasskeyVerifier::from_sec1_bytes(&passkey_record.pubkey).map_err(|e| {
+		AuthenticationError::PasskeyError(format!("Invalid stored public key: {}", e))
+	})?;
+
+	// Parse auth_data bytes for validation
+	let auth_data_bytes = hex::decode(&passkey_data.auth_data).map_err(|_| {
+		AuthenticationError::PasskeyError("Invalid auth data hex format".to_string())
+	})?;
+
+	if auth_data_bytes.len() < 37 {
+		return Err(AuthenticationError::PasskeyError("Auth data too short".to_string()));
+	}
+
+	// CRITICAL SECURITY CHECK: Verify RP ID hash
+	// The first 32 bytes of auth data must be SHA-256(RP ID) to prevent phishing attacks
+	// This ensures the authenticator signed for the correct domain
+	use crate::methods::omni::common::get_rp_id_for_client;
+	let expected_rp_id = get_rp_id_for_client(&passkey_data.client_id);
+
+	PasskeyVerifier::verify_rp_id_hash(&auth_data_bytes, expected_rp_id).map_err(|e| {
+		AuthenticationError::PasskeyError(format!(
+			"RP ID validation failed: {}. Expected RP ID: '{}' for client_id: '{}'",
+			e, expected_rp_id, passkey_data.client_id
+		))
+	})?;
+
+	// Check flags (UP bit must be set, UV bit for security)
+	let flags = auth_data_bytes[32];
+	let up_flag = (flags & 0x01) != 0;
+	let uv_flag = (flags & 0x04) != 0;
+
+	if !up_flag {
+		return Err(AuthenticationError::PasskeyError("User presence flag not set".to_string()));
+	}
+
+	if !uv_flag {
+		return Err(AuthenticationError::PasskeyError(
+			"User verification flag not set".to_string(),
+		));
+	}
+
+	// Check for webauthn.get type
+	if !passkey_data.client_data_json.contains("\"type\":\"webauthn.get\"") {
+		return Err(AuthenticationError::PasskeyError("Invalid client data type".to_string()));
+	}
+
+	// Verify the passkey signature (pure cryptographic verification)
+	let is_valid = PasskeyVerifier::verify_passkey_signature_only(
+		&passkey_data.auth_data,
+		&passkey_data.client_data_json,
+		&passkey_data.signature,
+		&public_key,
+	)
+	.map_err(|e| {
+		AuthenticationError::PasskeyError(format!("Passkey signature verification failed: {}", e))
+	})?;
+
+	if !is_valid {
+		return Err(AuthenticationError::Web3InvalidSignature);
+	}
+
+	Ok(())
 }
 
 #[cfg(test)]
