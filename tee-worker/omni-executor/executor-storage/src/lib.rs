@@ -12,8 +12,6 @@ pub use heima_jwt::HeimaJwtStorage;
 mod intent_id;
 pub use intent_id::IntentIdStorage;
 mod asset_lock;
-mod pumpx_account_profile;
-pub use pumpx_account_profile::PumpxProfileStorage;
 mod wildmeta_timestamp;
 pub use wildmeta_timestamp::WildmetaTimestampStorage;
 
