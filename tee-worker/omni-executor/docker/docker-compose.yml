@@ -18,14 +18,10 @@ services:
       - OE_PARENTCHAIN_URL=ws://heima-node:9944
       - OE_ETHEREUM_URL=http://ethereum-node:8545
       - OE_SOLANA_URL=https://api.devnet.solana.com
-      - OE_PUMPX_WORKER_URL=ws://omni-executor:2100
-      - OE_PUMPX_API_BASE_URL=http://omni-executor:3456/pumpx/
-      - OE_PUMPX_SIGNER_URL=http://omni-executor:3456/jsonrpc
       - OE_MAILER_TYPE_HEIMA=console
       # These should be set in the .env file or overridden as needed:
       # - OE_BSC_URL=
       # - OE_BSC_TESTNET_URL=
-      # - OE_PUMPX_SIGNER_URL=
     depends_on:
       ethereum-node:
         condition: service_started

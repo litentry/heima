@@ -57,7 +57,6 @@ loader.insecure__use_cmdline_argv = true
 
 # allowed env variables
 loader.env.RUST_LOG = { passthrough = true }
-loader.env.OE_PUMPX_API_BASE_URL = { passthrough = true }
 loader.env.OE_BINANCE_API_KEY = { passthrough = true }
 loader.env.OE_BINANCE_API_SECRET = { passthrough = true }
 loader.env.OE_BINANCE_API_BASE_URL = { passthrough = true }
@@ -78,8 +77,6 @@ loader.env.OE_SOLANA_URL = { passthrough = true }
 loader.env.OE_BSC_URL = { passthrough = true }
 loader.env.OE_BSC_TESTNET_URL = { passthrough = true }
 loader.env.OE_ALCHEMY_KEY = { passthrough = true }
-loader.env.OE_PUMPX_SIGNER_URL = { passthrough = true }
-loader.env.OE_PUMPX_WORKER_URL = { passthrough = true }
 loader.env.OE_ARBITRUM_URL = { passthrough = true }
 loader.env.OE_ARBITRUM_TESTNET_URL = { passthrough = true }
 loader.env.OE_HYPEREVM_URL = { passthrough = true }
