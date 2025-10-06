@@ -19,6 +19,8 @@ services:
       - OE_ETHEREUM_URL=http://ethereum-node:8545
       - OE_SOLANA_URL=https://api.devnet.solana.com
       - OE_MAILER_TYPE_HEIMA=console
+      - OE_SIGNER_URL=http://omni-executor:3456/jsonrpc
+      - OE_WORKER_URL=ws://omni-executor:2100
       # These should be set in the .env file or overridden as needed:
       # - OE_BSC_URL=
       # - OE_BSC_TESTNET_URL=
