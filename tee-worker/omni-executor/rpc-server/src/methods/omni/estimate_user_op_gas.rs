@@ -91,7 +91,6 @@ pub struct EstimateUserOpGasResponse {
 pub fn register_estimate_user_op_gas<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -103,7 +102,6 @@ pub fn register_estimate_user_op_gas<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
 		>,
 	>,
 ) {

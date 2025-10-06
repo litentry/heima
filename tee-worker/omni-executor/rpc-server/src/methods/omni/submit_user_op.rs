@@ -50,7 +50,6 @@ pub struct SubmitUserOpResponse {
 pub fn register_submit_user_op<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -62,7 +61,6 @@ pub fn register_submit_user_op<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
 		>,
 	>,
 ) {

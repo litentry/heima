@@ -36,6 +36,7 @@ executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
+executor-utils = { workspace = true }
 heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
 heima-primitives = { workspace = true }
@@ -43,13 +44,11 @@ heima-utils = { workspace = true }
 native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 parentchain-rpc-client = { workspace = true }
-pumpx = { workspace = true }
 signer-client = { workspace = true }
 wildmeta-api = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-pumpx = { workspace = true, features = ["mocks"] }
 binance-api = { workspace = true, features = ["mocks"] }
 parentchain-signer = { workspace = true }
 subxt = { workspace = true }

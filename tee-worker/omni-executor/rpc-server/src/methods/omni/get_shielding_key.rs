@@ -9,7 +9,6 @@ use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 pub fn register_get_shielding_key<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -21,7 +20,6 @@ pub fn register_get_shielding_key<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
 		>,
 	>,
 ) {

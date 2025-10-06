@@ -1,6 +1,6 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
+	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, SIGNER_SERVICE_ERROR_CODE},
 	methods::omni::PumpxRpcError,
 	server::RpcContext,
 };
@@ -9,9 +9,8 @@ use executor_primitives::utils::hex::FromHexPrefixed;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use pumpx::pubkey_to_address;
+use executor_utils::{pubkey_to_address, ChainType};
 use serde::Deserialize;
-use signer_client::ChainType;
 use tracing::{debug, error};
 
 // used in rpc with backend only
@@ -43,7 +42,6 @@ pub struct GetSmartWalletRootSignerParams {
 pub fn register_get_smart_wallet_root_signer<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -55,7 +53,6 @@ pub fn register_get_smart_wallet_root_signer<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
 		>,
 	>,
 ) {
@@ -91,7 +88,7 @@ pub fn register_get_smart_wallet_root_signer<
 					error!("Failed to request wallet from signer client");
 					PumpxRpcError::from(
 						DetailedError::new(
-							PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
+							SIGNER_SERVICE_ERROR_CODE,
 							"Failed to request wallet from signer service",
 						)
 						.with_reason("Signer service is temporarily unavailable")
@@ -103,7 +100,7 @@ pub fn register_get_smart_wallet_root_signer<
 				error!("Failed to convert pubkey to address");
 				PumpxRpcError::from(
 					DetailedError::new(
-						PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
+						INTERNAL_ERROR_CODE,
 						"Failed to convert public key to address",
 					)
 					.with_reason("Public key conversion error")

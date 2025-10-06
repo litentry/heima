@@ -1,7 +1,7 @@
 use http::Extensions;
 use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
 use parity_scale_codec::Codec;
-use pumpx::methods::common::ApiResponse;
+use executor_utils::ApiResponse;
 use serde::Serialize;
 
 use crate::{
@@ -90,7 +90,6 @@ impl From<Box<DetailedError>> for PumpxRpcError {
 pub async fn handle_omni_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -103,7 +102,6 @@ pub async fn handle_omni_native_task<
 		RpcClientFactory,
 		EthereumIntentExecutor,
 		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
 	>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 	task_ok_handler: F,
@@ -169,20 +167,6 @@ where
 			Err(PumpxRpcError::from(detailed_error))
 		},
 	}
-}
-
-pub fn check_omni_api_response<T>(
-	response: ApiResponse<T>,
-	name: String,
-) -> Result<(), PumpxRpcError>
-where
-	T: Codec,
-{
-	if response.code != 10000 {
-		error!("{} failed: code={}, message={}", name, response.code, response.message);
-		return Err(PumpxRpcError::from_api_response(response));
-	}
-	Ok(())
 }
 
 pub struct User {

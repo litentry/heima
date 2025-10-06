@@ -20,9 +20,8 @@ use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use pumpx::pubkey_to_address;
+use executor_utils::{pubkey_to_address, ChainType};
 use serde::{Deserialize, Serialize};
-use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error};
 
@@ -591,7 +590,6 @@ fn validate_backend_calldata(
 pub fn register_submit_user_op_with_auth<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -603,7 +601,6 @@ pub fn register_submit_user_op_with_auth<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
 		>,
 	>,
 ) {

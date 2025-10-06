@@ -76,60 +76,6 @@ pub fn validate_omni_account_length(
 	Ok(())
 }
 
-pub fn validate_amount(amount_str: &str, field_name: &str) -> Result<u128, Box<DetailedError>> {
-	// Check if empty
-	if amount_str.is_empty() {
-		return Err(Box::new(DetailedError::invalid_amount(
-			field_name,
-			amount_str,
-			"Amount cannot be empty",
-		)));
-	}
-
-	// Parse as u128
-	let amount = amount_str.parse::<u128>().map_err(|e| {
-		Box::new(DetailedError::invalid_amount(
-			field_name,
-			amount_str,
-			&format!("Failed to parse amount: {}", e),
-		))
-	})?;
-
-	// Check if zero
-	if amount == 0 {
-		return Err(Box::new(DetailedError::invalid_amount(
-			field_name,
-			amount_str,
-			"Amount must be greater than zero",
-		)));
-	}
-
-	Ok(amount)
-}
-
-pub fn validate_token_address(
-	address: &str,
-	field_name: &str,
-) -> Result<Address, Box<DetailedError>> {
-	// For native token transfers, address might be "0x0" or similar
-	if address == "0x0" || address == "0x0000000000000000000000000000000000000000" {
-		return Ok(Address::ZERO);
-	}
-
-	validate_ethereum_address(address, field_name).map_err(|_e| {
-		Box::new(
-			DetailedError::new(
-				crate::error_code::INVALID_TOKEN_ADDRESS_CODE,
-				"Invalid token contract address",
-			)
-			.with_field(field_name)
-			.with_received(address.to_string())
-			.with_expected("Valid ERC20 token contract address or 0x0 for native token")
-			.with_suggestion("Ensure the token address is correct for the selected chain"),
-		)
-	})
-}
-
 pub fn validate_email(email: &str) -> Result<(), Box<DetailedError>> {
 	if !EmailAddress::is_valid(email) {
 		return Err(Box::new(
@@ -313,36 +259,6 @@ mod tests {
 		let bytes_33 = vec![0u8; 33];
 		assert!(validate_omni_account_length(&bytes_31, "test").is_err());
 		assert!(validate_omni_account_length(&bytes_33, "test").is_err());
-	}
-
-	#[test]
-	fn test_validate_amount_valid() {
-		assert_eq!(validate_amount("100", "test").unwrap(), 100u128);
-		assert_eq!(validate_amount("999999999", "test").unwrap(), 999999999u128);
-	}
-
-	#[test]
-	fn test_validate_amount_invalid() {
-		assert!(validate_amount("", "test").is_err()); // Empty
-		assert!(validate_amount("0", "test").is_err()); // Zero
-		assert!(validate_amount("abc", "test").is_err()); // Non-numeric
-		assert!(validate_amount("-100", "test").is_err()); // Negative
-	}
-
-	#[test]
-	fn test_validate_token_address_native() {
-		// Native token addresses
-		assert_eq!(validate_token_address("0x0", "test").unwrap(), Address::ZERO);
-		assert_eq!(
-			validate_token_address("0x0000000000000000000000000000000000000000", "test").unwrap(),
-			Address::ZERO
-		);
-	}
-
-	#[test]
-	fn test_validate_token_address_erc20() {
-		let erc20_addr = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9";
-		assert!(validate_token_address(erc20_addr, "test").is_ok());
 	}
 
 	#[test]

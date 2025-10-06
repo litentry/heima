@@ -14,9 +14,8 @@ use executor_primitives::{
 use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, Withdraw3};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use pumpx::pubkey_to_address;
+use executor_utils::{pubkey_to_address, ChainType};
 use serde::{Deserialize, Serialize};
-use signer_client::ChainType;
 use std::convert::TryFrom;
 use tracing::{debug, error};
 
@@ -85,7 +84,6 @@ fn is_testnet_chain(chain_id: ChainId) -> bool {
 pub fn register_get_hyperliquid_signature_data<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -97,7 +95,6 @@ pub fn register_get_hyperliquid_signature_data<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
 		>,
 	>,
 ) {
@@ -323,7 +320,6 @@ pub fn register_get_hyperliquid_signature_data<
 async fn generate_eip712_signature<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	Header: Send + Sync + 'static,
 	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
@@ -335,7 +331,6 @@ async fn generate_eip712_signature<
 		RpcClientFactory,
 		EthereumIntentExecutor,
 		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
 	>,
 	action: &T,
 	omni_account: &[u8; 32],
