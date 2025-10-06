@@ -2813,44 +2813,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cross-chain-intent-executor"
-version = "0.1.0"
-dependencies = [
- "aa-contracts-client",
- "accounting-contract-client",
- "alloy",
- "alloy-rlp",
- "async-trait",
- "base58",
- "binance-api",
- "bincode",
- "ethereum-rpc",
- "executor-core",
- "executor-primitives",
- "executor-storage",
- "heima-authentication",
- "heima-primitives",
- "hex",
- "intent-asset-lock",
- "intent-token-query",
- "mockall",
- "parentchain-rpc-client",
- "parentchain-signer",
- "parity-scale-codec",
- "pumpx",
- "reqwest 0.12.23",
- "rust_decimal",
- "serde_json",
- "signer-client",
- "solana",
- "solana-sdk",
- "tempfile",
- "test-log",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "crossbeam-channel"
 version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4242,25 +4204,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "executor-utils"
+version = "0.1.0"
+dependencies = [
+ "base58",
+ "ethers",
+ "executor-primitives",
+ "libsecp256k1 0.7.2",
+ "parity-scale-codec",
+ "serde",
+ "serde_repr",
+ "signer-client",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing",
+]
+
+[[package]]
 name = "executor-worker"
 version = "0.1.0"
 dependencies = [
  "aa-contracts-client",
- "accounting-contract-client",
  "alloy",
  "binance-api",
  "clap",
  "config-loader",
- "cross-chain-intent-executor",
  "ethereum-intent-executor",
  "ethereum-rpc",
  "executor-core",
  "executor-crypto",
  "executor-primitives",
  "executor-storage",
+ "executor-utils",
  "heima-identity-verification",
  "hex",
- "intent-asset-lock",
  "metrics-exporter-prometheus",
  "mock-server",
  "native-task-handler",
@@ -4268,9 +4244,7 @@ dependencies = [
  "parentchain-listener",
  "parentchain-rpc-client",
  "parentchain-signer",
- "pumpx",
  "rpc-server",
- "rust_decimal",
  "scale-encode",
  "serde_json",
  "signer-client",
@@ -5031,27 +5005,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
-name = "gloo-net"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c06f627b1a58ca3d42b45d6104bf1e1a03799df472df00988b6ba21accc10580"
-dependencies = [
- "futures-channel",
- "futures-core",
- "futures-sink",
- "gloo-utils",
- "http 1.3.1",
- "js-sys",
- "pin-project",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
 name = "gloo-timers"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5061,19 +5014,6 @@ dependencies = [
  "futures-core",
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "gloo-utils"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b5555354113b18c547c1d3a98fbf7fb32a9ff4f6fa112ce823a21641a0ba3aa"
-dependencies = [
- "js-sys",
- "serde",
- "serde_json",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -6177,7 +6117,6 @@ dependencies = [
  "jsonrpsee-http-client",
  "jsonrpsee-server",
  "jsonrpsee-types",
- "jsonrpsee-wasm-client",
  "jsonrpsee-ws-client",
  "tokio",
 ]
@@ -6189,9 +6128,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bacb85abf4117092455e1573625e21b8f8ef4dec8aff13361140b2dc266cdff2"
 dependencies = [
  "base64 0.22.1",
- "futures-channel",
  "futures-util",
- "gloo-net",
  "http 1.3.1",
  "jsonrpsee-core",
  "pin-project",
@@ -6231,7 +6168,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
- "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -6296,17 +6232,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
-]
-
-[[package]]
-name = "jsonrpsee-wasm-client"
-version = "0.24.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6558a9586cad43019dafd0b6311d0938f46efc116b34b28c74778bc11a2edf6"
-dependencies = [
- "jsonrpsee-client-transport",
- "jsonrpsee-core",
- "jsonrpsee-types",
 ]
 
 [[package]]
@@ -6982,7 +6907,6 @@ dependencies = [
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
- "pumpx",
  "rand 0.8.5",
  "serde",
  "signer-client",
@@ -8215,35 +8139,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pumpx"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "base58",
- "ethers",
- "executor-core",
- "executor-crypto",
- "executor-primitives",
- "hex",
- "jsonrpsee",
- "libsecp256k1 0.7.2",
- "mockall",
- "parity-scale-codec",
- "rand 0.8.5",
- "reqwest 0.12.23",
- "rsa",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "sha2 0.10.9",
- "signer-client",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "qstring"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8867,6 +8762,7 @@ dependencies = [
  "executor-crypto",
  "executor-primitives",
  "executor-storage",
+ "executor-utils",
  "heima-authentication",
  "heima-identity-verification",
  "heima-primitives",
@@ -8880,7 +8776,6 @@ dependencies = [
  "parentchain-rpc-client",
  "parentchain-signer",
  "parity-scale-codec",
- "pumpx",
  "rand 0.8.5",
  "rsa",
  "serde",
@@ -9881,8 +9776,16 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "executor-crypto",
+ "hex",
+ "jsonrpsee",
  "mockall",
+ "rand 0.8.5",
+ "rsa",
  "serde",
+ "serde_json",
+ "serde_with",
+ "sha2 0.10.9",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -10106,7 +10009,6 @@ dependencies = [
  "executor-core",
  "mock-server",
  "mockall",
- "pumpx",
  "signer-client",
  "solana-client",
  "solana-sdk",
@@ -10773,7 +10675,6 @@ dependencies = [
  "async-trait",
  "executor-core",
  "executor-primitives",
- "pumpx",
  "solana-client",
  "solana-sdk",
  "tokio",

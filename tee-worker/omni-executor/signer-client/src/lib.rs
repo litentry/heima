@@ -1,6 +1,8 @@
 #[cfg(feature = "mocks")]
 pub mod mocks;
 
+pub mod http_client;
+
 use async_trait::async_trait;
 use executor_crypto::aes256::AesOutput;
 use serde::Deserialize;
