@@ -46,25 +46,10 @@ Deployed contracts:
 ## Mock Server
 
 The mock server is automatically enabled and provides mocked responses for:
-- PumpX API endpoints (`/pumpx/v3/account/*`)
 - SendGrid email API
 - Binance API
 - Solana RPC
 - EVM RPC
-
-### Testing the Mock Server
-
-Test the PumpX mock endpoints:
-
-```bash
-# Test get_account_user_id
-curl "http://localhost:3456/pumpx/v3/account/get_account_user_id?email=test@example.com"
-
-# Test user_connect (requires POST with JSON body)
-curl -X POST "http://localhost:3456/pumpx/v3/account/user_connect" \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","google_code":"123456","user_id":"test_user"}'
-```
 
 ## Email Verification Flow
 
@@ -80,7 +65,7 @@ The verification code will be printed in the console logs (look for `VERIFICATIO
 
 ### 2. Request JWT Token
 
-Use the verification code from step 1. **Important**: Use a supported client ID (`heima`, `pumpx`, or `wildmeta`):
+Use the verification code from step 1. **Important**: Use a supported client ID (`heima` or `wildmeta`):
 
 ```bash
 ./target/release/omni-cli request-jwt \
@@ -108,7 +93,7 @@ Use the **ID Token** (not access token) from step 2:
 
 **Note**: The `submit-user-op` command requires:
 - A valid **ID Token** (not access token) from step 2
-- Supported client ID: `heima`, `pumpx`, or `wildmeta`
+- Supported client ID: `heima` or `wildmeta`
 - Proper sender address format (0x prefixed, 40 hex characters)
 - Chain ID that matches your target network (1 for Ethereum mainnet, 31337 for local dev)
 
@@ -163,7 +148,6 @@ Key environment variables (set in `.env` file):
 
 ```bash
 # Mock server configuration
-OE_PUMPX_API_BASE_URL=http://omni-executor:3456/pumpx
 # If you want to use console mailer type for HEIMA client id
 OE_MAILER_TYPE_HEIMA=console
 
@@ -237,7 +221,6 @@ For even faster development, you can run the omni-executor directly without Dock
    ```bash
    export OE_PARENTCHAIN_URL=ws://localhost:9944
    export OE_ETHEREUM_URL=http://localhost:8545
-   export OE_PUMPX_API_BASE_URL=http://localhost:3456/pumpx
    export OE_MAILER_TYPE_HEIMA=console
    export RUST_LOG=debug
    ```
@@ -305,7 +288,6 @@ When submitting UserOps with omni-cli, ensure proper gas limits for account crea
 
 - The mock server runs on port 3456 by default
 - Console mailer will print verification codes to stdout
-- All PumpX API calls are mocked and return successful responses
 - The development setup uses in-memory storage that resets on restart
 - EntryPoint contract address: `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512`
 - Default anvil private key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
