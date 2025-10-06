@@ -12,7 +12,6 @@ use tokio::{
 use warp::Filter;
 
 mod binance;
-mod dex;
 mod evm;
 mod sendgrid;
 mod solana;
