@@ -14,7 +14,6 @@ use warp::Filter;
 mod binance;
 mod dex;
 mod evm;
-mod pumpx;
 mod sendgrid;
 mod solana;
 
@@ -53,7 +52,6 @@ pub fn run_with_shutdown_control(
 			let (addr, srv) = warp::serve(
 				binance::handle()
 					.or(evm::handle())
-					.or(pumpx::handle())
 					.or(sendgrid::handle())
 					.or(solana::handle())
 					.boxed(),
