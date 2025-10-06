@@ -13,18 +13,17 @@ use executor_core::{
 	types::SerializablePackedUserOperation,
 };
 use executor_crypto::{
-	aes256::{aes_decrypt, Aes256Key},
+	aes256::Aes256Key,
 	jwt,
 };
 use executor_primitives::{
-	utils::hex::{decode_hex, ToHexPrefixed},
-	AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType, PumpxAccountProfile,
-	Web2IdentityType,
+	utils::hex::decode_hex,
+	AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType,
 };
-use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
+use executor_storage::{IntentIdStorage, Storage, StorageDB};
 use heima_authentication::{
 	auth_token::*,
-	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
+	constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
 use parentchain_api_interface::runtime_types::{
 	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
@@ -36,16 +35,13 @@ use parentchain_rpc_client::{
 	SubxtClientFactory, ToSubxtType,
 };
 use parentchain_signer::TxSigner;
-use pumpx::{
-	methods::create_transfer_tx::CreateTransferTxBody, signer_client::PumpxChainId, PumpxApi,
-};
 use signer_client::{ChainType, SignerClient};
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
 pub use aes256_key_store::Aes256KeyStore;
-pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
+pub use types::{NativeTaskError, NativeTaskOk};
 
 pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 
@@ -508,7 +504,6 @@ pub struct TaskHandlerContext<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 	EthereumIntentExecutor: IntentExecutor,
 	SolanaIntentExecutor: IntentExecutor,
-	CrossChainIntentExecutor: IntentExecutor,
 > {
 	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
@@ -517,8 +512,6 @@ pub struct TaskHandlerContext<
 	pub transaction_signer: Arc<ParentchainTxSigner>,
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
-	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
@@ -533,7 +526,6 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 		EthereumIntentExecutor: IntentExecutor,
 		SolanaIntentExecutor: IntentExecutor,
-		CrossChainIntentExecutor: IntentExecutor,
 	>
 	TaskHandlerContext<
 		Header,
@@ -541,7 +533,6 @@ impl<
 		RpcClientFactory,
 		EthereumIntentExecutor,
 		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
 	>
 {
 	#[allow(clippy::too_many_arguments)]
@@ -553,8 +544,6 @@ impl<
 		aes256_key: Aes256Key,
 		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
-		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		binance_api_client: Arc<dyn BinancePaymasterApi>,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
@@ -567,8 +556,6 @@ impl<
 			aes256_key,
 			ethereum_intent_executor,
 			solana_intent_executor,
-			cross_chain_intent_executor,
-			pumpx_api,
 			pumpx_signer_client,
 			binance_api_client,
 			entry_point_clients,
@@ -593,7 +580,6 @@ pub async fn handle_native_task<
 	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<
 		TaskHandlerContext<
@@ -602,7 +588,6 @@ pub async fn handle_native_task<
 			RpcClientFactory,
 			EthereumIntentExecutor,
 			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
 		>,
 	>,
 	wrapper: NativeTaskWrapper<NativeTask>,
@@ -786,33 +771,12 @@ pub async fn handle_native_task<
 					)
 				},
 				Intent::Swap(..) => {
-					let (execution_result, should_notify_parentchain, response) = match ctx
-						.cross_chain_intent_executor
-						.execute(&omni_account, intent_id, intent.clone())
-						.await
-					{
-						Ok((response, should_notify_parentchain)) => {
-							(IntentCompletedDetail::Success, should_notify_parentchain, response)
-						},
-						Err(e) => {
-							error!("Error executing intent: {:?}", e);
-							ctx.cross_chain_intent_executor.on_execution_error().await;
-							(IntentCompletedDetail::Failure, true, None)
-						},
-					};
-					if let Some(response) = response {
-						(
-							execution_result,
-							should_notify_parentchain,
-							Ok(NativeTaskOk::IntentSwapResponse(response)),
-						)
-					} else {
-						(
-							execution_result,
-							should_notify_parentchain,
-							Err(NativeTaskError::InternalError(None)),
-						)
-					}
+					error!("Swap intents are no longer supported");
+					(
+						IntentCompletedDetail::Failure,
+						true,
+						Err(NativeTaskError::InternalError(Some("Swap intents not supported".to_string()))),
+					)
 				},
 			};
 
@@ -828,283 +792,6 @@ pub async fn handle_native_task<
 			}
 
 			result
-		},
-		NativeTask::PumpxRequestJwt(_sender, email, invite_code, google_code, language) => {
-			let expires_at = Utc::now()
-				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
-				.expect("Failed to calculate expiration")
-				.timestamp();
-			let auth_options = AuthOptions { expires_at };
-
-			debug!("Calling pumpx get_account_user_id, email: {}", email);
-			let res = match ctx.pumpx_api.get_account_user_id(email.clone()).await {
-				Ok(res) => res,
-				Err(e) => {
-					error!("Failed to get_account_user_id for email {}: {:?}", email, e);
-					return Err(NativeTaskError::PumpxApiError(
-						PumpxApiError::GetAccountUserIdFailed,
-					));
-				},
-			};
-			debug!("Response pumpx get_account_user_id: {:?}", res);
-
-			let Some(user_id) = res.data.user_id else {
-				error!("Response data.user_id of call get_account_user_id is none");
-				return Err(NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed));
-			};
-
-			debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
-			let omni_account = Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx)
-				.to_omni_account(client_id);
-
-			let access_token_claims = AuthTokenClaims::new(
-				omni_account.to_hex(),
-				AUTH_TOKEN_ACCESS_TYPE.to_string(),
-				client_id.to_string(),
-				auth_options.clone(),
-			);
-			let Ok(access_token) = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
-			else {
-				error!("Failed to create access token");
-				return Err(NativeTaskError::AuthTokenCreationFailed);
-			};
-
-			debug!("Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}", user_id, email, invite_code, google_code);
-			let Ok(backend_response) = ctx
-				.pumpx_api
-				.user_connect(
-					&access_token,
-					user_id.clone(),
-					email.clone(),
-					invite_code,
-					google_code,
-					language,
-				)
-				.await
-			else {
-				error!("Failed to connect user");
-				return Err(NativeTaskError::PumpxApiError(PumpxApiError::UserConnectionFailed));
-			};
-			debug!("Response pumpx user_connect: {:?}", backend_response);
-
-			// check google auth value
-			if !backend_response.data.google_auth_check.unwrap_or(false) {
-				error!("Google code verification failed from user_connect");
-				return Err(NativeTaskError::PumpxApiError(
-					PumpxApiError::GoogleCodeVerificationFailed,
-				));
-			}
-
-			let id_token_claims = AuthTokenClaims::new(
-				omni_account.to_hex(),
-				AUTH_TOKEN_ID_TYPE.to_string(),
-				client_id.to_string(),
-				auth_options,
-			);
-			let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
-				error!("Failed to create id token");
-				return Err(NativeTaskError::AuthTokenCreationFailed);
-			};
-
-			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			if storage
-				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
-				.is_err()
-			{
-				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
-			};
-
-			if storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
-				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
-			};
-
-			Ok(NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response })
-		},
-		NativeTask::PumpxExportWallet(
-			omni_account,
-			google_code,
-			pumpx_chain_id,
-			pumpx_wallet_index,
-			expected_wallet_address,
-		) => {
-			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
-			else {
-				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-				return Err(NativeTaskError::InternalError(None));
-			};
-
-			let verify_success = verify_google_code(
-				ctx.pumpx_api.as_ref().as_ref(),
-				&access_token,
-				google_code,
-				None,
-			)
-			.await;
-			if !verify_success {
-				error!("Failed to verify google code within NativeTask::PumpxExportWallet");
-				return Err(NativeTaskError::PumpxApiError(
-					PumpxApiError::GoogleCodeVerificationFailed,
-				));
-			}
-
-			let Some(chain) = ChainType::from_pumpx_chain_id(pumpx_chain_id) else {
-				error!("Failed to map pumpx chain_id {}", pumpx_chain_id);
-				return Err(NativeTaskError::ChainNotSupported(pumpx_chain_id as u64));
-			};
-
-			let Ok(mut wallet) = ctx
-				.pumpx_signer_client
-				.export_wallet(
-					chain,
-					pumpx_wallet_index,
-					omni_account.clone().into(),
-					// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
-					//       we don't have to do double encryption/decryption
-					ctx.aes256_key.to_vec(),
-					expected_wallet_address,
-				)
-				.await
-			else {
-				error!("Failed to export wallet from pumpx-signer");
-				return Err(NativeTaskError::SignatureServiceUnavailable);
-			};
-			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
-				error!("Failed to decrypt wallet");
-				return Err(NativeTaskError::InternalError(None));
-			};
-
-			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
-			if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account) {
-				let profile = maybe_profile
-					.map(|mut p| {
-						p.wallet_exported = true;
-						p
-					})
-					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
-				if let Err(e) = omni_account_profile_storage.insert(&omni_account, profile) {
-					error!("Failed to update pumpx account profile: {:?}", e);
-					return Err(NativeTaskError::InternalError(None));
-				};
-			} else {
-				error!("Failed to get pumpx account profile");
-				return Err(NativeTaskError::InternalError(None));
-			}
-			Ok(NativeTaskOk::PumpxExportWallet(decrypted_wallet))
-		},
-		NativeTask::PumpxAddWallet(omni_account) => {
-			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
-			else {
-				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-				return Err(NativeTaskError::InternalError(None));
-			};
-
-			// Call Pumpx API to add wallet
-			debug!("Calling pumpx add_wallet");
-			let Ok(backend_response) = ctx.pumpx_api.add_wallet(&access_token, None).await else {
-				error!("Failed to add wallet through Pumpx API");
-				return Err(NativeTaskError::PumpxApiError(PumpxApiError::AddWalletFailed));
-			};
-
-			Ok(NativeTaskOk::PumpxAddWallet(backend_response))
-		},
-		NativeTask::PumpxSignLimitOrder(omni_account, chain_id, wallet_index, unsigned_tx) => {
-			let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
-				error!("Failed to map pumpx chain_id {}", chain_id);
-				return Err(NativeTaskError::ChainNotSupported(chain_id as u64));
-			};
-			let Ok(signed_txs) = ctx
-				.pumpx_signer_client
-				.request_signatures(chain, wallet_index, omni_account.into(), unsigned_tx)
-				.await
-			else {
-				error!("Failed to request signatures from pumpx-signer");
-				return Err(NativeTaskError::SignatureServiceUnavailable);
-			};
-			Ok(NativeTaskOk::PumpxSignLimitOrder(signed_txs))
-		},
-		NativeTask::PumpxTransferWidthdraw(
-			omni_account,
-			request_id,
-			chain_id,
-			wallet_index,
-			recipient_address,
-			token_ca,
-			amount,
-			google_code,
-			language,
-		) => {
-			// 1. Verify we have a valid Pumpx "access" token for the user
-			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) =
-				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
-			else {
-				error!("Failed to get access_token within NativeTask::PumpxTransferWidthdraw");
-				return Err(NativeTaskError::InternalError(None));
-			};
-
-			// 2. Verify google code in every case
-			let verify_success = verify_google_code(
-				ctx.pumpx_api.as_ref().as_ref(),
-				&access_token,
-				google_code,
-				language.clone(),
-			)
-			.await;
-			if !verify_success {
-				error!("Failed to verify google code within NativeTask::PumpxTransferWidthdraw");
-				return Err(NativeTaskError::PumpxApiError(
-					PumpxApiError::GoogleCodeVerificationFailed,
-				));
-			}
-
-			// 3. Create a transfer tx and send to backend
-			let body = CreateTransferTxBody {
-				request_id,
-				chain_id,
-				wallet_index,
-				recipient_address,
-				token_ca,
-				amount,
-			};
-
-			debug!("Calling pumpx create_transfer_tx, body {:?}", body);
-			match ctx.pumpx_api.create_transfer_tx(&access_token, body, language.clone()).await {
-				Ok(res) => Ok(NativeTaskOk::PumpxTransferWithdraw(res)),
-				Err(e) => {
-					error!("Failed to create transfer tx: {}", e);
-					Err(NativeTaskError::PumpxApiError(PumpxApiError::CreateTransferTxFailed))
-				},
-			}
-		},
-		NativeTask::PumpxNotifyLimitOrderResult(omni_account, intent_id, result, message) => {
-			if result != "ok" && result != "nok" {
-				error!("Invalid result value: {}. Must be 'ok' or 'nok'", result);
-				return Err(NativeTaskError::PumpxApiError(PumpxApiError::InvalidInput));
-			}
-
-			let execution_result = match result.as_str() {
-				"ok" => IntentCompletedDetail::Success,
-				"nok" => IntentCompletedDetail::Failure,
-				_ => unreachable!(), // Already validated above
-			};
-
-			if let Some(msg) = message {
-				info!("Limit order result message for intent_id {}: {}", intent_id, msg);
-			}
-
-			notify_intent_completed(
-				&mut rpc_client,
-				ctx.transaction_signer.clone(),
-				omni_account,
-				intent_id,
-				execution_result,
-			)
-			.await;
-
-			Ok(NativeTaskOk::PumpxNotifyLimitOrderResult)
 		},
 		NativeTask::EstimateUserOpGas(
 			omni_account,
@@ -1467,30 +1154,6 @@ async fn notify_intent_completed<
 	};
 }
 
-async fn verify_google_code(
-	pumpx_api: &dyn PumpxApi,
-	access_token: &str,
-	google_code: String,
-	language: Option<String>,
-) -> bool {
-	debug!("Calling pumpx verify_google_code, code: {}", google_code);
-	let verify_result = pumpx_api.verify_google_code(access_token, google_code, language).await;
-	verify_result.map_or_else(
-		|e| {
-			error!("Google code verification request failed: {:?}", e);
-			false
-		},
-		|res| {
-			res.data.result.map_or_else(
-				|| {
-					error!("Google code verification response result is none");
-					false
-				},
-				|success| success,
-			)
-		},
-	)
-}
 
 // Helper functions for gas limit packing/unpacking
 fn pack_account_gas_limits(verification_gas: u128, call_gas: u128) -> FixedBytes<32> {

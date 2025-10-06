@@ -1,9 +1,6 @@
 use executor_primitives::Hash;
 use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
-use pumpx::methods::add_wallet::AddWalletResponse;
-use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
-use pumpx::methods::user_connect::UserConnectResponse;
 use serde::{Deserialize, Serialize};
 
 /// Information about estimated token cost for ERC20 paymaster operations
@@ -27,23 +24,10 @@ pub enum NativeTaskOk {
 		status: TransactionStatus<Hash>,
 	},
 	AuthToken(String),
-	PumpxRequestJwt {
-		/// Used for less sensitive operations
-		access_token: String,
-		/// Used for user's identity verification before making sensitive operations
-		id_token: String,
-		backend_response: UserConnectResponse,
-	},
 	RequestIntentResult {
 		intent_id: u32,
 		success: bool,
 	},
-	IntentSwapResponse(Vec<u8>),
-	PumpxExportWallet(Vec<u8>),
-	PumpxAddWallet(AddWalletResponse),
-	PumpxSignLimitOrder(Vec<Vec<u8>>),
-	PumpxTransferWithdraw(CreateTransferTxResponse),
-	PumpxNotifyLimitOrderResult,
 	SubmitUserOp(Option<String>), // transaction_hash
 	EstimateUserOpGas {
 		call_gas_limit: u128,
@@ -65,31 +49,10 @@ pub enum NativeTaskError {
 	InvalidMemberIdentity,
 	ValidationDataVerificationFailed,
 	UnsupportedIdentityType,
-	PumpxApiError(PumpxApiError),
-	PumpxSignerError(PumpxSignerError),
 	IntentNonceMismatch,
 	UnsupportedChain,
 	ChainNotSupported(u64),
 	InvalidUserOperation(String),
 	GasEstimationFailed,
 	SignatureServiceUnavailable,
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum PumpxApiError {
-	GoogleCodeVerificationFailed,
-	UserConnectionFailed,
-	UnknownError,
-	InvalidInput,
-	AddWalletFailed,
-	CreateTransferUnsignedTxFailed,
-	SendTransferTxFailed,
-	CreateTransferTxFailed,
-	GetAccountUserIdFailed,
-}
-
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
-pub enum PumpxSignerError {
-	RequestSignatureFailed,
-	RequestWalletFailed,
 }

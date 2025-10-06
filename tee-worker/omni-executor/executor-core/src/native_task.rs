@@ -31,40 +31,12 @@ impl<T: NativeTaskTrait + Debug> NativeTaskWrapper<T> {
 	}
 }
 
-pub type GoogleCode = String;
-pub type PumxWalletIndex = u32;
-pub type PumpxChainId = u32;
-
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum NativeTask {
 	RequestAuthToken(Identity),
 	RequestIntent(AccountId, IntentId, Box<Intent>),
 	SubmitUserOp(AccountId, Vec<SerializablePackedUserOperation>, ChainId, u32),
 	EstimateUserOpGas(AccountId, SerializablePackedUserOperation, ChainId, u32),
-
-	// pumpx specific, starting from index 20
-	#[codec(index = 20)]
-	PumpxRequestJwt(Identity, String, Option<String>, GoogleCode, Option<String>),
-	#[codec(index = 21)]
-	PumpxExportWallet(AccountId, GoogleCode, PumpxChainId, PumxWalletIndex, String),
-	#[codec(index = 22)]
-	PumpxAddWallet(AccountId),
-	#[codec(index = 23)]
-	PumpxSignLimitOrder(AccountId, PumpxChainId, PumxWalletIndex, Vec<Vec<u8>>),
-	#[codec(index = 24)]
-	PumpxTransferWidthdraw(
-		AccountId,
-		Option<u32>,    // request_id
-		u32,            // chain_id
-		u32,            // wallet_index
-		String,         // recipient_address
-		String,         // token_contract_address
-		String,         // amount
-		GoogleCode,     // google_code
-		Option<String>, // language
-	),
-	#[codec(index = 25)]
-	PumpxNotifyLimitOrderResult(AccountId, u32, String, Option<String>),
 }
 
 impl NativeTaskTrait for NativeTask {
@@ -74,6 +46,6 @@ impl NativeTaskTrait for NativeTask {
 	}
 
 	fn require_encrypt(&self) -> bool {
-		matches!(self, Self::PumpxExportWallet(..))
+		false
 	}
 }
