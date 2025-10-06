@@ -739,6 +739,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Free up disk space
+        if: startsWith(runner.name, 'GitHub Actions')
+        uses: ./.github/actions/disk-cleanup
+
       - name: Install dependencies
         run: |
           sudo apt-get update && \
