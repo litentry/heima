@@ -48,7 +48,6 @@ mod test {
 	use parentchain_rpc_client::{CustomConfig, SubxtClientFactory};
 	use parentchain_signer::key_store::SubstrateKeyStore;
 	use parentchain_signer::TxSigner;
-	use pumpx::PumpxApiClient;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use signer_client::{mocks::MockSignerClient, SignerClient};
 	use std::collections::HashMap;
@@ -67,7 +66,6 @@ mod test {
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
-		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
 		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
@@ -78,7 +76,6 @@ mod test {
 
 		let (solana_intent_executor, _solana_mock_recv) = MockedIntentExecutor::new();
 		let (ethereum_intent_executor, _ethereum_mock_recv) = MockedIntentExecutor::new();
-		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 
 		let client_factory =
 			SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
@@ -109,7 +106,6 @@ mod test {
 		start_server(
 			port,
 			shielding_key.clone(),
-			Arc::new(Box::new(pumpx_api)),
 			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
@@ -120,7 +116,6 @@ mod test {
 			[0u8; 33], // Test ECDSA public key
 			Arc::new(ethereum_intent_executor),
 			Arc::new(solana_intent_executor),
-			Arc::new(cross_chain_intent_executor),
 			parentchain_rpc_client_factory,
 			aes_key,
 			tx_signer,
