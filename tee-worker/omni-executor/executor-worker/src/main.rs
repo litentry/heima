@@ -176,7 +176,7 @@ async fn main() -> Result<(), ()> {
 
 			let signer_client: Arc<Box<dyn signer_client::SignerClient>> =
 				Arc::new(Box::new(signer_client::http_client::HttpSignerClient::new(
-					config_loader.pumpx_signer_url.clone(),
+					config_loader.signer_url.clone(),
 					signer_auth_pair,
 				)));
 
@@ -379,7 +379,7 @@ async fn main() -> Result<(), ()> {
 			let entry_point_clients = Arc::new(entry_point_clients);
 
 			let worker_url =
-				url::Url::parse(&config_loader.pumpx_worker_url).expect("Invalid worker url");
+				url::Url::parse(&config_loader.worker_url).expect("Invalid worker url");
 
 			let shielding_key_store = ShieldingKeyStore::new(
 				Path::new(&args.local_directory_path)
