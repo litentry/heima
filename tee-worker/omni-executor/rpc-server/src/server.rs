@@ -58,14 +58,7 @@ impl<
 		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 		EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 		SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	>
-	RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-	>
+	> RpcContext<Header, RpcClient, RpcClientFactory, EthereumIntentExecutor, SolanaIntentExecutor>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(

@@ -28,6 +28,7 @@ use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
+use executor_utils::pubkey_to_evm_address;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::Aes256KeyStore;
 use parentchain_attestation::perform_attestation;
@@ -37,7 +38,6 @@ use parentchain_rpc_client::{
 	ToPrimitiveType,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
-use executor_utils::pubkey_to_evm_address;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;

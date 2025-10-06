@@ -12,13 +12,9 @@ use executor_core::{
 	native_task::{NativeTask, NativeTaskWrapper},
 	types::SerializablePackedUserOperation,
 };
-use executor_crypto::{
-	aes256::Aes256Key,
-	jwt,
-};
+use executor_crypto::{aes256::Aes256Key, jwt};
 use executor_primitives::{
-	utils::hex::decode_hex,
-	AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType,
+	utils::hex::decode_hex, AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType,
 };
 use executor_storage::{IntentIdStorage, Storage, StorageDB};
 use heima_authentication::{
@@ -775,7 +771,9 @@ pub async fn handle_native_task<
 					(
 						IntentCompletedDetail::Failure,
 						true,
-						Err(NativeTaskError::InternalError(Some("Swap intents not supported".to_string()))),
+						Err(NativeTaskError::InternalError(Some(
+							"Swap intents not supported".to_string(),
+						))),
 					)
 				},
 			};
@@ -1153,7 +1151,6 @@ async fn notify_intent_completed<
 		},
 	};
 }
-
 
 // Helper functions for gas limit packing/unpacking
 fn pack_account_gas_limits(verification_gas: u128, call_gas: u128) -> FixedBytes<32> {

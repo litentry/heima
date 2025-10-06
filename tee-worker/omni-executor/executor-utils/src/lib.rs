@@ -61,7 +61,10 @@ pub fn pubkey_to_solana_address(pubkey: &[u8]) -> Result<String, ()> {
 // Re-export ChainType from signer-client for convenience
 pub use signer_client::ChainType;
 
-pub fn pubkey_to_address(chain_type: signer_client::ChainType, pubkey: &[u8]) -> Result<String, ()> {
+pub fn pubkey_to_address(
+	chain_type: signer_client::ChainType,
+	pubkey: &[u8],
+) -> Result<String, ()> {
 	match chain_type {
 		signer_client::ChainType::Evm => pubkey_to_evm_address(pubkey),
 		signer_client::ChainType::Solana => pubkey_to_solana_address(pubkey),

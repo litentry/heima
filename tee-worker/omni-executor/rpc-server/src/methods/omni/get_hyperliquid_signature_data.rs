@@ -11,10 +11,10 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
+use executor_utils::{pubkey_to_address, ChainType};
 use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, Withdraw3};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-use executor_utils::{pubkey_to_address, ChainType};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use tracing::{debug, error};
