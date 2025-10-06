@@ -1,0 +1,19 @@
+[package]
+name = "executor-utils"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+base58 = { workspace = true }
+ethers = { workspace = true }
+executor-primitives = { workspace = true }
+libsecp256k1 = { workspace = true }
+parity-scale-codec = { workspace = true }
+serde = { workspace = true }
+serde_repr = { workspace = true }
+signer-client = { workspace = true }
+sp-core = { workspace = true }
+tracing = { workspace = true }
