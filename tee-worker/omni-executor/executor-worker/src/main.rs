@@ -99,7 +99,7 @@ async fn main() -> Result<(), ()> {
 
 			let signer_auth_key_store = EcdsaKeyStore::new(
 				Path::new(&args.local_directory_path)
-					.join("keystore/signer_auth_key.bin")
+					.join("keystore/pumpx_auth_key.bin") // keeping the old name for now
 					.into_os_string()
 					.into_string()
 					.unwrap(),
