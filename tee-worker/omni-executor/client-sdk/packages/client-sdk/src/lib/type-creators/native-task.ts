@@ -63,14 +63,6 @@ type RequestAuthTokenParams = {
   member: Identity;
 };
 
-// Identity, Option<String>, Option<String>, Option<String>
-type RequestPumpxRequestJwtParams = {
-  member: Identity;
-  inviteCode?: string;
-  googleCode?: string;
-  lang?: string;
-};
-
 /**
  * Creates the NativeTask for the given method and provide the `param's` types expected for them.
  *
@@ -134,14 +126,6 @@ export function createNativeTaskType(
   data: {
     method: 'RequestAuthToken';
     params: RequestAuthTokenParams;
-  },
-): { task: NativeTask };
-
-export function createNativeTaskType(
-  registry: Registry,
-  data: {
-    method: 'PumpxRequestJwt';
-    params: RequestPumpxRequestJwtParams;
   },
 ): { task: NativeTask };
 
@@ -240,21 +224,6 @@ export function createNativeTaskType(
     return { task };
   }
 
-  if (isRequestPumpxRequestJwtTask(method, params)) {
-    const { member, inviteCode, googleCode, lang } = params;
-
-    const task = registry.createType<NativeTask>('NativeTask', {
-      [NativeTaskMethodsMap.PumpxRequestJwt]: [
-        member,
-        registry.createType('Option<String>', inviteCode),
-        registry.createType('Option<String>', googleCode),
-        registry.createType('Option<String>', lang),
-      ],
-    });
-
-    return { task };
-  }
-
   throw new Error(`native task method: ${data.method} is not supported`);
 }
 
@@ -303,11 +272,4 @@ function isRequestAuthTokenTask(
   params: Record<string, unknown>,
 ): params is RequestAuthTokenParams {
   return method === NativeTaskMethodsMap.RequestAuthToken;
-}
-
-function isRequestPumpxRequestJwtTask(
-  method: NativeTaskMethod,
-  params: Record<string, unknown>,
-): params is RequestPumpxRequestJwtParams {
-  return method === NativeTaskMethodsMap.PumpxRequestJwt;
 }
