@@ -26,7 +26,6 @@ type JwtToken = String;
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type", content = "value")]
 pub enum UserId {
-	Pumpx(String),
 	Email(String),
 	Twitter(String),
 	Discord(String),
@@ -44,9 +43,6 @@ impl TryFrom<UserId> for Identity {
 
 	fn try_from(value: UserId) -> Result<Self, Self::Error> {
 		match value {
-			UserId::Pumpx(handle) => {
-				Ok(Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec())))
-			},
 			UserId::Twitter(handle) => {
 				Ok(Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec())))
 			},
@@ -129,11 +125,12 @@ impl TryFrom<Identity> for UserId {
 			Identity::Google(handle) => {
 				Ok(UserId::Google(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
-			Identity::Pumpx(handle) => {
-				Ok(UserId::Pumpx(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
-			},
 			Identity::Passkey(handle) => {
 				Ok(UserId::Passkey(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
+			Identity::Pumpx(_) => {
+				// Pumpx identity is deprecated and no longer supported in UserId
+				Err(())
 			},
 		}
 	}
