@@ -14,10 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use accounting_contract_client::{
-	solana::AccountingContractClient as SolanaAccountingContractClient,
-	AccountingContractClient as EthereumAccountingContractClient,
-};
 use alloy::network::EthereumWallet;
 use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
@@ -25,23 +21,14 @@ use binance_api::BinanceApiClient;
 use clap::Parser;
 use cli::{Cli, Commands, RunArgs};
 use config_loader::ConfigLoader;
-use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
-use ethereum_rpc::client::EthereumRpcClient;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
-use executor_core::ed25519_key_store::Ed25519KeyStore;
 use executor_core::key_store::KeyStore;
 use executor_core::shielding_key_store::ShieldingKeyStore;
-use executor_core::wallet_metrics::Wallet;
-use executor_core::wallet_metrics::{
-	start_wallet_metrics, WalletBalanceFetcher, WalletId, WalletMetrics, WalletNetworkType,
-};
 use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
-use executor_crypto::{ecdsa, ed25519, PairTrait};
+use executor_crypto::{ecdsa, PairTrait};
 use executor_primitives::AccountId;
 use executor_storage::{init_storage, StorageDB};
-use intent_asset_lock::precise::PreciseAssetsLock;
-use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::Aes256KeyStore;
 use parentchain_attestation::perform_attestation;
@@ -51,11 +38,8 @@ use parentchain_rpc_client::{
 	ToPrimitiveType,
 };
 use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
-use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
-use pumpx::{PumpxApi, PumpxApiClient};
+use executor_utils::pubkey_to_evm_address;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
-use rust_decimal::Decimal;
-use solana::SolanaRpcClient;
 use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -114,19 +98,19 @@ async fn main() -> Result<(), ()> {
 			);
 			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
 
-			let pumpx_auth_key_store = pumpx::auth_key_store::AuthKeyStore::new(
+			let signer_auth_key_store = EcdsaKeyStore::new(
 				Path::new(&args.local_directory_path)
-					.join("keystore/pumpx_auth_key.bin")
+					.join("keystore/signer_auth_key.bin")
 					.into_os_string()
 					.into_string()
 					.unwrap(),
 			);
 
-			let pumpx_signer_key =
-				pumpx_auth_key_store.read().expect("Could not read PumpX signer key");
+			let signer_auth_key =
+				signer_auth_key_store.read().expect("Could not read signer auth key");
 
-			let pumpx_signer_pair = ecdsa::Pair::from_seed_slice(&pumpx_signer_key).unwrap();
-			info!("PumpX auth public key: {:?}", pumpx_signer_pair.public());
+			let signer_auth_pair = ecdsa::Pair::from_seed_slice(&signer_auth_key).unwrap();
+			info!("Signer auth public key: {:?}", signer_auth_pair.public());
 
 			let evm_accounting_ecdsa_signer_key = EcdsaKeyStore::new(
 				Path::new(&args.local_directory_path)
@@ -147,28 +131,6 @@ async fn main() -> Result<(), ()> {
 					.unwrap();
 
 			info!("Accounting ecdsa signer address: {:?}", bsc_accounting_signer);
-
-			let solana_accounting_ed25519_signer_key = Ed25519KeyStore::new(
-				Path::new(&args.local_directory_path)
-					.join("keystore/solana_accounting_ed25519_signer_key.bin")
-					.into_os_string()
-					.into_string()
-					.unwrap(),
-			);
-
-			let solana_accounting_ed25519_signer_key = solana_accounting_ed25519_signer_key
-				.read()
-				.expect("Could not read solana accounting ed25519 key");
-			let solana_accounting_ed25519_signer_key_pair =
-				ed25519::Pair::from_seed_slice(&solana_accounting_ed25519_signer_key).unwrap();
-
-			info!(
-				"Solana accounting ed25519 signer address: {:?}",
-				pubkey_to_solana_address(
-					solana_accounting_ed25519_signer_key_pair.public().as_ref()
-				)
-				.unwrap()
-			);
 
 			let storage_db = init_storage(&config_loader.parentchain_url)
 				.await
@@ -213,10 +175,10 @@ async fn main() -> Result<(), ()> {
 			);
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let pumpx_signer_client: Arc<Box<dyn signer_client::SignerClient>> =
-				Arc::new(Box::new(pumpx::signer_client::PumpxSignerClient::new(
+			let signer_client: Arc<Box<dyn signer_client::SignerClient>> =
+				Arc::new(Box::new(signer_client::http_client::HttpSignerClient::new(
 					config_loader.pumpx_signer_url.clone(),
-					pumpx_signer_pair,
+					signer_auth_pair,
 				)));
 
 			let ethereum_intent_executor = EthereumIntentExecutor::new(
@@ -225,98 +187,16 @@ async fn main() -> Result<(), ()> {
 			)?;
 			let solana_intent_executor = SolanaIntentExecutor::new(&config_loader.solana_url)?;
 
-			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
-			rpc_endpoint_registry.insert(Chain::Solana, config_loader.solana_url.to_string());
-			rpc_endpoint_registry.insert(Chain::Ethereum(56), config_loader.bsc_url.to_string());
-
-			if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
-				rpc_endpoint_registry.insert(Chain::Ethereum(97), bsc_testnet_url.to_owned());
-			}
-
-			let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(PumpxApiClient::new(
-				config_loader.pumpx_api_base_url.to_string(),
-			)));
-
 			let binance_api: Arc<BinanceApiClient> = Arc::new(BinanceApiClient::new(
 				config_loader.binance_api_key.clone(),
 				config_loader.binance_api_secret.clone(),
 				config_loader.binance_api_base_url.clone(),
 			));
 
-			let solana_client: Arc<SolanaRpcClient> =
-				Arc::new(SolanaRpcClient::new(&config_loader.solana_url));
-
 			let accounting_contract_signer =
 				PrivateKeySigner::from_slice(&evm_accounting_ecdsa_signer_key_pair.seed())
 					.expect("Could not create accounting contract signer");
 			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
-
-			let bsc_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
-				&config_loader.bsc_url,
-				accounting_contract_wallet.clone(),
-			);
-			let evm_accounting_contract_client = EthereumAccountingContractClient::new(
-				bsc_rpc_provider,
-				args.accounting_contract_address.parse().unwrap(),
-			);
-			let solana_accounting_contract_client = SolanaAccountingContractClient::new(
-				solana_accounting_ed25519_signer_key_pair,
-				config_loader.solana_url.clone(),
-				args.solana_accounting_contract_address.parse().unwrap(),
-			);
-
-			let bsc_client: Arc<EthereumRpcClient> =
-				Arc::new(EthereumRpcClient::new(&config_loader.bsc_url));
-
-			// wallet monitoring setup start
-			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.bsc_url)));
-
-			let solana_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(SolanaRpcClient::new(&config_loader.solana_url)));
-
-			let mut balance_fetchers: HashMap<
-				WalletNetworkType,
-				Arc<Box<dyn WalletBalanceFetcher>>,
-			> = HashMap::new();
-			balance_fetchers.insert(WalletNetworkType::Solana, solana_wallet_balance_fetcher);
-			balance_fetchers.insert(WalletNetworkType::Ethereum(56), bsc_wallet_balance_fetcher);
-
-			let mut wallet_metrics = WalletMetrics::new(balance_fetchers);
-
-			wallet_metrics.register(Wallet {
-				id: WalletId {
-					address: bsc_accounting_signer,
-					network_type: WalletNetworkType::Ethereum(56),
-				},
-				name: "bsc_accounting_signer".to_string(),
-			});
-
-			let join = start_wallet_metrics(Handle::current(), wallet_metrics);
-			// wallet monitoring setup end
-
-			let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
-				Arc::new(AccountAssetLocks::new(storage_db.clone()));
-
-			// TODO: Make these configurable via CLI args or config file
-			let omni_account_factory_address = Address::from_slice(&[0u8; 20]);
-			let omni_account_implementation_address = Address::from_slice(&[1u8; 20]);
-
-			let cross_chain_intent_executor = CrossChainIntentExecutor::new(
-				account_assets_lock,
-				rpc_endpoint_registry,
-				pumpx_signer_client.clone(),
-				pumpx_api.clone(),
-				storage_db.clone(),
-				binance_api.clone(),
-				bsc_client,
-				solana_client,
-				Arc::new(Box::new(evm_accounting_contract_client)),
-				Arc::new(Box::new(solana_accounting_contract_client)),
-				Decimal::from_str(&args.instant_payout_threshold).unwrap(),
-				omni_account_factory_address,
-				omni_account_implementation_address,
-			)?;
 
 			// Create EntryPoint clients registry
 			// Create RPC providers first
@@ -559,18 +439,16 @@ async fn main() -> Result<(), ()> {
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
-				pumpx_api,
 				storage_db.clone(),
 				jwt_rsa_private_key,
 				&config_loader,
-				pumpx_signer_client,
+				signer_client,
 				binance_api,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				wildmeta_backend_ecdsa_pubkey,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
-				Arc::new(cross_chain_intent_executor),
 				parentchain_rpc_client_factory.clone(),
 				aes256_key,
 				tx_signer,
@@ -586,10 +464,6 @@ async fn main() -> Result<(), ()> {
 					.await
 					.unwrap();
 			}
-
-			if let Err(e) = join.await {
-				error!("There was an error in associated task: {:?}", e);
-			};
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
