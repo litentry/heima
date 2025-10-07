@@ -31,25 +31,14 @@ use notify_limit_order_result::*;
 
 mod get_omni_account;
 use get_omni_account::*;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub fn register_pumpx<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	register_request_jwt(module);

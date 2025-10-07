@@ -22,11 +22,6 @@ members = [
     "native-task-handler",
     "oauth-providers",
     "omni-cli",
-    "parentchain/listener",
-    "parentchain/api-interface",
-    "parentchain/attestation",
-    "parentchain/rpc-client",
-    "parentchain/signer",
     "pumpx",
     "rpc-server",
     "signer-client",
@@ -56,14 +51,12 @@ ciborium = "0.2"
 clap = "4.5.17"
 email_address = "0.2"
 ethers = "2.0"
-frame-metadata = { version = "23.0.0", features = ["decode"], default-features = false }
-frame-support = { version = "39.0.0", features = ["std"] }
 futures = "0.3.31"
-hyperliquid_rust_sdk = { git = "https://github.com/silva-fj/hyperliquid-rust-sdk", branch = "eip712-public-trait" }
 hex = "0.4"
 hex-literal = "0.4"
 hmac = "0.12.1"
 http = "1.3.1"
+hyperliquid_rust_sdk = { git = "https://github.com/silva-fj/hyperliquid-rust-sdk", branch = "eip712-public-trait" }
 jsonrpsee = { version = "0.24.9", features = ["server"] }
 jsonwebtoken = "9.3.0"
 libsecp256k1 = "0.7.1"
@@ -91,12 +84,8 @@ sha2 = "0.10.8"
 solana-client = "2.2.1"
 solana-sdk = "2.2.1"
 sp-core = "35.0.0"
-sp-state-machine = { version = "0.44.0", features = ["std"] }
 spl-associated-token-account = "6.0.0"
 spl-token = "7.0.0"
-subxt = "0.42.0"
-subxt-core = "0.42.0"
-subxt-signer = { version = "0.42.0", features = ["subxt"] }
 tempfile = "3.19.1"
 test-log = { version = "0.2.17", features = ["trace"] }
 thiserror = "2"
@@ -129,11 +118,6 @@ intent-token-query = { path = "intent/token-query" }
 mock-server = { path = "mock-server" }
 native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }
-parentchain-api-interface = { path = "parentchain/api-interface" }
-parentchain-attestation = { path = "parentchain/attestation" }
-parentchain-listener = { path = "parentchain/listener" }
-parentchain-rpc-client = { path = "parentchain/rpc-client" }
-parentchain-signer = { path = "parentchain/signer" }
 pumpx = { path = "pumpx" }
 rpc-server = { path = "rpc-server" }
 signer-client = { path = "signer-client" }

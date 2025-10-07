@@ -77,8 +77,6 @@ use remove_passkey::*;
 mod request_passkey_challenge;
 use request_passkey_challenge::*;
 
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-
 #[cfg(test)]
 mod test_protected_method;
 
@@ -91,19 +89,9 @@ pub fn register_omni<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	register_get_health(module);

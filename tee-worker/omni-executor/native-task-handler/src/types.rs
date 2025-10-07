@@ -1,6 +1,14 @@
 use executor_primitives::Hash;
-use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
+
+// Simple replacement for TransactionStatus
+#[derive(Encode, Decode, Debug, PartialEq, Eq)]
+pub enum TransactionStatus<Hash> {
+	InBlock(Hash),
+	Finalized(Hash),
+	Invalid,
+	Dropped,
+}
 use pumpx::methods::add_wallet::AddWalletResponse;
 use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
 use pumpx::methods::user_connect::UserConnectResponse;

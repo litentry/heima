@@ -13,8 +13,8 @@ chrono = { workspace = true }
 email_address = { workspace = true }
 ethers = { workspace = true }
 hex = { workspace = true }
-hyperliquid_rust_sdk = { workspace = true }
 http = { workspace = true }
+hyperliquid_rust_sdk = { workspace = true }
 jsonrpsee = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
@@ -43,7 +43,6 @@ heima-primitives = { workspace = true }
 heima-utils = { workspace = true }
 native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
-parentchain-rpc-client = { workspace = true }
 pumpx = { workspace = true }
 signer-client = { workspace = true }
 wildmeta-api = { workspace = true }
@@ -52,8 +51,6 @@ wildmeta-api = { workspace = true }
 tempfile = { workspace = true }
 pumpx = { workspace = true, features = ["mocks"] }
 binance-api = { workspace = true, features = ["mocks"] }
-parentchain-signer = { workspace = true }
-subxt = { workspace = true }
 signer-client = { workspace = true, features = ["mocks"] }
 wildmeta-api = { workspace = true, features = ["mocks"] }
 executor-storage = { workspace = true }

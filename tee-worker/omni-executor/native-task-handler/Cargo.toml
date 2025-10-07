@@ -11,7 +11,6 @@ hex = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
-subxt = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 
@@ -25,11 +24,9 @@ executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
-parentchain-api-interface = { workspace = true }
-parentchain-rpc-client = { workspace = true }
-parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
 signer-client = { workspace = true }
+sp-core = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }
