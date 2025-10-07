@@ -18,29 +18,18 @@ use executor_crypto::{
 };
 use executor_primitives::{
 	utils::hex::{decode_hex, ToHexPrefixed},
-	AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType, PumpxAccountProfile,
-	Web2IdentityType,
+	ChainId, Identity, Intent, PumpxAccountProfile, Web2IdentityType,
 };
 use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
 use heima_authentication::{
 	auth_token::*,
 	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
-use parentchain_api_interface::runtime_types::{
-	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::IntentCompletedDetail, paseo_runtime::RuntimeCall,
-};
-use parentchain_rpc_client::{
-	metadata::{Metadata, SubxtMetadataProvider},
-	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory, ToSubxtType,
-};
-use parentchain_signer::TxSigner;
 use pumpx::{
 	methods::create_transfer_tx::CreateTransferTxBody, signer_client::PumpxChainId, PumpxApi,
 };
 use signer_client::{ChainType, SignerClient};
-use std::{collections::HashMap, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
@@ -494,27 +483,14 @@ const DEFAULT_PAYMASTER_POST_OP_GAS: u128 = 50_000;
 /// Maximum allowed paymaster gas to prevent abuse
 const MAX_PAYMASTER_GAS: u128 = 5_000_000;
 
-pub type ParentchainTxSigner = TxSigner<
-	SubxtClient<CustomConfig>,
-	SubxtClientFactory<CustomConfig>,
-	CustomConfig,
-	Metadata,
-	SubxtMetadataProvider<CustomConfig>,
->;
-
 pub struct TaskHandlerContext<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 	EthereumIntentExecutor: IntentExecutor,
 	SolanaIntentExecutor: IntentExecutor,
 	CrossChainIntentExecutor: IntentExecutor,
 > {
-	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub aes256_key: Aes256Key,
-	pub transaction_signer: Arc<ParentchainTxSigner>,
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
@@ -523,31 +499,16 @@ pub struct TaskHandlerContext<
 	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	pub whitelisted_paymaster: Arc<Vec<Address>>,
-	phantom_header: PhantomData<Header>,
-	phantom_rpc_client: PhantomData<RpcClient>,
 }
 
 impl<
-		Header,
-		RpcClient: SubstrateRpcClient<Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 		EthereumIntentExecutor: IntentExecutor,
 		SolanaIntentExecutor: IntentExecutor,
 		CrossChainIntentExecutor: IntentExecutor,
-	>
-	TaskHandlerContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>
+	> TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-		transaction_signer: Arc<ParentchainTxSigner>,
 		storage_db: Arc<StorageDB>,
 		jwt_rsa_private_key: Vec<u8>,
 		aes256_key: Aes256Key,
@@ -560,8 +521,6 @@ impl<
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {
-			parentchain_rpc_client_factory,
-			transaction_signer,
 			storage_db,
 			jwt_rsa_private_key,
 			aes256_key,
@@ -573,8 +532,6 @@ impl<
 			binance_api_client,
 			entry_point_clients,
 			whitelisted_paymaster: Arc::new(parse_whitelisted_paymasters()),
-			phantom_header: PhantomData,
-			phantom_rpc_client: PhantomData,
 		}
 	}
 
@@ -588,37 +545,19 @@ impl<
 }
 
 pub async fn handle_native_task<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<
-		TaskHandlerContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 ) -> NativeTaskResponse {
-	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
-		error!("Failed to create rpc client");
-		return Err(NativeTaskError::InternalError(None));
-	};
-
-	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
 	let client_id = &wrapper.client_id;
 
 	match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
-			// Convert Identity to AccountId directly using client_id
-			let omni_account = sender.to_omni_account(client_id);
 			let expires_at = Utc::now()
 				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
 				.expect("Failed to calculate expiration")
@@ -648,23 +587,12 @@ pub async fn handle_native_task<
 				error!("Failed to create auth token");
 				return Err(NativeTaskError::AuthTokenCreationFailed);
 			};
-			let auth_token_requested_call = parentchain_api_interface::tx()
-				.omni_account()
-				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
-
-			let tx = ctx.transaction_signer.sign(auth_token_requested_call).await;
-
-			if rpc_client.submit_tx(&tx).await.is_err() {
-				ctx.transaction_signer.update_nonce().await;
-				error!("Failed to submit tx");
-				return Err(NativeTaskError::InternalError(None));
-			}
 
 			Ok(NativeTaskOk::AuthToken(token))
 		},
 		NativeTask::RequestIntent(omni_account, intent_id, intent) => {
-			let intent = *intent; // Unbox the intent
-			debug!("Intent requested");
+			let intent = *intent;
+			debug!("Intent requested, intent_id: {}", intent_id);
 
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
 			let stored_intent_id = match intent_id_storage.get(&omni_account) {
@@ -689,143 +617,35 @@ pub async fn handle_native_task<
 				return Err(NativeTaskError::IntentNonceMismatch);
 			}
 
-			let _ = notify_intent_accepted(
-				&mut rpc_client,
-				ctx.transaction_signer.clone(),
-				omni_account.clone(),
-				intent_id,
-				intent.clone(),
-			)
-			.await;
-
-			let (execution_result, should_notify_parentchain, result) = match intent {
-				Intent::SystemRemark(remark) => {
-					let remark_call = SystemCall::remark { remark: remark.to_vec() };
-					let _ = dispatch_as_signed(
-						&mut rpc_client,
-						ctx.transaction_signer.clone(),
-						omni_account.clone(),
-						RuntimeCall::System(remark_call),
-						auth_type,
-					)
-					.await;
-					(
-						IntentCompletedDetail::Success,
-						true,
-						Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }),
-					)
-				},
-				Intent::TransferNative(transfer) => {
-					let transfer_call = BalancesCall::transfer_allow_death {
-						dest: transfer.to.to_subxt_type().into(),
-						value: transfer.value,
-					};
-					let _ = dispatch_as_signed(
-						&mut rpc_client,
-						ctx.transaction_signer.clone(),
-						omni_account.clone(),
-						RuntimeCall::Balances(transfer_call),
-						auth_type,
-					)
-					.await;
-					(
-						IntentCompletedDetail::Success,
-						true,
-						Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }),
-					)
-				},
-				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
-					// if let Err(e) = ctx
-					// 	.ethereum_intent_executor
-					// 	.execute(&omni_account, intent_id, intent.clone())
-					// 	.await
-					// {
-					// 	log::error!("Error executing intent: {:?}", e);
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
-					// 	);
-					// 	(IntentCompletedDetail::Failure, true)
-					// } else {
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
-					// 	);
-					// 	(IntentCompletedDetail::Success, true)
-					// }
-					info!("Intent rejected");
-					(
-						IntentCompletedDetail::Failure,
-						true,
-						Err(NativeTaskError::InternalError(None)),
-					)
-				},
-				Intent::TransferSolana(_) => {
-					// if let Err(e) = ctx
-					// 	.solana_intent_executor
-					// 	.execute(&omni_account, intent_id, intent.clone())
-					// 	.await
-					// {
-					// 	log::error!("Error executing intent: {:?}", e);
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
-					// 	);
-					// 	(IntentCompletedDetail::Failure, true)
-					// } else {
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
-					// 	);
-					// 	(IntentCompletedDetail::Success, true)
-					// }
-					(
-						IntentCompletedDetail::Failure,
-						true,
-						Err(NativeTaskError::InternalError(None)),
-					)
+			let result = match intent {
+				Intent::SystemRemark(_)
+				| Intent::TransferNative(_)
+				| Intent::CallEthereum(_)
+				| Intent::TransferEthereum(_)
+				| Intent::TransferSolana(_) => {
+					info!("Intent temporarily rejected, intent_id: {}", intent_id);
+					Err(NativeTaskError::InternalError(None))
 				},
 				Intent::Swap(..) => {
-					let (execution_result, should_notify_parentchain, response) = match ctx
+					let response = match ctx
 						.cross_chain_intent_executor
 						.execute(&omni_account, intent_id, intent.clone())
 						.await
 					{
-						Ok((response, should_notify_parentchain)) => {
-							(IntentCompletedDetail::Success, should_notify_parentchain, response)
-						},
+						Ok((response, _)) => response,
 						Err(e) => {
 							error!("Error executing intent: {:?}", e);
 							ctx.cross_chain_intent_executor.on_execution_error().await;
-							(IntentCompletedDetail::Failure, true, None)
+							None
 						},
 					};
 					if let Some(response) = response {
-						(
-							execution_result,
-							should_notify_parentchain,
-							Ok(NativeTaskOk::IntentSwapResponse(response)),
-						)
+						Ok(NativeTaskOk::IntentSwapResponse(response))
 					} else {
-						(
-							execution_result,
-							should_notify_parentchain,
-							Err(NativeTaskError::InternalError(None)),
-						)
+						Err(NativeTaskError::InternalError(None))
 					}
 				},
 			};
-
-			if should_notify_parentchain {
-				let _ = notify_intent_completed(
-					&mut rpc_client,
-					ctx.transaction_signer.clone(),
-					omni_account.clone(),
-					intent_id,
-					execution_result,
-				)
-				.await;
-			}
 
 			result
 		},
@@ -1079,30 +899,15 @@ pub async fn handle_native_task<
 				},
 			}
 		},
-		NativeTask::PumpxNotifyLimitOrderResult(omni_account, intent_id, result, message) => {
+		NativeTask::PumpxNotifyLimitOrderResult(_omni_account, intent_id, result, message) => {
 			if result != "ok" && result != "nok" {
 				error!("Invalid result value: {}. Must be 'ok' or 'nok'", result);
 				return Err(NativeTaskError::PumpxApiError(PumpxApiError::InvalidInput));
 			}
 
-			let execution_result = match result.as_str() {
-				"ok" => IntentCompletedDetail::Success,
-				"nok" => IntentCompletedDetail::Failure,
-				_ => unreachable!(), // Already validated above
-			};
-
 			if let Some(msg) = message {
 				info!("Limit order result message for intent_id {}: {}", intent_id, msg);
 			}
-
-			notify_intent_completed(
-				&mut rpc_client,
-				ctx.transaction_signer.clone(),
-				omni_account,
-				intent_id,
-				execution_result,
-			)
-			.await;
 
 			Ok(NativeTaskOk::PumpxNotifyLimitOrderResult)
 		},
@@ -1374,97 +1179,6 @@ pub async fn handle_native_task<
 			Ok(NativeTaskOk::SubmitUserOp(transaction_hash))
 		},
 	}
-}
-
-async fn dispatch_as_signed<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
->(
-	client: &mut RpcClient,
-	signer: Arc<ParentchainTxSigner>,
-	sender: AccountId,
-	call: RuntimeCall,
-	auth_type: Option<OmniAccountAuthType>,
-) {
-	let call = parentchain_api_interface::tx().omni_account().dispatch_as_signed(
-		sender.to_subxt_type(),
-		call,
-		auth_type.map(|t| t.to_subxt_type()),
-	);
-	let tx = signer.sign(call).await;
-	// notify parentchain - for now we continue even with error
-	match client.submit_tx(&tx).await {
-		Ok(_) => {
-			debug!("Submitted dispatch_as_signed parentchain call")
-		},
-		Err(_) => {
-			error!("Failed to submit dispatch_as_signed parentchain call",);
-			signer.update_nonce().await
-		},
-	};
-}
-
-async fn notify_intent_accepted<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
->(
-	client: &mut RpcClient,
-	signer: Arc<ParentchainTxSigner>,
-	account: AccountId,
-	intent_id: IntentId,
-	intent: Intent,
-) {
-	let call = parentchain_api_interface::tx().omni_account().intent_accepted(
-		account.to_subxt_type(),
-		intent_id,
-		intent.to_subxt_type(),
-	);
-
-	let tx = signer.sign(call).await;
-
-	// notify parentchain - for now we continue even with error
-	match client.submit_tx(&tx).await {
-		Ok(_) => {
-			debug!("Submitted intent_accepted parentchain call for intent_id {}", intent_id)
-		},
-		Err(_) => {
-			error!("Failed to submit intent_accepted parentchain call for intent_id {}", intent_id);
-			signer.update_nonce().await
-		},
-	};
-}
-
-async fn notify_intent_completed<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
->(
-	client: &mut RpcClient,
-	signer: Arc<ParentchainTxSigner>,
-	account: AccountId,
-	intent_id: IntentId,
-	detail: IntentCompletedDetail,
-) {
-	let call = parentchain_api_interface::tx().omni_account().intent_completed(
-		account.to_subxt_type(),
-		intent_id,
-		detail,
-	);
-
-	let tx = signer.sign(call).await;
-
-	// notify parentchain - for now we continue even with error
-	match client.submit_tx(&tx).await {
-		Ok(_) => {
-			debug!("Submitted intent_completed parentchain call for intent_id {}", intent_id)
-		},
-		Err(_) => {
-			error!(
-				"Failed to submit intent_completed parentchain call for intent_id {}",
-				intent_id
-			);
-			signer.update_nonce().await
-		},
-	};
 }
 
 async fn verify_google_code(
