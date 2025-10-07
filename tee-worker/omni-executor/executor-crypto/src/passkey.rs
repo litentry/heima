@@ -383,9 +383,13 @@ impl PasskeyVerifier {
 		let ecdsa_signature = Signature::from_slice(&signature_bytes)
 			.map_err(|_| PasskeyError::InvalidSignatureFormat)?;
 
+		let client_data_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+			.decode(client_data_json)
+			.map_err(|e| PasskeyError::ParseError(format!("Client data decode error: {}", e)))?;
+
 		let auth_data_bytes = hex::decode(auth_data_hex)
 			.map_err(|e| PasskeyError::ParseError(format!("Auth data decode error: {}", e)))?;
-		let client_data_hash = Sha256::digest(client_data_json.as_bytes());
+		let client_data_hash = Sha256::digest(&client_data_bytes);
 		// Per WebAuthn spec: signature = sign(authenticatorData || SHA256(clientDataJSON))
 		let mut signing_data = Vec::new();
 		signing_data.extend_from_slice(&auth_data_bytes);

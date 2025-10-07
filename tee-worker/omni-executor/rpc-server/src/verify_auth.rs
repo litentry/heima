@@ -335,6 +335,7 @@ pub fn verify_passkey_authentication<
 ) -> Result<(), AuthenticationError> {
 	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
 	use executor_storage::PasskeyStorage;
+	use crate::methods::omni::common::{get_origin_for_client, get_rp_id_for_client};
 
 	let passkey_identity =
 		Identity::from_web2_account(&passkey_data.user_id, Web2IdentityType::Passkey);
@@ -343,6 +344,24 @@ pub fn verify_passkey_authentication<
 		PasskeyVerifier::parse_client_data_json(&passkey_data.client_data_json).map_err(|e| {
 			AuthenticationError::PasskeyError(format!("Failed to parse client data: {}", e))
 		})?;
+
+	let expected_origin = get_origin_for_client(&passkey_data.client_id);
+	if client_data.origin != expected_origin {
+		return Err(AuthenticationError::PasskeyError(format!(
+			"Client data origin mismatch: expected '{}', got '{}'",
+			expected_origin,
+			client_data.origin.as_str()
+		)));
+	}
+
+	const EXPECTED_PASSKEY_TYPE: &str = "webauthn.get";
+	if client_data.type_ != EXPECTED_PASSKEY_TYPE {
+		return Err(AuthenticationError::PasskeyError(format!(
+			"Invalid client data type: expected '{}', got '{}'",
+			EXPECTED_PASSKEY_TYPE,
+			client_data.type_.as_str()
+		)));
+	}
 
 	// Verify challenge
 	let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
@@ -389,7 +408,6 @@ pub fn verify_passkey_authentication<
 	// CRITICAL SECURITY CHECK: Verify RP ID hash
 	// The first 32 bytes of auth data must be SHA-256(RP ID) to prevent phishing attacks
 	// This ensures the authenticator signed for the correct domain
-	use crate::methods::omni::common::get_rp_id_for_client;
 	let expected_rp_id = get_rp_id_for_client(&passkey_data.client_id);
 
 	PasskeyVerifier::verify_rp_id_hash(&auth_data_bytes, expected_rp_id).map_err(|e| {
@@ -412,11 +430,6 @@ pub fn verify_passkey_authentication<
 		return Err(AuthenticationError::PasskeyError(
 			"User verification flag not set".to_string(),
 		));
-	}
-
-	// Check for webauthn.get type
-	if !passkey_data.client_data_json.contains("\"type\":\"webauthn.get\"") {
-		return Err(AuthenticationError::PasskeyError("Invalid client data type".to_string()));
 	}
 
 	// Verify the passkey signature (pure cryptographic verification)
