@@ -11,9 +11,9 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
+use executor_utils::pubkey_to_address;
 use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, Withdraw3};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use executor_utils::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use std::convert::TryFrom;
@@ -84,11 +84,8 @@ fn is_testnet_chain(chain_id: ChainId) -> bool {
 pub fn register_get_hyperliquid_signature_data<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
@@ -312,7 +309,6 @@ pub fn register_get_hyperliquid_signature_data<
 async fn generate_eip712_signature<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 	T: Eip712 + Send + Sync,
 >(
 	ctx: &RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,

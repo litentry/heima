@@ -20,11 +20,8 @@ pub struct RequestEmailVerificationCodeParams {
 pub fn register_request_email_verification_code<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {

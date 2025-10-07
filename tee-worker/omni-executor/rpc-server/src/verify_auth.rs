@@ -107,7 +107,6 @@ pub fn verify_web3_authentication(
 pub fn verify_email_authentication<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 	client_id: &str,
@@ -144,7 +143,6 @@ pub fn verify_auth_token_authentication(
 pub async fn verify_oauth2_authentication<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 	sender: &Identity,
@@ -158,7 +156,6 @@ pub async fn verify_oauth2_authentication<
 async fn verify_google_oauth2<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 	sender: &Identity,

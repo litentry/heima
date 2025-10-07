@@ -60,9 +60,7 @@ pub fn register_omni<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	register_get_health(module);
 	register_get_next_intent_id(module);

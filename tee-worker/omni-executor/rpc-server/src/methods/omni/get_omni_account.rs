@@ -34,11 +34,8 @@ pub struct GetOmniAccountParams {
 pub fn register_get_omni_account<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_getOmniAccount", |params, _, _| async move {

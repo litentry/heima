@@ -41,11 +41,8 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 pub fn register_user_login<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_userLogin", |params, ctx, _| async move {

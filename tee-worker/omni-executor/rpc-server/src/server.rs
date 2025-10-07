@@ -86,9 +86,7 @@ impl<
 
 	pub fn to_task_handler_context(
 		&self,
-	) -> Arc<
-		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	> {
+	) -> Arc<TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor>> {
 		Arc::new(TaskHandlerContext::new(
 			self.storage_db.clone(),
 			self.jwt_rsa_private_key.clone(),

@@ -21,11 +21,8 @@ use tracing::error;
 pub fn register_submit_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_submitNativeTask", |params, ctx, _| async move {
@@ -53,7 +50,6 @@ type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>)
 async fn parse<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
 	params: Params<'static>,
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,

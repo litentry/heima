@@ -7,11 +7,8 @@ use jsonrpsee::{types::ErrorObject, RpcModule};
 pub fn register_test_protected_method<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_method("omni_testProtectedMethod", |_, _, ext| {
@@ -85,7 +82,6 @@ mod test {
 			[0u8; 33], // Test ECDSA public key
 			Arc::new(ethereum_intent_executor),
 			Arc::new(solana_intent_executor),
-			
 			aes_key,
 			Arc::new(entry_point_clients),
 		)

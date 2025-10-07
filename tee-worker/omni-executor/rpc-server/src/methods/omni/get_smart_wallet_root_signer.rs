@@ -6,9 +6,9 @@ use crate::{
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::FromHexPrefixed;
+use executor_utils::pubkey_to_address;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use executor_utils::pubkey_to_address;
 use serde::Deserialize;
 use signer_client::ChainType;
 use tracing::{debug, error};
@@ -42,11 +42,8 @@ pub struct GetSmartWalletRootSignerParams {
 pub fn register_get_smart_wallet_root_signer<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {

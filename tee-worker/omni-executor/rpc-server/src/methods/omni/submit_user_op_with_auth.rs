@@ -17,9 +17,9 @@ use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
 use executor_storage::WildmetaTimestampStorage;
+use executor_utils::pubkey_to_address;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use executor_utils::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use std::sync::Arc;
@@ -590,11 +590,8 @@ fn validate_backend_calldata(
 pub fn register_submit_user_op_with_auth<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_submitUserOpWithAuth", |params, ctx, _ext| async move {
