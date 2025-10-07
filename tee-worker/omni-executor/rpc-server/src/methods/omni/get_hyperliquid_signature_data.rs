@@ -11,11 +11,11 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
-use executor_utils::{pubkey_to_address, ChainType};
 use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, Withdraw3};
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use executor_utils::pubkey_to_address;
 use serde::{Deserialize, Serialize};
+use signer_client::ChainType;
 use std::convert::TryFrom;
 use tracing::{debug, error};
 
@@ -84,18 +84,10 @@ fn is_testnet_chain(chain_id: ChainId) -> bool {
 pub fn register_get_hyperliquid_signature_data<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	>,
 ) {
 	module
@@ -320,18 +312,10 @@ pub fn register_get_hyperliquid_signature_data<
 async fn generate_eip712_signature<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	
 	T: Eip712 + Send + Sync,
 >(
-	ctx: &RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-	>,
+	ctx: &RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	action: &T,
 	omni_account: &[u8; 32],
 ) -> Result<String, ErrorObject<'static>> {

@@ -7,7 +7,8 @@ use serde::Serialize;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{
-		INTENT_NONCE_MISMATCH_ERROR_CODE, INVALID_CHAIN_ID_CODE, UNAUTHORIZED_SENDER_CODE, *,
+		INTENT_NONCE_MISMATCH_ERROR_CODE, INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE,
+		UNAUTHORIZED_SENDER_CODE, *,
 	},
 	middlewares::RpcExtensions,
 	server::RpcContext,
@@ -15,7 +16,6 @@ use crate::{
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use native_task_handler::{handle_native_task, NativeTaskError, NativeTaskOk};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::error;
 
 #[derive(Serialize, Debug)]
@@ -90,19 +90,10 @@ impl From<Box<DetailedError>> for PumpxRpcError {
 pub async fn handle_omni_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	F,
 	R,
 >(
-	ctx: &RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-	>,
+	ctx: &RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 	task_ok_handler: F,
 ) -> Result<R, PumpxRpcError>

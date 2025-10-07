@@ -21,7 +21,6 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -35,18 +34,10 @@ pub struct GetOmniAccountParams {
 pub fn register_get_omni_account<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	>,
 ) {
 	module

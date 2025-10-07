@@ -15,7 +15,6 @@ services:
     environment:
       - RUST_LOG=${RUST_LOG:-debug}
       # RPC URLs moved from CLI args to environment variables (see commit 8803b7dd)
-      - OE_PARENTCHAIN_URL=ws://heima-node:9944
       - OE_ETHEREUM_URL=http://ethereum-node:8545
       - OE_SOLANA_URL=https://api.devnet.solana.com
       - OE_MAILER_TYPE_HEIMA=console
@@ -27,13 +26,10 @@ services:
     depends_on:
       ethereum-node:
         condition: service_started
-      heima-node:
-        condition: service_healthy
-        restart: true
       aa-contracts-deploy:
         condition: service_completed_successfully
     entrypoint: ["/entrypoint.sh"]
-    command: ["executor-worker", "run", "--parentchain-sync", "--enable-mock-server"]
+    command: ["executor-worker", "run", "--enable-mock-server"]
     privileged: true
     restart: unless-stopped
     networks:
@@ -82,22 +78,6 @@ services:
     networks:
       - litentry-test-network
     restart: "no"
-  heima-node:
-    image: litentry/heima:latest
-    container_name: heima-node
-    ports:
-      - "9944:9944"
-    command: ["--dev", "--rpc-external", "--pool-type=fork-aware", "--rpc-port", "9944"]
-    networks:
-      - litentry-test-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9944"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-      start_interval:  5s
 
 networks:
   litentry-test-network:

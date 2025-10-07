@@ -1,16 +1,16 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, SIGNER_SERVICE_ERROR_CODE},
+	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE},
 	methods::omni::PumpxRpcError,
 	server::RpcContext,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::FromHexPrefixed;
-use executor_utils::{pubkey_to_address, ChainType};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use executor_utils::pubkey_to_address;
 use serde::Deserialize;
+use signer_client::ChainType;
 use tracing::{debug, error};
 
 // used in rpc with backend only
@@ -42,18 +42,10 @@ pub struct GetSmartWalletRootSignerParams {
 pub fn register_get_smart_wallet_root_signer<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	>,
 ) {
 	module
@@ -88,7 +80,7 @@ pub fn register_get_smart_wallet_root_signer<
 					error!("Failed to request wallet from signer client");
 					PumpxRpcError::from(
 						DetailedError::new(
-							SIGNER_SERVICE_ERROR_CODE,
+							INTERNAL_ERROR_CODE,
 							"Failed to request wallet from signer service",
 						)
 						.with_reason("Signer service is temporarily unavailable")

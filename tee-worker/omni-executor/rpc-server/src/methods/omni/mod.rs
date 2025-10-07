@@ -48,8 +48,6 @@ use user_login::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-
 #[cfg(test)]
 mod test_protected_method;
 
@@ -61,18 +59,9 @@ use submit_user_op_test::*;
 pub fn register_omni<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	>,
 ) {
 	register_get_health(module);
@@ -83,7 +72,6 @@ pub fn register_omni<
 	register_get_oauth2_google_authorization_url(module);
 	register_get_web3_sign_in_message(module);
 	register_user_login(module);
-
 	register_get_omni_account(module);
 	register_get_smart_wallet_root_signer(module);
 	register_submit_user_op(module);

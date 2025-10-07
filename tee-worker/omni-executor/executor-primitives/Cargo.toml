@@ -18,7 +18,7 @@ tracing = { workspace = true }
 executor-crypto = { workspace = true }
 heima-primitives = { workspace = true }
 heima-utils = { workspace = true }
-sp-core = { workspace = true, features = ["serde"] }
+sp-core = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

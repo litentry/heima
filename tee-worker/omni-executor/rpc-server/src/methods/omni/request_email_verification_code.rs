@@ -9,7 +9,6 @@ use heima_identity_verification::web2::email::{
 	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
 };
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use tracing::{error, info};
 
 #[derive(Debug, Deserialize)]
@@ -21,18 +20,10 @@ pub struct RequestEmailVerificationCodeParams {
 pub fn register_request_email_verification_code<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	>,
 ) {
 	module

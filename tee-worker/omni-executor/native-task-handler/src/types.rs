@@ -1,7 +1,15 @@
 use executor_primitives::Hash;
-use parentchain_rpc_client::TransactionStatus;
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
+
+// Simple replacement for TransactionStatus
+#[derive(Encode, Decode, Debug, PartialEq, Eq)]
+pub enum TransactionStatus<Hash> {
+	InBlock(Hash),
+	Finalized(Hash),
+	Invalid,
+	Dropped,
+}
 
 /// Information about estimated token cost for ERC20 paymaster operations
 #[derive(Debug, Serialize, Deserialize, Clone, Encode, Decode, PartialEq, Eq)]

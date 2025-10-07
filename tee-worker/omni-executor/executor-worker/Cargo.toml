@@ -29,10 +29,6 @@ executor-storage = { workspace = true }
 heima-identity-verification = { workspace = true }
 mock-server = { workspace = true }
 native-task-handler = { workspace = true }
-parentchain-attestation = { workspace = true }
-parentchain-listener = { workspace = true }
-parentchain-rpc-client = { workspace = true }
-parentchain-signer = { workspace = true }
 executor-utils = { workspace = true }
 rpc-server = { workspace = true }
 signer-client = { workspace = true }

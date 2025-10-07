@@ -18,26 +18,18 @@ use alloy::network::EthereumWallet;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
-use cli::{Cli, Commands, RunArgs};
+use cli::{Cli, Commands};
 use config_loader::ConfigLoader;
 use ethereum_intent_executor::EthereumIntentExecutor;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
+use executor_core::ed25519_key_store::Ed25519KeyStore;
 use executor_core::key_store::KeyStore;
 use executor_core::shielding_key_store::ShieldingKeyStore;
-use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
-use executor_crypto::{ecdsa, PairTrait};
-use executor_primitives::AccountId;
-use executor_storage::{init_storage, StorageDB};
-use executor_utils::pubkey_to_evm_address;
+use executor_crypto::{ecdsa, ed25519, PairTrait};
+use executor_storage::init_storage;
+use executor_utils::{pubkey_to_evm_address, pubkey_to_solana_address};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::Aes256KeyStore;
-use parentchain_attestation::perform_attestation;
-use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-use parentchain_rpc_client::{
-	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory,
-	ToPrimitiveType,
-};
-use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
@@ -45,11 +37,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::thread;
-use std::thread::JoinHandle;
-use tokio::runtime::Handle;
 use tokio::signal;
-use tokio::sync::oneshot;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
@@ -73,7 +61,7 @@ async fn main() -> Result<(), ()> {
 				#[cfg(feature = "mock-server")]
 				{
 					let mock_server_port = args.mock_server_port;
-					thread::spawn(move || {
+					std::thread::spawn(move || {
 						mock_server::run(mock_server_port).expect("Mock server failed to start");
 					});
 				}
@@ -131,40 +119,30 @@ async fn main() -> Result<(), ()> {
 
 			info!("Accounting ecdsa signer address: {:?}", bsc_accounting_signer);
 
-			let storage_db = init_storage(&config_loader.parentchain_url)
-				.await
-				.expect("Could not initialize storage");
-
-			let client_factory =
-				SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
-			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
-			let parentchain_rpc_client_factory = Arc::new(client_factory);
-
-			let substrate_key_store = Arc::new(SubstrateKeyStore::new(
+			let solana_accounting_ed25519_signer_key = Ed25519KeyStore::new(
 				Path::new(&args.local_directory_path)
-					.join("keystore/substrate_key.bin")
+					.join("keystore/solana_accounting_ed25519_signer_key.bin")
 					.into_os_string()
 					.into_string()
 					.unwrap(),
-			));
-			let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
-			let signer_account_id: AccountId =
-				parentchain_signer.public_key().to_account_id().to_primitive_type();
-			let mut parentchain_rpc_client = parentchain_rpc_client_factory
-				.new_client()
-				.await
-				.expect("Could not create RPC client");
-			let signer_account_nonce = parentchain_rpc_client
-				.get_account_nonce(&signer_account_id)
-				.await
-				.expect("Could not get signer account nonce");
+			);
 
-			let tx_signer = Arc::new(TxSigner::new(
-				metadata_provider,
-				parentchain_rpc_client_factory.clone(),
-				parentchain_signer.clone(),
-				signer_account_nonce,
-			));
+			let solana_accounting_ed25519_signer_key = solana_accounting_ed25519_signer_key
+				.read()
+				.expect("Could not read solana accounting ed25519 key");
+			let solana_accounting_ed25519_signer_key_pair =
+				ed25519::Pair::from_seed_slice(&solana_accounting_ed25519_signer_key).unwrap();
+
+			info!(
+				"Solana accounting ed25519 signer address: {:?}",
+				pubkey_to_solana_address(
+					solana_accounting_ed25519_signer_key_pair.public().as_ref()
+				)
+				.unwrap()
+			);
+
+			let storage_db = init_storage().await.expect("Could not initialize storage");
+
 			let aes256_key_store = Aes256KeyStore::new(
 				Path::new(&args.local_directory_path)
 					.join("keystore/aes_256_key.bin")
@@ -390,24 +368,6 @@ async fn main() -> Result<(), ()> {
 			);
 
 			let shielding_key = shielding_key_store.read().expect("Could not read shielding key");
-			let shielding_pubkey = shielding_key.public_key();
-			let shielding_pubkey_vec = serde_json::to_vec(&Rsa3072PubKey {
-				n: shielding_pubkey.n().to_bytes_le(),
-				e: shielding_pubkey.e().to_bytes_le(),
-			})
-			.expect("Could not serialize shielding public key");
-
-			let _ = perform_attestation(
-				parentchain_rpc_client_factory.clone(),
-				parentchain_signer,
-				tx_signer.clone(),
-				worker_url.as_str(),
-				shielding_pubkey_vec,
-			)
-			.await
-			.map_err(|_| {
-				error!("Could not perform attestation");
-			})?;
 
 			// Create wildmeta API client and timestamp storage
 			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> = Arc::new(Box::new(
@@ -448,21 +408,13 @@ async fn main() -> Result<(), ()> {
 				wildmeta_backend_ecdsa_pubkey,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
-				parentchain_rpc_client_factory.clone(),
 				aes256_key,
-				tx_signer,
 				entry_point_clients,
 			)
 			.await
 			.map_err(|e| {
 				error!("Could not start server: {:?}", e);
 			})?;
-
-			if args.parentchain_sync {
-				listen_to_parentchain(*args, storage_db, &config_loader.parentchain_url)
-					.await
-					.unwrap();
-			}
 
 			match signal::ctrl_c().await {
 				Ok(()) => {},
@@ -472,43 +424,7 @@ async fn main() -> Result<(), ()> {
 				},
 			}
 		},
-		Commands::GenKey(args) => {
-			let key_store = Arc::new(SubstrateKeyStore::new(
-				Path::new(&args.local_directory_path)
-					.join("keystore/substrate_key.bin")
-					.into_os_string()
-					.into_string()
-					.unwrap(),
-			));
-			let _ = parentchain_signer::get_signer(key_store);
-		},
 	}
 
 	Ok(())
-}
-
-async fn listen_to_parentchain(
-	args: RunArgs,
-	storage_db: Arc<StorageDB>,
-	ws_rpc_endpoint: &str,
-) -> Result<JoinHandle<()>, ()> {
-	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
-	let mut parentchain_listener = parentchain_listener::create_listener(
-		"heima",
-		Handle::current(),
-		ws_rpc_endpoint,
-		sub_stop_receiver,
-		storage_db,
-		&Path::new(&args.local_directory_path)
-			.join("log/parentchain_last_log.bin")
-			.into_os_string()
-			.into_string()
-			.unwrap(),
-	)
-	.await?;
-
-	Ok(thread::Builder::new()
-		.name("heima_sync".to_string())
-		.spawn(move || parentchain_listener.sync(args.start_block))
-		.unwrap())
 }

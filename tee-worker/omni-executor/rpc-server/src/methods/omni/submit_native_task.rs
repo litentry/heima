@@ -14,7 +14,6 @@ use jsonrpsee::{
 	RpcModule,
 };
 use native_task_handler::handle_native_task;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 use tracing::error;
@@ -22,18 +21,10 @@ use tracing::error;
 pub fn register_submit_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>,
 	>,
 ) {
 	module
@@ -62,20 +53,10 @@ type ParseResult<'a> = Result<(NativeTaskWrapper<NativeTask>, Option<Aes256Key>)
 async fn parse<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
+	
 >(
 	params: Params<'static>,
-	ctx: Arc<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-		>,
-	>,
+	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor>>,
 ) -> ParseResult<'static> {
 	let Ok(hex_request) = params.one::<String>() else {
 		error!("Failed to parse params: {:?}", params);
