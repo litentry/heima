@@ -333,9 +333,9 @@ pub fn verify_passkey_authentication<
 	>,
 	passkey_data: &PasskeyData,
 ) -> Result<(), AuthenticationError> {
+	use crate::methods::omni::common::{get_origin_for_client, get_rp_id_for_client};
 	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
 	use executor_storage::PasskeyStorage;
-	use crate::methods::omni::common::{get_origin_for_client, get_rp_id_for_client};
 
 	let passkey_identity =
 		Identity::from_web2_account(&passkey_data.user_id, Web2IdentityType::Passkey);
