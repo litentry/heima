@@ -17,7 +17,6 @@ use executor_crypto::{
 use executor_primitives::utils::hex::decode_hex;
 use executor_storage::{Storage, WildmetaTimestampStorage};
 use jsonrpsee::RpcModule;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use rsa::Oaep;
 use sha2::Sha256;
 use std::sync::Arc;
@@ -168,19 +167,9 @@ pub fn register_export_bundler_private_key<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	module
@@ -260,14 +249,10 @@ mod tests {
 	use executor_crypto::{ecdsa, PairTrait};
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
-	use parentchain_rpc_client::{
-		metadata::SubxtMetadataProvider, CustomConfig, SubxtClientFactory,
-	};
-	use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 	use pumpx::PumpxApiClient;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use signer_client::{mocks::MockSignerClient, SignerClient};
-	use std::{collections::HashMap, path::Path, sync::Arc};
+	use std::{collections::HashMap, sync::Arc};
 	use tempfile::tempdir;
 	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
@@ -336,30 +321,8 @@ mod tests {
 		let (ethereum_intent_executor, _) = MockedIntentExecutor::new();
 		let (cross_chain_intent_executor, _) = MockedIntentExecutor::new();
 
-		let client_factory =
-			SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
-		let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
-		let parentchain_rpc_client_factory = Arc::new(client_factory);
-
 		let aes_key = TEST_AES_KEY;
 		let entry_point_clients = HashMap::new();
-
-		let substrate_key_store = Arc::new(SubstrateKeyStore::new(
-			Path::new("./")
-				.join("keystore/substrate_key.bin")
-				.into_os_string()
-				.into_string()
-				.unwrap(),
-		));
-
-		let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
-
-		let tx_signer = Arc::new(TxSigner::new(
-			metadata_provider,
-			parentchain_rpc_client_factory.clone(),
-			parentchain_signer,
-			0,
-		));
 
 		start_server(
 			port,
@@ -378,9 +341,7 @@ mod tests {
 			Arc::new(ethereum_intent_executor),
 			Arc::new(solana_intent_executor),
 			Arc::new(cross_chain_intent_executor),
-			parentchain_rpc_client_factory,
 			aes_key,
-			tx_signer,
 			Arc::new(entry_point_clients),
 		)
 		.await
