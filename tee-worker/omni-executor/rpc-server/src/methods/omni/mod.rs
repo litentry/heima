@@ -32,6 +32,9 @@ use executor_core::intent_executor::IntentExecutor;
 mod export_wallet;
 use export_wallet::*;
 
+mod export_bundler_private_key;
+use export_bundler_private_key::*;
+
 mod notify_limit_order_result;
 use notify_limit_order_result::*;
 
@@ -96,6 +99,7 @@ pub fn register_omni<
 
 	register_request_jwt(module);
 	register_export_wallet(module);
+	register_export_bundler_private_key(module);
 	register_add_wallet(module);
 	register_transfer_withdraw(module);
 	register_submit_swap_order(module);
