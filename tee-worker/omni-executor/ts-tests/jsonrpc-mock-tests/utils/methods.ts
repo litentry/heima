@@ -13,6 +13,7 @@ enum JsonRpcMethods {
     OmniSubmitUserOpTest = 'omni_submitUserOpTest',
     OmniTransferWithdraw = 'omni_transferWithdraw',
     OmniGetSmartWalletRootSigner = 'omni_getSmartWalletRootSigner',
+    OmniGetHyperliquidSignatureData = 'omni_getHyperliquidSignatureData',
 }
 
 export { JsonRpcMethods };
