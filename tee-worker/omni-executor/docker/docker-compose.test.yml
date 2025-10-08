@@ -2,7 +2,7 @@ services:
   omni-executor:
     env_file:
       - ../.env.test
-    command: ["executor-worker", "run", "--parentchain-sync", "--enable-mock-server"]
+    command: ["executor-worker", "run", "--enable-mock-server"]
     ports:
       - "2100:2100"
       - "3456:3456"
