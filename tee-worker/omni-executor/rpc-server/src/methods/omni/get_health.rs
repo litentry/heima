@@ -80,7 +80,9 @@ mod test {
 			binance_api_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
-			[0u8; 33],
+			[0u8; 33], // Test ECDSA public key
+			[0u8; 32], // Test bundler private key
+			[0u8; 33], // Test bundler export authorized pubkey
 			Arc::new(ethereum_intent_executor),
 			Arc::new(solana_intent_executor),
 			aes_key,

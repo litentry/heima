@@ -27,6 +27,9 @@ use get_web3_sign_in_message::*;
 
 use executor_core::intent_executor::IntentExecutor;
 
+mod export_bundler_private_key;
+use export_bundler_private_key::*;
+
 mod get_omni_account;
 use get_omni_account::*;
 
@@ -70,6 +73,7 @@ pub fn register_omni<
 	register_get_oauth2_google_authorization_url(module);
 	register_get_web3_sign_in_message(module);
 	register_user_login(module);
+	register_export_bundler_private_key(module);
 	register_get_omni_account(module);
 	register_get_smart_wallet_root_signer(module);
 	register_submit_user_op(module);

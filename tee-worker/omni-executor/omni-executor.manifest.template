@@ -84,6 +84,7 @@ loader.env.OE_OMNI_FACTORY_ADDRESS = { passthrough = true }
 loader.env.OE_ENTRY_POINT_ADDRESS = { passthrough = true }
 loader.env.OE_WILDMETA_API_URL = { passthrough = true }
 loader.env.OE_WILDMETA_BACKEND_ECDSA_PUBKEY = "{{ env.get('OE_WILDMETA_BACKEND_ECDSA_PUBKEY', '020000000000000000000000000000000000000000000000000000000000000000') }}"
+loader.env.OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY = "{{ env.get('OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY', '020000000000000000000000000000000000000000000000000000000000000000') }}"
 
 # This key is a workaround because gramine-direct doesn't provide _sgx_mrsigner key
 {{'' if env.get('SGX', '0') == '1' else 'fs.insecure__keys.fake_sgx_mrsigner = "ffeeddccbbaa99887766554433221100"'}}

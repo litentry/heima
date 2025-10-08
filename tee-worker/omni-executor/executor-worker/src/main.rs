@@ -395,6 +395,26 @@ async fn main() -> Result<(), ()> {
 				pubkey_array
 			};
 
+			let bundler_key_export_authorized_pubkey =
+				{
+					use executor_primitives::utils::hex::decode_hex;
+					let pubkey_hex = &config_loader.bundler_key_export_authorized_pubkey;
+					let pubkey_bytes =
+						decode_hex(pubkey_hex).map_err(|e| {
+							error!("Failed to decode bundler key export authorized ECDSA public key: {:?}", e);
+						})?;
+					if pubkey_bytes.len() != 33 {
+						error!(
+						"Invalid bundler key export authorized ECDSA public key length: expected 33 bytes, got {}",
+						pubkey_bytes.len()
+					);
+						return Err(());
+					}
+					let mut pubkey_array = [0u8; 33];
+					pubkey_array.copy_from_slice(&pubkey_bytes);
+					pubkey_array
+				};
+
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
@@ -406,6 +426,8 @@ async fn main() -> Result<(), ()> {
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				wildmeta_backend_ecdsa_pubkey,
+				evm_accounting_ecdsa_signer_key,
+				bundler_key_export_authorized_pubkey,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
 				aes256_key,
