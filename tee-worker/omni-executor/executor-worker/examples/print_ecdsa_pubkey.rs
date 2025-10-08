@@ -21,10 +21,7 @@ fn main() {
 	});
 
 	if seed_bytes.len() != 32 {
-		eprintln!(
-			"❌ Error: Invalid key file length. Expected 32 bytes, got {}",
-			seed_bytes.len()
-		);
+		eprintln!("❌ Error: Invalid key file length. Expected 32 bytes, got {}", seed_bytes.len());
 		process::exit(1);
 	}
 
