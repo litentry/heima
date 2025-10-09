@@ -338,7 +338,7 @@ impl<
 							});
 						}
 
-						Ok((Some(res), false))
+						Ok((res, false))
 					},
 					SingleChainSwapProvider::Omni => {
 						debug!("Processing Omni single chain swap provider");
