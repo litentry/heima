@@ -11,13 +11,11 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
 	Run(Box<RunArgs>),
-	GenKey(GenKeyArgs),
+	ExportBundlerKey(ExportBundlerKeyArgs),
 }
 
 #[derive(Args)]
 pub struct RunArgs {
-	#[arg(long, short = 'b', default_value = "0", help = "Start block to sync from parentchain")]
-	pub start_block: u64,
 	#[arg(short, long, default_value = "local", value_name = "local directory path")]
 	pub local_directory_path: String,
 	#[arg(
@@ -41,8 +39,6 @@ pub struct RunArgs {
 		value_name = "solana accounting contract address"
 	)]
 	pub solana_accounting_contract_address: String,
-	#[arg(long, value_name = "should sync with parentchain")]
-	pub parentchain_sync: bool,
 	#[arg(short, long, default_value = "9090", value_name = "metrics port")]
 	pub metrics_port: String,
 	#[arg(long, default_value = "0", value_name = "threshold value in usdt")]
@@ -54,7 +50,9 @@ pub struct RunArgs {
 }
 
 #[derive(Args)]
-pub struct GenKeyArgs {
-	#[arg(short, long, default_value = "local", value_name = "local directory path")]
-	pub local_directory_path: String,
+pub struct ExportBundlerKeyArgs {
+	#[arg(short, long, value_name = "path to authorized ECDSA private key file (32-byte seed)")]
+	pub authorized_key_path: String,
+	#[arg(short, long, default_value = "ws://127.0.0.1:3456", value_name = "worker WebSocket URL")]
+	pub worker_url: String,
 }

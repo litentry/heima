@@ -19,7 +19,6 @@ use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
 use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
 use native_task_handler::NativeTaskOk;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
@@ -592,19 +591,9 @@ pub fn register_submit_user_op_with_auth<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	module
@@ -964,6 +953,7 @@ fn verify_wildmeta_backend_signature_wrapper(
 mod tests {
 	use super::*;
 	use executor_storage::StorageDB;
+	use native_task_handler::convert_to_packed_user_op;
 	use tempfile::tempdir;
 
 	#[test]
@@ -1196,7 +1186,6 @@ mod tests {
 		use executor_crypto::secp256k1::{
 			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
 		};
-		use native_task_handler::convert_to_packed_user_op;
 
 		// Create a test private key (32 bytes)
 		let private_key: [u8; 32] = [
@@ -1266,7 +1255,6 @@ mod tests {
 		use executor_crypto::secp256k1::{
 			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
 		};
-		use native_task_handler::convert_to_packed_user_op;
 
 		let private_key: [u8; 32] = [
 			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
@@ -1358,7 +1346,6 @@ mod tests {
 		use alloy::primitives::{keccak256, Address};
 		use executor_core::types::SerializablePackedUserOperation;
 		use executor_crypto::secp256k1::secp256k1_ecdsa_sign;
-		use native_task_handler::convert_to_packed_user_op;
 
 		// Create a test private key
 		let private_key: [u8; 32] = [

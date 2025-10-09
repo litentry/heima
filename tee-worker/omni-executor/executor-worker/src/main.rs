@@ -23,7 +23,7 @@ use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
-use cli::{Cli, Commands, RunArgs};
+use cli::{Cli, Commands, ExportBundlerKeyArgs};
 use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
@@ -36,21 +36,12 @@ use executor_core::wallet_metrics::Wallet;
 use executor_core::wallet_metrics::{
 	start_wallet_metrics, WalletBalanceFetcher, WalletId, WalletMetrics, WalletNetworkType,
 };
-use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey};
 use executor_crypto::{ecdsa, ed25519, PairTrait};
-use executor_primitives::AccountId;
-use executor_storage::{init_storage, StorageDB};
+use executor_storage::init_storage;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use native_task_handler::Aes256KeyStore;
-use parentchain_attestation::perform_attestation;
-use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-use parentchain_rpc_client::{
-	CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClientFactory,
-	ToPrimitiveType,
-};
-use parentchain_signer::{key_store::SubstrateKeyStore, TxSigner};
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
@@ -62,11 +53,8 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::thread;
-use std::thread::JoinHandle;
 use tokio::runtime::Handle;
 use tokio::signal;
-use tokio::sync::oneshot;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
@@ -85,12 +73,15 @@ async fn main() -> Result<(), ()> {
 	let cli = Cli::parse();
 
 	match cli.cmd {
+		Commands::ExportBundlerKey(args) => {
+			export_bundler_key(args).await?;
+		},
 		Commands::Run(args) => {
 			if args.enable_mock_server {
 				#[cfg(feature = "mock-server")]
 				{
 					let mock_server_port = args.mock_server_port;
-					thread::spawn(move || {
+					std::thread::spawn(move || {
 						mock_server::run(mock_server_port).expect("Mock server failed to start");
 					});
 				}
@@ -170,40 +161,8 @@ async fn main() -> Result<(), ()> {
 				.unwrap()
 			);
 
-			let storage_db = init_storage(&config_loader.parentchain_url)
-				.await
-				.expect("Could not initialize storage");
+			let storage_db = init_storage().await.expect("Could not initialize storage");
 
-			let client_factory =
-				SubxtClientFactory::<CustomConfig>::new(&config_loader.parentchain_url);
-			let metadata_provider = Arc::new(SubxtMetadataProvider::new(client_factory.clone()));
-			let parentchain_rpc_client_factory = Arc::new(client_factory);
-
-			let substrate_key_store = Arc::new(SubstrateKeyStore::new(
-				Path::new(&args.local_directory_path)
-					.join("keystore/substrate_key.bin")
-					.into_os_string()
-					.into_string()
-					.unwrap(),
-			));
-			let parentchain_signer = parentchain_signer::get_signer(substrate_key_store.clone());
-			let signer_account_id: AccountId =
-				parentchain_signer.public_key().to_account_id().to_primitive_type();
-			let mut parentchain_rpc_client = parentchain_rpc_client_factory
-				.new_client()
-				.await
-				.expect("Could not create RPC client");
-			let signer_account_nonce = parentchain_rpc_client
-				.get_account_nonce(&signer_account_id)
-				.await
-				.expect("Could not get signer account nonce");
-
-			let tx_signer = Arc::new(TxSigner::new(
-				metadata_provider,
-				parentchain_rpc_client_factory.clone(),
-				parentchain_signer.clone(),
-				signer_account_nonce,
-			));
 			let aes256_key_store = Aes256KeyStore::new(
 				Path::new(&args.local_directory_path)
 					.join("keystore/aes_256_key.bin")
@@ -511,24 +470,6 @@ async fn main() -> Result<(), ()> {
 			);
 
 			let shielding_key = shielding_key_store.read().expect("Could not read shielding key");
-			let shielding_pubkey = shielding_key.public_key();
-			let shielding_pubkey_vec = serde_json::to_vec(&Rsa3072PubKey {
-				n: shielding_pubkey.n().to_bytes_le(),
-				e: shielding_pubkey.e().to_bytes_le(),
-			})
-			.expect("Could not serialize shielding public key");
-
-			let _ = perform_attestation(
-				parentchain_rpc_client_factory.clone(),
-				parentchain_signer,
-				tx_signer.clone(),
-				worker_url.as_str(),
-				shielding_pubkey_vec,
-			)
-			.await
-			.map_err(|_| {
-				error!("Could not perform attestation");
-			})?;
 
 			// Create wildmeta API client and timestamp storage
 			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> = Arc::new(Box::new(
@@ -556,6 +497,26 @@ async fn main() -> Result<(), ()> {
 				pubkey_array
 			};
 
+			let bundler_key_export_authorized_pubkey =
+				{
+					use executor_primitives::utils::hex::decode_hex;
+					let pubkey_hex = &config_loader.bundler_key_export_authorized_pubkey;
+					let pubkey_bytes =
+						decode_hex(pubkey_hex).map_err(|e| {
+							error!("Failed to decode bundler key export authorized ECDSA public key: {:?}", e);
+						})?;
+					if pubkey_bytes.len() != 33 {
+						error!(
+						"Invalid bundler key export authorized ECDSA public key length: expected 33 bytes, got {}",
+						pubkey_bytes.len()
+					);
+						return Err(());
+					}
+					let mut pubkey_array = [0u8; 33];
+					pubkey_array.copy_from_slice(&pubkey_bytes);
+					pubkey_array
+				};
+
 			start_rpc_server(
 				worker_url.port().expect("Missing worker port"),
 				shielding_key,
@@ -568,24 +529,18 @@ async fn main() -> Result<(), ()> {
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				wildmeta_backend_ecdsa_pubkey,
+				evm_accounting_ecdsa_signer_key,
+				bundler_key_export_authorized_pubkey,
 				Arc::new(ethereum_intent_executor),
 				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),
-				parentchain_rpc_client_factory.clone(),
 				aes256_key,
-				tx_signer,
 				entry_point_clients,
 			)
 			.await
 			.map_err(|e| {
 				error!("Could not start server: {:?}", e);
 			})?;
-
-			if args.parentchain_sync {
-				listen_to_parentchain(*args, storage_db, &config_loader.parentchain_url)
-					.await
-					.unwrap();
-			}
 
 			if let Err(e) = join.await {
 				error!("There was an error in associated task: {:?}", e);
@@ -599,43 +554,148 @@ async fn main() -> Result<(), ()> {
 				},
 			}
 		},
-		Commands::GenKey(args) => {
-			let key_store = Arc::new(SubstrateKeyStore::new(
-				Path::new(&args.local_directory_path)
-					.join("keystore/substrate_key.bin")
-					.into_os_string()
-					.into_string()
-					.unwrap(),
-			));
-			let _ = parentchain_signer::get_signer(key_store);
-		},
 	}
 
 	Ok(())
 }
 
-async fn listen_to_parentchain(
-	args: RunArgs,
-	storage_db: Arc<StorageDB>,
-	ws_rpc_endpoint: &str,
-) -> Result<JoinHandle<()>, ()> {
-	let (_sub_stop_sender, sub_stop_receiver) = oneshot::channel();
-	let mut parentchain_listener = parentchain_listener::create_listener(
-		"heima",
-		Handle::current(),
-		ws_rpc_endpoint,
-		sub_stop_receiver,
-		storage_db,
-		&Path::new(&args.local_directory_path)
-			.join("log/parentchain_last_log.bin")
-			.into_os_string()
-			.into_string()
-			.unwrap(),
-	)
-	.await?;
+async fn export_bundler_key(args: ExportBundlerKeyArgs) -> Result<(), ()> {
+	use alloy::primitives::keccak256;
+	use executor_crypto::{
+		aes256::{aes_decrypt, Aes256Key, Aes256KeyNonce, AesOutput},
+		ecdsa, PairTrait,
+	};
+	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
+	use rsa::{Oaep, RsaPublicKey};
+	use sha2::Sha256;
+	use std::time::{SystemTime, UNIX_EPOCH};
 
-	Ok(thread::Builder::new()
-		.name("heima_sync".to_string())
-		.spawn(move || parentchain_listener.sync(args.start_block))
-		.unwrap())
+	info!("Loading authorized key from: {}", args.authorized_key_path);
+
+	let authorized_key_bytes = std::fs::read(&args.authorized_key_path).map_err(|e| {
+		error!("Failed to read authorized key file: {:?}", e);
+		eprintln!("❌ Error: Failed to read authorized key file: {}", e);
+	})?;
+
+	if authorized_key_bytes.len() != 32 {
+		error!(
+			"Invalid authorized key length: expected 32 bytes, got {}",
+			authorized_key_bytes.len()
+		);
+		eprintln!("❌ Error: Invalid authorized key file (expected 32 bytes)");
+		return Err(());
+	}
+
+	let mut authorized_seed = [0u8; 32];
+	authorized_seed.copy_from_slice(&authorized_key_bytes);
+
+	let authorized_pair = ecdsa::Pair::from_seed_slice(&authorized_seed).map_err(|e| {
+		error!("Failed to create keypair from seed: {:?}", e);
+		eprintln!("❌ Error: Failed to create keypair from authorized key");
+	})?;
+
+	info!("Authorized public key: {:?}", authorized_pair.public());
+
+	info!("Connecting to worker at: {}", args.worker_url);
+	let client = WsClientBuilder::default().build(&args.worker_url).await.map_err(|e| {
+		error!("Failed to connect to worker: {:?}", e);
+		eprintln!("❌ Error: Failed to connect to worker at {}: {}", args.worker_url, e);
+	})?;
+
+	info!("Getting shielding key from worker...");
+	#[derive(serde::Deserialize, Debug)]
+	struct ShieldingKeyResponse {
+		n: ethers::types::Bytes,
+		e: ethers::types::Bytes,
+	}
+
+	let shielding_key: ShieldingKeyResponse =
+		client.request("omni_getShieldingKey", rpc_params![]).await.map_err(|e| {
+			error!("Failed to get shielding key: {:?}", e);
+			eprintln!("❌ Error: Failed to get shielding key from worker: {}", e);
+		})?;
+
+	let mut n_bytes = shielding_key.n.to_vec();
+	n_bytes.reverse();
+	let mut e_bytes = shielding_key.e.to_vec();
+	e_bytes.reverse();
+
+	let rsa_public_key = RsaPublicKey::new(
+		rsa::BigUint::from_bytes_be(&n_bytes),
+		rsa::BigUint::from_bytes_be(&e_bytes),
+	)
+	.map_err(|e| {
+		error!("Failed to create RSA public key: {:?}", e);
+		eprintln!("❌ Error: Failed to create RSA public key: {}", e);
+	})?;
+
+	info!("Generating random AES key...");
+	let aes_key: Aes256Key = rand::random();
+
+	info!("RSA-encrypting AES key...");
+	let encrypted_aes_key = rsa_public_key
+		.encrypt(&mut rand::thread_rng(), Oaep::new::<Sha256>(), &aes_key)
+		.map_err(|e| {
+			error!("Failed to RSA-encrypt AES key: {:?}", e);
+			eprintln!("❌ Error: Failed to RSA-encrypt AES key: {}", e);
+		})?;
+
+	let timestamp = SystemTime::now()
+		.duration_since(UNIX_EPOCH)
+		.map_err(|e| {
+			error!("Failed to get current time: {:?}", e);
+			eprintln!("❌ Error: System time error");
+		})?
+		.as_millis() as u64;
+
+	info!("Signing timestamp: {}", timestamp);
+	let timestamp_str = timestamp.to_string();
+	let challenge_hash = keccak256(timestamp_str.as_bytes());
+	let signature = authorized_pair.sign_prehashed(&challenge_hash.0);
+
+	let signature_hex = format!("0x{}", hex::encode(signature.0));
+	let encrypted_key_hex = format!("0x{}", hex::encode(&encrypted_aes_key));
+
+	info!("Calling omni_exportBundlerPrivateKey RPC...");
+	#[derive(serde::Deserialize, Debug)]
+	struct SerdeAesOutput {
+		ciphertext: ethers::types::Bytes,
+		aad: ethers::types::Bytes,
+		nonce: ethers::types::Bytes,
+	}
+
+	let encrypted_response: SerdeAesOutput = client
+		.request(
+			"omni_exportBundlerPrivateKey",
+			rpc_params![timestamp, signature_hex, encrypted_key_hex],
+		)
+		.await
+		.map_err(|e| {
+			error!("RPC call failed: {:?}", e);
+			eprintln!("❌ Error: RPC call failed: {}", e);
+		})?;
+
+	info!("Decrypting bundler private key...");
+	let nonce: Aes256KeyNonce = encrypted_response.nonce.to_vec().try_into().map_err(|_| {
+		error!("Invalid nonce length in response");
+		eprintln!("❌ Error: Invalid response nonce length");
+	})?;
+
+	let mut aes_output = AesOutput {
+		ciphertext: encrypted_response.ciphertext.to_vec(),
+		aad: encrypted_response.aad.to_vec(),
+		nonce,
+	};
+
+	let bundler_key = aes_decrypt(&aes_key, &mut aes_output).ok_or_else(|| {
+		error!("Failed to decrypt bundler private key");
+		eprintln!("❌ Error: Failed to decrypt bundler private key");
+	})?;
+
+	let bundler_key_hex = format!("0x{}", hex::encode(&bundler_key));
+
+	println!("\n✅ Bundler Private Key: {}", bundler_key_hex);
+	println!("⚠️  WARNING: This is a sensitive key. Store it securely and never share it.\n");
+
+	Ok(())
 }

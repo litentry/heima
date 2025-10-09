@@ -7,11 +7,17 @@ edition.workspace = true
 [dependencies]
 alloy = { workspace = true, features = ["signer-local"] }
 clap = { workspace = true, features = ["derive"] }
+ethers = { workspace = true }
 hex = { workspace = true }
+jsonrpsee = { workspace = true, features = ["ws-client"] }
 metrics-exporter-prometheus = { workspace = true }
+rand = { workspace = true }
+rsa = { workspace = true }
 rust_decimal = { workspace = true }
 scale-encode = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -33,10 +39,6 @@ heima-identity-verification = { workspace = true }
 intent-asset-lock = { workspace = true }
 mock-server = { workspace = true }
 native-task-handler = { workspace = true }
-parentchain-attestation = { workspace = true }
-parentchain-listener = { workspace = true }
-parentchain-rpc-client = { workspace = true }
-parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
 rpc-server = { workspace = true }
 signer-client = { workspace = true }

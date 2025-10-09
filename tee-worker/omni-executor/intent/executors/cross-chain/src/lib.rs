@@ -56,12 +56,6 @@ use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, CLIENT_ID_HEIMA};
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use intent_asset_lock::AmountType;
-use parentchain_rpc_client::metadata::Metadata;
-use parentchain_rpc_client::metadata::SubxtMetadataProvider;
-use parentchain_rpc_client::CustomConfig;
-use parentchain_rpc_client::SubxtClient;
-use parentchain_rpc_client::SubxtClientFactory;
-use parentchain_signer::TxSigner;
 use parity_scale_codec::Encode;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
@@ -86,14 +80,6 @@ use utils::{
 };
 // use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
 // use intent_asset_lock::AccountAssetLocks;
-
-pub type ParentchainTxSigner = TxSigner<
-	SubxtClient<CustomConfig>,
-	SubxtClientFactory<CustomConfig>,
-	CustomConfig,
-	Metadata,
-	SubxtMetadataProvider<CustomConfig>,
->;
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<
@@ -248,9 +234,6 @@ impl<
 
 						let mut instant_flow_details: Option<InstantFlowDetails> = None;
 
-						let should_notify_parentchain =
-							pumpx_config.order_type != PumpxOrderType::Limit;
-
 						// do cross-chain swap first, if required
 						if pumpx_config.is_cross_chain() {
 							(amount, from_address, instant_flow_details) = match self
@@ -337,7 +320,7 @@ impl<
 							});
 						}
 
-						Ok((Some(res), should_notify_parentchain))
+						Ok((Some(res), false))
 					},
 					SingleChainSwapProvider::Omni => {
 						debug!("Processing Omni single chain swap provider");
@@ -453,7 +436,7 @@ impl<
 						}
 
 						match res {
-							Ok(result) => Ok((Some(result), false)), // false = don't notify parentchain for omni
+							Ok(result) => Ok((Some(result), false)), // false = no notification needed for omni
 							Err(_) => {
 								error!("Omni single chain swap failed");
 								Err(())

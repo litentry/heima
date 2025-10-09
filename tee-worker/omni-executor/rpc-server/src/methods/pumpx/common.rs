@@ -3,7 +3,6 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::*;
 use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
 use native_task_handler::{handle_native_task, NativeTaskError, NativeTaskOk};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;
 use serde::Serialize;
@@ -67,20 +66,10 @@ pub async fn handle_pumpx_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	F,
 	R,
 >(
-	ctx: &RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>,
+	ctx: &RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 	task_ok_handler: F,
 ) -> Result<R, PumpxRpcError>
