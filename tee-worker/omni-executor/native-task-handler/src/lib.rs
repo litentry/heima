@@ -1,5 +1,5 @@
 mod aes256_key_store;
-mod types;
+pub mod types;
 
 use aa_contracts_client::calculate_user_operation_hash;
 use aa_contracts_client::EntryPointClient;
@@ -18,29 +18,18 @@ use executor_crypto::{
 };
 use executor_primitives::{
 	utils::hex::{decode_hex, ToHexPrefixed},
-	AccountId, ChainId, Identity, Intent, IntentId, OmniAccountAuthType, PumpxAccountProfile,
-	Web2IdentityType,
+	ChainId, Identity, Intent, PumpxAccountProfile, Web2IdentityType,
 };
 use executor_storage::{HeimaJwtStorage, IntentIdStorage, PumpxProfileStorage, Storage, StorageDB};
 use heima_authentication::{
 	auth_token::*,
 	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
-use parentchain_api_interface::runtime_types::{
-	frame_system::pallet::Call as SystemCall, pallet_balances::pallet::Call as BalancesCall,
-	pallet_omni_account::pallet::IntentCompletedDetail, paseo_runtime::RuntimeCall,
-};
-use parentchain_rpc_client::{
-	metadata::{Metadata, SubxtMetadataProvider},
-	AccountId32, CustomConfig, SubstrateRpcClient, SubstrateRpcClientFactory, SubxtClient,
-	SubxtClientFactory, ToSubxtType,
-};
-use parentchain_signer::TxSigner;
 use pumpx::{
 	methods::create_transfer_tx::CreateTransferTxBody, signer_client::PumpxChainId, PumpxApi,
 };
 use signer_client::{ChainType, SignerClient};
-use std::{collections::HashMap, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
@@ -59,6 +48,7 @@ pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 const MIN_ERC20_PAYMASTER_DATA_LENGTH: usize = 52 + 20 + 32 + 32 + 32; // 168 bytes minimum
 const PAYMASTER_DATA_OFFSET: usize = 52; // paymaster address (20) + validation_gas_limit (16) + postop_gas_limit (16)
 const EXCHANGE_RATE_FEE_PERCENT: f64 = 0.0; // 0% fee for now
+const WEI_PER_ETH: u128 = 1_000_000_000_000_000_000; // 1e18 wei
 
 // Whitelisted paymaster addresses that we support (deployed by heima), the logic is:
 // - Unsigned userOp: If paymaster specified, **must** be whitelisted
@@ -358,6 +348,112 @@ async fn process_erc20_paymaster_data(
 	}
 }
 
+/// Calculate estimated token cost for ERC20 paymaster operations
+async fn calculate_erc20_token_cost(
+	binance_api: &dyn BinancePaymasterApi,
+	paymaster_and_data: &Bytes,
+	gas_estimates: &NativeTaskOk,
+	user_op: &aa_contracts_client::PackedUserOperation,
+	chain_id: u64,
+) -> Option<crate::types::TokenCostEstimate> {
+	// Decode paymaster data
+	let (token_address, _, valid_until, valid_after) =
+		decode_erc20_paymaster_data(paymaster_and_data.as_ref())?;
+
+	// Check if timestamps are valid
+	let current_time = std::time::SystemTime::now()
+		.duration_since(std::time::UNIX_EPOCH)
+		.ok()?
+		.as_secs();
+
+	if current_time < valid_after || current_time > valid_until {
+		debug!("Exchange rate timestamps not valid for estimation");
+		return None;
+	}
+
+	// Get token info from mapping
+	let (token_symbol, token_decimals) =
+		get_token_info_from_mapping(&token_address, chain_id).await?;
+
+	// Get fresh exchange rate from Binance
+	let exchange_rate = match calculate_exchange_rate_with_binance(
+		binance_api,
+		&token_symbol,
+		token_decimals,
+	)
+	.await
+	{
+		Ok(rate) => rate,
+		Err(e) => {
+			error!("Failed to get exchange rate for token cost estimation: {}", e);
+			return None;
+		},
+	};
+
+	// Extract gas limits from estimates (pattern match on NativeTaskOk)
+	let (
+		call_gas,
+		verification_gas,
+		pre_verification_gas,
+		paymaster_verification_gas,
+		paymaster_post_op_gas,
+	) = if let NativeTaskOk::EstimateUserOpGas {
+		call_gas_limit,
+		verification_gas_limit,
+		pre_verification_gas,
+		paymaster_verification_gas_limit,
+		paymaster_post_op_gas_limit,
+		..
+	} = gas_estimates
+	{
+		(
+			*call_gas_limit,
+			*verification_gas_limit,
+			*pre_verification_gas,
+			*paymaster_verification_gas_limit,
+			*paymaster_post_op_gas_limit,
+		)
+	} else {
+		return None;
+	};
+
+	// Extract gas price from the UserOp's gasFees field
+	// gasFees format: maxFeePerGas (16 bytes) | maxPriorityFeePerGas (16 bytes)
+	let gas_fees_bytes = user_op.gasFees.0;
+	let mut max_fee_bytes = [0u8; 16];
+	max_fee_bytes.copy_from_slice(&gas_fees_bytes[0..16]); // First 16 bytes for maxFeePerGas
+	let max_fee_per_gas = u128::from_be_bytes(max_fee_bytes);
+
+	// Calculate total gas cost in wei
+	// Include all gas components including paymaster overhead
+	let total_gas = call_gas
+		+ verification_gas
+		+ pre_verification_gas
+		+ paymaster_verification_gas
+		+ paymaster_post_op_gas;
+
+	let total_cost_wei = total_gas.saturating_mul(max_fee_per_gas);
+
+	// Calculate token amount using same formula as the contract with ceil rounding
+	// tokenAmount = ceil((gasCost * exchangeRate) / 1e18)
+	let numerator = total_cost_wei.saturating_mul(exchange_rate);
+	let token_amount = if numerator == 0 {
+		0
+	} else {
+		numerator.saturating_add(WEI_PER_ETH - 1).saturating_div(WEI_PER_ETH)
+	};
+
+	// Add 10% safety buffer for price fluctuations
+	let token_amount_with_buffer = token_amount.saturating_mul(110).saturating_div(100);
+
+	Some(crate::types::TokenCostEstimate {
+		token_address: token_address.to_string(),
+		amount: token_amount_with_buffer,
+		decimals: token_decimals,
+		exchange_rate,
+	})
+}
+
 pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
 pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
 
@@ -387,27 +483,14 @@ const DEFAULT_PAYMASTER_POST_OP_GAS: u128 = 50_000;
 /// Maximum allowed paymaster gas to prevent abuse
 const MAX_PAYMASTER_GAS: u128 = 5_000_000;
 
-pub type ParentchainTxSigner = TxSigner<
-	SubxtClient<CustomConfig>,
-	SubxtClientFactory<CustomConfig>,
-	CustomConfig,
-	Metadata,
-	SubxtMetadataProvider<CustomConfig>,
->;
-
 pub struct TaskHandlerContext<
-	Header,
-	RpcClient: SubstrateRpcClient<Header>,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 	EthereumIntentExecutor: IntentExecutor,
 	SolanaIntentExecutor: IntentExecutor,
 	CrossChainIntentExecutor: IntentExecutor,
 > {
-	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	pub storage_db: Arc<StorageDB>,
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub aes256_key: Aes256Key,
-	pub transaction_signer: Arc<ParentchainTxSigner>,
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
@@ -416,31 +499,16 @@ pub struct TaskHandlerContext<
 	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	pub whitelisted_paymaster: Arc<Vec<Address>>,
-	phantom_header: PhantomData<Header>,
-	phantom_rpc_client: PhantomData<RpcClient>,
 }
 
 impl<
-		Header,
-		RpcClient: SubstrateRpcClient<Header>,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient>,
 		EthereumIntentExecutor: IntentExecutor,
 		SolanaIntentExecutor: IntentExecutor,
 		CrossChainIntentExecutor: IntentExecutor,
-	>
-	TaskHandlerContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>
+	> TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-		transaction_signer: Arc<ParentchainTxSigner>,
 		storage_db: Arc<StorageDB>,
 		jwt_rsa_private_key: Vec<u8>,
 		aes256_key: Aes256Key,
@@ -453,8 +521,6 @@ impl<
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {
-			parentchain_rpc_client_factory,
-			transaction_signer,
 			storage_db,
 			jwt_rsa_private_key,
 			aes256_key,
@@ -466,8 +532,6 @@ impl<
 			binance_api_client,
 			entry_point_clients,
 			whitelisted_paymaster: Arc::new(parse_whitelisted_paymasters()),
-			phantom_header: PhantomData,
-			phantom_rpc_client: PhantomData,
 		}
 	}
 
@@ -481,37 +545,19 @@ impl<
 }
 
 pub async fn handle_native_task<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<
-		TaskHandlerContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 	wrapper: NativeTaskWrapper<NativeTask>,
 ) -> NativeTaskResponse {
-	let Ok(mut rpc_client) = ctx.parentchain_rpc_client_factory.new_client().await else {
-		error!("Failed to create rpc client");
-		return Err(NativeTaskError::InternalError(None));
-	};
-
-	let auth_type: Option<OmniAccountAuthType> = wrapper.auth.map(|t| t.into());
 	let client_id = &wrapper.client_id;
 
 	match wrapper.task {
 		NativeTask::RequestAuthToken(sender) => {
-			// Convert Identity to AccountId directly using client_id
-			let omni_account = sender.to_omni_account(client_id);
 			let expires_at = Utc::now()
 				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
 				.expect("Failed to calculate expiration")
@@ -541,23 +587,12 @@ pub async fn handle_native_task<
 				error!("Failed to create auth token");
 				return Err(NativeTaskError::AuthTokenCreationFailed);
 			};
-			let auth_token_requested_call = parentchain_api_interface::tx()
-				.omni_account()
-				.auth_token_requested(AccountId32(omni_account.into()), claims.exp);
-
-			let tx = ctx.transaction_signer.sign(auth_token_requested_call).await;
-
-			if rpc_client.submit_tx(&tx).await.is_err() {
-				ctx.transaction_signer.update_nonce().await;
-				error!("Failed to submit tx");
-				return Err(NativeTaskError::InternalError(None));
-			}
 
 			Ok(NativeTaskOk::AuthToken(token))
 		},
 		NativeTask::RequestIntent(omni_account, intent_id, intent) => {
-			let intent = *intent; // Unbox the intent
-			debug!("Intent requested");
+			let intent = *intent;
+			debug!("Intent requested, intent_id: {}", intent_id);
 
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
 			let stored_intent_id = match intent_id_storage.get(&omni_account) {
@@ -582,143 +617,35 @@ pub async fn handle_native_task<
 				return Err(NativeTaskError::IntentNonceMismatch);
 			}
 
-			let _ = notify_intent_accepted(
-				&mut rpc_client,
-				ctx.transaction_signer.clone(),
-				omni_account.clone(),
-				intent_id,
-				intent.clone(),
-			)
-			.await;
-
-			let (execution_result, should_notify_parentchain, result) = match intent {
-				Intent::SystemRemark(remark) => {
-					let remark_call = SystemCall::remark { remark: remark.to_vec() };
-					let _ = dispatch_as_signed(
-						&mut rpc_client,
-						ctx.transaction_signer.clone(),
-						omni_account.clone(),
-						RuntimeCall::System(remark_call),
-						auth_type,
-					)
-					.await;
-					(
-						IntentCompletedDetail::Success,
-						true,
-						Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }),
-					)
-				},
-				Intent::TransferNative(transfer) => {
-					let transfer_call = BalancesCall::transfer_allow_death {
-						dest: transfer.to.to_subxt_type().into(),
-						value: transfer.value,
-					};
-					let _ = dispatch_as_signed(
-						&mut rpc_client,
-						ctx.transaction_signer.clone(),
-						omni_account.clone(),
-						RuntimeCall::Balances(transfer_call),
-						auth_type,
-					)
-					.await;
-					(
-						IntentCompletedDetail::Success,
-						true,
-						Ok(NativeTaskOk::RequestIntentResult { intent_id, success: true }),
-					)
-				},
-				Intent::CallEthereum(_) | Intent::TransferEthereum(_) => {
-					// if let Err(e) = ctx
-					// 	.ethereum_intent_executor
-					// 	.execute(&omni_account, intent_id, intent.clone())
-					// 	.await
-					// {
-					// 	log::error!("Error executing intent: {:?}", e);
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
-					// 	);
-					// 	(IntentCompletedDetail::Failure, true)
-					// } else {
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
-					// 	);
-					// 	(IntentCompletedDetail::Success, true)
-					// }
-					info!("Intent rejected");
-					(
-						IntentCompletedDetail::Failure,
-						true,
-						Err(NativeTaskError::InternalError(None)),
-					)
-				},
-				Intent::TransferSolana(_) => {
-					// if let Err(e) = ctx
-					// 	.solana_intent_executor
-					// 	.execute(&omni_account, intent_id, intent.clone())
-					// 	.await
-					// {
-					// 	log::error!("Error executing intent: {:?}", e);
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: false },
-					// 	);
-					// 	(IntentCompletedDetail::Failure, true)
-					// } else {
-					// 	send_ok(
-					// 		response_sender,
-					// 		NativeTaskOk::RequestIntentResult { intent_id, success: true },
-					// 	);
-					// 	(IntentCompletedDetail::Success, true)
-					// }
-					(
-						IntentCompletedDetail::Failure,
-						true,
-						Err(NativeTaskError::InternalError(None)),
-					)
+			let result = match intent {
+				Intent::SystemRemark(_)
+				| Intent::TransferNative(_)
+				| Intent::CallEthereum(_)
+				| Intent::TransferEthereum(_)
+				| Intent::TransferSolana(_) => {
+					info!("Intent temporarily rejected, intent_id: {}", intent_id);
+					Err(NativeTaskError::InternalError(None))
 				},
 				Intent::Swap(..) => {
-					let (execution_result, should_notify_parentchain, response) = match ctx
+					let response = match ctx
 						.cross_chain_intent_executor
 						.execute(&omni_account, intent_id, intent.clone())
 						.await
 					{
-						Ok((response, should_notify_parentchain)) => {
-							(IntentCompletedDetail::Success, should_notify_parentchain, response)
-						},
+						Ok((response, _)) => response,
 						Err(e) => {
 							error!("Error executing intent: {:?}", e);
 							ctx.cross_chain_intent_executor.on_execution_error().await;
-							(IntentCompletedDetail::Failure, true, None)
+							None
 						},
 					};
 					if let Some(response) = response {
-						(
-							execution_result,
-							should_notify_parentchain,
-							Ok(NativeTaskOk::IntentSwapResponse(response)),
-						)
+						Ok(NativeTaskOk::IntentSwapResponse(response))
 					} else {
-						(
-							execution_result,
-							should_notify_parentchain,
-							Err(NativeTaskError::InternalError(None)),
-						)
+						Err(NativeTaskError::InternalError(None))
 					}
 				},
 			};
-
-			if should_notify_parentchain {
-				let _ = notify_intent_completed(
-					&mut rpc_client,
-					ctx.transaction_signer.clone(),
-					omni_account.clone(),
-					intent_id,
-					execution_result,
-				)
-				.await;
-			}
 
 			result
 		},
@@ -972,30 +899,15 @@ pub async fn handle_native_task<
 				},
 			}
 		},
-		NativeTask::PumpxNotifyLimitOrderResult(omni_account, intent_id, result, message) => {
+		NativeTask::PumpxNotifyLimitOrderResult(_omni_account, intent_id, result, message) => {
 			if result != "ok" && result != "nok" {
 				error!("Invalid result value: {}. Must be 'ok' or 'nok'", result);
 				return Err(NativeTaskError::PumpxApiError(PumpxApiError::InvalidInput));
 			}
 
-			let execution_result = match result.as_str() {
-				"ok" => IntentCompletedDetail::Success,
-				"nok" => IntentCompletedDetail::Failure,
-				_ => unreachable!(), // Already validated above
-			};
-
 			if let Some(msg) = message {
 				info!("Limit order result message for intent_id {}: {}", intent_id, msg);
 			}
-
-			notify_intent_completed(
-				&mut rpc_client,
-				ctx.transaction_signer.clone(),
-				omni_account,
-				intent_id,
-				execution_result,
-			)
-			.await;
 
 			Ok(NativeTaskOk::PumpxNotifyLimitOrderResult)
 		},
@@ -1031,7 +943,14 @@ pub async fn handle_native_task<
 			};
 
 			// Perform gas estimation (wallet_index can be used for wallet-specific optimizations)
-			match estimate_user_op_gas(entry_point_client, packed_user_op, chain_id).await {
+			match estimate_user_op_gas(
+				entry_point_client,
+				packed_user_op,
+				chain_id,
+				ctx.binance_api_client.as_ref(),
+			)
+			.await
+			{
 				Ok(gas_estimates) => {
 					info!("Gas estimation successful: {:?}", gas_estimates);
 					Ok(gas_estimates)
@@ -1262,97 +1181,6 @@ pub async fn handle_native_task<
 	}
 }
 
-async fn dispatch_as_signed<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
->(
-	client: &mut RpcClient,
-	signer: Arc<ParentchainTxSigner>,
-	sender: AccountId,
-	call: RuntimeCall,
-	auth_type: Option<OmniAccountAuthType>,
-) {
-	let call = parentchain_api_interface::tx().omni_account().dispatch_as_signed(
-		sender.to_subxt_type(),
-		call,
-		auth_type.map(|t| t.to_subxt_type()),
-	);
-	let tx = signer.sign(call).await;
-	// notify parentchain - for now we continue even with error
-	match client.submit_tx(&tx).await {
-		Ok(_) => {
-			debug!("Submitted dispatch_as_signed parentchain call")
-		},
-		Err(_) => {
-			error!("Failed to submit dispatch_as_signed parentchain call",);
-			signer.update_nonce().await
-		},
-	};
-}
-
-async fn notify_intent_accepted<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
->(
-	client: &mut RpcClient,
-	signer: Arc<ParentchainTxSigner>,
-	account: AccountId,
-	intent_id: IntentId,
-	intent: Intent,
-) {
-	let call = parentchain_api_interface::tx().omni_account().intent_accepted(
-		account.to_subxt_type(),
-		intent_id,
-		intent.to_subxt_type(),
-	);
-
-	let tx = signer.sign(call).await;
-
-	// notify parentchain - for now we continue even with error
-	match client.submit_tx(&tx).await {
-		Ok(_) => {
-			debug!("Submitted intent_accepted parentchain call for intent_id {}", intent_id)
-		},
-		Err(_) => {
-			error!("Failed to submit intent_accepted parentchain call for intent_id {}", intent_id);
-			signer.update_nonce().await
-		},
-	};
-}
-
-async fn notify_intent_completed<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
->(
-	client: &mut RpcClient,
-	signer: Arc<ParentchainTxSigner>,
-	account: AccountId,
-	intent_id: IntentId,
-	detail: IntentCompletedDetail,
-) {
-	let call = parentchain_api_interface::tx().omni_account().intent_completed(
-		account.to_subxt_type(),
-		intent_id,
-		detail,
-	);
-
-	let tx = signer.sign(call).await;
-
-	// notify parentchain - for now we continue even with error
-	match client.submit_tx(&tx).await {
-		Ok(_) => {
-			debug!("Submitted intent_completed parentchain call for intent_id {}", intent_id)
-		},
-		Err(_) => {
-			error!(
-				"Failed to submit intent_completed parentchain call for intent_id {}",
-				intent_id
-			);
-			signer.update_nonce().await
-		},
-	};
-}
-
 async fn verify_google_code(
 	pumpx_api: &dyn PumpxApi,
 	access_token: &str,
@@ -1489,6 +1317,7 @@ async fn estimate_user_op_gas(
 	entry_point_client: Arc<EntryPointClient<AlloyRpcProvider>>,
 	user_op: aa_contracts_client::PackedUserOperation,
 	chain_id: ChainId,
+	binance_api: &dyn BinancePaymasterApi,
 ) -> Result<NativeTaskOk, String> {
 	// Step 1: Simulate validation to get base gas requirements
 	let validation_result = entry_point_client
@@ -1518,6 +1347,12 @@ async fn estimate_user_op_gas(
 	let (paymaster_verification_gas_limit, paymaster_post_op_gas_limit) =
 		extract_paymaster_gas_limits(&user_op.paymasterAndData);
 
+	// Step 6: Calculate gas fees with buffer
+	let (max_fee_per_gas, max_priority_fee_per_gas) = entry_point_client
+		.calculate_gas_fees_with_buffer(10) // Use 10% additional buffer for estimation
+		.await
+		.map_err(|e| format!("Failed to calculate gas fees: {:?}", e))?;
+
 	// Convert to u128 for response, ensuring values are within bounds
 	let call_gas_limit = call_gas_limit.try_into().map_err(|_| {
 		format!("Call gas limit {} exceeds maximum supported value", call_gas_limit)
@@ -1531,16 +1366,57 @@ async fn estimate_user_op_gas(
 		format!("Pre-verification gas {} exceeds maximum supported value", pre_verification_gas)
 	})?;
 
-	let response = NativeTaskOk::EstimateUserOpGas {
+	let max_fee_per_gas = max_fee_per_gas.try_into().map_err(|_| {
+		format!("Max fee per gas {} exceeds maximum supported value", max_fee_per_gas)
+	})?;
+
+	let max_priority_fee_per_gas = max_priority_fee_per_gas.try_into().map_err(|_| {
+		format!(
+			"Max priority fee per gas {} exceeds maximum supported value",
+			max_priority_fee_per_gas
+		)
+	})?;
+
+	// Build initial response with gas estimates
+	let gas_response = NativeTaskOk::EstimateUserOpGas {
 		call_gas_limit,
 		verification_gas_limit,
 		pre_verification_gas,
 		paymaster_verification_gas_limit,
 		paymaster_post_op_gas_limit,
+		max_fee_per_gas,
+		max_priority_fee_per_gas,
+		estimated_token_cost: None, // Will be updated if ERC20 paymaster is detected
 	};
 
-	info!("Gas estimation complete: {:?}", response);
-	Ok(response)
+	let estimated_token_cost = if !user_op.paymasterAndData.is_empty() {
+		// Step 7: Calculate token cost if ERC20 paymaster is present
+		calculate_erc20_token_cost(
+			binance_api,
+			&user_op.paymasterAndData,
+			&gas_response,
+			&user_op,
+			chain_id,
+		)
+		.await
+	} else {
+		None
+	};
+
+	// Update response with token cost estimate
+	let final_response = NativeTaskOk::EstimateUserOpGas {
+		call_gas_limit,
+		verification_gas_limit,
+		pre_verification_gas,
+		paymaster_verification_gas_limit,
+		paymaster_post_op_gas_limit,
+		max_fee_per_gas,
+		max_priority_fee_per_gas,
+		estimated_token_cost,
+	};
+
+	info!("Gas estimation complete: {:?}", final_response);
+	Ok(final_response)
 }
 
 /// Binary search for optimal call gas limit following Rundler's approach
@@ -2203,6 +2079,7 @@ mod tests {
 mod erc20_paymaster_tests {
 	use super::*;
 	use alloy::primitives::Bytes;
+	use binance_api::Error as BinanceApiError;
 
 	#[test]
 	fn test_decode_erc20_paymaster_data_valid() {
@@ -2320,6 +2197,380 @@ mod erc20_paymaster_tests {
 		assert!(arbitrum_tokens.len() >= 2, "Should have at least 2 tokens on Arbitrum");
 	}
 
+	#[tokio::test]
+	async fn test_calculate_erc20_token_cost_valid() {
+		// Mock Binance API
+		struct MockBinanceApi;
+		#[async_trait::async_trait]
+		impl BinancePaymasterApi for MockBinanceApi {
+			async fn get_symbol_price(&self, symbol: &str) -> Result<String, BinanceApiError> {
+				// Return mock price for ETHUSDC: 3000 USDC per ETH
+				if symbol == "ETHUSDC" {
+					Ok("3000.00".to_string())
+				} else {
+					Err(BinanceApiError::SymbolNotFound)
+				}
+			}
+
+			async fn get_symbol_precision(&self, _symbol: &str) -> Result<u8, BinanceApiError> {
+				Ok(6)
+			}
+
+			async fn get_all_trading_symbols(&self) -> Result<Vec<String>, BinanceApiError> {
+				Ok(vec!["ETHUSDC".to_string()])
+			}
+		}
+
+		// Create mock paymaster data with USDC token
+		let mut paymaster_data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+		// Set paymaster address (bytes 0-19)
+		paymaster_data[0..20].copy_from_slice(&[0x12; 20]);
+		// Set validation gas limit (bytes 20-35) - 100000
+		paymaster_data[20..36].copy_from_slice(&100000u128.to_be_bytes());
+		// Set postop gas limit (bytes 36-51) - 50000
+		paymaster_data[36..52].copy_from_slice(&50000u128.to_be_bytes());
+		// Set USDC token address on Ethereum mainnet (bytes 52-71)
+		let usdc_address_bytes = hex::decode("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48").unwrap();
+		paymaster_data[52..72].copy_from_slice(&usdc_address_bytes);
+
+		// Set exchange rate (bytes 72-103) - will be recalculated
+		let exchange_rate = 0u128; // Placeholder
+		let rate_bytes = [0u8; 16]
+			.iter()
+			.chain(&exchange_rate.to_be_bytes())
+			.copied()
+			.collect::<Vec<u8>>();
+		paymaster_data[72..104].copy_from_slice(&rate_bytes);
+
+		// Set validUntil to future timestamp
+		let valid_until = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.unwrap()
+			.as_secs()
+			+ 3600; // 1 hour from now
+		let valid_until_bytes =
+			[0u8; 24].iter().chain(&valid_until.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[104..136].copy_from_slice(&valid_until_bytes);
+
+		// Set validAfter to past timestamp
+		let valid_after = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.unwrap()
+			.as_secs()
+			- 3600; // 1 hour ago
+		let valid_after_bytes =
+			[0u8; 24].iter().chain(&valid_after.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[136..168].copy_from_slice(&valid_after_bytes);
+
+		let paymaster_and_data = Bytes::from(paymaster_data);
+
+		// Create mock gas estimates
+		let gas_estimates = NativeTaskOk::EstimateUserOpGas {
+			call_gas_limit: 100000,
+			verification_gas_limit: 200000,
+			pre_verification_gas: 50000,
+			paymaster_verification_gas_limit: 100000,
+			paymaster_post_op_gas_limit: 50000,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
+			estimated_token_cost: None,
+		};
+
+		// Create mock UserOp with gas fees
+		let mut gas_fees_bytes = [0u8; 32];
+		// maxFeePerGas: 30 gwei = 30_000_000_000
+		let max_fee = 30_000_000_000u128;
+		gas_fees_bytes[0..16].copy_from_slice(&max_fee.to_be_bytes());
+		// maxPriorityFeePerGas: 2 gwei = 2_000_000_000
+		let priority_fee = 2_000_000_000u128;
+		gas_fees_bytes[16..32].copy_from_slice(&priority_fee.to_be_bytes());
+
+		let user_op = aa_contracts_client::PackedUserOperation {
+			sender: Address::from([0x01; 20]),
+			nonce: U256::from(0),
+			initCode: Bytes::new(),
+			callData: Bytes::new(),
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(50000),
+			gasFees: FixedBytes::from(gas_fees_bytes),
+			paymasterAndData: paymaster_and_data.clone(),
+			signature: Bytes::new(),
+		};
+
+		let mock_api = MockBinanceApi;
+		let result = calculate_erc20_token_cost(
+			&mock_api,
+			&paymaster_and_data,
+			&gas_estimates,
+			&user_op,
+			1, // Ethereum mainnet
+		)
+		.await;
+
+		assert!(result.is_some());
+		let token_cost = result.unwrap();
+
+		// Verify the token cost estimate
+		assert_eq!(token_cost.decimals, 6); // USDC has 6 decimals
+		assert!(token_cost.amount > 0);
+		// The amount should be reasonable (not too high)
+		// Total gas = 500k, gas price = 30 gwei, ETH price = 3000 USDC
+		// Expected cost ~= 500000 * 30e9 * 3000 / 1e18 = 45 USDC
+		// With 10% buffer = 49.5 USDC = 49,500,000 in smallest unit
+		let expected_min = 40_000_000u128; // 40 USDC
+		let expected_max = 60_000_000u128; // 60 USDC
+		assert!(
+			token_cost.amount >= expected_min && token_cost.amount <= expected_max,
+			"Token cost {} should be between {} and {}",
+			token_cost.amount,
+			expected_min,
+			expected_max
+		);
+	}
+
+	#[tokio::test]
+	async fn test_calculate_erc20_token_cost_rounds_up() {
+		struct MockBinanceApi;
+		#[async_trait::async_trait]
+		impl BinancePaymasterApi for MockBinanceApi {
+			async fn get_symbol_price(&self, symbol: &str) -> Result<String, BinanceApiError> {
+				if symbol == "ETHUSDC" {
+					Ok("3000.00".to_string())
+				} else {
+					Err(BinanceApiError::SymbolNotFound)
+				}
+			}
+
+			async fn get_symbol_precision(&self, _symbol: &str) -> Result<u8, BinanceApiError> {
+				Ok(6)
+			}
+
+			async fn get_all_trading_symbols(&self) -> Result<Vec<String>, BinanceApiError> {
+				Ok(vec!["ETHUSDC".to_string()])
+			}
+		}
+
+		let mut paymaster_data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+		paymaster_data[0..20].copy_from_slice(&[0x12; 20]);
+		paymaster_data[20..36].copy_from_slice(&100000u128.to_be_bytes());
+		paymaster_data[36..52].copy_from_slice(&50000u128.to_be_bytes());
+		let usdc_address_bytes = hex::decode("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48").unwrap();
+		paymaster_data[52..72].copy_from_slice(&usdc_address_bytes);
+		let rate_bytes = [0u8; 16].iter().chain(&0u128.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[72..104].copy_from_slice(&rate_bytes);
+		let valid_until = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.unwrap()
+			.as_secs()
+			+ 3600;
+		let valid_until_bytes =
+			[0u8; 24].iter().chain(&valid_until.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[104..136].copy_from_slice(&valid_until_bytes);
+		let valid_after = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.unwrap()
+			.as_secs()
+			- 3600;
+		let valid_after_bytes =
+			[0u8; 24].iter().chain(&valid_after.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[136..168].copy_from_slice(&valid_after_bytes);
+
+		let paymaster_and_data = Bytes::from(paymaster_data);
+
+		let gas_estimates = NativeTaskOk::EstimateUserOpGas {
+			call_gas_limit: 1,
+			verification_gas_limit: 0,
+			pre_verification_gas: 0,
+			paymaster_verification_gas_limit: 0,
+			paymaster_post_op_gas_limit: 0,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
+			estimated_token_cost: None,
+		};
+
+		let mut gas_fees_bytes = [0u8; 32];
+		let max_fee = 1u128;
+		gas_fees_bytes[0..16].copy_from_slice(&max_fee.to_be_bytes());
+		let priority_fee = 0u128;
+		gas_fees_bytes[16..32].copy_from_slice(&priority_fee.to_be_bytes());
+
+		let user_op = aa_contracts_client::PackedUserOperation {
+			sender: Address::from([0x01; 20]),
+			nonce: U256::from(0),
+			initCode: Bytes::new(),
+			callData: Bytes::new(),
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(0),
+			gasFees: FixedBytes::from(gas_fees_bytes),
+			paymasterAndData: paymaster_and_data.clone(),
+			signature: Bytes::new(),
+		};
+
+		let mock_api = MockBinanceApi;
+		let result =
+			calculate_erc20_token_cost(&mock_api, &paymaster_and_data, &gas_estimates, &user_op, 1)
+				.await;
+
+		let token_cost = result.expect("Expected token cost to be calculated");
+		assert_eq!(token_cost.amount, 1);
+	}
+
+	#[tokio::test]
+	async fn test_calculate_erc20_token_cost_invalid_timestamps() {
+		struct MockBinanceApi;
+		#[async_trait::async_trait]
+		impl BinancePaymasterApi for MockBinanceApi {
+			async fn get_symbol_price(&self, _symbol: &str) -> Result<String, BinanceApiError> {
+				Ok("3000.00".to_string())
+			}
+
+			async fn get_symbol_precision(&self, _symbol: &str) -> Result<u8, BinanceApiError> {
+				Ok(6)
+			}
+
+			async fn get_all_trading_symbols(&self) -> Result<Vec<String>, BinanceApiError> {
+				Ok(vec!["ETHUSDC".to_string()])
+			}
+		}
+
+		// Create paymaster data with expired timestamps
+		let mut paymaster_data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+		paymaster_data[0..20].copy_from_slice(&[0x12; 20]);
+		paymaster_data[20..36].copy_from_slice(&100000u128.to_be_bytes());
+		paymaster_data[36..52].copy_from_slice(&50000u128.to_be_bytes());
+
+		// Set USDC token address
+		let usdc_address_bytes = hex::decode("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48").unwrap();
+		paymaster_data[52..72].copy_from_slice(&usdc_address_bytes);
+
+		// Set validUntil to past timestamp (expired)
+		let valid_until = 1000u64; // Very old timestamp
+		let valid_until_bytes =
+			[0u8; 24].iter().chain(&valid_until.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[104..136].copy_from_slice(&valid_until_bytes);
+
+		// Set validAfter to recent timestamp
+		let valid_after = 900u64;
+		let valid_after_bytes =
+			[0u8; 24].iter().chain(&valid_after.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[136..168].copy_from_slice(&valid_after_bytes);
+
+		let paymaster_and_data = Bytes::from(paymaster_data);
+
+		// Create mock gas estimates
+		let gas_estimates = NativeTaskOk::EstimateUserOpGas {
+			call_gas_limit: 100000,
+			verification_gas_limit: 200000,
+			pre_verification_gas: 50000,
+			paymaster_verification_gas_limit: 100000,
+			paymaster_post_op_gas_limit: 50000,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
+			estimated_token_cost: None,
+		};
+
+		// Create mock UserOp
+		let user_op = aa_contracts_client::PackedUserOperation {
+			sender: Address::from([0x01; 20]),
+			nonce: U256::from(0),
+			initCode: Bytes::new(),
+			callData: Bytes::new(),
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(50000),
+			gasFees: FixedBytes::from([0u8; 32]),
+			paymasterAndData: paymaster_and_data.clone(),
+			signature: Bytes::new(),
+		};
+
+		let mock_api = MockBinanceApi;
+		let result =
+			calculate_erc20_token_cost(&mock_api, &paymaster_and_data, &gas_estimates, &user_op, 1)
+				.await;
+
+		// Should return None due to expired timestamps
+		assert!(result.is_none());
+	}
+
+	#[tokio::test]
+	async fn test_calculate_erc20_token_cost_unsupported_token() {
+		struct MockBinanceApi;
+		#[async_trait::async_trait]
+		impl BinancePaymasterApi for MockBinanceApi {
+			async fn get_symbol_price(&self, _symbol: &str) -> Result<String, BinanceApiError> {
+				Ok("3000.00".to_string())
+			}
+
+			async fn get_symbol_precision(&self, _symbol: &str) -> Result<u8, BinanceApiError> {
+				Ok(6)
+			}
+
+			async fn get_all_trading_symbols(&self) -> Result<Vec<String>, BinanceApiError> {
+				Ok(vec!["ETHUSDC".to_string()])
+			}
+		}
+
+		// Create paymaster data with unsupported token
+		let mut paymaster_data = vec![0u8; MIN_ERC20_PAYMASTER_DATA_LENGTH];
+		paymaster_data[0..20].copy_from_slice(&[0x12; 20]);
+		paymaster_data[20..36].copy_from_slice(&100000u128.to_be_bytes());
+		paymaster_data[36..52].copy_from_slice(&50000u128.to_be_bytes());
+
+		// Set unsupported token address
+		paymaster_data[52..72].copy_from_slice(&[0xFF; 20]);
+
+		// Set valid timestamps
+		let valid_until = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.unwrap()
+			.as_secs()
+			+ 3600;
+		let valid_until_bytes =
+			[0u8; 24].iter().chain(&valid_until.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[104..136].copy_from_slice(&valid_until_bytes);
+
+		let valid_after = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.unwrap()
+			.as_secs()
+			- 3600;
+		let valid_after_bytes =
+			[0u8; 24].iter().chain(&valid_after.to_be_bytes()).copied().collect::<Vec<u8>>();
+		paymaster_data[136..168].copy_from_slice(&valid_after_bytes);
+
+		let paymaster_and_data = Bytes::from(paymaster_data);
+
+		let gas_estimates = NativeTaskOk::EstimateUserOpGas {
+			call_gas_limit: 100000,
+			verification_gas_limit: 200000,
+			pre_verification_gas: 50000,
+			paymaster_verification_gas_limit: 100000,
+			paymaster_post_op_gas_limit: 50000,
+			max_fee_per_gas: 1000000000,
+			max_priority_fee_per_gas: 100000000,
+			estimated_token_cost: None,
+		};
+
+		let user_op = aa_contracts_client::PackedUserOperation {
+			sender: Address::from([0x01; 20]),
+			nonce: U256::from(0),
+			initCode: Bytes::new(),
+			callData: Bytes::new(),
+			accountGasLimits: FixedBytes::from([0u8; 32]),
+			preVerificationGas: U256::from(50000),
+			gasFees: FixedBytes::from([0u8; 32]),
+			paymasterAndData: paymaster_and_data.clone(),
+			signature: Bytes::new(),
+		};
+
+		let mock_api = MockBinanceApi;
+		let result =
+			calculate_erc20_token_cost(&mock_api, &paymaster_and_data, &gas_estimates, &user_op, 1)
+				.await;
+
+		// Should return None due to unsupported token
+		assert!(result.is_none());
+	}
+
 	#[test]
 	fn test_get_token_info_from_mapping_unknown_token() {
 		let token_address = Address::from([0xFF; 20]);
@@ -2405,7 +2656,7 @@ mod erc20_paymaster_tests {
 		let token_decimals = 6;
 		let tokens_per_eth = 4000.0;
 
-		let expected_rate = (tokens_per_eth * 10_f64.powi(token_decimals as i32)) as u128;
+		let expected_rate = (tokens_per_eth * 10_f64.powi(token_decimals)) as u128;
 		// 4000 * 10^6 = 4000000000
 		assert_eq!(expected_rate, 4000000000u128);
 
@@ -2420,7 +2671,7 @@ mod erc20_paymaster_tests {
 		let token_decimals = 18;
 		let tokens_per_eth = 4000.0;
 
-		let expected_rate = (tokens_per_eth * 10_f64.powi(token_decimals as i32)) as u128;
+		let expected_rate = (tokens_per_eth * 10_f64.powi(token_decimals)) as u128;
 		// 4000 * 10^18 = 4000000000000000000000
 		assert_eq!(expected_rate, 4000000000000000000000u128);
 	}

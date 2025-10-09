@@ -12,6 +12,7 @@ This application demonstrates:
 - **Non-Custodial Flow**: Users maintain full control of their accounts while enabling delegated operations
 - **ERC-4337 Integration**: Implements the ERC-4337 standard for account abstraction
 - **TEE Worker Integration**: Authorize trusted execution environment workers to execute transactions securely
+- **Email-Based Accounts**: Derive OmniAccounts from email identities with the TEE worker acting as root signer
 - **Paymaster Support**: Optional gas sponsorship through integrated paymaster contracts
 
 ## Key Features
@@ -23,7 +24,9 @@ This application demonstrates:
 - **TEE Worker Integration**: Execute token transfers securely through TEE worker
 - **Root Key Delegation**: Authorize multiple signers to control your smart account
 - **TEE Worker Authorization**: Delegate transaction execution to secure TEE workers
+- **Email Authentication**: Sign in with an email address and let the TEE worker deploy and control your smart account
 - **Gas Sponsorship**: Enable paymaster to cover transaction fees for users
+- **Selectable Paymasters**: Choose between ETH self-funding, SimplePaymaster sponsorship, or ERC20-based paymaster flow
 
 ## Prerequisites
 
@@ -128,6 +131,7 @@ NEXT_PUBLIC_RPC_URL=<your-network-rpc-url>
 NEXT_PUBLIC_ENTRYPOINT_ADDRESS=<your-entrypoint-address>
 NEXT_PUBLIC_FACTORY_ADDRESS=<your-factory-address>
 NEXT_PUBLIC_PAYMASTER_ADDRESS=<your-paymaster-address>
+NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS=<your-erc20-paymaster-address>
 
 # Token Addresses (use actual token addresses on your network)
 NEXT_PUBLIC_USDC_ADDRESS=<usdc-address-on-your-network>
@@ -148,6 +152,7 @@ NEXT_PUBLIC_RPC_URL=https://rpc.testnet.example.com
 NEXT_PUBLIC_ENTRYPOINT_ADDRESS=0x5fbdb2315678afecb367f032d93f642f64180aa3
 NEXT_PUBLIC_FACTORY_ADDRESS=0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
 NEXT_PUBLIC_PAYMASTER_ADDRESS=0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0
+NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS=0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed
 NEXT_PUBLIC_USDC_ADDRESS=0x1234567890abcdef1234567890abcdef12345678
 NEXT_PUBLIC_USDT_ADDRESS=0xabcdef1234567890abcdef1234567890abcdef12
 NEXT_PUBLIC_TEE_WORKER_RPC_URL=https://staging-dex-worker.heima.network
@@ -208,44 +213,33 @@ pnpm dev
 
 ## Use the Application
 
-1. **Connect Wallet**: Click "Connect Wallet" and select your wallet
-   - For local development: Make sure you're connected to the Anvil network (Chain ID: 1337)
-     - If not, add a custom network in MetaMask:
-       - Network Name: Anvil Local
-       - RPC URL: http://localhost:8545
-       - Chain ID: 1337
-       - Currency Symbol: ETH
-   - For remote networks: Connect to the network matching your NEXT_PUBLIC_CHAIN_ID
-   - After connecting, your Omni Account details will be displayed automatically
+1. **Authenticate**: Choose how you want to control the Omni Account.
+   - **EVM / Solana wallets**: Click "Connect Wallet" and pick your wallet provider. For local development use the Anvil network (Chain ID 1337); for remote deployments, match `NEXT_PUBLIC_CHAIN_ID`.
+   - **Email identity**: Switch to the Email tab, enter a valid address, and the app will request `omni_getOmniAccount` from the TEE worker. The derived OmniAccount hash and a TEE-controlled root signer are stored in state.
+   - You can switch between auth methods at any time; clearing the email session returns you to the wallet view.
 
-2. **Fund with ETH**: Send ETH to your OmniAccount address for gas fees
-   - Copy the displayed address or scan the QR code
-   - Send at least 0.01 ETH (recommended)
-   - The app will automatically detect when funded
-   - **Optional**: If a paymaster is deployed and funded, you can enable gas sponsorship instead
+2. **Fund the Omni Account**: Send ETH to the pre-calculated OmniAccount address.
+   - Copy the address or scan the QR code exposed in the dashboard.
+   - A small amount (≥ 0.01 ETH recommended) is enough for deployment and first actions. The app watches the balance and marks the step complete automatically.
+   - Email users can fund the address from any wallet or exchange because no on-chain signature is required yet.
 
-3. **Create Omni Account**: Once ETH is received, create your smart account
-   - This deploys your OmniAccount contract
-   - Your wallet automatically becomes the initial root signer
-   - **Optional**: Toggle "Use Paymaster" to have gas fees sponsored
+3. **Create Omni Account**: Deploy the smart account once the funding step is complete.
+   - Pick how gas should be paid: self-funded ETH, `SimplePaymaster`, or the ERC20 paymaster (USDC). Availability depends on the contracts you deployed and their balances.
+   - Wallet users sign and submit the UserOperation locally. Email users send the operation to the bundler via `omni_submitUserOpTest`; the TEE worker signs as the root key on their behalf.
+   - Successful deployment moves you to the next step and records the transaction hash for later inspection.
 
-4. **Authorize TEE Worker**: Authorize the TEE worker to execute transactions
-   - Click "Authorize TEE Worker" to authenticate with the TEE service
-   - The worker will be added as an authorized signer
-   - Enables secure delegated transaction execution
-   - The worker address will be tagged in the signers list
+4. **Authorize the TEE Worker**: Let the worker act as a root signer for delegated execution.
+   - Wallet-controlled accounts run an authorization flow that signs a UserOperation adding the worker to the signer set.
+   - Email accounts skip this step—the worker obtained through `omni_getSmartWalletRootSigner` is auto-authorized during deployment and the UI marks the step complete.
 
-5. **Send Token Transfer**: Transfer ETH, USDC, or USDT through the TEE worker
-   - Select the token you want to transfer (ETH, USDC, or USDT)
-   - Enter recipient address and amount
-   - The transfer is executed through a UserOperation signed by the TEE worker
-   - Monitor transaction status in real-time
+5. **Send Token Transfers**: Execute ERC-4337 transfers through the worker.
+   - Choose ETH, USDC, or USDT, specify a recipient and amount, and submit.
+   - Operations are routed through the TEE worker, which signs and relays them using the same paymaster settings and gas estimation helpers used during deployment.
 
-6. **Manage Signers**: After deployment, manage authorized signers
-   - View all current authorized signers
-   - Add new signers by entering their address
-   - Remove existing signers (except yourself while connected)
-   - **Optional**: Enable paymaster for signer management operations
+6. **Manage Signers**: Keep track of who can operate the account.
+   - The dashboard lists the root signers derived from events, highlighting the TEE worker when present.
+   - Adding/removing signers requires an Owner signature; connect with the wallet owner to make changes. Email sessions can view the list but need a connected wallet to mutate it.
+   - You can rerun the refresh action at any time to sync with on-chain events.
 
 ## Verifying On-Chain
 
@@ -290,11 +284,14 @@ aa-demo-app/
 │   │   ├── TEETokenTransfer.tsx     # ETH and token transfers through TEE worker
 │   │   ├── CreateOmniAccount.tsx    # Smart account creation flow with paymaster option
 │   │   └── WalletConnect.tsx        # Wallet connection component
+│   ├── contexts/        # Shared React contexts
+│   │   └── AuthContext.tsx          # Tracks wallet/email auth state and omni account hashes
 │   ├── contracts/        # Contract ABIs (auto-synced from V1 contracts)
 │   │   ├── EntryPoint.json          # Synced from EntryPointV1
 │   │   ├── OmniAccount.json         # Synced from OmniAccountV1
 │   │   ├── OmniAccountFactory.json  # Synced from OmniAccountFactoryV1
-│   │   └── SimplePaymaster.json     # Paymaster contract ABI
+│   │   ├── SimplePaymaster.json     # Simple paymaster ABI
+│   │   └── ERC20PaymasterV1.json    # ERC20 paymaster ABI
 │   └── lib/             # Utilities and configuration
 │       ├── aa-utils.ts  # AA utilities including UserOp construction
 │       ├── constants.ts # Contract addresses and token configs
@@ -337,6 +334,12 @@ You might see errors like `execution reverted` for `symbol()` or `decimals()` ca
 - **Server errors**: Check that the TEE Worker RPC URL is accessible
 - **Worker not added**: Ensure your Omni Account is deployed before authorizing
 
+### Email Authentication Issues
+- **Invalid email**: The UI validates format before calling the worker; ensure there are no trailing spaces.
+- **Worker unavailable**: The `omni_getOmniAccount` RPC call requires the TEE worker hosting email support to be online and reachable from the browser.
+- **Account creation fails**: Fund the derived address and retry—email deployments still need ETH for an initial prefund unless a paymaster sponsors it.
+- **Managing signers**: Email sessions are view-only for signer management; connect the wallet owner to add or remove entries.
+
 ### Paymaster Issues
 - **"Paymaster not available"**: The paymaster might not be deployed or funded
 - **"Insufficient balance"**: The paymaster needs ETH deposited at the EntryPoint
@@ -362,11 +365,13 @@ For local development (set automatically by `update-demo-addresses.sh`):
 - `NEXT_PUBLIC_RPC_URL`: Ethereum RPC URL (http://localhost:8545 for local)
 - `NEXT_PUBLIC_TEE_WORKER_RPC_URL`: TEE Worker RPC endpoint
 - `NEXT_PUBLIC_PAYMASTER_ADDRESS`: Paymaster contract address (0x0 if not deployed)
+- `NEXT_PUBLIC_ERC20_PAYMASTER_ADDRESS`: ERC20 paymaster contract address (0x0 if not deployed)
 
 For remote networks, manually set these in `.env.local`:
 - Use the actual deployed contract addresses for your network
 - Set the appropriate chain ID and RPC URL
 - Use real token addresses for USDC and USDT on your network
+- Provide the ERC20 paymaster address when using token-based gas payments
 
 You can copy `.env.local.example` to `.env.local` and update manually for any configuration.
 

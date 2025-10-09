@@ -12,21 +12,17 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::aes256::Aes256Key;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use jsonrpsee::{server::Server, RpcModule};
-use native_task_handler::{ParentchainTxSigner, TaskHandlerContext};
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
+use native_task_handler::TaskHandlerContext;
 use pumpx::PumpxApi;
 use signer_client::SignerClient;
 use std::collections::HashMap;
-use std::marker::PhantomData;
+// Removed unused PhantomData import
 use std::marker::{Send, Sync};
 use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
 use wildmeta_api::WildmetaApi;
 
 pub(crate) struct RpcContext<
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -45,33 +41,20 @@ pub(crate) struct RpcContext<
 	pub wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	pub wildmeta_backend_ecdsa_pubkey: [u8; 33], // Compressed ECDSA public key for wildmeta backend signature verification
+	pub bundler_private_key: [u8; 32],           // Bundler (accounting ECDSA) private key for export
+	pub bundler_key_export_authorized_pubkey: [u8; 33], // Compressed ECDSA public key authorized to export bundler key
 	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-	pub parentchain_rpc_client_factory: Arc<RpcClientFactory>,
-	pub phantom_header: PhantomData<Header>,
-	pub phantom_rpc_client: PhantomData<RpcClient>,
 	pub aes256_key: Aes256Key,
-	pub transaction_signer: Arc<ParentchainTxSigner>,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 }
 
 impl<
-		Header: Send + Sync + 'static,
-		RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-		RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 		EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 		SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 		CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	>
-	RpcContext<
-		Header,
-		RpcClient,
-		RpcClientFactory,
-		EthereumIntentExecutor,
-		SolanaIntentExecutor,
-		CrossChainIntentExecutor,
-	>
+	> RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -87,12 +70,12 @@ impl<
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 		wildmeta_backend_ecdsa_pubkey: [u8; 33],
+		bundler_private_key: [u8; 32],
+		bundler_key_export_authorized_pubkey: [u8; 33],
 		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 		solana_intent_executor: Arc<SolanaIntentExecutor>,
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-		parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 		aes256_key: Aes256Key,
-		transaction_signer: Arc<ParentchainTxSigner>,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	) -> Self {
 		Self {
@@ -108,14 +91,12 @@ impl<
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			wildmeta_backend_ecdsa_pubkey,
+			bundler_private_key,
+			bundler_key_export_authorized_pubkey,
 			ethereum_intent_executor,
 			solana_intent_executor,
 			cross_chain_intent_executor,
-			parentchain_rpc_client_factory,
-			phantom_header: PhantomData,
-			phantom_rpc_client: PhantomData,
 			aes256_key,
-			transaction_signer,
 			entry_point_clients,
 		}
 	}
@@ -123,18 +104,9 @@ impl<
 	pub fn to_task_handler_context(
 		&self,
 	) -> Arc<
-		TaskHandlerContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	> {
 		Arc::new(TaskHandlerContext::new(
-			self.parentchain_rpc_client_factory.clone(),
-			self.transaction_signer.clone(),
 			self.storage_db.clone(),
 			self.jwt_rsa_private_key.clone(),
 			self.aes256_key,
@@ -154,9 +126,6 @@ pub async fn start_server<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	port: u16,
 	shielding_key: ShieldingKey,
@@ -169,12 +138,12 @@ pub async fn start_server<
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	wildmeta_backend_ecdsa_pubkey: [u8; 33],
+	bundler_private_key: [u8; 32],
+	bundler_key_export_authorized_pubkey: [u8; 33],
 	ethereum_intent_executor: Arc<EthereumIntentExecutor>,
 	solana_intent_executor: Arc<SolanaIntentExecutor>,
 	cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
-	parentchain_rpc_client_factory: Arc<RpcClientFactory>,
 	aes256_key: Aes256Key,
-	transaction_signer: Arc<ParentchainTxSigner>,
 	entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	// Create mailer factory
@@ -193,12 +162,12 @@ pub async fn start_server<
 		wildmeta_api,
 		wildmeta_timestamp_storage,
 		wildmeta_backend_ecdsa_pubkey,
+		bundler_private_key,
+		bundler_key_export_authorized_pubkey,
 		ethereum_intent_executor,
 		solana_intent_executor,
 		cross_chain_intent_executor,
-		parentchain_rpc_client_factory,
 		aes256_key,
-		transaction_signer,
 		entry_point_clients,
 	);
 	let mut module = RpcModule::new(ctx);

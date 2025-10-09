@@ -32,6 +32,9 @@ use executor_core::intent_executor::IntentExecutor;
 mod export_wallet;
 use export_wallet::*;
 
+mod export_bundler_private_key;
+use export_bundler_private_key::*;
+
 mod notify_limit_order_result;
 use notify_limit_order_result::*;
 
@@ -68,8 +71,6 @@ use user_login::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
-
 #[cfg(test)]
 mod test_protected_method;
 
@@ -82,19 +83,9 @@ pub fn register_omni<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	register_get_health(module);
@@ -108,6 +99,7 @@ pub fn register_omni<
 
 	register_request_jwt(module);
 	register_export_wallet(module);
+	register_export_bundler_private_key(module);
 	register_add_wallet(module);
 	register_transfer_withdraw(module);
 	register_submit_swap_order(module);

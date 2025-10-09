@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
-import { Copy, AlertCircle, CheckCircle, Wallet, Coins } from "lucide-react";
+import { Copy, AlertCircle, CheckCircle, Wallet, Coins, Mail } from "lucide-react";
 import { formatEther } from "viem";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FundingGuideProps {
     omniAccountAddress?: string;
@@ -17,6 +18,7 @@ export function FundingGuide({
     fetchEthBalance,
 }: FundingGuideProps) {
     const { address: evmAddress } = useAccount();
+    const { authType, identifier } = useAuth();
     const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
     const [fundingComplete, setFundingComplete] = useState(false);
 
@@ -67,16 +69,19 @@ export function FundingGuide({
         }
     };
 
-    if (!evmAddress) {
+    // Check if user is authenticated (either wallet or email)
+    const isAuthenticated = (authType === "wallet" && evmAddress) || (authType === "email" && identifier);
+
+    if (!isAuthenticated) {
         return (
             <div className="w-full p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="text-center">
                     <Wallet className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Connect Wallet First
+                        Authentication Required
                     </h3>
                     <p className="text-gray-600">
-                        Please connect your EVM wallet to see funding instructions.
+                        Please connect your wallet or authenticate with email to see funding instructions.
                     </p>
                 </div>
             </div>
@@ -186,6 +191,20 @@ export function FundingGuide({
                                 </button>
                             </div>
                         </div>
+                        {authType === "email" && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+                                <div className="flex">
+                                    <Mail className="h-5 w-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                                    <div className="text-sm text-blue-700">
+                                        <p className="font-medium mb-1">Email Account Funding</p>
+                                        <p>
+                                            You can send ETH to this address from any wallet or directly from an exchange.
+                                            No wallet connection required!
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-3">
@@ -205,6 +224,7 @@ export function FundingGuide({
                                 </span>
                                 <span>
                                     Send some ETH (minimum 0.01 ETH recommended) to cover gas fees
+                                    {authType === "email" && " from any wallet or exchange"}
                                 </span>
                             </li>
                             <li className="flex">

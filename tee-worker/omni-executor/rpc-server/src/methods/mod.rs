@@ -7,7 +7,6 @@ use pumpx::*;
 
 mod omni;
 use omni::*;
-use parentchain_rpc_client::{SubstrateRpcClient, SubstrateRpcClientFactory};
 
 pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",
@@ -24,19 +23,9 @@ pub fn register_methods<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	Header: Send + Sync + 'static,
-	RpcClient: SubstrateRpcClient<Header> + Send + Sync + 'static,
-	RpcClientFactory: SubstrateRpcClientFactory<Header, RpcClient> + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<
-			Header,
-			RpcClient,
-			RpcClientFactory,
-			EthereumIntentExecutor,
-			SolanaIntentExecutor,
-			CrossChainIntentExecutor,
-		>,
+		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 ) {
 	register_omni(module);

@@ -1,12 +1,12 @@
 pub mod convert_api;
 mod error;
+pub use error::Error;
 pub mod spot_trading_api;
 mod traits;
 mod types;
 pub mod wallet_api;
 
 use async_trait::async_trait;
-use error::Error;
 use hmac::{Hmac, Mac};
 use reqwest::{Client, Method};
 use sha2::Sha256;

@@ -42,7 +42,6 @@ const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
 const DEFAULT_MAILER_FROM_NAME: &str = "Heima Verify";
 const DEFAULT_GOOGLE_CLIENT_ID: &str = "";
 const DEFAULT_GOOGLE_CLIENT_SECRET: &str = "";
-const DEFAULT_PARENTCHAIN_URL: &str = "wss://rpc.paseo-parachain.heima.network";
 const DEFAULT_ETHEREUM_URL: &str = "https://eth-mainnet.g.alchemy.com/v2/";
 const DEFAULT_SOLANA_URL: &str = "https://solana-mainnet.g.alchemy.com/v2/";
 const DEFAULT_BSC_URL: &str = "https://bnb-mainnet.g.alchemy.com/v2/";
@@ -62,6 +61,8 @@ const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000
 const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 const DEFAULT_WILDMETA_API_URL: &str = "https://test-dex-api.heima.network";
 const DEFAULT_WILDMETA_BACKEND_ECDSA_PUBKEY: &str =
+	"020000000000000000000000000000000000000000000000000000000000000000";
+const DEFAULT_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY: &str =
 	"020000000000000000000000000000000000000000000000000000000000000000";
 
 #[derive(Debug, Clone)]
@@ -90,7 +91,6 @@ pub struct ConfigLoader {
 	pub mailer_configs: HashMap<String, MailerConfig>,
 	pub google_client_id: String,
 	pub google_client_secret: String,
-	pub parentchain_url: String,
 	pub ethereum_url: String,
 	pub solana_url: String,
 	pub bsc_url: String,
@@ -110,6 +110,7 @@ pub struct ConfigLoader {
 	pub entry_point_address: String,
 	pub wildmeta_api_url: String,
 	pub wildmeta_backend_ecdsa_pubkey: String,
+	pub bundler_key_export_authorized_pubkey: String,
 }
 
 struct EnvVar {
@@ -151,15 +152,6 @@ impl ConfigLoader {
 					env_key: "OE_GOOGLE_CLIENT_SECRET",
 					default: DEFAULT_GOOGLE_CLIENT_SECRET,
 					sensitive: true,
-					optional: false,
-				},
-			),
-			(
-				"parentchain_url",
-				EnvVar {
-					env_key: "OE_PARENTCHAIN_URL",
-					default: DEFAULT_PARENTCHAIN_URL,
-					sensitive: false,
 					optional: false,
 				},
 			),
@@ -334,6 +326,15 @@ impl ConfigLoader {
 					optional: false,
 				},
 			),
+			(
+				"bundler_key_export_authorized_pubkey",
+				EnvVar {
+					env_key: "OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY",
+					default: DEFAULT_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY,
+					sensitive: false,
+					optional: false,
+				},
+			),
 		]);
 
 		let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or_default();
@@ -354,7 +355,6 @@ impl ConfigLoader {
 			mailer_configs,
 			google_client_id: get("google_client_id"),
 			google_client_secret: get("google_client_secret"),
-			parentchain_url: get("parentchain_url"),
 			ethereum_url: append_key(&get("ethereum_url")),
 			solana_url: append_key(&get("solana_url")),
 			bsc_url: append_key(&get("bsc_url")),
@@ -374,6 +374,7 @@ impl ConfigLoader {
 			entry_point_address: get("entry_point_address"),
 			wildmeta_api_url: get("wildmeta_api_url"),
 			wildmeta_backend_ecdsa_pubkey: get("wildmeta_backend_ecdsa_pubkey"),
+			bundler_key_export_authorized_pubkey: get("bundler_key_export_authorized_pubkey"),
 		}
 	}
 

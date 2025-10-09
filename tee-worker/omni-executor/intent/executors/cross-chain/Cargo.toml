@@ -28,8 +28,6 @@ heima-authentication = { workspace = true }
 heima-primitives = { workspace = true }
 intent-asset-lock = { workspace = true }
 intent-token-query = { workspace = true }
-parentchain-rpc-client = { workspace = true }
-parentchain-signer = { workspace = true }
 pumpx = { workspace = true }
 signer-client = { workspace = true }
 solana = { workspace = true }
@@ -45,7 +43,6 @@ solana = { workspace = true, features = ["mocks"] }
 tempfile = { workspace = true }
 mockall = { workspace = true }
 serde_json = { workspace = true }
-heima-primitives = { workspace = true }
 reqwest = { workspace = true }
 alloy-rlp = { workspace = true }
 test-log = { workspace = true }

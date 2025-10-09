@@ -26,7 +26,6 @@ The services will be available at:
 - **Omni-Executor RPC**: http://localhost:2100
 - **Mock Server**: http://localhost:3456
 - **Ethereum Node (Anvil)**: http://localhost:8545
-- **Heima Node**: ws://localhost:9944
 - **Metrics**: http://localhost:9090
 
 ### Automatic AA Contract Deployment
@@ -168,7 +167,6 @@ OE_PUMPX_API_BASE_URL=http://omni-executor:3456/pumpx
 OE_MAILER_TYPE_HEIMA=console
 
 # Network endpoints
-OE_PARENTCHAIN_URL=ws://heima-node:9944
 OE_ETHEREUM_URL=http://ethereum-node:8545
 OE_SOLANA_URL=https://api.devnet.solana.com
 
@@ -235,7 +233,6 @@ For even faster development, you can run the omni-executor directly without Dock
 
 2. Set environment variables:
    ```bash
-   export OE_PARENTCHAIN_URL=ws://localhost:9944
    export OE_ETHEREUM_URL=http://localhost:8545
    export OE_PUMPX_API_BASE_URL=http://localhost:3456/pumpx
    export OE_MAILER_TYPE_HEIMA=console
@@ -244,7 +241,7 @@ For even faster development, you can run the omni-executor directly without Dock
 
 3. Run omni-executor:
    ```bash
-   ./target/release/executor-worker run --enable-mock-server --parentchain-sync
+   ./target/release/executor-worker run --enable-mock-server
    ```
 
 ## Account Funding and EntryPoint Deposits

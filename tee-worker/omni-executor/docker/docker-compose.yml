@@ -15,7 +15,6 @@ services:
     environment:
       - RUST_LOG=${RUST_LOG:-debug}
       # RPC URLs moved from CLI args to environment variables (see commit 8803b7dd)
-      - OE_PARENTCHAIN_URL=ws://heima-node:9944
       - OE_ETHEREUM_URL=http://ethereum-node:8545
       - OE_SOLANA_URL=https://api.devnet.solana.com
       - OE_PUMPX_WORKER_URL=ws://omni-executor:2100
@@ -29,13 +28,10 @@ services:
     depends_on:
       ethereum-node:
         condition: service_started
-      heima-node:
-        condition: service_healthy
-        restart: true
       aa-contracts-deploy:
         condition: service_completed_successfully
     entrypoint: ["/entrypoint.sh"]
-    command: ["executor-worker", "run", "--parentchain-sync", "--enable-mock-server"]
+    command: ["executor-worker", "run", "--enable-mock-server"]
     privileged: true
     restart: unless-stopped
     networks:
@@ -77,29 +73,13 @@ services:
     image: ghcr.io/foundry-rs/foundry
     container_name: fund-eth-account
     command:
-      - "cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x370Cd7A68F5762bdB4c922930445a58F39c46C3b --value 10ether -r http://ethereum-node:8545"
+      - "cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x63a1FdC2e52008c98a5C8EEa182F5cB2612F21EC --value 10ether -r http://ethereum-node:8545"
     depends_on:
       ethereum-node:
         condition: service_started
     networks:
       - litentry-test-network
     restart: "no"
-  heima-node:
-    image: litentry/heima:latest
-    container_name: heima-node
-    ports:
-      - "9944:9944"
-    command: ["--dev", "--rpc-external", "--pool-type=fork-aware", "--rpc-port", "9944"]
-    networks:
-      - litentry-test-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9944"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-      start_interval:  5s
 
 networks:
   litentry-test-network:
