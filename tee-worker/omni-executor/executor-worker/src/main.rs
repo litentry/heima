@@ -23,7 +23,7 @@ use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 use binance_api::BinanceApiClient;
 use clap::Parser;
-use cli::{Cli, Commands};
+use cli::{Cli, Commands, ExportBundlerKeyArgs};
 use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
 use ethereum_intent_executor::EthereumIntentExecutor;
@@ -73,6 +73,9 @@ async fn main() -> Result<(), ()> {
 	let cli = Cli::parse();
 
 	match cli.cmd {
+		Commands::ExportBundlerKey(args) => {
+			export_bundler_key(args).await?;
+		},
 		Commands::Run(args) => {
 			if args.enable_mock_server {
 				#[cfg(feature = "mock-server")]
@@ -552,6 +555,147 @@ async fn main() -> Result<(), ()> {
 			}
 		},
 	}
+
+	Ok(())
+}
+
+async fn export_bundler_key(args: ExportBundlerKeyArgs) -> Result<(), ()> {
+	use alloy::primitives::keccak256;
+	use executor_crypto::{
+		aes256::{aes_decrypt, Aes256Key, Aes256KeyNonce, AesOutput},
+		ecdsa, PairTrait,
+	};
+	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
+	use rsa::{Oaep, RsaPublicKey};
+	use sha2::Sha256;
+	use std::time::{SystemTime, UNIX_EPOCH};
+
+	info!("Loading authorized key from: {}", args.authorized_key_path);
+
+	let authorized_key_bytes = std::fs::read(&args.authorized_key_path).map_err(|e| {
+		error!("Failed to read authorized key file: {:?}", e);
+		eprintln!("❌ Error: Failed to read authorized key file: {}", e);
+	})?;
+
+	if authorized_key_bytes.len() != 32 {
+		error!(
+			"Invalid authorized key length: expected 32 bytes, got {}",
+			authorized_key_bytes.len()
+		);
+		eprintln!("❌ Error: Invalid authorized key file (expected 32 bytes)");
+		return Err(());
+	}
+
+	let mut authorized_seed = [0u8; 32];
+	authorized_seed.copy_from_slice(&authorized_key_bytes);
+
+	let authorized_pair = ecdsa::Pair::from_seed_slice(&authorized_seed).map_err(|e| {
+		error!("Failed to create keypair from seed: {:?}", e);
+		eprintln!("❌ Error: Failed to create keypair from authorized key");
+	})?;
+
+	info!("Authorized public key: {:?}", authorized_pair.public());
+
+	info!("Connecting to worker at: {}", args.worker_url);
+	let client = WsClientBuilder::default().build(&args.worker_url).await.map_err(|e| {
+		error!("Failed to connect to worker: {:?}", e);
+		eprintln!("❌ Error: Failed to connect to worker at {}: {}", args.worker_url, e);
+	})?;
+
+	info!("Getting shielding key from worker...");
+	#[derive(serde::Deserialize, Debug)]
+	struct ShieldingKeyResponse {
+		n: ethers::types::Bytes,
+		e: ethers::types::Bytes,
+	}
+
+	let shielding_key: ShieldingKeyResponse =
+		client.request("omni_getShieldingKey", rpc_params![]).await.map_err(|e| {
+			error!("Failed to get shielding key: {:?}", e);
+			eprintln!("❌ Error: Failed to get shielding key from worker: {}", e);
+		})?;
+
+	let mut n_bytes = shielding_key.n.to_vec();
+	n_bytes.reverse();
+	let mut e_bytes = shielding_key.e.to_vec();
+	e_bytes.reverse();
+
+	let rsa_public_key = RsaPublicKey::new(
+		rsa::BigUint::from_bytes_be(&n_bytes),
+		rsa::BigUint::from_bytes_be(&e_bytes),
+	)
+	.map_err(|e| {
+		error!("Failed to create RSA public key: {:?}", e);
+		eprintln!("❌ Error: Failed to create RSA public key: {}", e);
+	})?;
+
+	info!("Generating random AES key...");
+	let aes_key: Aes256Key = rand::random();
+
+	info!("RSA-encrypting AES key...");
+	let encrypted_aes_key = rsa_public_key
+		.encrypt(&mut rand::thread_rng(), Oaep::new::<Sha256>(), &aes_key)
+		.map_err(|e| {
+			error!("Failed to RSA-encrypt AES key: {:?}", e);
+			eprintln!("❌ Error: Failed to RSA-encrypt AES key: {}", e);
+		})?;
+
+	let timestamp = SystemTime::now()
+		.duration_since(UNIX_EPOCH)
+		.map_err(|e| {
+			error!("Failed to get current time: {:?}", e);
+			eprintln!("❌ Error: System time error");
+		})?
+		.as_millis() as u64;
+
+	info!("Signing timestamp: {}", timestamp);
+	let timestamp_str = timestamp.to_string();
+	let challenge_hash = keccak256(timestamp_str.as_bytes());
+	let signature = authorized_pair.sign_prehashed(&challenge_hash.0);
+
+	let signature_hex = format!("0x{}", hex::encode(signature.0));
+	let encrypted_key_hex = format!("0x{}", hex::encode(&encrypted_aes_key));
+
+	info!("Calling omni_exportBundlerPrivateKey RPC...");
+	#[derive(serde::Deserialize, Debug)]
+	struct SerdeAesOutput {
+		ciphertext: ethers::types::Bytes,
+		aad: ethers::types::Bytes,
+		nonce: ethers::types::Bytes,
+	}
+
+	let encrypted_response: SerdeAesOutput = client
+		.request(
+			"omni_exportBundlerPrivateKey",
+			rpc_params![timestamp, signature_hex, encrypted_key_hex],
+		)
+		.await
+		.map_err(|e| {
+			error!("RPC call failed: {:?}", e);
+			eprintln!("❌ Error: RPC call failed: {}", e);
+		})?;
+
+	info!("Decrypting bundler private key...");
+	let nonce: Aes256KeyNonce = encrypted_response.nonce.to_vec().try_into().map_err(|_| {
+		error!("Invalid nonce length in response");
+		eprintln!("❌ Error: Invalid response nonce length");
+	})?;
+
+	let mut aes_output = AesOutput {
+		ciphertext: encrypted_response.ciphertext.to_vec(),
+		aad: encrypted_response.aad.to_vec(),
+		nonce,
+	};
+
+	let bundler_key = aes_decrypt(&aes_key, &mut aes_output).ok_or_else(|| {
+		error!("Failed to decrypt bundler private key");
+		eprintln!("❌ Error: Failed to decrypt bundler private key");
+	})?;
+
+	let bundler_key_hex = format!("0x{}", hex::encode(&bundler_key));
+
+	println!("\n✅ Bundler Private Key: {}", bundler_key_hex);
+	println!("⚠️  WARNING: This is a sensitive key. Store it securely and never share it.\n");
 
 	Ok(())
 }
