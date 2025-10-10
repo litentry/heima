@@ -1182,13 +1182,14 @@ pub async fn handle_native_task<
 			omni_account,
 			chain_id,
 			wallet_index,
+			smart_wallet_address,
 			collateral_ticker,
 			spot_ratio,
 			margin_ratio,
 		) => {
 			info!(
-				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, collateral: {}, spot_ratio: {}, margin_ratio: {}",
-				omni_account, chain_id, wallet_index, collateral_ticker, spot_ratio, margin_ratio
+				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, smart_wallet: {}, collateral: {}, spot_ratio: {}, margin_ratio: {}",
+				omni_account, chain_id, wallet_index, smart_wallet_address, collateral_ticker, spot_ratio, margin_ratio
 			);
 
 			handle_request_loan(
@@ -1196,6 +1197,7 @@ pub async fn handle_native_task<
 				omni_account,
 				chain_id,
 				wallet_index,
+				&smart_wallet_address,
 				&collateral_ticker,
 				spot_ratio,
 				margin_ratio,
@@ -1736,6 +1738,7 @@ async fn handle_request_loan<
 	omni_account: executor_primitives::AccountId,
 	chain_id: u64,
 	wallet_index: u32,
+	smart_wallet_address_str: &str,
 	collateral_ticker: &str,
 	spot_ratio: u64,
 	margin_ratio: u64,
@@ -1774,20 +1777,13 @@ async fn handle_request_loan<
 		spot_asset_id, perp_asset_id, collateral_ticker
 	);
 
-	// Get smart wallet address
-	let wallet_bytes = ctx
-		.pumpx_signer_client
-		.request_wallet(signer_client::ChainType::Evm, wallet_index, omni_account.clone().into())
-		.await
-		.map_err(|_| {
-			error!("Failed to get smart wallet address");
-			NativeTaskError::PumpxSignerError(PumpxSignerError::RequestWalletFailed)
-		})?;
+	// Parse the smart wallet address provided by the caller
+	let smart_wallet_address: Address = smart_wallet_address_str.parse().map_err(|_| {
+		error!("Invalid smart wallet address: {}", smart_wallet_address_str);
+		NativeTaskError::InvalidUserOperation("Invalid smart wallet address".to_string())
+	})?;
 
-	let smart_wallet_address =
-		format!("0x{}", hex::encode(&wallet_bytes[wallet_bytes.len() - 20..]));
-
-	info!("Smart wallet address: {}", smart_wallet_address);
+	info!("Using smart wallet address: {}", smart_wallet_address);
 
 	// Calculate spot sell size (assuming 1.0 units for now, should be calculated from collateral)
 	let total_collateral_size = 1.0;
@@ -1814,7 +1810,7 @@ async fn handle_request_loan<
 		&omni_account,
 		chain_id,
 		wallet_index,
-		&smart_wallet_address,
+		smart_wallet_address,
 		spot_sell_calldata,
 	)
 	.await?;
@@ -1822,8 +1818,9 @@ async fn handle_request_loan<
 	info!("Spot sell transaction submitted: {:?}", spot_sell_tx_hash);
 
 	// Wait for spot sell to complete
+	let smart_wallet_address_str = format!("{:?}", smart_wallet_address);
 	let spot_filled = hypercore_client
-		.wait_for_order_completion(&smart_wallet_address, &spot_sell_cloid.to_string(), 60)
+		.wait_for_order_completion(&smart_wallet_address_str, &spot_sell_cloid.to_string(), 60)
 		.await
 		.map_err(|e| {
 			error!("Spot sell order did not complete: {}", e);
@@ -1855,7 +1852,7 @@ async fn handle_request_loan<
 		&omni_account,
 		chain_id,
 		wallet_index,
-		&smart_wallet_address,
+		smart_wallet_address,
 		hedge_calldata,
 	)
 	.await?;
@@ -1864,7 +1861,7 @@ async fn handle_request_loan<
 
 	// Wait for hedge to complete
 	let hedge_filled = hypercore_client
-		.wait_for_order_completion(&smart_wallet_address, &hedge_open_cloid.to_string(), 60)
+		.wait_for_order_completion(&smart_wallet_address_str, &hedge_open_cloid.to_string(), 60)
 		.await
 		.map_err(|e| {
 			error!("Hedge order did not complete: {}", e);
@@ -1901,7 +1898,7 @@ async fn submit_corewriter_userop<
 	omni_account: &executor_primitives::AccountId,
 	chain_id: u64,
 	wallet_index: u32,
-	smart_wallet_address: &str,
+	smart_wallet_address: Address,
 	call_data: String,
 ) -> Result<Option<String>, NativeTaskError> {
 	use executor_core::types::SerializablePackedUserOperation;
@@ -1925,7 +1922,7 @@ async fn submit_corewriter_userop<
 
 	// Build UserOp
 	let user_op = SerializablePackedUserOperation {
-		sender: smart_wallet_address.to_string(),
+		sender: format!("{:?}", smart_wallet_address),
 		nonce,
 		init_code: "0x".to_string(),
 		call_data,

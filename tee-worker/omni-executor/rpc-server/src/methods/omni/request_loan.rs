@@ -21,6 +21,7 @@ use tracing::{debug, error};
 pub struct RequestLoanParams {
 	pub chain_id: u64,
 	pub wallet_index: u32,
+	pub smart_wallet_address: String, // OmniAccount address
 	pub collateral_ticker: String,
 	pub spot_ratio: u64,   // percentage as basis points, e.g., 5000 = 50%
 	pub margin_ratio: u64, // leverage ratio for hedge position
@@ -68,6 +69,20 @@ pub fn register_request_loan<
 
 			validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
 
+			// Validate smart wallet address
+			let smart_wallet_address_bytes =
+				validate_omni_account_hex(&params.smart_wallet_address, "smart_wallet_address")
+					.map_err(PumpxRpcError::from)?;
+
+			if smart_wallet_address_bytes.len() != 20 {
+				return Err(PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Smart wallet address must be 20 bytes")
+						.with_field("smart_wallet_address")
+						.with_received(format!("{} bytes", smart_wallet_address_bytes.len()))
+						.with_expected("20 bytes (Ethereum address)"),
+				));
+			}
+
 			// Validate collateral ticker is not empty
 			if params.collateral_ticker.is_empty() {
 				return Err(PumpxRpcError::from(
@@ -104,6 +119,7 @@ pub fn register_request_loan<
 					})?,
 					params.chain_id,
 					params.wallet_index,
+					params.smart_wallet_address,
 					params.collateral_ticker,
 					params.spot_ratio,
 					params.margin_ratio,

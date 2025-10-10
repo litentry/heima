@@ -70,6 +70,7 @@ pub enum NativeTask {
 		AccountId,
 		ChainId, // chain_id
 		u32,     // wallet_index
+		String,  // smart_wallet_address (OmniAccount address, e.g., "0x1234...")
 		String,  // collateral_ticker (e.g., "ETH", "PURR")
 		u64,     // spot_ratio (percentage as basis points, e.g., 5000 = 50%)
 		u64,     // margin_ratio (used in hedge position)
