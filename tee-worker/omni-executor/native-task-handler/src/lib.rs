@@ -1178,6 +1178,30 @@ pub async fn handle_native_task<
 
 			Ok(NativeTaskOk::SubmitUserOp(transaction_hash))
 		},
+		NativeTask::RequestLoan(
+			omni_account,
+			chain_id,
+			wallet_index,
+			collateral_ticker,
+			spot_ratio,
+			margin_ratio,
+		) => {
+			info!(
+				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, collateral: {}, spot_ratio: {}, margin_ratio: {}",
+				omni_account, chain_id, wallet_index, collateral_ticker, spot_ratio, margin_ratio
+			);
+
+			handle_request_loan(
+				ctx,
+				omni_account,
+				chain_id,
+				wallet_index,
+				&collateral_ticker,
+				spot_ratio,
+				margin_ratio,
+			)
+			.await
+		},
 	}
 }
 
@@ -1698,6 +1722,242 @@ fn extract_paymaster_gas_limits(paymaster_and_data: &Bytes) -> (u128, u128) {
 		// Paymaster present but no gas limits specified, use defaults
 		debug!("Paymaster present but gas limits not specified, using defaults");
 		(DEFAULT_PAYMASTER_VERIFICATION_GAS, DEFAULT_PAYMASTER_POST_OP_GAS)
+	}
+}
+
+async fn handle_request_loan<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	chain_id: u64,
+	wallet_index: u32,
+	collateral_ticker: &str,
+	spot_ratio: u64,
+	margin_ratio: u64,
+) -> NativeTaskResponse {
+	use hyperliquid::*;
+
+	let hypercore_client = HyperCoreClient::new(chain_id).map_err(|e| {
+		error!("Failed to create HyperCore client: {}", e);
+		NativeTaskError::ChainNotSupported(chain_id)
+	})?;
+
+	// Fetch metadata from HyperCore
+	let spot_meta = hypercore_client.get_spot_meta().await.map_err(|e| {
+		error!("Failed to get spot meta: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	let meta = hypercore_client.get_meta().await.map_err(|e| {
+		error!("Failed to get perp meta: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	// Get asset IDs
+	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
+		error!("Failed to get spot asset ID: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	let perp_asset_id = get_perp_asset_id(collateral_ticker, &meta).map_err(|e| {
+		error!("Failed to get perp asset ID: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	info!(
+		"Resolved asset IDs - spot: {}, perp: {} for ticker: {}",
+		spot_asset_id, perp_asset_id, collateral_ticker
+	);
+
+	// Get smart wallet address
+	let wallet_bytes = ctx
+		.pumpx_signer_client
+		.request_wallet(signer_client::ChainType::Evm, wallet_index, omni_account.clone().into())
+		.await
+		.map_err(|_| {
+			error!("Failed to get smart wallet address");
+			NativeTaskError::PumpxSignerError(PumpxSignerError::RequestWalletFailed)
+		})?;
+
+	let smart_wallet_address =
+		format!("0x{}", hex::encode(&wallet_bytes[wallet_bytes.len() - 20..]));
+
+	info!("Smart wallet address: {}", smart_wallet_address);
+
+	// Calculate spot sell size (assuming 1.0 units for now, should be calculated from collateral)
+	let total_collateral_size = 1.0;
+	let spot_sell_ratio = (spot_ratio as f64) / 10000.0;
+	let spot_sell_size = total_collateral_size * spot_sell_ratio;
+	let spot_sell_size_units = calculate_size_units(spot_sell_size);
+
+	// Generate cloids
+	let spot_sell_cloid = generate_cloid();
+	let hedge_open_cloid = generate_cloid() + 1;
+
+	info!("Generated cloids - spot_sell: {}, hedge_open: {}", spot_sell_cloid, hedge_open_cloid);
+
+	// Build spot sell action
+	let spot_sell_action =
+		build_spot_sell_order(spot_asset_id, spot_sell_size_units, spot_sell_cloid);
+	let spot_sell_corewriter_calldata = encode_send_raw_action(spot_sell_action);
+	let spot_sell_calldata =
+		encode_omni_account_execute(get_core_writer_address(), spot_sell_corewriter_calldata);
+
+	// Submit spot sell UserOp
+	let spot_sell_tx_hash = submit_corewriter_userop(
+		ctx.clone(),
+		&omni_account,
+		chain_id,
+		wallet_index,
+		&smart_wallet_address,
+		spot_sell_calldata,
+	)
+	.await?;
+
+	info!("Spot sell transaction submitted: {:?}", spot_sell_tx_hash);
+
+	// Wait for spot sell to complete
+	let spot_filled = hypercore_client
+		.wait_for_order_completion(&smart_wallet_address, &spot_sell_cloid.to_string(), 60)
+		.await
+		.map_err(|e| {
+			error!("Spot sell order did not complete: {}", e);
+			NativeTaskError::InternalError(Some(format!("Spot sell timeout: {}", e)))
+		})?;
+
+	if !spot_filled {
+		error!("Spot sell order failed");
+		return Err(NativeTaskError::InternalError(Some("Spot sell order failed".to_string())));
+	}
+
+	info!("Spot sell order filled successfully");
+
+	// Calculate hedge size based on margin_ratio
+	let hedge_size = total_collateral_size * (10000.0 - (spot_ratio as f64)) / 10000.0;
+	let leverage = (margin_ratio as f64) / 10000.0;
+	let hedge_position_size = hedge_size * leverage;
+	let hedge_size_units = calculate_size_units(hedge_position_size);
+
+	// Build hedge perp order
+	let hedge_action = build_perp_long_order(perp_asset_id, hedge_size_units, hedge_open_cloid);
+	let hedge_corewriter_calldata = encode_send_raw_action(hedge_action);
+	let hedge_calldata =
+		encode_omni_account_execute(get_core_writer_address(), hedge_corewriter_calldata);
+
+	// Submit hedge UserOp
+	let hedge_tx_hash = submit_corewriter_userop(
+		ctx.clone(),
+		&omni_account,
+		chain_id,
+		wallet_index,
+		&smart_wallet_address,
+		hedge_calldata,
+	)
+	.await?;
+
+	info!("Hedge transaction submitted: {:?}", hedge_tx_hash);
+
+	// Wait for hedge to complete
+	let hedge_filled = hypercore_client
+		.wait_for_order_completion(&smart_wallet_address, &hedge_open_cloid.to_string(), 60)
+		.await
+		.map_err(|e| {
+			error!("Hedge order did not complete: {}", e);
+			NativeTaskError::InternalError(Some(format!("Hedge timeout: {}", e)))
+		})?;
+
+	if !hedge_filled {
+		error!("Hedge order failed");
+		return Err(NativeTaskError::InternalError(Some("Hedge order failed".to_string())));
+	}
+
+	info!("Hedge order filled successfully");
+
+	// Calculate USDC received (simplified, should query actual fill amount)
+	let usdc_received = format!("{:.2}", spot_sell_size * 3000.0); // Placeholder price
+
+	Ok(NativeTaskOk::RequestLoan {
+		spot_sell_cloid: spot_sell_cloid.to_string(),
+		hedge_open_cloid: hedge_open_cloid.to_string(),
+		usdc_received,
+		spot_sell_tx_hash,
+		hedge_open_tx_hash: hedge_tx_hash,
+	})
+}
+
+async fn submit_corewriter_userop<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: &executor_primitives::AccountId,
+	chain_id: u64,
+	wallet_index: u32,
+	smart_wallet_address: &str,
+	call_data: String,
+) -> Result<Option<String>, NativeTaskError> {
+	use executor_core::types::SerializablePackedUserOperation;
+	use hyperliquid::*;
+
+	let entry_point_client = ctx.get_entry_point_client(chain_id).ok_or_else(|| {
+		error!("No EntryPoint client for chain_id: {}", chain_id);
+		NativeTaskError::ChainNotSupported(chain_id)
+	})?;
+
+	// Get current nonce - use a simple counter for now
+	// TODO: Query from EntryPoint.getNonce(sender, key) in production
+	let nonce = 0u128;
+
+	// Calculate gas fees
+	let (max_fee_per_gas, max_priority_fee_per_gas) =
+		entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
+			error!("Failed to calculate gas fees: {:?}", e);
+			NativeTaskError::InternalError(Some("Failed to calculate gas fees".to_string()))
+		})?;
+
+	// Build UserOp
+	let user_op = SerializablePackedUserOperation {
+		sender: smart_wallet_address.to_string(),
+		nonce,
+		init_code: "0x".to_string(),
+		call_data,
+		account_gas_limits: pack_account_gas_limits(1_000_000, 2_000_000),
+		pre_verification_gas: 100_000,
+		gas_fees: pack_gas_fees(
+			max_fee_per_gas.to::<u128>(),
+			max_priority_fee_per_gas.to::<u128>(),
+		),
+		paymaster_and_data: encode_simple_paymaster(),
+		signature: None, // Will be signed by SubmitUserOp handler
+	};
+
+	// Submit via existing SubmitUserOp handler
+	let wrapper = executor_core::native_task::NativeTaskWrapper::new(
+		executor_core::native_task::NativeTask::SubmitUserOp(
+			omni_account.clone(),
+			vec![user_op],
+			chain_id,
+			wallet_index,
+		),
+		None,
+		None,
+		"internal".to_string(),
+	);
+
+	match Box::pin(handle_native_task(ctx, wrapper)).await {
+		Ok(NativeTaskOk::SubmitUserOp(tx_hash)) => Ok(tx_hash),
+		Ok(_) => Err(NativeTaskError::InternalError(Some(
+			"Unexpected response from SubmitUserOp".to_string(),
+		))),
+		Err(e) => Err(e),
 	}
 }
 

@@ -65,6 +65,15 @@ pub enum NativeTask {
 	),
 	#[codec(index = 25)]
 	PumpxNotifyLimitOrderResult(AccountId, u32, String, Option<String>),
+	#[codec(index = 26)]
+	RequestLoan(
+		AccountId,
+		ChainId, // chain_id
+		u32,     // wallet_index
+		String,  // collateral_ticker (e.g., "ETH", "PURR")
+		u64,     // spot_ratio (percentage as basis points, e.g., 5000 = 50%)
+		u64,     // margin_ratio (used in hedge position)
+	),
 }
 
 impl NativeTaskTrait for NativeTask {

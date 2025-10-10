@@ -5276,6 +5276,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperliquid"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "ethabi",
+ "executor-primitives",
+ "hex",
+ "reqwest 0.12.23",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "hyperliquid_rust_sdk"
 version = "0.6.0"
 source = "git+https://github.com/silva-fj/hyperliquid-rust-sdk?branch=eip712-public-trait#c906f75a334d35a89875015305e1e95f3add9bfb"
@@ -6584,6 +6599,7 @@ dependencies = [
  "heima-authentication",
  "heima-identity-verification",
  "hex",
+ "hyperliquid",
  "parity-scale-codec",
  "pumpx",
  "rand 0.8.5",

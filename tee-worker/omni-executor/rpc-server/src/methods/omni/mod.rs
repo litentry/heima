@@ -71,6 +71,9 @@ use user_login::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
+mod request_loan;
+use request_loan::*;
+
 #[cfg(test)]
 mod test_protected_method;
 
@@ -111,6 +114,7 @@ pub fn register_omni<
 	register_estimate_user_op_gas(module);
 	register_submit_user_op_with_auth(module);
 	register_get_hyperliquid_signature_data(module);
+	register_request_loan(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);
