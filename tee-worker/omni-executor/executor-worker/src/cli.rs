@@ -11,6 +11,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
 	Run(Box<RunArgs>),
+	ExportBundlerKey(ExportBundlerKeyArgs),
 }
 
 #[derive(Args)]
@@ -46,4 +47,12 @@ pub struct RunArgs {
 	pub enable_mock_server: bool,
 	#[arg(long, default_value = "3456", value_name = "mock server port")]
 	pub mock_server_port: u16,
+}
+
+#[derive(Args)]
+pub struct ExportBundlerKeyArgs {
+	#[arg(short, long, value_name = "path to authorized ECDSA private key file (32-byte seed)")]
+	pub authorized_key_path: String,
+	#[arg(short, long, default_value = "ws://127.0.0.1:3456", value_name = "worker WebSocket URL")]
+	pub worker_url: String,
 }

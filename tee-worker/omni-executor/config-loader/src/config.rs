@@ -62,6 +62,8 @@ const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026
 const DEFAULT_WILDMETA_API_URL: &str = "https://test-dex-api.heima.network";
 const DEFAULT_WILDMETA_BACKEND_ECDSA_PUBKEY: &str =
 	"020000000000000000000000000000000000000000000000000000000000000000";
+const DEFAULT_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY: &str =
+	"020000000000000000000000000000000000000000000000000000000000000000";
 
 #[derive(Debug, Clone)]
 pub struct MailerConfig {
@@ -108,6 +110,7 @@ pub struct ConfigLoader {
 	pub entry_point_address: String,
 	pub wildmeta_api_url: String,
 	pub wildmeta_backend_ecdsa_pubkey: String,
+	pub bundler_key_export_authorized_pubkey: String,
 }
 
 struct EnvVar {
@@ -323,6 +326,15 @@ impl ConfigLoader {
 					optional: false,
 				},
 			),
+			(
+				"bundler_key_export_authorized_pubkey",
+				EnvVar {
+					env_key: "OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY",
+					default: DEFAULT_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY,
+					sensitive: false,
+					optional: false,
+				},
+			),
 		]);
 
 		let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or_default();
@@ -362,6 +374,7 @@ impl ConfigLoader {
 			entry_point_address: get("entry_point_address"),
 			wildmeta_api_url: get("wildmeta_api_url"),
 			wildmeta_backend_ecdsa_pubkey: get("wildmeta_backend_ecdsa_pubkey"),
+			bundler_key_export_authorized_pubkey: get("bundler_key_export_authorized_pubkey"),
 		}
 	}
 
