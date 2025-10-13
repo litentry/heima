@@ -21,10 +21,10 @@ use tracing::{debug, error};
 pub struct RequestLoanParams {
 	pub chain_id: u64,
 	pub wallet_index: u32,
-	pub smart_wallet_address: String, // OmniAccount address
+	pub smart_wallet_address: String,
 	pub collateral_ticker: String,
-	pub spot_ratio: u64,   // percentage as basis points, e.g., 5000 = 50%
-	pub margin_ratio: u64, // leverage ratio for hedge position
+	pub spot_ratio: u32, // percentage of collateral that should be sold as spot, e.g., 50 = 50%
+	pub margin_ratio: u32, // percentage, e.g., 200 = 200% (leverage)
 }
 
 #[derive(Serialize, Clone)]
@@ -92,13 +92,13 @@ pub fn register_request_loan<
 				));
 			}
 
-			// Validate spot_ratio is between 0 and 10000 (0-100%)
-			if params.spot_ratio > 10000 {
+			// Validate spot_ratio is between 0 and 100 (0-100%)
+			if params.spot_ratio > 100 {
 				return Err(PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Spot ratio must be between 0 and 10000")
+					DetailedError::new(PARSE_ERROR_CODE, "Spot ratio must be between 0 and 100")
 						.with_field("spot_ratio")
 						.with_received(params.spot_ratio.to_string())
-						.with_expected("0-10000 (basis points)"),
+						.with_expected("0-100 (percentage)"),
 				));
 			}
 

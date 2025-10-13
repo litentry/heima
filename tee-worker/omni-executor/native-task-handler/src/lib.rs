@@ -1740,8 +1740,8 @@ async fn handle_request_loan<
 	wallet_index: u32,
 	smart_wallet_address_str: &str,
 	collateral_ticker: &str,
-	spot_ratio: u64,
-	margin_ratio: u64,
+	spot_ratio: u32,
+	margin_ratio: u32,
 ) -> NativeTaskResponse {
 	use hyperliquid::*;
 
@@ -1777,17 +1777,11 @@ async fn handle_request_loan<
 		spot_asset_id, perp_asset_id, collateral_ticker
 	);
 
-	// Parse the smart wallet address provided by the caller
-	let smart_wallet_address: Address = smart_wallet_address_str.parse().map_err(|_| {
-		error!("Invalid smart wallet address: {}", smart_wallet_address_str);
-		NativeTaskError::InvalidUserOperation("Invalid smart wallet address".to_string())
-	})?;
-
-	info!("Using smart wallet address: {}", smart_wallet_address);
+	info!("Using smart wallet address: {}", smart_wallet_address_str);
 
 	// Calculate spot sell size (assuming 1.0 units for now, should be calculated from collateral)
 	let total_collateral_size = 1.0;
-	let spot_sell_ratio = (spot_ratio as f64) / 10000.0;
+	let spot_sell_ratio = (spot_ratio as f64) / 100.0;
 	let spot_sell_size = total_collateral_size * spot_sell_ratio;
 	let spot_sell_size_units = calculate_size_units(spot_sell_size);
 
@@ -1810,7 +1804,7 @@ async fn handle_request_loan<
 		&omni_account,
 		chain_id,
 		wallet_index,
-		smart_wallet_address,
+		smart_wallet_address_str,
 		spot_sell_calldata,
 	)
 	.await?;
@@ -1818,7 +1812,6 @@ async fn handle_request_loan<
 	info!("Spot sell transaction submitted: {:?}", spot_sell_tx_hash);
 
 	// Wait for spot sell to complete
-	let smart_wallet_address_str = format!("{:?}", smart_wallet_address);
 	let spot_filled = hypercore_client
 		.wait_for_order_completion(&smart_wallet_address_str, &spot_sell_cloid.to_string(), 60)
 		.await
@@ -1835,8 +1828,8 @@ async fn handle_request_loan<
 	info!("Spot sell order filled successfully");
 
 	// Calculate hedge size based on margin_ratio
-	let hedge_size = total_collateral_size * (10000.0 - (spot_ratio as f64)) / 10000.0;
-	let leverage = (margin_ratio as f64) / 10000.0;
+	let hedge_size = total_collateral_size * (100.0 - (spot_ratio as f64)) / 100.0;
+	let leverage = (margin_ratio as f64) / 100.0;
 	let hedge_position_size = hedge_size * leverage;
 	let hedge_size_units = calculate_size_units(hedge_position_size);
 
@@ -1852,7 +1845,7 @@ async fn handle_request_loan<
 		&omni_account,
 		chain_id,
 		wallet_index,
-		smart_wallet_address,
+		smart_wallet_address_str,
 		hedge_calldata,
 	)
 	.await?;
@@ -1898,7 +1891,7 @@ async fn submit_corewriter_userop<
 	omni_account: &executor_primitives::AccountId,
 	chain_id: u64,
 	wallet_index: u32,
-	smart_wallet_address: Address,
+	smart_wallet_address: &str,
 	call_data: String,
 ) -> Result<Option<String>, NativeTaskError> {
 	use executor_core::types::SerializablePackedUserOperation;
@@ -1922,7 +1915,7 @@ async fn submit_corewriter_userop<
 
 	// Build UserOp
 	let user_op = SerializablePackedUserOperation {
-		sender: format!("{:?}", smart_wallet_address),
+		sender: smart_wallet_address.to_string(),
 		nonce,
 		init_code: "0x".to_string(),
 		call_data,
