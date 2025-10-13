@@ -1,3 +1,3 @@
 mod config;
 
-pub use config::{ConfigLoader, MailerConfig, MailerType};
+pub use config::{ConfigLoader, GoogleOAuth2Config, MailerConfig, MailerType};

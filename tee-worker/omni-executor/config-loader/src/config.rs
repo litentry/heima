@@ -40,8 +40,6 @@ const DEFAULT_MAILER_TYPE: &str = "sendgrid";
 const DEFAULT_MAILER_API_KEY: &str = "";
 const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
 const DEFAULT_MAILER_FROM_NAME: &str = "Heima Verify";
-const DEFAULT_GOOGLE_CLIENT_ID: &str = "";
-const DEFAULT_GOOGLE_CLIENT_SECRET: &str = "";
 const DEFAULT_ETHEREUM_URL: &str = "https://eth-mainnet.g.alchemy.com/v2/";
 const DEFAULT_SOLANA_URL: &str = "https://solana-mainnet.g.alchemy.com/v2/";
 const DEFAULT_BSC_URL: &str = "https://bnb-mainnet.g.alchemy.com/v2/";
@@ -87,10 +85,15 @@ impl Default for MailerConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct GoogleOAuth2Config {
+	pub client_id: String,
+	pub client_secret: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConfigLoader {
 	pub mailer_configs: HashMap<String, MailerConfig>,
-	pub google_client_id: String,
-	pub google_client_secret: String,
+	pub google_oauth2_configs: HashMap<String, GoogleOAuth2Config>,
 	pub ethereum_url: String,
 	pub solana_url: String,
 	pub bsc_url: String,
@@ -137,24 +140,6 @@ impl ConfigLoader {
 		info!("Executing: {}", std::env::args().collect::<Vec<_>>().join(" "));
 
 		let vars: HashMap<&str, EnvVar> = HashMap::from([
-			(
-				"google_client_id",
-				EnvVar {
-					env_key: "OE_GOOGLE_CLIENT_ID",
-					default: DEFAULT_GOOGLE_CLIENT_ID,
-					sensitive: false,
-					optional: false,
-				},
-			),
-			(
-				"google_client_secret",
-				EnvVar {
-					env_key: "OE_GOOGLE_CLIENT_SECRET",
-					default: DEFAULT_GOOGLE_CLIENT_SECRET,
-					sensitive: true,
-					optional: false,
-				},
-			),
 			(
 				"ethereum_url",
 				EnvVar {
@@ -350,11 +335,11 @@ impl ConfigLoader {
 		let get_opt = |key: &str| get_env_value(&vars[key]);
 
 		let mailer_configs = Self::load_mailer_configs();
+		let google_oauth2_configs = Self::load_google_oauth2_configs();
 
 		ConfigLoader {
 			mailer_configs,
-			google_client_id: get("google_client_id"),
-			google_client_secret: get("google_client_secret"),
+			google_oauth2_configs,
 			ethereum_url: append_key(&get("ethereum_url")),
 			solana_url: append_key(&get("solana_url")),
 			bsc_url: append_key(&get("bsc_url")),
@@ -465,5 +450,64 @@ impl ConfigLoader {
 		let mut clients: Vec<String> = self.mailer_configs.keys().cloned().collect();
 		clients.sort();
 		clients
+	}
+
+	/// Load Google OAuth2 configurations for multiple clients from environment variables
+	/// Format: OE_GOOGLE_CLIENT_ID_{CLIENT}, OE_GOOGLE_CLIENT_SECRET_{CLIENT}
+	/// CLIENT can be WILDMETA, HEIMA, etc.
+	fn load_google_oauth2_configs() -> HashMap<String, GoogleOAuth2Config> {
+		let mut configs = HashMap::new();
+
+		let env_vars: HashMap<String, String> = std::env::vars().collect();
+
+		let mut clients = std::collections::HashSet::new();
+		for key in env_vars.keys() {
+			if key.starts_with("OE_GOOGLE_CLIENT_ID_") {
+				if let Some(client) = key.strip_prefix("OE_GOOGLE_CLIENT_ID_") {
+					info!("Found Google OAuth2 configuration for client: {}", client);
+					clients.insert(client.to_lowercase());
+				}
+			}
+		}
+
+		info!("Total discovered Google OAuth2 clients: {:?}", clients);
+
+		if clients.is_empty() {
+			warn!("No Google OAuth2 configurations found in environment variables.");
+			return configs;
+		}
+
+		for client in clients {
+			let client_upper = client.to_uppercase();
+
+			let client_id =
+				std::env::var(format!("OE_GOOGLE_CLIENT_ID_{}", client_upper)).unwrap_or_default();
+			let client_secret = std::env::var(format!("OE_GOOGLE_CLIENT_SECRET_{}", client_upper))
+				.unwrap_or_default();
+
+			if client_id.is_empty() || client_secret.is_empty() {
+				warn!(
+					"Incomplete Google OAuth2 config for client '{}': client_id_empty={}, client_secret_empty={}",
+					client,
+					client_id.is_empty(),
+					client_secret.is_empty()
+				);
+				continue;
+			}
+
+			let config = GoogleOAuth2Config { client_id, client_secret };
+
+			info!("Loaded Google OAuth2 config for client '{}'", client);
+
+			configs.insert(client.clone(), config);
+		}
+
+		configs
+	}
+
+	/// Get Google OAuth2 configuration for a specific client
+	pub fn get_google_oauth2_config(&self, client_id: &str) -> Option<GoogleOAuth2Config> {
+		let client_key = client_id.to_lowercase();
+		self.google_oauth2_configs.get(&client_key).cloned()
 	}
 }
