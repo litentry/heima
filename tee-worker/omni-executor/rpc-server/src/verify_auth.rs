@@ -63,7 +63,13 @@ pub async fn verify_auth<
 			verify_email_authentication(ctx, client_id, email, verification_code)
 		},
 		OmniAuth::OAuth2(ref client_id, ref sender, ref oauth2_data) => {
-			verify_oauth2_authentication(ctx, client_id, sender, oauth2_data).await
+			let verified_identity =
+				verify_oauth2_authentication(ctx, client_id, oauth2_data).await?;
+			if sender.hash() == verified_identity.hash() {
+				Ok(())
+			} else {
+				Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string()))
+			}
 		},
 		OmniAuth::AuthToken(ref auth_token) => verify_auth_token_authentication(
 			&ctx.jwt_rsa_private_key,
@@ -151,11 +157,10 @@ pub async fn verify_oauth2_authentication<
 >(
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
 	client_id: &str,
-	sender: &Identity,
 	payload: &OAuth2Data,
-) -> Result<(), AuthenticationError> {
+) -> Result<Identity, AuthenticationError> {
 	match payload.provider {
-		OAuth2Provider::Google => verify_google_oauth2(ctx, client_id, sender, payload).await,
+		OAuth2Provider::Google => verify_google_oauth2(ctx, client_id, payload).await,
 	}
 }
 
@@ -166,9 +171,8 @@ async fn verify_google_oauth2<
 >(
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
 	client_id: &str,
-	sender: &Identity,
 	payload: &OAuth2Data,
-) -> Result<(), AuthenticationError> {
+) -> Result<Identity, AuthenticationError> {
 	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
 	let key: Hash = blake2_256((client_id, &payload.uid).encode().as_slice()).into();
 	let Ok(Some(stored_state)) = state_verifier_storage.get(&key) else {
@@ -198,10 +202,7 @@ async fn verify_google_oauth2<
 		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
 	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
 
-	match sender.hash() == google_identity.hash() {
-		true => Ok(()),
-		false => Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string())),
-	}
+	Ok(google_identity)
 }
 
 #[cfg(test)]
