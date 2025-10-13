@@ -17,6 +17,7 @@ mod evm;
 mod pumpx;
 mod sendgrid;
 mod solana;
+mod wildmeta;
 
 // It should only works on UNIX.
 async fn shutdown_signal() {
@@ -56,6 +57,7 @@ pub fn run_with_shutdown_control(
 					.or(pumpx::handle())
 					.or(sendgrid::handle())
 					.or(solana::handle())
+					.or(wildmeta::handle())
 					.boxed(),
 			)
 			.bind_with_graceful_shutdown(([0, 0, 0, 0], port), async {

@@ -118,3 +118,35 @@ export interface SubmitUserOpTestParams {
     omni_account: string;
     client_id: string;
 }
+
+export interface GetHyperliquidSignatureDataParams {
+    user_id: {
+        type: string;
+        value: string;
+    };
+    user_auth?: {
+        type: string;
+        value: string;
+    };
+    client_id: string;
+    client_auth?: {
+        type: string;
+        value: {
+            agent_address: string;
+            business_json: string;
+            main_address: string;
+            signature: string;
+            login_type: number;
+        };
+    };
+    action_type: {
+        type: 'approve_agent' | 'withdraw3' | 'approve_builder_fee';
+        agent_address?: string;
+        agent_name?: string;
+        amount?: string;
+        destination?: string;
+        max_fee_rate?: string;
+        builder?: string;
+    };
+    chain_id: number;
+}
