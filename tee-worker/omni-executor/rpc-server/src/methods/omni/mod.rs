@@ -68,6 +68,9 @@ use submit_user_op_with_auth::*;
 mod user_login;
 use user_login::*;
 
+mod login_with_oauth2;
+use login_with_oauth2::*;
+
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
@@ -96,6 +99,7 @@ pub fn register_omni<
 	register_get_oauth2_google_authorization_url(module);
 	register_get_web3_sign_in_message(module);
 	register_user_login(module);
+	register_login_with_oauth2(module);
 
 	register_request_jwt(module);
 	register_export_wallet(module);
