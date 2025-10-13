@@ -6501,6 +6501,7 @@ dependencies = [
  "hex",
  "libsecp256k1 0.7.2",
  "log",
+ "serde",
  "serde_json",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio",
