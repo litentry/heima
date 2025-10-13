@@ -1,8 +1,9 @@
 use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
+use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hash, Hashable, Identity,
+	OAuth2Data, OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
@@ -12,6 +13,7 @@ use heima_authentication::{
 };
 use heima_identity_verification::web2::google::decode_id_token;
 use oauth_providers::google::GoogleOAuth2Client;
+use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
 
 #[derive(Debug, PartialEq)]
@@ -60,8 +62,8 @@ pub async fn verify_auth<
 		OmniAuth::Email(ref client_id, ref email, ref verification_code) => {
 			verify_email_authentication(ctx, client_id, email, verification_code)
 		},
-		OmniAuth::OAuth2(ref sender, ref oauth2_data) => {
-			verify_oauth2_authentication(ctx, sender, oauth2_data).await
+		OmniAuth::OAuth2(ref client_id, ref sender, ref oauth2_data) => {
+			verify_oauth2_authentication(ctx, client_id, sender, oauth2_data).await
 		},
 		OmniAuth::AuthToken(ref auth_token) => verify_auth_token_authentication(
 			&ctx.jwt_rsa_private_key,
@@ -148,11 +150,12 @@ pub async fn verify_oauth2_authentication<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	client_id: &str,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	match payload.provider {
-		OAuth2Provider::Google => verify_google_oauth2(ctx, sender, payload).await,
+		OAuth2Provider::Google => verify_google_oauth2(ctx, client_id, sender, payload).await,
 	}
 }
 
@@ -162,18 +165,30 @@ async fn verify_google_oauth2<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	client_id: &str,
 	sender: &Identity,
 	payload: &OAuth2Data,
 ) -> Result<(), AuthenticationError> {
 	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
-	let Ok(Some(state_verifier)) = state_verifier_storage.get(&sender.hash()) else {
+	let key: Hash = blake2_256((client_id, &payload.uid).encode().as_slice()).into();
+	let Ok(Some(stored_state)) = state_verifier_storage.get(&key) else {
 		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
 	};
-	if state_verifier != payload.state {
+
+	if stored_state != payload.state {
 		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
 	}
+
+	let google_config =
+		ctx.google_oauth2_factory.get_google_config_for_client(client_id).map_err(|e| {
+			AuthenticationError::OAuth2Error(format!(
+				"Failed to get Google OAuth2 config for client '{}': {}",
+				client_id, e
+			))
+		})?;
+
 	let google_client =
-		GoogleOAuth2Client::new(ctx.google_client_id.clone(), ctx.google_client_secret.clone());
+		GoogleOAuth2Client::new(google_config.client_id, google_config.client_secret);
 	let code = payload.code.clone();
 	let redirect_uri = payload.redirect_uri.clone();
 	let token = google_client.exchange_code_for_token(code, redirect_uri).await.map_err(|_| {
