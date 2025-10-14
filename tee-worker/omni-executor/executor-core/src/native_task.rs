@@ -71,9 +71,9 @@ pub enum NativeTask {
 		ChainId, // chain_id
 		u32,     // wallet_index
 		String,  // smart_wallet_address (OmniAccount address, e.g., "0x1234...")
-		String,  // collateral_ticker (e.g., "ETH", "PURR")
-		u32,     // lending_ratio (percentage, e.g., 50 = 50%)
+		String,  // collateral_ticker (e.g., "ETH", "PURR", uppercase)
 		String,  // collateral_size (balance of collateral in smart wallet spot)
+		u32,     // lending_ratio (percentage, e.g., 50 = 50%)
 	),
 }
 

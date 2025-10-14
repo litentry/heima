@@ -1184,12 +1184,12 @@ pub async fn handle_native_task<
 			wallet_index,
 			smart_wallet_address,
 			collateral_ticker,
-			lending_ratio,
 			collateral_size,
+			lending_ratio,
 		) => {
 			info!(
-				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, smart_wallet: {}, collateral: {}, lending_ratio: {}, collateral_size: {}",
-				omni_account, chain_id, wallet_index, smart_wallet_address, collateral_ticker, lending_ratio, collateral_size
+				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, smart_wallet: {}, collateral: {}, collateral_size: {}, lending_ratio: {}",
+				omni_account, chain_id, wallet_index, smart_wallet_address, collateral_ticker, collateral_size, lending_ratio
 			);
 
 			handle_request_loan(
@@ -1199,8 +1199,8 @@ pub async fn handle_native_task<
 				wallet_index,
 				&smart_wallet_address,
 				&collateral_ticker,
-				lending_ratio,
 				&collateral_size,
+				lending_ratio,
 			)
 			.await
 		},
@@ -1740,8 +1740,8 @@ async fn handle_request_loan<
 	wallet_index: u32,
 	smart_wallet_address_str: &str,
 	collateral_ticker: &str,
-	lending_ratio: u32,
 	collateral_size_str: &str,
+	lending_ratio: u32,
 ) -> NativeTaskResponse {
 	use hyperliquid::*;
 

@@ -23,8 +23,8 @@ pub struct RequestLoanParams {
 	pub wallet_index: u32,
 	pub smart_wallet_address: String,
 	pub collateral_ticker: String,
-	pub lending_ratio: u32, // percentage of total collateral sold as spot and returned as lending, e.g., 50 = 50%
 	pub collateral_size: String, // size (balance) of collateral in smart wallet spot
+	pub lending_ratio: u32, // percentage of total collateral sold as spot and returned as lending, e.g., 50 = 50%
 }
 
 #[derive(Serialize, Clone)]
@@ -83,12 +83,24 @@ pub fn register_request_loan<
 				));
 			}
 
-			// Validate collateral ticker is not empty
+			// Validate collateral ticker is not empty and normalize to uppercase
 			if params.collateral_ticker.is_empty() {
 				return Err(PumpxRpcError::from(
 					DetailedError::new(PARSE_ERROR_CODE, "Collateral ticker cannot be empty")
 						.with_field("collateral_ticker")
 						.with_suggestion("Provide a valid ticker like ETH, PURR, etc."),
+				));
+			}
+			let collateral_ticker = params.collateral_ticker.to_uppercase();
+
+			// Validate collateral_size is not empty
+			if params.collateral_size.is_empty() {
+				return Err(PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Collateral size cannot be empty")
+						.with_field("collateral_size")
+						.with_suggestion(
+							"Provide a valid collateral size in human-readable format",
+						),
 				));
 			}
 
@@ -99,17 +111,6 @@ pub fn register_request_loan<
 						.with_field("lending_ratio")
 						.with_received(params.lending_ratio.to_string())
 						.with_expected("0-100 (percentage)"),
-				));
-			}
-
-			// Validate collateral_size is not empty
-			if params.collateral_size.is_empty() {
-				return Err(PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Collateral size cannot be empty")
-						.with_field("collateral_size")
-						.with_suggestion(
-							"Provide a valid collateral size in human-readable format",
-						),
 				));
 			}
 
@@ -131,9 +132,9 @@ pub fn register_request_loan<
 					params.chain_id,
 					params.wallet_index,
 					params.smart_wallet_address,
-					params.collateral_ticker,
-					params.lending_ratio,
+					collateral_ticker,
 					params.collateral_size,
+					params.lending_ratio,
 				),
 				None,
 				None,
