@@ -93,4 +93,25 @@ export interface SubmitUserOpTestResponse {
     transaction_hash: string | null;
 }
 
+export interface GetHyperliquidSignatureDataResponse {
+    main_address: string;
+    hyperliquid_signature_data: {
+        action: {
+            type: 'approve_agent' | 'withdraw3' | 'approve_builder_fee';
+            signatureChainId?: string;
+            hyperliquidChain?: string;
+            agentAddress?: string;
+            agentName?: string;
+            nonce?: number;
+            amount?: string;
+            time?: number;
+            destination?: string;
+            maxFeeRate?: string;
+            builder?: string;
+        };
+        nonce: number;
+        signature: string;
+    };
+}
+
 // todo: add other types
