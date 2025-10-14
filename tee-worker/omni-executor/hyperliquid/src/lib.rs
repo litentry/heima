@@ -7,7 +7,7 @@ pub use hypercore_api::*;
 use alloy::primitives::Address;
 
 pub const CORE_WRITER_ADDRESS: &str = "0x3333333333333333333333333333333333333333";
-pub const SIMPLE_PAYMASTER_ADDRESS: &str = "0xD4dCB31763CBA7295bA4023E9411CB6db607DE07";
+pub const SIMPLE_PAYMASTER_ADDRESS: &str = "0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912"; // staging-v1
 
 pub fn get_core_writer_address() -> Address {
 	CORE_WRITER_ADDRESS.parse().unwrap()

@@ -1965,9 +1965,42 @@ async fn submit_corewriter_userop<
 		NativeTaskError::ChainNotSupported(chain_id)
 	})?;
 
-	// Get current nonce - use a simple counter for now
-	// TODO: Query from EntryPoint.getNonce(sender, key) in production
-	let nonce = 0u128;
+	// Query nonce from smart wallet (internally calls EntryPoint.getNonce with key=0)
+	let smart_wallet_addr: alloy::primitives::Address =
+		smart_wallet_address.parse().map_err(|e| {
+			error!("Failed to parse smart wallet address: {:?}", e);
+			NativeTaskError::InternalError(Some(format!(
+				"Invalid smart wallet address: {}",
+				smart_wallet_address
+			)))
+		})?;
+
+	// Get RPC client for this chain to query the smart wallet
+	let rpc_url = match chain_id {
+		999 => "https://api.hyperliquid.xyz/evm",
+		998 => "https://api.hyperliquid-testnet.xyz/evm",
+		_ => {
+			return Err(NativeTaskError::InternalError(Some(format!(
+				"Unsupported chain_id {} for nonce query",
+				chain_id
+			))))
+		},
+	};
+
+	let rpc_provider = Arc::new(ethereum_rpc::AlloyRpcProvider::new(rpc_url));
+	let omni_account_client =
+		aa_contracts_client::OmniAccountClient::new(smart_wallet_addr, rpc_provider);
+
+	let nonce = omni_account_client.get_nonce().await.map_err(|_| {
+		error!("Failed to get nonce for smart wallet: {}", smart_wallet_address);
+		NativeTaskError::InternalError(Some(format!(
+			"Failed to query nonce for wallet {}",
+			smart_wallet_address
+		)))
+	})?;
+
+	let nonce_u128 = nonce.to::<u128>();
+	info!("Retrieved nonce {} for smart wallet {}", nonce_u128, smart_wallet_address);
 
 	// Calculate gas fees
 	let (max_fee_per_gas, max_priority_fee_per_gas) =
@@ -1979,7 +2012,7 @@ async fn submit_corewriter_userop<
 	// Build UserOp
 	let user_op = SerializablePackedUserOperation {
 		sender: smart_wallet_address.to_string(),
-		nonce,
+		nonce: nonce_u128,
 		init_code: "0x".to_string(),
 		call_data,
 		account_gas_limits: pack_account_gas_limits(1_000_000, 2_000_000),
