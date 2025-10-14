@@ -2188,7 +2188,10 @@ async fn submit_corewriter_userop<
 	let omni_account_client =
 		aa_contracts_client::OmniAccountClient::new(smart_wallet_addr, rpc_provider);
 
-	let nonce = if is_first_action {
+	let nonce = if is_first_action
+		&& !skeleton_user_op.init_code.is_empty()
+		&& skeleton_user_op.init_code != "0x"
+	{
 		U256::from(0)
 	} else {
 		omni_account_client.get_nonce().await.map_err(|_| {
