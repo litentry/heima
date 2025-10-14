@@ -5,7 +5,7 @@ use jsonrpsee::RpcModule;
 mod omni;
 use omni::*;
 
-pub const PROTECTED_METHODS: [&str; 9] = [
+pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",
 	"omni_addWallet",
 	"omni_notifyLimitOrderResult",
@@ -14,7 +14,6 @@ pub const PROTECTED_METHODS: [&str; 9] = [
 	"omni_submitUserOp",
 	"omni_transferWithdraw",
 	"omni_exportWallet",
-	"omni_requestLoan",
 ];
 
 pub fn register_methods<
