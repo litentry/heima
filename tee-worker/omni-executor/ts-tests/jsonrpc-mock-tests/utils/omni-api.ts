@@ -13,6 +13,7 @@ import {
     SubmitSwapOrderParams,
     SignLimitOrderParams,
     NotifyLimitOrderResultParams,
+    GetHyperliquidSignatureDataParams,
 } from './request-types';
 import {
     RequestEmailVerificationCodeResponse,
@@ -29,6 +30,7 @@ import {
     SubmitSwapOrderResponse,
     SignLimitOrderResponse,
     NotifyLimitOrderResultResponse,
+    GetHyperliquidSignatureDataResponse,
 } from './response-types';
 
 export class OmniApi {
@@ -141,6 +143,12 @@ export class OmniApi {
 
     async submitUserOpTest(params: SubmitUserOpTestParams): Promise<SubmitUserOpTestResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniSubmitUserOpTest, params);
+
+        return response;
+    }
+
+    async getHyperliquidSignatureData(params: GetHyperliquidSignatureDataParams, token?: string): Promise<GetHyperliquidSignatureDataResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniGetHyperliquidSignatureData, params, token);
 
         return response;
     }
