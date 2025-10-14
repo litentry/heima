@@ -23,8 +23,8 @@ pub struct RequestLoanParams {
 	pub wallet_index: u32,
 	pub smart_wallet_address: String,
 	pub collateral_ticker: String,
-	pub spot_ratio: u32, // percentage of collateral that should be sold as spot, e.g., 50 = 50%
-	pub margin_ratio: u32, // percentage, e.g., 200 = 200% (leverage)
+	pub lending_ratio: u32, // percentage of total collateral sold as spot and returned as lending, e.g., 50 = 50%
+	pub collateral_size: String, // size (balance) of collateral in smart wallet spot
 }
 
 #[derive(Serialize, Clone)]
@@ -92,13 +92,24 @@ pub fn register_request_loan<
 				));
 			}
 
-			// Validate spot_ratio is between 0 and 100 (0-100%)
-			if params.spot_ratio > 100 {
+			// Validate lending_ratio is between 0 and 100 (0-100%)
+			if params.lending_ratio > 100 {
 				return Err(PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Spot ratio must be between 0 and 100")
-						.with_field("spot_ratio")
-						.with_received(params.spot_ratio.to_string())
+					DetailedError::new(PARSE_ERROR_CODE, "Lending ratio must be between 0 and 100")
+						.with_field("lending_ratio")
+						.with_received(params.lending_ratio.to_string())
 						.with_expected("0-100 (percentage)"),
+				));
+			}
+
+			// Validate collateral_size is not empty
+			if params.collateral_size.is_empty() {
+				return Err(PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Collateral size cannot be empty")
+						.with_field("collateral_size")
+						.with_suggestion(
+							"Provide a valid collateral size in human-readable format",
+						),
 				));
 			}
 
@@ -121,8 +132,8 @@ pub fn register_request_loan<
 					params.wallet_index,
 					params.smart_wallet_address,
 					params.collateral_ticker,
-					params.spot_ratio,
-					params.margin_ratio,
+					params.lending_ratio,
+					params.collateral_size,
 				),
 				None,
 				None,

@@ -1184,12 +1184,12 @@ pub async fn handle_native_task<
 			wallet_index,
 			smart_wallet_address,
 			collateral_ticker,
-			spot_ratio,
-			margin_ratio,
+			lending_ratio,
+			collateral_size,
 		) => {
 			info!(
-				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, smart_wallet: {}, collateral: {}, spot_ratio: {}, margin_ratio: {}",
-				omni_account, chain_id, wallet_index, smart_wallet_address, collateral_ticker, spot_ratio, margin_ratio
+				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, smart_wallet: {}, collateral: {}, lending_ratio: {}, collateral_size: {}",
+				omni_account, chain_id, wallet_index, smart_wallet_address, collateral_ticker, lending_ratio, collateral_size
 			);
 
 			handle_request_loan(
@@ -1199,8 +1199,8 @@ pub async fn handle_native_task<
 				wallet_index,
 				&smart_wallet_address,
 				&collateral_ticker,
-				spot_ratio,
-				margin_ratio,
+				lending_ratio,
+				&collateral_size,
 			)
 			.await
 		},
@@ -1740,14 +1740,19 @@ async fn handle_request_loan<
 	wallet_index: u32,
 	smart_wallet_address_str: &str,
 	collateral_ticker: &str,
-	spot_ratio: u32,
-	margin_ratio: u32,
+	lending_ratio: u32,
+	collateral_size_str: &str,
 ) -> NativeTaskResponse {
 	use hyperliquid::*;
 
 	let hypercore_client = HyperCoreClient::new(chain_id).map_err(|e| {
 		error!("Failed to create HyperCore client: {}", e);
 		NativeTaskError::ChainNotSupported(chain_id)
+	})?;
+
+	let collateral_size = collateral_size_str.parse::<f64>().map_err(|e| {
+		error!("Failed to parse collateral_size: {}", e);
+		NativeTaskError::InternalError(Some(format!("Invalid collateral_size: {}", e)))
 	})?;
 
 	// Fetch metadata from HyperCore
@@ -1777,28 +1782,51 @@ async fn handle_request_loan<
 		spot_asset_id, perp_asset_id, collateral_ticker
 	);
 
-	info!("Using smart wallet address: {}", smart_wallet_address_str);
+	// Check user balance
+	let user_balance = hypercore_client
+		.get_spot_balance(smart_wallet_address_str, collateral_ticker)
+		.await
+		.map_err(|e| {
+			error!("Failed to get user balance: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to query balance: {}", e)))
+		})?;
 
-	// Calculate spot sell size (assuming 1.0 units for now, should be calculated from collateral)
-	let total_collateral_size = 1.0;
-	let spot_sell_ratio = (spot_ratio as f64) / 100.0;
-	let spot_sell_size = total_collateral_size * spot_sell_ratio;
-	let spot_sell_size_units = calculate_size_units(spot_sell_size);
+	if user_balance < collateral_size {
+		error!(
+			"Insufficient balance: user has {} but needs {} {}",
+			user_balance, collateral_size, collateral_ticker
+		);
+		return Err(NativeTaskError::InternalError(Some(format!(
+			"Insufficient balance: user has {} but needs {} {}",
+			user_balance, collateral_size, collateral_ticker
+		))));
+	}
+
+	info!(
+		"Balance check passed: user has {} {} (required: {})",
+		user_balance, collateral_ticker, collateral_size
+	);
+
+	// Action 1: Sell collateral_size as spot to get X USDC
+	let spot_sell_size_units = calculate_size_units(collateral_size);
 
 	// Generate cloids
 	let spot_sell_cloid = generate_cloid();
-	let hedge_open_cloid = generate_cloid() + 1;
+	let usd_transfer_cloid = generate_cloid() + 1;
+	let hedge_open_cloid = generate_cloid() + 2;
 
-	info!("Generated cloids - spot_sell: {}, hedge_open: {}", spot_sell_cloid, hedge_open_cloid);
+	info!(
+		"Generated cloids - spot_sell: {}, usd_transfer: {}, hedge_open: {}",
+		spot_sell_cloid, usd_transfer_cloid, hedge_open_cloid
+	);
 
-	// Build spot sell action
+	// Action 1: Build and submit spot sell action
 	let spot_sell_action =
 		build_spot_sell_order(spot_asset_id, spot_sell_size_units, spot_sell_cloid);
 	let spot_sell_corewriter_calldata = encode_send_raw_action(spot_sell_action);
 	let spot_sell_calldata =
 		encode_omni_account_execute(get_core_writer_address(), spot_sell_corewriter_calldata);
 
-	// Submit spot sell UserOp
 	let spot_sell_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
@@ -1809,11 +1837,11 @@ async fn handle_request_loan<
 	)
 	.await?;
 
-	info!("Spot sell transaction submitted: {:?}", spot_sell_tx_hash);
+	info!("Action 1: Spot sell submitted: {:?}", spot_sell_tx_hash);
 
-	// Wait for spot sell to complete
+	// Monitor Action 1 until it succeeds/finalises
 	let spot_filled = hypercore_client
-		.wait_for_order_completion(&smart_wallet_address_str, &spot_sell_cloid.to_string(), 60)
+		.wait_for_order_completion(smart_wallet_address_str, &spot_sell_cloid.to_string(), 60)
 		.await
 		.map_err(|e| {
 			error!("Spot sell order did not complete: {}", e);
@@ -1825,21 +1853,57 @@ async fn handle_request_loan<
 		return Err(NativeTaskError::InternalError(Some("Spot sell order failed".to_string())));
 	}
 
-	info!("Spot sell order filled successfully");
+	info!("Action 1: Spot sell filled successfully");
 
-	// Calculate hedge size based on margin_ratio
-	let hedge_size = total_collateral_size * (100.0 - (spot_ratio as f64)) / 100.0;
-	let leverage = (margin_ratio as f64) / 100.0;
-	let hedge_position_size = hedge_size * leverage;
-	let hedge_size_units = calculate_size_units(hedge_position_size);
+	// Calculate USDC received (using placeholder price, should query actual fill)
+	let estimated_eth_price = 3000.0;
+	let usdc_received_total = collateral_size * estimated_eth_price;
+	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
+	let usdc_for_perp = usdc_received_total * (1.0 - lending_ratio_f64);
 
-	// Build hedge perp order
+	info!(
+		"Estimated USDC received: {:.2}, USDC for perp: {:.2}",
+		usdc_received_total, usdc_for_perp
+	);
+
+	// Action 2: Move usdc_for_perp into perps within HyperCore
+	let usdc_for_perp_units = calculate_size_units(usdc_for_perp);
+	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
+	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
+	let usd_transfer_calldata =
+		encode_omni_account_execute(get_core_writer_address(), usd_transfer_corewriter_calldata);
+
+	let usd_transfer_tx_hash = submit_corewriter_userop(
+		ctx.clone(),
+		&omni_account,
+		chain_id,
+		wallet_index,
+		smart_wallet_address_str,
+		usd_transfer_calldata,
+	)
+	.await?;
+
+	info!("Action 2: USD class transfer submitted: {:?}", usd_transfer_tx_hash);
+
+	// Monitor Action 2 (wait for confirmation)
+	tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+	info!("Action 2: USD class transfer completed");
+
+	// Action 3: Open hedge position
+	let expected_leverage = 1.0 / (1.0 - lending_ratio_f64);
+	let hedge_notional_size = collateral_size * expected_leverage;
+	let hedge_size_units = calculate_size_units(hedge_notional_size);
+
+	info!(
+		"Opening hedge position: notional_size={:.2} {} (leverage: {:.2}x)",
+		hedge_notional_size, collateral_ticker, expected_leverage
+	);
+
 	let hedge_action = build_perp_long_order(perp_asset_id, hedge_size_units, hedge_open_cloid);
 	let hedge_corewriter_calldata = encode_send_raw_action(hedge_action);
 	let hedge_calldata =
 		encode_omni_account_execute(get_core_writer_address(), hedge_corewriter_calldata);
 
-	// Submit hedge UserOp
 	let hedge_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
@@ -1850,11 +1914,11 @@ async fn handle_request_loan<
 	)
 	.await?;
 
-	info!("Hedge transaction submitted: {:?}", hedge_tx_hash);
+	info!("Action 3: Hedge position submitted: {:?}", hedge_tx_hash);
 
-	// Wait for hedge to complete
+	// Monitor Action 3 until it succeeds/finalises
 	let hedge_filled = hypercore_client
-		.wait_for_order_completion(&smart_wallet_address_str, &hedge_open_cloid.to_string(), 60)
+		.wait_for_order_completion(smart_wallet_address_str, &hedge_open_cloid.to_string(), 60)
 		.await
 		.map_err(|e| {
 			error!("Hedge order did not complete: {}", e);
@@ -1866,10 +1930,9 @@ async fn handle_request_loan<
 		return Err(NativeTaskError::InternalError(Some("Hedge order failed".to_string())));
 	}
 
-	info!("Hedge order filled successfully");
+	info!("Action 3: Hedge position filled successfully");
 
-	// Calculate USDC received (simplified, should query actual fill amount)
-	let usdc_received = format!("{:.2}", spot_sell_size * 3000.0); // Placeholder price
+	let usdc_received = format!("{:.2}", usdc_received_total * lending_ratio_f64);
 
 	Ok(NativeTaskOk::RequestLoan {
 		spot_sell_cloid: spot_sell_cloid.to_string(),

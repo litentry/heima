@@ -14,6 +14,8 @@ enum HyperCoreRequest {
 	Meta,
 	#[serde(rename = "orderStatus")]
 	OrderStatus { user: String, oid: String },
+	#[serde(rename = "spotClearinghouseState")]
+	SpotClearinghouseState { user: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +85,18 @@ pub struct OrderDetail {
 	#[serde(rename = "reduceOnly")]
 	pub reduce_only: bool,
 	pub cloid: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SpotClearinghouseStateResponse {
+	pub balances: Vec<SpotBalance>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SpotBalance {
+	pub coin: String,
+	pub hold: String,
+	pub total: String,
 }
 
 pub struct HyperCoreClient {
@@ -233,6 +247,43 @@ impl HyperCoreClient {
 
 			tokio::time::sleep(Duration::from_secs(2)).await;
 		}
+	}
+
+	pub async fn get_spot_balance(&self, user_address: &str, ticker: &str) -> Result<f64, String> {
+		let request = HyperCoreRequest::SpotClearinghouseState { user: user_address.to_string() };
+
+		debug!("Fetching spot balance for {} from HyperCore API", user_address);
+
+		let response = self
+			.client
+			.post(&self.api_url)
+			.json(&request)
+			.send()
+			.await
+			.map_err(|e| format!("Failed to send spot clearinghouse state request: {}", e))?;
+
+		if !response.status().is_success() {
+			let status = response.status();
+			let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+			error!("HyperCore API error {}: {}", status, error_text);
+			return Err(format!("HyperCore API error {}: {}", status, error_text));
+		}
+
+		let state = response
+			.json::<SpotClearinghouseStateResponse>()
+			.await
+			.map_err(|e| format!("Failed to parse spot clearinghouse state response: {}", e))?;
+
+		let balance = state
+			.balances
+			.iter()
+			.find(|b| b.coin.eq_ignore_ascii_case(ticker))
+			.ok_or_else(|| format!("Token {} not found in user balances", ticker))?;
+
+		balance
+			.total
+			.parse::<f64>()
+			.map_err(|e| format!("Failed to parse balance value: {}", e))
 	}
 }
 

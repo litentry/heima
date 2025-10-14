@@ -79,3 +79,18 @@ pub fn build_perp_long_order(asset_id: u32, size: u64, cloid: u128) -> Vec<u8> {
 pub fn calculate_size_units(amount: f64) -> u64 {
 	(amount * 1e8) as u64
 }
+
+pub fn encode_usd_class_transfer_action(ntl: u64, to_perp: bool) -> Vec<u8> {
+	let encoded = ethabi::encode(&[ethabi::Token::Uint(ntl.into()), ethabi::Token::Bool(to_perp)]);
+
+	let mut data = Vec::new();
+	data.push(0x01); // version
+	data.extend_from_slice(&[0x00, 0x00, 0x07]); // action_id = 7
+	data.extend_from_slice(&encoded);
+
+	data
+}
+
+pub fn build_usd_class_transfer_to_perp(ntl: u64) -> Vec<u8> {
+	encode_usd_class_transfer_action(ntl, true)
+}
