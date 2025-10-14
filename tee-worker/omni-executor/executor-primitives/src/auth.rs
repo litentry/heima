@@ -101,7 +101,7 @@ pub enum OmniAuth {
 	Web3(String, Identity, HeimaMultiSignature), // (client_id, Signer, Signature)
 	Email(String, Email, VerificationCode),      // (client_id, Email, VerificationCode)
 	AuthToken(JwtToken),
-	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
+	OAuth2(String, Identity, OAuth2Data), // (client_id, Sender, OAuth2Data)
 	Passkey(PasskeyData),
 }
 
@@ -176,6 +176,7 @@ pub struct OAuth2Data {
 	pub code: String,
 	pub state: String,
 	pub redirect_uri: String,
+	pub uid: String, // A unique identifier for the user/session requesting the OAuth2
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -257,7 +258,7 @@ pub fn to_omni_auth(
 		UserAuth::OAuth2(data) => {
 			let identity =
 				Identity::try_from(user_id.clone()).map_err(|_| "Invalid user ID format")?;
-			OmniAuth::OAuth2(identity, data.clone())
+			OmniAuth::OAuth2(client_id.to_string(), identity, data.clone())
 		},
 		UserAuth::Passkey(data) => OmniAuth::Passkey(data.clone()),
 	};
