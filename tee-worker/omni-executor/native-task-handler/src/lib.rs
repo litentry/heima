@@ -1178,29 +1178,30 @@ pub async fn handle_native_task<
 
 			Ok(NativeTaskOk::SubmitUserOp(transaction_hash))
 		},
-		NativeTask::RequestLoan(
+		NativeTask::RequestLoanTest(
 			omni_account,
+			user_operation,
 			chain_id,
 			wallet_index,
-			smart_wallet_address,
 			collateral_ticker,
 			collateral_size,
 			lending_ratio,
 		) => {
 			info!(
-				"Processing RequestLoan for {:?}, chain_id: {}, wallet_index: {}, smart_wallet: {}, collateral: {}, collateral_size: {}, lending_ratio: {}",
-				omni_account, chain_id, wallet_index, smart_wallet_address, collateral_ticker, collateral_size, lending_ratio
+				"Processing RequestLoanTest for {:?}, chain_id: {}, wallet_index: {}, sender: {}, collateral: {}, collateral_size: {}, lending_ratio: {}",
+				omni_account, chain_id, wallet_index, user_operation.sender, collateral_ticker, collateral_size, lending_ratio
 			);
 
 			handle_request_loan(
 				ctx,
 				omni_account,
+				user_operation,
 				chain_id,
 				wallet_index,
-				&smart_wallet_address,
 				&collateral_ticker,
 				&collateral_size,
 				lending_ratio,
+				&client_id,
 			)
 			.await
 		},
@@ -1799,14 +1800,18 @@ async fn handle_request_loan<
 		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 	omni_account: executor_primitives::AccountId,
+	skeleton_user_op: executor_core::types::SerializablePackedUserOperation,
 	chain_id: u64,
 	wallet_index: u32,
-	smart_wallet_address_str: &str,
 	collateral_ticker: &str,
 	collateral_size_str: &str,
 	lending_ratio: u32,
+	client_id: &str,
 ) -> NativeTaskResponse {
 	use hyperliquid::*;
+
+	// Extract smart wallet address from the skeleton UserOp
+	let smart_wallet_address_str = &skeleton_user_op.sender;
 
 	let hypercore_client = HyperCoreClient::new(chain_id).map_err(|e| {
 		error!("Failed to create HyperCore client: {}", e);
@@ -1896,10 +1901,12 @@ async fn handle_request_loan<
 	let spot_sell_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
+		&skeleton_user_op,
 		chain_id,
 		wallet_index,
-		smart_wallet_address_str,
 		spot_sell_calldata,
+		client_id,
+		true, // first action
 	)
 	.await?;
 
@@ -1946,10 +1953,12 @@ async fn handle_request_loan<
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
+		&skeleton_user_op,
 		chain_id,
 		wallet_index,
-		smart_wallet_address_str,
 		usd_transfer_calldata,
+		client_id,
+		false, // not first action
 	)
 	.await?;
 
@@ -1985,10 +1994,12 @@ async fn handle_request_loan<
 	let hedge_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
+		&skeleton_user_op,
 		chain_id,
 		wallet_index,
-		smart_wallet_address_str,
 		hedge_calldata,
+		client_id,
+		false, // not first action
 	)
 	.await?;
 
@@ -2034,13 +2045,17 @@ async fn submit_corewriter_userop<
 		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
 	>,
 	omni_account: &executor_primitives::AccountId,
+	skeleton_user_op: &executor_core::types::SerializablePackedUserOperation,
 	chain_id: u64,
 	wallet_index: u32,
-	smart_wallet_address: &str,
 	call_data: String,
+	client_id: &str,
+	is_first_action: bool,
 ) -> Result<Option<String>, NativeTaskError> {
 	use executor_core::types::SerializablePackedUserOperation;
 	use hyperliquid::*;
+
+	let smart_wallet_address = &skeleton_user_op.sender;
 
 	let entry_point_client = ctx.get_entry_point_client(chain_id).ok_or_else(|| {
 		error!("No EntryPoint client for chain_id: {}", chain_id);
@@ -2084,26 +2099,60 @@ async fn submit_corewriter_userop<
 	let nonce_u128 = nonce.to::<u128>();
 	info!("Retrieved nonce {} for smart wallet {}", nonce_u128, smart_wallet_address);
 
-	// Calculate gas fees
-	let (max_fee_per_gas, max_priority_fee_per_gas) =
-		entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
-			error!("Failed to calculate gas fees: {:?}", e);
-			NativeTaskError::InternalError(Some("Failed to calculate gas fees".to_string()))
-		})?;
+	// Use gas settings from skeleton UserOp if provided, otherwise calculate
+	let (gas_fees, account_gas_limits, pre_verification_gas) =
+		if !skeleton_user_op.gas_fees.is_empty()
+			&& skeleton_user_op.gas_fees != "0x"
+			&& !skeleton_user_op.account_gas_limits.is_empty()
+			&& skeleton_user_op.account_gas_limits != "0x"
+		{
+			info!("Using gas settings from skeleton UserOp");
+			(
+				skeleton_user_op.gas_fees.clone(),
+				skeleton_user_op.account_gas_limits.clone(),
+				skeleton_user_op.pre_verification_gas,
+			)
+		} else {
+			info!("Calculating gas fees");
+			let (max_fee_per_gas, max_priority_fee_per_gas) =
+				entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
+					error!("Failed to calculate gas fees: {:?}", e);
+					NativeTaskError::InternalError(Some("Failed to calculate gas fees".to_string()))
+				})?;
+			(
+				pack_gas_fees(max_fee_per_gas.to::<u128>(), max_priority_fee_per_gas.to::<u128>()),
+				pack_account_gas_limits(1_000_000, 2_000_000),
+				100_000,
+			)
+		};
+
+	// Use init_code from skeleton if this is the first action and init_code is non-empty
+	let init_code = if is_first_action
+		&& !skeleton_user_op.init_code.is_empty()
+		&& skeleton_user_op.init_code != "0x"
+	{
+		info!("Using init_code from skeleton UserOp for first action");
+		skeleton_user_op.init_code.clone()
+	} else {
+		"0x".to_string()
+	};
 
 	// Build UserOp
 	let user_op = SerializablePackedUserOperation {
 		sender: smart_wallet_address.to_string(),
 		nonce: nonce_u128,
-		init_code: "0x".to_string(),
+		init_code,
 		call_data,
-		account_gas_limits: pack_account_gas_limits(1_000_000, 2_000_000),
-		pre_verification_gas: 100_000,
-		gas_fees: pack_gas_fees(
-			max_fee_per_gas.to::<u128>(),
-			max_priority_fee_per_gas.to::<u128>(),
-		),
-		paymaster_and_data: encode_simple_paymaster(),
+		account_gas_limits,
+		pre_verification_gas,
+		gas_fees,
+		paymaster_and_data: if !skeleton_user_op.paymaster_and_data.is_empty()
+			&& skeleton_user_op.paymaster_and_data != "0x"
+		{
+			skeleton_user_op.paymaster_and_data.clone()
+		} else {
+			encode_simple_paymaster()
+		},
 		signature: None, // Will be signed by SubmitUserOp handler
 	};
 
@@ -2117,7 +2166,7 @@ async fn submit_corewriter_userop<
 		),
 		None,
 		None,
-		"internal".to_string(),
+		client_id.to_string(),
 	);
 
 	match Box::pin(handle_native_task(ctx, wrapper)).await {
