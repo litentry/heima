@@ -1727,6 +1727,69 @@ fn extract_paymaster_gas_limits(paymaster_and_data: &Bytes) -> (u128, u128) {
 	}
 }
 
+async fn print_account_state(
+	hypercore_client: &hyperliquid::HyperCoreClient,
+	user_address: &str,
+	label: &str,
+) {
+	use tracing::info;
+
+	info!("========== Account State: {} ==========", label);
+
+	// Print spot balances
+	match hypercore_client.get_spot_clearinghouse_state(user_address).await {
+		Ok(spot_state) => {
+			info!("Spot Balances:");
+			for balance in &spot_state.balances {
+				let total: f64 = balance.total.parse().unwrap_or(0.0);
+				let hold: f64 = balance.hold.parse().unwrap_or(0.0);
+				if total > 0.0 || hold > 0.0 {
+					info!("  {} - Total: {}, Hold: {}", balance.coin, balance.total, balance.hold);
+				}
+			}
+		},
+		Err(e) => {
+			info!("Failed to fetch spot balances: {}", e);
+		},
+	}
+
+	// Print perp clearinghouse state
+	match hypercore_client.get_perp_clearinghouse_state(user_address).await {
+		Ok(perp_state) => {
+			info!("Perp Margin Summary:");
+			info!(
+				"  Account Value: {}, Total Margin Used: {}, Withdrawable: {}",
+				perp_state.margin_summary.account_value,
+				perp_state.margin_summary.total_margin_used,
+				perp_state.withdrawable
+			);
+
+			if !perp_state.asset_positions.is_empty() {
+				info!("Open Positions:");
+				for asset_pos in &perp_state.asset_positions {
+					let pos = &asset_pos.position;
+					info!(
+						"  {} - Size: {}, Entry Px: {}, Position Value: {}, Unrealized PnL: {}, Leverage: {}x",
+						pos.coin,
+						pos.szi,
+						pos.entry_px.as_ref().unwrap_or(&"N/A".to_string()),
+						pos.position_value,
+						pos.unrealized_pnl,
+						pos.leverage.value
+					);
+				}
+			} else {
+				info!("Open Positions: None");
+			}
+		},
+		Err(e) => {
+			info!("Failed to fetch perp clearinghouse state: {}", e);
+		},
+	}
+
+	info!("==========================================");
+}
+
 async fn handle_request_loan<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -1807,6 +1870,9 @@ async fn handle_request_loan<
 		user_balance, collateral_ticker, collateral_size
 	);
 
+	// Print initial account state
+	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Actions").await;
+
 	// Action 1: Sell collateral_size as spot to get X USDC
 	let spot_sell_size_units = calculate_size_units(collateral_size);
 
@@ -1855,6 +1921,10 @@ async fn handle_request_loan<
 
 	info!("Action 1: Spot sell filled successfully");
 
+	// Print account state after Action 1
+	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 1 - Spot Sell")
+		.await;
+
 	// Calculate USDC received (using placeholder price, should query actual fill)
 	let estimated_eth_price = 3000.0;
 	let usdc_received_total = collateral_size * estimated_eth_price;
@@ -1888,6 +1958,14 @@ async fn handle_request_loan<
 	// Monitor Action 2 (wait for confirmation)
 	tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 	info!("Action 2: USD class transfer completed");
+
+	// Print account state after Action 2
+	print_account_state(
+		&hypercore_client,
+		smart_wallet_address_str,
+		"After Action 2 - USD Transfer to Perp",
+	)
+	.await;
 
 	// Action 3: Open hedge position
 	let expected_leverage = 1.0 / (1.0 - lending_ratio_f64);
@@ -1931,6 +2009,10 @@ async fn handle_request_loan<
 	}
 
 	info!("Action 3: Hedge position filled successfully");
+
+	// Print final account state after Action 3
+	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 3 - Hedge Open")
+		.await;
 
 	let usdc_received = format!("{:.2}", usdc_received_total * lending_ratio_f64);
 
