@@ -2088,13 +2088,17 @@ async fn submit_corewriter_userop<
 	let omni_account_client =
 		aa_contracts_client::OmniAccountClient::new(smart_wallet_addr, rpc_provider);
 
-	let nonce = omni_account_client.get_nonce().await.map_err(|_| {
-		error!("Failed to get nonce for smart wallet: {}", smart_wallet_address);
-		NativeTaskError::InternalError(Some(format!(
-			"Failed to query nonce for wallet {}",
-			smart_wallet_address
-		)))
-	})?;
+	let nonce = if is_first_action {
+		U256::from(0)
+	} else {
+		omni_account_client.get_nonce().await.map_err(|_| {
+			error!("Failed to get nonce for smart wallet: {}", smart_wallet_address);
+			NativeTaskError::InternalError(Some(format!(
+				"Failed to query nonce for wallet {}",
+				smart_wallet_address
+			)))
+		})?
+	};
 
 	let nonce_u128 = nonce.to::<u128>();
 	info!("Retrieved nonce {} for smart wallet {}", nonce_u128, smart_wallet_address);
