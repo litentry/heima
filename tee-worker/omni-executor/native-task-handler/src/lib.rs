@@ -1916,11 +1916,14 @@ async fn handle_request_loan<
 		wallet_index,
 		spot_sell_calldata,
 		client_id,
-		true, // first action
 	)
 	.await?;
 
 	info!("Action 1: Spot sell submitted with tx_hash: {:?}", spot_sell_tx_hash);
+
+	// Track nonce for subsequent actions
+	// After Action 1, the nonce has been consumed, so increment for Action 2
+	let mut current_nonce = skeleton_user_op.nonce + 1;
 
 	// Wait for transaction to be mined and UserOp to execute
 	if let Some(tx_hash) = &spot_sell_tx_hash {
@@ -2007,19 +2010,28 @@ async fn handle_request_loan<
 	let usd_transfer_calldata =
 		encode_omni_account_execute(get_core_writer_address(), usd_transfer_corewriter_calldata);
 
+	// Create updated skeleton with incremented nonce for Action 2
+	// Clear init_code since wallet is already deployed after Action 1
+	let mut skeleton_action2 = skeleton_user_op.clone();
+	skeleton_action2.nonce = current_nonce;
+	skeleton_action2.init_code = "0x".to_string();
+	info!("Action 2: Using nonce {}", current_nonce);
+
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&skeleton_user_op,
+		&skeleton_action2,
 		chain_id,
 		wallet_index,
 		usd_transfer_calldata,
 		client_id,
-		false, // not first action
 	)
 	.await?;
 
 	info!("Action 2: USD class transfer submitted: {:?}", usd_transfer_tx_hash);
+
+	// Increment nonce for Action 3
+	current_nonce += 1;
 
 	// Monitor Action 2 (wait for confirmation)
 	tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
@@ -2051,15 +2063,21 @@ async fn handle_request_loan<
 	let hedge_calldata =
 		encode_omni_account_execute(get_core_writer_address(), hedge_corewriter_calldata);
 
+	// Create updated skeleton with incremented nonce for Action 3
+	// Clear init_code since wallet is already deployed after Action 1
+	let mut skeleton_action3 = skeleton_user_op.clone();
+	skeleton_action3.nonce = current_nonce;
+	skeleton_action3.init_code = "0x".to_string();
+	info!("Action 3: Using nonce {}", current_nonce);
+
 	let hedge_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&skeleton_user_op,
+		&skeleton_action3,
 		chain_id,
 		wallet_index,
 		hedge_calldata,
 		client_id,
-		false, // not first action
 	)
 	.await?;
 
@@ -2150,7 +2168,6 @@ async fn submit_corewriter_userop<
 	wallet_index: u32,
 	call_data: String,
 	client_id: &str,
-	is_first_action: bool,
 ) -> Result<Option<String>, NativeTaskError> {
 	use executor_core::types::SerializablePackedUserOperation;
 	use hyperliquid::*;
@@ -2162,49 +2179,12 @@ async fn submit_corewriter_userop<
 		NativeTaskError::ChainNotSupported(chain_id)
 	})?;
 
-	// Query nonce from smart wallet (internally calls EntryPoint.getNonce with key=0)
-	let smart_wallet_addr: alloy::primitives::Address =
-		smart_wallet_address.parse().map_err(|e| {
-			error!("Failed to parse smart wallet address: {:?}", e);
-			NativeTaskError::InternalError(Some(format!(
-				"Invalid smart wallet address: {}",
-				smart_wallet_address
-			)))
-		})?;
-
-	// Get RPC client for this chain to query the smart wallet
-	let rpc_url = match chain_id {
-		999 => "https://api.hyperliquid.xyz/evm",
-		998 => "https://api.hyperliquid-testnet.xyz/evm",
-		_ => {
-			return Err(NativeTaskError::InternalError(Some(format!(
-				"Unsupported chain_id {} for nonce query",
-				chain_id
-			))))
-		},
-	};
-
-	let rpc_provider = Arc::new(ethereum_rpc::AlloyRpcProvider::new(rpc_url));
-	let omni_account_client =
-		aa_contracts_client::OmniAccountClient::new(smart_wallet_addr, rpc_provider);
-
-	let nonce = if is_first_action
-		&& !skeleton_user_op.init_code.is_empty()
-		&& skeleton_user_op.init_code != "0x"
-	{
-		U256::from(0)
-	} else {
-		omni_account_client.get_nonce().await.map_err(|_| {
-			error!("Failed to get nonce for smart wallet: {}", smart_wallet_address);
-			NativeTaskError::InternalError(Some(format!(
-				"Failed to query nonce for wallet {}",
-				smart_wallet_address
-			)))
-		})?
-	};
-
-	let nonce_u128 = nonce.to::<u128>();
-	info!("Retrieved nonce {} for smart wallet {}", nonce_u128, smart_wallet_address);
+	// Nonce handling: Always use nonce from skeleton_user_op and increment locally between actions
+	// The skeleton_user_op.nonce comes from RPC initially, then caller increments it for each subsequent action
+	// TODO: This assumes no concurrent transactions are sent from this smart wallet at the same time
+	// If concurrent transactions are possible, we need to implement proper nonce synchronization
+	let nonce = skeleton_user_op.nonce;
+	info!("Using nonce {} for smart wallet {}", nonce, smart_wallet_address);
 
 	// Use gas settings from skeleton UserOp if provided, otherwise calculate
 	let (gas_fees, account_gas_limits, pre_verification_gas) =
@@ -2233,21 +2213,15 @@ async fn submit_corewriter_userop<
 			)
 		};
 
-	// Use init_code from skeleton if this is the first action and init_code is non-empty
-	let init_code = if is_first_action
-		&& !skeleton_user_op.init_code.is_empty()
-		&& skeleton_user_op.init_code != "0x"
-	{
-		info!("Using init_code from skeleton UserOp for first action");
-		skeleton_user_op.init_code.clone()
-	} else {
-		"0x".to_string()
-	};
+	// Init_code handling: Use whatever is in skeleton_user_op (empty or not)
+	// For first action, skeleton contains init_code if wallet needs creation
+	// For subsequent actions, skeleton should have empty init_code since wallet is already deployed
+	let init_code = skeleton_user_op.init_code.clone();
 
 	// Build UserOp
 	let user_op = SerializablePackedUserOperation {
 		sender: smart_wallet_address.to_string(),
-		nonce: nonce_u128,
+		nonce,
 		init_code,
 		call_data,
 		account_gas_limits,
