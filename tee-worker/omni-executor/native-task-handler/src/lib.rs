@@ -1930,8 +1930,8 @@ async fn handle_request_loan<
 	let spot_sell_size_units = calculate_corewriter_size(collateral_size);
 
 	// TODO: need to confirm:
-	// shall we calculate aggressive sell price (2% below market to ensure fill)
-	let spot_sell_price_usdc = market_price * 0.98;
+	// shall we calculate aggressive sell price (5% below market to ensure fill)
+	let spot_sell_price_usdc = market_price * 0.95;
 	let spot_sell_price_units = calculate_corewriter_price(spot_sell_price_usdc);
 
 	// Generate cloids for orders (USD transfers don't use cloids)
