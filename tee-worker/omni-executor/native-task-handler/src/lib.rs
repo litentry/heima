@@ -2059,9 +2059,14 @@ async fn handle_request_loan<
 	}
 
 	// Use USDC decimals for the transfer amount
-	// let usdc_for_perp_units =
-	// 	calculate_spot_size(usdc_for_perp, usdc_token.wei_decimals, usdc_token.sz_decimals);
-	let usdc_for_perp_units = 1000000;
+	// Note: HyperLiquid uses 8 decimals for USDC, not 6!
+	// For 1.0 USDC: 1 * 10^8 = 100,000,000
+	let usdc_for_perp_units =
+		calculate_spot_size(1.0, usdc_token.wei_decimals, usdc_token.sz_decimals);
+	info!(
+		"Transferring {} units ({} USDC with {} decimals) from spot to perp",
+		usdc_for_perp_units, 1.0, usdc_token.wei_decimals
+	);
 	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
 	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
 
