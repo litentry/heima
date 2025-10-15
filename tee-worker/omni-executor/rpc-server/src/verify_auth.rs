@@ -12,6 +12,7 @@ use heima_authentication::{
 	web3::HeimaMessagePayload,
 };
 use heima_identity_verification::web2::google::decode_id_token;
+use oauth_providers::apple::AppleOAuth2Client;
 use oauth_providers::google::GoogleOAuth2Client;
 use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
@@ -161,6 +162,7 @@ pub async fn verify_oauth2_authentication<
 ) -> Result<Identity, AuthenticationError> {
 	match payload.provider {
 		OAuth2Provider::Google => verify_google_oauth2(ctx, client_id, payload).await,
+		OAuth2Provider::Apple => verify_apple_oauth2(ctx, client_id, payload).await,
 	}
 }
 
@@ -203,6 +205,46 @@ async fn verify_google_oauth2<
 	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
 
 	Ok(google_identity)
+}
+
+async fn verify_apple_oauth2<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	client_id: &str,
+	payload: &OAuth2Data,
+) -> Result<Identity, AuthenticationError> {
+	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
+	let key: Hash = blake2_256((client_id, &payload.uid).encode().as_slice()).into();
+	let Ok(Some(stored_state)) = state_verifier_storage.get(&key) else {
+		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
+	};
+
+	if stored_state != payload.state {
+		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
+	}
+
+	let apple_config =
+		ctx.apple_oauth2_factory.get_apple_config_for_client(client_id).map_err(|e| {
+			AuthenticationError::OAuth2Error(format!(
+				"Failed to get Apple OAuth2 config for client '{}': {}",
+				client_id, e
+			))
+		})?;
+
+	let apple_client = AppleOAuth2Client::new(apple_config.client_id, apple_config.client_secret);
+	let code = payload.code.clone();
+	let redirect_uri = payload.redirect_uri.clone();
+	let token = apple_client.exchange_code_for_token(code, redirect_uri).await.map_err(|_| {
+		AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
+	})?;
+	let id_token = heima_identity_verification::web2::apple::decode_id_token(&token)
+		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
+	let apple_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Apple);
+
+	Ok(apple_identity)
 }
 
 #[cfg(test)]
