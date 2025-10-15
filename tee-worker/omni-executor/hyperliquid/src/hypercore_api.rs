@@ -12,6 +12,8 @@ enum HyperCoreRequest {
 	SpotMeta,
 	#[serde(rename = "meta")]
 	Meta,
+	#[serde(rename = "allMids")]
+	AllMids,
 	#[serde(rename = "orderStatus")]
 	OrderStatus { user: String, oid: String },
 	#[serde(rename = "spotClearinghouseState")]
@@ -53,6 +55,9 @@ pub struct SpotToken {
 pub struct MetaResponse {
 	pub universe: Vec<PerpAsset>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct AllMidsResponse(pub std::collections::HashMap<String, String>);
 
 #[derive(Debug, Deserialize)]
 pub struct PerpAsset {
@@ -246,6 +251,43 @@ impl HyperCoreClient {
 			.map_err(|e| format!("Failed to parse meta response: {}", e))
 	}
 
+	pub async fn get_all_mids(&self) -> Result<AllMidsResponse, String> {
+		let request = HyperCoreRequest::AllMids;
+
+		debug!("Fetching all mid prices from HyperCore API");
+
+		let response = self
+			.client
+			.post(&self.api_url)
+			.json(&request)
+			.send()
+			.await
+			.map_err(|e| format!("Failed to send allMids request: {}", e))?;
+
+		if !response.status().is_success() {
+			let status = response.status();
+			let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+			error!("HyperCore API error {}: {}", status, error_text);
+			return Err(format!("HyperCore API error {}: {}", status, error_text));
+		}
+
+		response
+			.json::<AllMidsResponse>()
+			.await
+			.map_err(|e| format!("Failed to parse allMids response: {}", e))
+	}
+
+	pub async fn get_mid_price(&self, ticker: &str) -> Result<f64, String> {
+		let all_mids = self.get_all_mids().await?;
+		let price_str = all_mids
+			.0
+			.get(ticker)
+			.ok_or_else(|| format!("Price for {} not found in allMids", ticker))?;
+		price_str
+			.parse::<f64>()
+			.map_err(|e| format!("Failed to parse price for {}: {}", ticker, e))
+	}
+
 	pub async fn get_order_status(
 		&self,
 		user_address: &str,
@@ -317,6 +359,58 @@ impl HyperCoreClient {
 				}
 			} else {
 				debug!("Order {} not found yet, waiting...", cloid);
+			}
+
+			tokio::time::sleep(Duration::from_secs(2)).await;
+		}
+	}
+
+	/// Waits for the perp account balance to increase by at least the expected amount.
+	/// This is useful for verifying that a USD class transfer has completed.
+	///
+	/// # Arguments
+	/// * `initial_balance` - The perp balance before the transfer
+	/// * `expected_increase` - The amount we expect the balance to increase by
+	pub async fn wait_for_perp_balance_increase(
+		&self,
+		user_address: &str,
+		initial_balance: f64,
+		expected_increase: f64,
+		max_wait_seconds: u64,
+	) -> Result<f64, String> {
+		let start_time = std::time::Instant::now();
+		let max_duration = Duration::from_secs(max_wait_seconds);
+		let tolerance = 0.01; // 1 cent tolerance for floating point comparison
+		let expected_final_balance = initial_balance + expected_increase;
+
+		loop {
+			if start_time.elapsed() >= max_duration {
+				return Err(format!(
+					"Timeout waiting for perp balance to increase from {:.2} by {:.2} (to {:.2}) after {} seconds",
+					initial_balance, expected_increase, expected_final_balance, max_wait_seconds
+				));
+			}
+
+			let state = self.get_perp_clearinghouse_state(user_address).await?;
+			let account_value = state
+				.cross_margin_summary
+				.account_value
+				.parse::<f64>()
+				.map_err(|e| format!("Failed to parse account value: {}", e))?;
+
+			debug!(
+				"Current perp account value: {:.2}, initial: {:.2}, expected final: {:.2}",
+				account_value, initial_balance, expected_final_balance
+			);
+
+			// Check if account value has increased by the expected amount (with tolerance)
+			if account_value >= expected_final_balance - tolerance {
+				debug!(
+					"Perp balance increased successfully: {:.2} (increased by {:.2})",
+					account_value,
+					account_value - initial_balance
+				);
+				return Ok(account_value);
 			}
 
 			tokio::time::sleep(Duration::from_secs(2)).await;

@@ -64,20 +64,96 @@ pub fn encode_send_raw_action(action_data: Vec<u8>) -> Vec<u8> {
 	result
 }
 
-pub fn build_spot_sell_order(asset_id: u32, size: u64, cloid: u128) -> Vec<u8> {
+/// Calculate spot order size in HyperLiquid units
+///
+/// Formula: size = human_readable_amount * 10^weiDecimals
+/// Then round down to respect minimum tradable increment: 10^(weiDecimals - szDecimals)
+///
+/// # Arguments
+/// * `amount` - Human-readable amount (e.g., 100.5 PURR)
+/// * `wei_decimals` - Token wei decimals from spot meta
+/// * `sz_decimals` - Token size decimals from spot meta
+pub fn calculate_spot_size(amount: f64, wei_decimals: u8, sz_decimals: u8) -> u64 {
+	let multiplier = 10f64.powi(wei_decimals as i32);
+	let size_raw = amount * multiplier;
+
+	// Calculate minimum tradable increment
+	let increment_decimals = wei_decimals.saturating_sub(sz_decimals);
+	let min_increment = 10f64.powi(increment_decimals as i32);
+
+	// Round down to nearest increment
+	let size_rounded = (size_raw / min_increment).floor() * min_increment;
+	size_rounded as u64
+}
+
+/// Calculate spot order price in HyperLiquid units
+///
+/// Formula: price = usdc_price * 10^usdc_wei_decimals
+///
+/// # Arguments
+/// * `usdc_price` - Price in USDC (e.g., 3000.5 USDC per token)
+/// * `usdc_wei_decimals` - USDC wei decimals from spot meta (typically 6)
+pub fn calculate_spot_price(usdc_price: f64, usdc_wei_decimals: u8) -> u64 {
+	let multiplier = 10f64.powi(usdc_wei_decimals as i32);
+	(usdc_price * multiplier) as u64
+}
+
+/// Calculate perp order size in HyperLiquid units
+///
+/// Formula:
+/// 1. Calculate effective leverage = min(1 / (1 - lending_ratio), max_leverage)
+/// 2. Calculate notional = margin * leverage
+/// 3. Calculate size = notional / market_price
+/// 4. Convert to units: size * 10^szDecimals
+///
+/// # Arguments
+/// * `margin` - Margin amount in USDC
+/// * `lending_ratio` - Lending ratio (0.0 to 1.0)
+/// * `market_price` - Current market price in USDC
+/// * `sz_decimals` - Size decimals from perp meta
+/// * `max_leverage` - Maximum leverage allowed for this asset from perp meta
+pub fn calculate_perp_size(
+	margin: f64,
+	lending_ratio: f64,
+	market_price: f64,
+	sz_decimals: u8,
+	max_leverage: u32,
+) -> u64 {
+	// Calculate desired leverage, capped at max
+	let desired_leverage = 1.0 / (1.0 - lending_ratio);
+	let effective_leverage = desired_leverage.min(max_leverage as f64);
+
+	// Calculate notional value
+	let notional = margin * effective_leverage;
+
+	// Calculate size in human-readable units
+	let size = notional / market_price;
+
+	// Convert to HyperLiquid units
+	let multiplier = 10f64.powi(sz_decimals as i32);
+	(size * multiplier) as u64
+}
+
+/// Calculate perp order price in HyperLiquid units
+///
+/// Formula: price = usdc_price * 10^usdc_wei_decimals
+///
+/// # Arguments
+/// * `usdc_price` - Price in USDC
+/// * `usdc_wei_decimals` - USDC wei decimals (typically 6)
+pub fn calculate_perp_price(usdc_price: f64, usdc_wei_decimals: u8) -> u64 {
+	let multiplier = 10f64.powi(usdc_wei_decimals as i32);
+	(usdc_price * multiplier) as u64
+}
+
+pub fn build_spot_sell_order(asset_id: u32, size: u64, price: u64, cloid: u128) -> Vec<u8> {
 	let is_buy = false;
-	let aggressive_price = 1u64;
-	encode_limit_order_action(asset_id, is_buy, aggressive_price, size, cloid)
+	encode_limit_order_action(asset_id, is_buy, price, size, cloid)
 }
 
-pub fn build_perp_long_order(asset_id: u32, size: u64, cloid: u128) -> Vec<u8> {
+pub fn build_perp_long_order(asset_id: u32, size: u64, price: u64, cloid: u128) -> Vec<u8> {
 	let is_buy = true;
-	let aggressive_price = u64::MAX;
-	encode_limit_order_action(asset_id, is_buy, aggressive_price, size, cloid)
-}
-
-pub fn calculate_size_units(amount: f64) -> u64 {
-	(amount * 1e8) as u64
+	encode_limit_order_action(asset_id, is_buy, price, size, cloid)
 }
 
 pub fn encode_usd_class_transfer_action(ntl: u64, to_perp: bool) -> Vec<u8> {

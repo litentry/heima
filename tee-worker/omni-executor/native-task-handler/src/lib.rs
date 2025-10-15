@@ -1850,6 +1850,53 @@ async fn handle_request_loan<
 		spot_asset_id, perp_asset_id, collateral_ticker
 	);
 
+	// Get token metadata for size/price calculations
+	let collateral_token = spot_meta
+		.tokens
+		.iter()
+		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
+		.ok_or_else(|| {
+			error!("Token {} not found in spot meta", collateral_ticker);
+			NativeTaskError::InternalError(Some(format!(
+				"Token {} not found in spot meta",
+				collateral_ticker
+			)))
+		})?;
+
+	let usdc_token = spot_meta
+		.tokens
+		.iter()
+		.find(|t| t.name.eq_ignore_ascii_case("USDC"))
+		.ok_or_else(|| {
+			error!("USDC token not found in spot meta");
+			NativeTaskError::InternalError(Some("USDC token not found in spot meta".to_string()))
+		})?;
+
+	let perp_asset = meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
+		error!("Perp asset {} not found in meta", perp_asset_id);
+		NativeTaskError::InternalError(Some(format!("Perp asset {} not found", perp_asset_id)))
+	})?;
+
+	info!(
+		"Token metadata - collateral: weiDecimals={}, szDecimals={}, USDC: weiDecimals={}, perp: szDecimals={}, maxLeverage={}",
+		collateral_token.wei_decimals,
+		collateral_token.sz_decimals,
+		usdc_token.wei_decimals,
+		perp_asset.sz_decimals,
+		perp_asset.max_leverage
+	);
+
+	// Fetch market prices
+	let market_price = hypercore_client.get_mid_price(collateral_ticker).await.map_err(|e| {
+		error!("Failed to get market price for {}: {}", collateral_ticker, e);
+		NativeTaskError::InternalError(Some(format!(
+			"Failed to get market price for {}: {}",
+			collateral_ticker, e
+		)))
+	})?;
+
+	info!("Market price for {}: {} USDC", collateral_ticker, market_price);
+
 	// Check user balance
 	let user_balance = hypercore_client
 		.get_spot_balance(smart_wallet_address_str, collateral_ticker)
@@ -1879,26 +1926,36 @@ async fn handle_request_loan<
 	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Actions").await;
 
 	// Action 1: Sell collateral_size as spot to get X USDC
-	let spot_sell_size_units = calculate_size_units(collateral_size);
-
-	// Generate cloids
-	let spot_sell_cloid = generate_cloid();
-	let usd_transfer_cloid = generate_cloid() + 1;
-	let hedge_open_cloid = generate_cloid() + 2;
-
-	info!(
-		"Generated cloids - spot_sell: {}, usd_transfer: {}, hedge_open: {}",
-		spot_sell_cloid, usd_transfer_cloid, hedge_open_cloid
+	// Calculate size using proper decimals
+	let spot_sell_size_units = calculate_spot_size(
+		collateral_size,
+		collateral_token.wei_decimals,
+		collateral_token.sz_decimals,
 	);
+
+	// TODO: need to confirm:
+	// shall we calculate aggressive sell price (5% below market to ensure fill)
+	let spot_sell_price_usdc = market_price * 0.95;
+	let spot_sell_price_units = calculate_spot_price(spot_sell_price_usdc, usdc_token.wei_decimals);
+
+	// Generate cloids for orders (USD transfers don't use cloids)
+	let spot_sell_cloid = generate_cloid();
+	let hedge_open_cloid = generate_cloid() + 1;
+
+	info!("Generated cloids - spot_sell: {}, hedge_open: {}", spot_sell_cloid, hedge_open_cloid);
 
 	// Action 1: Build and submit spot sell action
 	info!(
-		"Building spot sell: asset_id={}, size_units={}, cloid={}, size_human={}",
-		spot_asset_id, spot_sell_size_units, spot_sell_cloid, collateral_size
+		"Building spot sell: asset_id={}, size_units={}, price_units={}, cloid={}, size_human={}, price_usdc={}",
+		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, collateral_size, spot_sell_price_usdc
 	);
 
-	let spot_sell_action =
-		build_spot_sell_order(spot_asset_id, spot_sell_size_units, spot_sell_cloid);
+	let spot_sell_action = build_spot_sell_order(
+		spot_asset_id,
+		spot_sell_size_units,
+		spot_sell_price_units,
+		spot_sell_cloid,
+	);
 	let spot_sell_corewriter_calldata = encode_send_raw_action(spot_sell_action);
 
 	info!("spot_sell_corewriter_calldata: 0x{}", hex::encode(&spot_sell_corewriter_calldata));
@@ -1925,41 +1982,24 @@ async fn handle_request_loan<
 	// After Action 1, the nonce has been consumed, so increment for Action 2
 	let mut current_nonce = skeleton_user_op.nonce + 1;
 
-	// Wait for transaction to be mined and UserOp to execute
-	if let Some(tx_hash) = &spot_sell_tx_hash {
-		info!("Waiting for transaction {} to be confirmed...", tx_hash);
-		tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-	}
-
-	// Monitor Action 1 by checking that collateral balance decreased significantly
-	// We expect the balance to drop by at least the collateral_size amount
-	info!("Verifying spot sell execution via balance check...");
-	let new_balance = hypercore_client
-		.get_spot_balance(smart_wallet_address_str, collateral_ticker)
+	// Wait for order to be placed and filled by polling HyperCore API
+	info!("Polling HyperCore API for spot sell order completion (cloid: {})...", spot_sell_cloid);
+	let order_filled = hypercore_client
+		.wait_for_order_completion(smart_wallet_address_str, &spot_sell_cloid.to_string(), 20)
 		.await
 		.map_err(|e| {
-			error!("Failed to query balance after spot sell: {}", e);
-			NativeTaskError::InternalError(Some(format!("Balance query failed: {}", e)))
+			error!("Spot sell order did not complete: {}", e);
+			NativeTaskError::InternalError(Some(format!("Spot sell order failed: {}", e)))
 		})?;
 
-	let balance_decrease = user_balance - new_balance;
-	let expected_decrease = collateral_size * 0.95; // Allow 5% slippage/rounding
-
-	info!(
-		"Balance change: initial={}, current={}, decrease={}, expected={}",
-		user_balance, new_balance, balance_decrease, expected_decrease
-	);
-
-	if balance_decrease < expected_decrease {
-		error!(
-			"Spot sell order incomplete: only sold {} out of {} {}",
-			balance_decrease, collateral_size, collateral_ticker
-		);
-		return Err(NativeTaskError::InternalError(Some(format!(
-			"Spot sell incomplete: only {} out of {} {} was sold",
-			balance_decrease, collateral_size, collateral_ticker
-		))));
+	if !order_filled {
+		error!("Spot sell order was rejected or canceled");
+		return Err(NativeTaskError::InternalError(Some(
+			"Spot sell order was rejected or canceled".to_string(),
+		)));
 	}
+
+	info!("Action 1: Spot sell order filled successfully");
 
 	// Get USDC balance to see how much we received
 	let usdc_balance = hypercore_client
@@ -1969,7 +2009,7 @@ async fn handle_request_loan<
 
 	info!(
 		"Action 1: Spot sell completed successfully - sold {} {}, current USDC balance: {}",
-		balance_decrease, collateral_ticker, usdc_balance
+		collateral_size, collateral_ticker, usdc_balance
 	);
 
 	// Print account state after Action 1
@@ -2001,7 +2041,9 @@ async fn handle_request_loan<
 	}
 
 	// Action 2: Move usdc_for_perp into perps within HyperCore
-	let usdc_for_perp_units = calculate_size_units(usdc_for_perp);
+	// Use USDC decimals for the transfer amount
+	let usdc_for_perp_units =
+		calculate_spot_size(usdc_for_perp, usdc_token.wei_decimals, usdc_token.sz_decimals);
 	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
 	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
 
@@ -2033,9 +2075,51 @@ async fn handle_request_loan<
 	// Increment nonce for Action 3
 	current_nonce += 1;
 
-	// Monitor Action 2 (wait for confirmation)
-	tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-	info!("Action 2: USD class transfer completed");
+	// Get initial perp balance before transfer
+	let initial_perp_balance = hypercore_client
+		.get_perp_clearinghouse_state(smart_wallet_address_str)
+		.await
+		.map_err(|e| {
+			error!("Failed to get initial perp balance: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to query perp balance: {}", e)))
+		})?
+		.cross_margin_summary
+		.account_value
+		.parse::<f64>()
+		.map_err(|e| {
+			error!("Failed to parse initial perp balance: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to parse perp balance: {}", e)))
+		})?;
+
+	info!(
+		"Action 2: Initial perp balance: {:.2} USDC, expecting increase of {:.2} USDC",
+		initial_perp_balance, usdc_for_perp
+	);
+
+	// Wait for USD transfer to complete by polling for perp account balance increase
+	info!(
+		"Polling HyperCore API for perp balance to increase by {:.2} USDC (from {:.2} to {:.2})...",
+		usdc_for_perp,
+		initial_perp_balance,
+		initial_perp_balance + usdc_for_perp
+	);
+	let actual_perp_balance = hypercore_client
+		.wait_for_perp_balance_increase(
+			smart_wallet_address_str,
+			initial_perp_balance,
+			usdc_for_perp,
+			20,
+		)
+		.await
+		.map_err(|e| {
+			error!("USD transfer to perp did not complete: {}", e);
+			NativeTaskError::InternalError(Some(format!("USD transfer failed: {}", e)))
+		})?;
+
+	info!(
+		"Action 2: USD class transfer completed successfully - perp account value: {:.2} USDC (increased by {:.2} from {:.2})",
+		actual_perp_balance, actual_perp_balance - initial_perp_balance, initial_perp_balance
+	);
 
 	// Print account state after Action 2
 	print_account_state(
@@ -2046,16 +2130,30 @@ async fn handle_request_loan<
 	.await;
 
 	// Action 3: Open hedge position
-	let expected_leverage = 1.0 / (1.0 - lending_ratio_f64);
-	let hedge_notional_size = collateral_size * expected_leverage;
-	let hedge_size_units = calculate_size_units(hedge_notional_size);
-
-	info!(
-		"Opening hedge position: notional_size={:.2} {} (leverage: {:.2}x)",
-		hedge_notional_size, collateral_ticker, expected_leverage
+	// Calculate hedge size using proper perp size calculation with leverage and decimals
+	let hedge_size_units = calculate_perp_size(
+		usdc_for_perp,
+		lending_ratio_f64,
+		market_price,
+		perp_asset.sz_decimals,
+		perp_asset.max_leverage,
 	);
 
-	let hedge_action = build_perp_long_order(perp_asset_id, hedge_size_units, hedge_open_cloid);
+	// Calculate effective leverage used
+	let desired_leverage = 1.0 / (1.0 - lending_ratio_f64);
+	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
+
+	// Calculate aggressive buy price (10% above market to ensure fill)
+	let hedge_price_usdc = market_price * 1.1;
+	let hedge_price_units = calculate_perp_price(hedge_price_usdc, usdc_token.wei_decimals);
+
+	info!(
+		"Opening hedge position: margin={:.2} USDC, leverage={:.2}x (max={}), size_units={}, price_units={}, price_usdc={}",
+		usdc_for_perp, effective_leverage, perp_asset.max_leverage, hedge_size_units, hedge_price_units, hedge_price_usdc
+	);
+
+	let hedge_action =
+		build_perp_long_order(perp_asset_id, hedge_size_units, hedge_price_units, hedge_open_cloid);
 	let hedge_corewriter_calldata = encode_send_raw_action(hedge_action);
 
 	info!("hedge_corewriter_calldata: 0x{}", hex::encode(&hedge_corewriter_calldata));
@@ -2083,61 +2181,24 @@ async fn handle_request_loan<
 
 	info!("Action 3: Hedge position submitted with tx_hash: {:?}", hedge_tx_hash);
 
-	// Wait for transaction to be mined and UserOp to execute
-	if let Some(tx_hash) = &hedge_tx_hash {
-		info!("Waiting for transaction {} to be confirmed...", tx_hash);
-		tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-	}
-
-	// Monitor Action 3 by checking for position appearance and size
-	info!("Verifying hedge position opened via position check...");
-	let positions =
-		hypercore_client
-			.get_open_positions(smart_wallet_address_str)
-			.await
-			.map_err(|e| {
-				error!("Failed to query positions after hedge order: {}", e);
-				NativeTaskError::InternalError(Some(format!("Position query failed: {}", e)))
-			})?;
-
-	// Find the position for our collateral ticker
-	let position = positions
-		.iter()
-		.find(|pos| pos.position.coin.eq_ignore_ascii_case(collateral_ticker))
-		.ok_or_else(|| {
-			error!("Hedge position not found for {}", collateral_ticker);
-			NativeTaskError::InternalError(Some(format!(
-				"Hedge position not found for {}",
-				collateral_ticker
-			)))
+	// Wait for order to be placed and filled by polling HyperCore API
+	info!("Polling HyperCore API for hedge order completion (cloid: {})...", hedge_open_cloid);
+	let hedge_filled = hypercore_client
+		.wait_for_order_completion(smart_wallet_address_str, &hedge_open_cloid.to_string(), 20)
+		.await
+		.map_err(|e| {
+			error!("Hedge order did not complete: {}", e);
+			NativeTaskError::InternalError(Some(format!("Hedge order failed: {}", e)))
 		})?;
 
-	let position_size: f64 = position.position.szi.parse().unwrap_or(0.0);
-	let expected_size = hedge_notional_size * 0.95; // Allow 5% slippage/rounding
-
-	info!(
-		"Position found: size={}, expected={:.2}, value={}, pnl={}",
-		position_size,
-		expected_size,
-		position.position.position_value,
-		position.position.unrealized_pnl
-	);
-
-	if position_size.abs() < expected_size {
-		error!(
-			"Hedge position incomplete: opened {} but expected at least {}",
-			position_size, expected_size
-		);
-		return Err(NativeTaskError::InternalError(Some(format!(
-			"Hedge position incomplete: size {} is less than expected {}",
-			position_size, expected_size
-		))));
+	if !hedge_filled {
+		error!("Hedge order was rejected or canceled");
+		return Err(NativeTaskError::InternalError(Some(
+			"Hedge order was rejected or canceled".to_string(),
+		)));
 	}
 
-	info!(
-		"Action 3: Hedge position opened successfully - size: {}, value: {}",
-		position_size, position.position.position_value
-	);
+	info!("Action 3: Hedge order filled successfully");
 
 	// Print final account state after Action 3
 	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 3 - Hedge Open")
