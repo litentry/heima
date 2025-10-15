@@ -1,31 +1,33 @@
 use reqwest::{Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
 
-const OAUTH2_TOKEN_ENDPOINT: &str = "https://appleid.apple.com/auth/token";
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AppleOAuth2TokenResponse {
-	access_token: String,
-	expires_in: u64,
-	id_token: String,
-	refresh_token: String,
-	token_type: String,
+pub struct OAuth2TokenResponse {
+	pub access_token: String,
+	pub expires_in: u64,
+	pub id_token: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub refresh_token: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub scope: Option<String>,
+	pub token_type: String,
 }
 
-pub struct AppleOAuth2Client {
+pub struct OAuth2Client {
 	client: Client,
 	client_id: String,
 	client_secret: String,
+	token_endpoint: String,
 }
 
-impl AppleOAuth2Client {
-	pub fn new(client_id: String, client_secret: String) -> Self {
+impl OAuth2Client {
+	pub fn new(client_id: String, client_secret: String, token_endpoint: String) -> Self {
 		let client = ClientBuilder::new()
 			.redirect(reqwest::redirect::Policy::none())
 			.build()
 			.unwrap();
 
-		Self { client, client_id, client_secret }
+		Self { client, client_id, client_secret, token_endpoint }
 	}
 
 	pub async fn exchange_code_for_token(
@@ -35,7 +37,7 @@ impl AppleOAuth2Client {
 	) -> Result<String, String> {
 		let response = self
 			.client
-			.post(OAUTH2_TOKEN_ENDPOINT)
+			.post(&self.token_endpoint)
 			.form(&[
 				("code", code),
 				("client_id", self.client_id.clone()),
@@ -46,7 +48,7 @@ impl AppleOAuth2Client {
 			.send()
 			.await
 			.map_err(|e| e.to_string())?
-			.json::<AppleOAuth2TokenResponse>()
+			.json::<OAuth2TokenResponse>()
 			.await
 			.map_err(|e| e.to_string())?;
 
