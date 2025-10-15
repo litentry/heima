@@ -91,9 +91,16 @@ pub struct GoogleOAuth2Config {
 }
 
 #[derive(Debug, Clone)]
+pub struct AppleOAuth2Config {
+	pub client_id: String,
+	pub client_secret: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConfigLoader {
 	pub mailer_configs: HashMap<String, MailerConfig>,
 	pub google_oauth2_configs: HashMap<String, GoogleOAuth2Config>,
+	pub apple_oauth2_configs: HashMap<String, AppleOAuth2Config>,
 	pub ethereum_url: String,
 	pub solana_url: String,
 	pub bsc_url: String,
@@ -336,10 +343,12 @@ impl ConfigLoader {
 
 		let mailer_configs = Self::load_mailer_configs();
 		let google_oauth2_configs = Self::load_google_oauth2_configs();
+		let apple_oauth2_configs = Self::load_apple_oauth2_configs();
 
 		ConfigLoader {
 			mailer_configs,
 			google_oauth2_configs,
+			apple_oauth2_configs,
 			ethereum_url: append_key(&get("ethereum_url")),
 			solana_url: append_key(&get("solana_url")),
 			bsc_url: append_key(&get("bsc_url")),
@@ -509,5 +518,64 @@ impl ConfigLoader {
 	pub fn get_google_oauth2_config(&self, client_id: &str) -> Option<GoogleOAuth2Config> {
 		let client_key = client_id.to_lowercase();
 		self.google_oauth2_configs.get(&client_key).cloned()
+	}
+
+	/// Load Apple OAuth2 configurations for multiple clients from environment variables
+	/// Format: OE_APPLE_CLIENT_ID_{CLIENT}, OE_APPLE_CLIENT_SECRET_{CLIENT}
+	/// CLIENT can be WILDMETA, HEIMA, etc.
+	fn load_apple_oauth2_configs() -> HashMap<String, AppleOAuth2Config> {
+		let mut configs = HashMap::new();
+
+		let env_vars: HashMap<String, String> = std::env::vars().collect();
+
+		let mut clients = std::collections::HashSet::new();
+		for key in env_vars.keys() {
+			if key.starts_with("OE_APPLE_CLIENT_ID_") {
+				if let Some(client) = key.strip_prefix("OE_APPLE_CLIENT_ID_") {
+					info!("Found Apple OAuth2 configuration for client: {}", client);
+					clients.insert(client.to_lowercase());
+				}
+			}
+		}
+
+		info!("Total discovered Apple OAuth2 clients: {:?}", clients);
+
+		if clients.is_empty() {
+			warn!("No Apple OAuth2 configurations found in environment variables.");
+			return configs;
+		}
+
+		for client in clients {
+			let client_upper = client.to_uppercase();
+
+			let client_id =
+				std::env::var(format!("OE_APPLE_CLIENT_ID_{}", client_upper)).unwrap_or_default();
+			let client_secret = std::env::var(format!("OE_APPLE_CLIENT_SECRET_{}", client_upper))
+				.unwrap_or_default();
+
+			if client_id.is_empty() || client_secret.is_empty() {
+				warn!(
+					"Incomplete Apple OAuth2 config for client '{}': client_id_empty={}, client_secret_empty={}",
+					client,
+					client_id.is_empty(),
+					client_secret.is_empty()
+				);
+				continue;
+			}
+
+			let config = AppleOAuth2Config { client_id, client_secret };
+
+			info!("Loaded Apple OAuth2 config for client '{}'", client);
+
+			configs.insert(client.clone(), config);
+		}
+
+		configs
+	}
+
+	/// Get Apple OAuth2 configuration for a specific client
+	pub fn get_apple_oauth2_config(&self, client_id: &str) -> Option<AppleOAuth2Config> {
+		let client_key = client_id.to_lowercase();
+		self.apple_oauth2_configs.get(&client_key).cloned()
 	}
 }
