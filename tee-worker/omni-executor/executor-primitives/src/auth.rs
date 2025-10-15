@@ -36,6 +36,7 @@ pub enum UserId {
 	Bitcoin(String),   // hex-encoded
 	Solana(String),    // base58-encoded
 	Google(String),
+	Apple(String),
 	Passkey(String), // unique user_id, even for multiple credential_id
 }
 
@@ -89,6 +90,9 @@ impl TryFrom<UserId> for Identity {
 			UserId::Google(handle) => {
 				Ok(Identity::Google(IdentityString::new(handle.as_bytes().to_vec())))
 			},
+			UserId::Apple(handle) => {
+				Ok(Identity::Apple(IdentityString::new(handle.as_bytes().to_vec())))
+			},
 			UserId::Passkey(handle) => {
 				Ok(Identity::Passkey(IdentityString::new(handle.as_bytes().to_vec())))
 			},
@@ -129,6 +133,9 @@ impl TryFrom<Identity> for UserId {
 			Identity::Google(handle) => {
 				Ok(UserId::Google(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
+			Identity::Apple(handle) => {
+				Ok(UserId::Apple(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			},
 			Identity::Pumpx(handle) => {
 				Ok(UserId::Pumpx(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
@@ -168,6 +175,7 @@ impl From<OmniAuth> for OmniAccountAuthType {
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OAuth2Provider {
 	Google,
+	Apple,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
