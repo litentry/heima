@@ -1,3 +1,4 @@
+pub mod apple;
 pub mod email;
 pub mod google;
 
