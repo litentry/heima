@@ -36,6 +36,7 @@ pub struct LoginWithOAuth2Response {
 fn parse_oauth2_provider(provider: &str) -> Result<OAuth2Provider, ErrorCode> {
 	match provider.to_lowercase().as_str() {
 		"google" => Ok(OAuth2Provider::Google),
+		"apple" => Ok(OAuth2Provider::Apple),
 		_ => {
 			error!("Unsupported OAuth2 provider: {}", provider);
 			Err(ErrorCode::InvalidParams)
@@ -89,7 +90,7 @@ pub fn register_login_with_oauth2<
 				DetailedError::new(PARSE_ERROR_CODE, "Invalid provider")
 					.with_field("provider")
 					.with_received(&params.provider)
-					.with_expected("google")
+					.with_expected("google, apple")
 					.to_error_object()
 			})?;
 
@@ -129,7 +130,7 @@ pub fn register_login_with_oauth2<
 			})?;
 
 			let user_id = match &verified_identity {
-				Identity::Google(identity_string) => {
+				Identity::Google(identity_string) | Identity::Apple(identity_string) => {
 					std::str::from_utf8(identity_string.inner_ref())
 						.map_err(|_| {
 							error!("Failed to convert identity to string");
