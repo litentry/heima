@@ -2054,12 +2054,19 @@ async fn handle_request_loan<
 	let usd_transfer_calldata =
 		encode_omni_account_execute(get_core_writer_address(), usd_transfer_corewriter_calldata);
 
+	info!("Action 2: USD transfer calldata (OmniAccount.execute): {}", usd_transfer_calldata);
+	info!("Action 2: CoreWriter target address: {}", get_core_writer_address());
+
 	// Create updated skeleton with incremented nonce for Action 2
 	// Clear init_code since wallet is already deployed after Action 1
 	let mut skeleton_action2 = skeleton_user_op.clone();
 	// skeleton_action2.nonce = current_nonce;
 	skeleton_action2.init_code = "0x".to_string();
 	info!("Action 2: Using nonce {}", skeleton_action2.nonce);
+	info!(
+		"Action 2: Skeleton UserOp - sender: {}, paymaster: {}",
+		skeleton_action2.sender, skeleton_action2.paymaster_and_data
+	);
 
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
@@ -2286,11 +2293,11 @@ async fn submit_corewriter_userop<
 	let user_op = SerializablePackedUserOperation {
 		sender: smart_wallet_address.to_string(),
 		nonce,
-		init_code,
-		call_data,
-		account_gas_limits,
+		init_code: init_code.clone(),
+		call_data: call_data.clone(),
+		account_gas_limits: account_gas_limits.clone(),
 		pre_verification_gas,
-		gas_fees,
+		gas_fees: gas_fees.clone(),
 		paymaster_and_data: if !skeleton_user_op.paymaster_and_data.is_empty()
 			&& skeleton_user_op.paymaster_and_data != "0x"
 		{
@@ -2300,6 +2307,16 @@ async fn submit_corewriter_userop<
 		},
 		signature: None, // Will be signed by SubmitUserOp handler
 	};
+
+	info!("Built UserOp for submission:");
+	info!("  sender: {}", user_op.sender);
+	info!("  nonce: {}", user_op.nonce);
+	info!("  init_code: {}", user_op.init_code);
+	info!("  call_data: {}", user_op.call_data);
+	info!("  account_gas_limits: {}", user_op.account_gas_limits);
+	info!("  pre_verification_gas: {}", user_op.pre_verification_gas);
+	info!("  gas_fees: {}", user_op.gas_fees);
+	info!("  paymaster_and_data: {}", user_op.paymaster_and_data);
 
 	// Submit via existing SubmitUserOp handler
 	let wrapper = executor_core::native_task::NativeTaskWrapper::new(
@@ -2314,12 +2331,22 @@ async fn submit_corewriter_userop<
 		client_id.to_string(),
 	);
 
+	info!("Submitting CoreWriter UserOp via SubmitUserOp handler...");
 	match Box::pin(handle_native_task(ctx, wrapper)).await {
-		Ok(NativeTaskOk::SubmitUserOp(tx_hash)) => Ok(tx_hash),
-		Ok(_) => Err(NativeTaskError::InternalError(Some(
-			"Unexpected response from SubmitUserOp".to_string(),
-		))),
-		Err(e) => Err(e),
+		Ok(NativeTaskOk::SubmitUserOp(tx_hash)) => {
+			info!("CoreWriter UserOp submitted successfully: {:?}", tx_hash);
+			Ok(tx_hash)
+		},
+		Ok(response) => {
+			error!("Unexpected response from SubmitUserOp: {:?}", response);
+			Err(NativeTaskError::InternalError(Some(
+				"Unexpected response from SubmitUserOp".to_string(),
+			)))
+		},
+		Err(e) => {
+			error!("Failed to submit CoreWriter UserOp: {:?}", e);
+			Err(e)
+		},
 	}
 }
 
