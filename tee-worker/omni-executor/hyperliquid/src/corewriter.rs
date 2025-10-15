@@ -1,5 +1,5 @@
 use alloy::primitives::Address;
-use executor_primitives::utils::hex::ToHexPrefixed;
+use executor_primitives::utils::hex::hex_encode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn generate_cloid() -> u128 {
@@ -48,7 +48,7 @@ pub fn encode_omni_account_execute(target: Address, call_data: Vec<u8>) -> Strin
 	result.extend_from_slice(&EXECUTE_SELECTOR);
 	result.extend_from_slice(&encoded);
 
-	result.to_hex()
+	hex_encode(&result)
 }
 
 pub fn encode_send_raw_action(action_data: Vec<u8>) -> Vec<u8> {
