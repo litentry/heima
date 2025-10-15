@@ -172,7 +172,7 @@ impl From<OmniAuth> for OmniAccountAuthType {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Encode, Decode, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OAuth2Provider {
 	Google,
 	Apple,
