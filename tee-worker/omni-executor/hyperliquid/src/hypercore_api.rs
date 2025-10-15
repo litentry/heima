@@ -293,12 +293,21 @@ impl HyperCoreClient {
 		user_address: &str,
 		cloid: &str,
 	) -> Result<OrderStatusResponse, String> {
+		// Convert cloid to 16-byte hex string as per HyperLiquid API spec
+		// The API expects "Either u64 representing the order id or 16-byte hex string representing the client order id"
+		let cloid_u128 = cloid
+			.parse::<u128>()
+			.map_err(|e| format!("Failed to parse cloid as u128: {}", e))?;
+
+		// Convert to 16-byte hex string (32 hex chars) with 0x prefix
+		let cloid_hex = format!("0x{:032x}", cloid_u128);
+
 		let request = HyperCoreRequest::OrderStatus {
 			user: user_address.to_string(),
-			oid: cloid.to_string(),
+			oid: cloid_hex.clone(),
 		};
 
-		debug!("Querying order status for cloid: {}", cloid);
+		debug!("Querying order status for cloid: {} (raw: {}, hex: {})", cloid, cloid, cloid_hex);
 
 		let response = self
 			.client

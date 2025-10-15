@@ -1942,7 +1942,10 @@ async fn handle_request_loan<
 	let spot_sell_cloid = generate_cloid();
 	let hedge_open_cloid = generate_cloid() + 1;
 
-	info!("Generated cloids - spot_sell: {}, hedge_open: {}", spot_sell_cloid, hedge_open_cloid);
+	info!(
+		"Generated cloids - spot_sell: {} (hex: 0x{:032x}), hedge_open: {} (hex: 0x{:032x})",
+		spot_sell_cloid, spot_sell_cloid, hedge_open_cloid, hedge_open_cloid
+	);
 
 	// Action 1: Build and submit spot sell action
 	info!(
