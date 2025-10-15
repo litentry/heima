@@ -1886,6 +1886,7 @@ async fn handle_request_loan<
 		perp_asset.max_leverage
 	);
 
+	/*
 	// Fetch market prices
 	let market_price = hypercore_client.get_mid_price(collateral_ticker).await.map_err(|e| {
 		error!("Failed to get market price for {}: {}", collateral_ticker, e);
@@ -2038,11 +2039,13 @@ async fn handle_request_loan<
 			usdc_balance, collateral_size, collateral_ticker
 		))));
 	}
+	*/
 
 	// Action 2: Move usdc_for_perp into perps within HyperCore
 	// Use USDC decimals for the transfer amount
-	let usdc_for_perp_units =
-		calculate_spot_size(usdc_for_perp, usdc_token.wei_decimals, usdc_token.sz_decimals);
+	// let usdc_for_perp_units =
+	// 	calculate_spot_size(usdc_for_perp, usdc_token.wei_decimals, usdc_token.sz_decimals);
+	let usdc_for_perp_units = 1000000;
 	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
 	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
 
@@ -2054,9 +2057,9 @@ async fn handle_request_loan<
 	// Create updated skeleton with incremented nonce for Action 2
 	// Clear init_code since wallet is already deployed after Action 1
 	let mut skeleton_action2 = skeleton_user_op.clone();
-	skeleton_action2.nonce = current_nonce;
+	// skeleton_action2.nonce = current_nonce;
 	skeleton_action2.init_code = "0x".to_string();
-	info!("Action 2: Using nonce {}", current_nonce);
+	info!("Action 2: Using nonce {}", skeleton_action2.nonce);
 
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
@@ -2071,6 +2074,7 @@ async fn handle_request_loan<
 
 	info!("Action 2: USD class transfer submitted: {:?}", usd_transfer_tx_hash);
 
+	/*
 	// Increment nonce for Action 3
 	current_nonce += 1;
 
@@ -2203,13 +2207,14 @@ async fn handle_request_loan<
 		.await;
 
 	let usdc_received = format!("{:.2}", usdc_to_lend);
+	*/
 
 	Ok(NativeTaskOk::RequestLoan {
-		spot_sell_cloid: spot_sell_cloid.to_string(),
-		hedge_open_cloid: hedge_open_cloid.to_string(),
-		usdc_received,
-		spot_sell_tx_hash,
-		hedge_open_tx_hash: hedge_tx_hash,
+		spot_sell_cloid: "".into(),
+		hedge_open_cloid: "".into(),
+		usdc_received: "0".into(),
+		spot_sell_tx_hash: None,
+		hedge_open_tx_hash: None,
 	})
 }
 
