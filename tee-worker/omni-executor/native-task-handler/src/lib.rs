@@ -2042,22 +2042,6 @@ async fn handle_request_loan<
 	*/
 
 	// Action 2: Move usdc_for_perp into perps within HyperCore
-
-	// Check USDC balance on spot before attempting transfer
-	info!("Checking USDC balance on spot before USD transfer...");
-	match hypercore_client.get_spot_balance(smart_wallet_address_str, "USDC").await {
-		Ok(usdc_balance) => {
-			info!("USDC balance on spot: {}", usdc_balance);
-			if usdc_balance < 1.0 {
-				error!("Insufficient USDC on spot! Have: {}, Need: 1.0", usdc_balance);
-				error!("This will cause the USD transfer to fail");
-			}
-		},
-		Err(e) => {
-			error!("Failed to check USDC balance on spot: {}", e);
-		},
-	}
-
 	// Use USDC decimals for the transfer amount
 	// let usdc_for_perp_units =
 	// 	calculate_spot_size(usdc_for_perp, usdc_token.wei_decimals, usdc_token.sz_decimals);
@@ -2079,62 +2063,10 @@ async fn handle_request_loan<
 	// skeleton_action2.nonce = current_nonce;
 	skeleton_action2.init_code = "0x".to_string();
 	info!("Action 2: Using nonce {}", skeleton_action2.nonce);
-	info!("Action 2: Init code: {}", skeleton_action2.init_code);
 	info!(
 		"Action 2: Skeleton UserOp - sender: {}, paymaster: {}",
 		skeleton_action2.sender, skeleton_action2.paymaster_and_data
 	);
-
-	// Check if smart wallet is deployed and pre-validate the execution
-	let entry_point_client = ctx.get_entry_point_client(chain_id).ok_or_else(|| {
-		error!("No EntryPoint client for chain_id: {}", chain_id);
-		NativeTaskError::ChainNotSupported(chain_id)
-	})?;
-
-	let smart_wallet_address: alloy::primitives::Address =
-		skeleton_action2.sender.parse().map_err(|e| {
-			error!("Failed to parse smart wallet address: {}", e);
-			NativeTaskError::InternalError(Some(format!("Invalid address: {}", e)))
-		})?;
-
-	match entry_point_client.get_code_at(smart_wallet_address).await {
-		Ok(code) => {
-			if code.is_empty() {
-				info!(
-					"WARNING: Smart wallet at {} is NOT deployed (no code found)",
-					skeleton_action2.sender
-				);
-				info!("The UserOp should include init_code to deploy the wallet first");
-			} else {
-				info!(
-					"Smart wallet at {} is deployed (code length: {} bytes)",
-					skeleton_action2.sender,
-					code.len()
-				);
-			}
-		},
-		Err(e) => {
-			info!("Could not check if smart wallet is deployed: {:?}", e);
-		},
-	}
-
-	// Pre-validate by calling the action directly to see if it would revert
-	info!("Pre-validating USD transfer action by simulating eth_call...");
-	use alloy::rpc::types::TransactionRequest;
-	let call_tx = TransactionRequest::default().to(smart_wallet_address).input(
-		alloy::primitives::Bytes::from(hex::decode(&usd_transfer_calldata[2..]).unwrap()).into(),
-	);
-
-	match entry_point_client.call(call_tx).await {
-		Ok(result) => {
-			info!("Pre-validation successful! Call would return {} bytes", result.len());
-		},
-		Err(e) => {
-			error!("Pre-validation FAILED! The call would revert: {:?}", e);
-			error!("This explains why the UserOp execution failed");
-			error!("Check: 1) Does wallet have USDC on spot? 2) Is the action correctly encoded?");
-		},
-	}
 
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),

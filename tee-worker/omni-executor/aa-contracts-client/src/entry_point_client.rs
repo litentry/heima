@@ -289,16 +289,6 @@ impl<P: RpcProvider<Transaction = TransactionRequest, Addr = Address>> EntryPoin
 		self.rpc_client.get_wallet_address().await.map_err(|_| ())
 	}
 
-	/// Get code at address - wrapper for RPC provider
-	pub async fn get_code_at(&self, address: Address) -> Result<Vec<u8>, ()> {
-		self.rpc_client.get_code_at(address).await.map_err(|_| ())
-	}
-
-	/// Call a contract - wrapper for RPC provider
-	pub async fn call(&self, tx: TransactionRequest) -> Result<Vec<u8>, RpcProviderError> {
-		self.rpc_client.call(tx).await
-	}
-
 	/// Calculate dynamic gas fees based on current network conditions
 	async fn calculate_gas_fees(&self) -> Result<(U256, U256), ()> {
 		// Try EIP-1559 estimation first
