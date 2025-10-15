@@ -1886,7 +1886,6 @@ async fn handle_request_loan<
 		perp_asset.max_leverage
 	);
 
-	/*
 	// Fetch market prices
 	let market_price = hypercore_client.get_mid_price(collateral_ticker).await.map_err(|e| {
 		error!("Failed to get market price for {}: {}", collateral_ticker, e);
@@ -1931,8 +1930,8 @@ async fn handle_request_loan<
 	let spot_sell_size_units = calculate_corewriter_size(collateral_size);
 
 	// TODO: need to confirm:
-	// shall we calculate aggressive sell price (5% below market to ensure fill)
-	let spot_sell_price_usdc = market_price * 0.95;
+	// shall we calculate aggressive sell price (2% below market to ensure fill)
+	let spot_sell_price_usdc = market_price * 0.98;
 	let spot_sell_price_units = calculate_corewriter_price(spot_sell_price_usdc);
 
 	// Generate cloids for orders (USD transfers don't use cloids)
@@ -1958,12 +1957,8 @@ async fn handle_request_loan<
 	);
 	let spot_sell_corewriter_calldata = encode_send_raw_action(spot_sell_action);
 
-	info!("spot_sell_corewriter_calldata: 0x{}", hex::encode(&spot_sell_corewriter_calldata));
-
 	let spot_sell_calldata =
 		encode_omni_account_execute(get_core_writer_address(), spot_sell_corewriter_calldata);
-
-	info!("spot_sell_calldata (final UserOp callData): {}", spot_sell_calldata);
 
 	let spot_sell_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
@@ -1977,10 +1972,6 @@ async fn handle_request_loan<
 	.await?;
 
 	info!("Action 1: Spot sell submitted with tx_hash: {:?}", spot_sell_tx_hash);
-
-	// Track nonce for subsequent actions
-	// After Action 1, the nonce has been consumed, so increment for Action 2
-	let mut current_nonce = skeleton_user_op.nonce + 1;
 
 	// Wait for order to be placed and filled by polling HyperCore API
 	info!("Polling HyperCore API for spot sell order completion (cloid: {})...", spot_sell_cloid);
@@ -2001,65 +1992,62 @@ async fn handle_request_loan<
 
 	info!("Action 1: Spot sell order filled successfully");
 
-	// Get USDC balance to see how much we received
-	let usdc_balance = hypercore_client
-		.get_spot_balance(smart_wallet_address_str, "USDC")
+	// Get the actual fill to see how much USDC we received
+	let spot_sell_fill = hypercore_client
+		.get_fill_by_cloid(smart_wallet_address_str, spot_sell_cloid)
 		.await
-		.unwrap_or(0.0);
+		.map_err(|e| {
+			error!("Failed to get fill for spot sell order: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to get fill: {}", e)))
+		})?;
+
+	let usdc_received = calculate_usdc_received_from_spot_sell(&spot_sell_fill).map_err(|e| {
+		error!("Failed to calculate USDC received: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to calculate USDC: {}", e)))
+	})?;
 
 	info!(
-		"Action 1: Spot sell completed successfully - sold {} {}, current USDC balance: {}",
-		collateral_size, collateral_ticker, usdc_balance
+		"Action 1: Spot sell completed - sold {} {} at price {} (filled: {}), received {:.2} USDC (fee: {} {})",
+		collateral_size,
+		collateral_ticker,
+		spot_sell_fill.px,
+		spot_sell_fill.sz,
+		usdc_received,
+		spot_sell_fill.fee,
+		spot_sell_fill.fee_token
 	);
 
 	// Print account state after Action 1
 	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 1 - Spot Sell")
 		.await;
 
-	// Calculate actual USDC to transfer based on current USDC balance
-	// We use the actual USDC balance instead of estimated price
+	// Calculate actual USDC to transfer based on USDC received from the spot sell
 	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
-	let usdc_for_perp = usdc_balance * (1.0 - lending_ratio_f64);
-	let usdc_to_lend = usdc_balance * lending_ratio_f64;
+	let usdc_for_perp = usdc_received * (1.0 - lending_ratio_f64);
+	let usdc_to_lend = usdc_received * lending_ratio_f64;
 
 	info!(
-		"USDC allocation: total={:.2}, for_perp={:.2} ({:.0}%), to_lend={:.2} ({:.0}%)",
-		usdc_balance,
+		"USDC allocation: total_received={:.2}, for_perp={:.2} ({:.0}%), to_lend={:.2} ({:.0}%)",
+		usdc_received,
 		usdc_for_perp,
 		(1.0 - lending_ratio_f64) * 100.0,
 		usdc_to_lend,
 		lending_ratio_f64 * 100.0
 	);
 
-	// Safety check: ensure we have enough USDC to proceed
-	if usdc_balance < 1.0 {
-		error!("Insufficient USDC balance after spot sell: {}", usdc_balance);
-		return Err(NativeTaskError::InternalError(Some(format!(
-			"Insufficient USDC balance: {} (expected more from selling {} {})",
-			usdc_balance, collateral_size, collateral_ticker
-		))));
-	}
-	*/
-
 	// Action 2: Move usdc_for_perp into perps within HyperCore
-	// Use USDC decimals for the transfer amount
-	// let usdc_for_perp_units =
-	// 	calculate_spot_size(usdc_for_perp, usdc_token.wei_decimals, usdc_token.sz_decimals);
-	let usdc_for_perp_units = 1000000;
+	let mut current_nonce = skeleton_user_op.nonce + 1;
+	let usdc_for_perp_units = (usdc_for_perp * 1_000_000.0) as u64;
 	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
 	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
-
-	info!("usd_transfer_corewriter_calldata: 0x{}", hex::encode(&usd_transfer_corewriter_calldata));
 
 	let usd_transfer_calldata =
 		encode_omni_account_execute(get_core_writer_address(), usd_transfer_corewriter_calldata);
 
 	// Create updated skeleton with incremented nonce for Action 2
-	// Clear init_code since wallet is already deployed after Action 1
 	let mut skeleton_action2 = skeleton_user_op.clone();
-	// skeleton_action2.nonce = current_nonce;
+	skeleton_action2.nonce = current_nonce;
 	skeleton_action2.init_code = "0x".to_string();
-	info!("Action 2: Using nonce {}", skeleton_action2.nonce);
 
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
@@ -2073,10 +2061,6 @@ async fn handle_request_loan<
 	.await?;
 
 	info!("Action 2: USD class transfer submitted: {:?}", usd_transfer_tx_hash);
-
-	/*
-	// Increment nonce for Action 3
-	current_nonce += 1;
 
 	// Get initial perp balance before transfer
 	let initial_perp_balance = hypercore_client
@@ -2133,6 +2117,8 @@ async fn handle_request_loan<
 	.await;
 
 	// Action 3: Open hedge position
+	current_nonce += 1;
+
 	// Use CoreWriter encoding: 10^8 * human_readable_value
 	let hedge_size_units = calculate_corewriter_perp_size(
 		usdc_for_perp,
@@ -2158,8 +2144,6 @@ async fn handle_request_loan<
 		build_perp_long_order(perp_asset_id, hedge_size_units, hedge_price_units, hedge_open_cloid);
 	let hedge_corewriter_calldata = encode_send_raw_action(hedge_action);
 
-	info!("hedge_corewriter_calldata: 0x{}", hex::encode(&hedge_corewriter_calldata));
-
 	let hedge_calldata =
 		encode_omni_account_execute(get_core_writer_address(), hedge_corewriter_calldata);
 
@@ -2168,7 +2152,6 @@ async fn handle_request_loan<
 	let mut skeleton_action3 = skeleton_user_op.clone();
 	skeleton_action3.nonce = current_nonce;
 	skeleton_action3.init_code = "0x".to_string();
-	info!("Action 3: Using nonce {}", current_nonce);
 
 	let hedge_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
@@ -2207,14 +2190,13 @@ async fn handle_request_loan<
 		.await;
 
 	let usdc_received = format!("{:.2}", usdc_to_lend);
-	*/
 
 	Ok(NativeTaskOk::RequestLoan {
-		spot_sell_cloid: "".into(),
-		hedge_open_cloid: "".into(),
-		usdc_received: "0".into(),
-		spot_sell_tx_hash: None,
-		hedge_open_tx_hash: None,
+		spot_sell_cloid: spot_sell_cloid.to_string(),
+		hedge_open_cloid: hedge_open_cloid.to_string(),
+		usdc_received,
+		spot_sell_tx_hash,
+		hedge_open_tx_hash: hedge_tx_hash,
 	})
 }
 

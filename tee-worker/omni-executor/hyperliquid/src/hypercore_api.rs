@@ -20,6 +20,8 @@ enum HyperCoreRequest {
 	SpotClearinghouseState { user: String },
 	#[serde(rename = "clearinghouseState")]
 	ClearinghouseState { user: String },
+	#[serde(rename = "userFills")]
+	UserFills { user: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -176,6 +178,29 @@ pub struct CrossMarginSummary {
 	pub total_ntl_pos: String,
 	#[serde(rename = "totalRawUsd")]
 	pub total_raw_usd: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Fill {
+	pub coin: String,
+	pub px: String,
+	pub sz: String,
+	pub side: String,
+	pub time: u64,
+	#[serde(rename = "startPosition")]
+	pub start_position: String,
+	pub dir: String,
+	#[serde(rename = "closedPnl")]
+	pub closed_pnl: String,
+	pub hash: String,
+	pub oid: u64,
+	pub cloid: Option<String>,
+	pub tid: u64,
+	pub fee: String,
+	#[serde(rename = "feeToken")]
+	pub fee_token: String,
+	#[serde(rename = "builderFee")]
+	pub builder_fee: Option<String>,
 }
 
 pub struct HyperCoreClient {
@@ -528,6 +553,54 @@ impl HyperCoreClient {
 		let state = self.get_perp_clearinghouse_state(user_address).await?;
 		Ok(state.asset_positions)
 	}
+
+	/// Get user fills (up to 2000 most recent fills)
+	pub async fn get_user_fills(&self, user_address: &str) -> Result<Vec<Fill>, String> {
+		let request = HyperCoreRequest::UserFills { user: user_address.to_string() };
+
+		debug!("Fetching user fills for {} from HyperCore API", user_address);
+
+		let response = self
+			.client
+			.post(&self.api_url)
+			.json(&request)
+			.send()
+			.await
+			.map_err(|e| format!("Failed to send user fills request: {}", e))?;
+
+		if !response.status().is_success() {
+			let status = response.status();
+			let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+			error!("HyperCore API error {}: {}", status, error_text);
+			return Err(format!("HyperCore API error {}: {}", status, error_text));
+		}
+
+		response
+			.json::<Vec<Fill>>()
+			.await
+			.map_err(|e| format!("Failed to parse user fills response: {}", e))
+	}
+
+	/// Get a specific fill by client order ID (cloid)
+	pub async fn get_fill_by_cloid(&self, user_address: &str, cloid: u128) -> Result<Fill, String> {
+		let fills = self.get_user_fills(user_address).await?;
+
+		// Convert cloid to hex string format for comparison
+		let cloid_hex = format!("0x{:032x}", cloid);
+
+		debug!("Searching for fill with cloid: {} (hex: {})", cloid, cloid_hex);
+
+		fills
+			.into_iter()
+			.find(|fill| {
+				if let Some(ref fill_cloid) = fill.cloid {
+					fill_cloid == &cloid_hex || fill_cloid == &cloid.to_string()
+				} else {
+					false
+				}
+			})
+			.ok_or_else(|| format!("No fill found with cloid: {}", cloid))
+	}
 }
 
 pub fn get_spot_asset_id(ticker: &str, spot_meta: &SpotMetaResponse) -> Result<u32, String> {
@@ -561,4 +634,48 @@ pub fn get_perp_asset_id(ticker: &str, meta: &MetaResponse) -> Result<u32, Strin
 		.ok_or_else(|| format!("Perp asset {} not found in meta", ticker))?;
 
 	Ok(asset.0 as u32)
+}
+
+/// Calculate the USDC received from a spot sell fill
+/// For a sell order: USDC received = price * size - fee (if fee is in USDC)
+/// Returns the net USDC amount received
+pub fn calculate_usdc_received_from_spot_sell(fill: &Fill) -> Result<f64, String> {
+	// Parse price and size
+	let price = fill
+		.px
+		.parse::<f64>()
+		.map_err(|e| format!("Failed to parse fill price: {}", e))?;
+	let size = fill
+		.sz
+		.parse::<f64>()
+		.map_err(|e| format!("Failed to parse fill size: {}", e))?;
+	let fee = fill
+		.fee
+		.parse::<f64>()
+		.map_err(|e| format!("Failed to parse fill fee: {}", e))?;
+
+	// Verify it's a sell order
+	if !fill.side.eq_ignore_ascii_case("A") && !fill.dir.to_lowercase().contains("sell") {
+		return Err(format!("Fill is not a sell order: side={}, dir={}", fill.side, fill.dir));
+	}
+
+	// Calculate gross USDC from the trade (price * size for sell)
+	let gross_usdc = price * size;
+
+	// Subtract fee if it's in USDC
+	let net_usdc = if fill.fee_token.eq_ignore_ascii_case("USDC") {
+		gross_usdc - fee
+	} else {
+		// If fee is not in USDC, we don't subtract it from the USDC amount
+		// but we log a warning
+		debug!("Warning: Fee is in {} not USDC, returning gross USDC amount", fill.fee_token);
+		gross_usdc
+	};
+
+	debug!(
+		"Spot sell fill: price={}, size={}, fee={} {}, gross_usdc={:.2}, net_usdc={:.2}",
+		price, size, fee, fill.fee_token, gross_usdc, net_usdc
+	);
+
+	Ok(net_usdc)
 }
