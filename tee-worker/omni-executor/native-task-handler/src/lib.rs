@@ -1926,17 +1926,13 @@ async fn handle_request_loan<
 	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Actions").await;
 
 	// Action 1: Sell collateral_size as spot to get X USDC
-	// Calculate size using proper decimals
-	let spot_sell_size_units = calculate_spot_size(
-		collateral_size,
-		collateral_token.wei_decimals,
-		collateral_token.sz_decimals,
-	);
+	// Use CoreWriter encoding: 10^8 * human_readable_value
+	let spot_sell_size_units = calculate_corewriter_size(collateral_size);
 
 	// TODO: need to confirm:
 	// shall we calculate aggressive sell price (5% below market to ensure fill)
 	let spot_sell_price_usdc = market_price * 0.95;
-	let spot_sell_price_units = calculate_spot_price(spot_sell_price_usdc, usdc_token.wei_decimals);
+	let spot_sell_price_units = calculate_corewriter_price(spot_sell_price_usdc);
 
 	// Generate cloids for orders (USD transfers don't use cloids)
 	let spot_sell_cloid = generate_cloid();
@@ -2133,12 +2129,11 @@ async fn handle_request_loan<
 	.await;
 
 	// Action 3: Open hedge position
-	// Calculate hedge size using proper perp size calculation with leverage and decimals
-	let hedge_size_units = calculate_perp_size(
+	// Use CoreWriter encoding: 10^8 * human_readable_value
+	let hedge_size_units = calculate_corewriter_perp_size(
 		usdc_for_perp,
 		lending_ratio_f64,
 		market_price,
-		perp_asset.sz_decimals,
 		perp_asset.max_leverage,
 	);
 
@@ -2148,7 +2143,7 @@ async fn handle_request_loan<
 
 	// Calculate aggressive buy price (10% above market to ensure fill)
 	let hedge_price_usdc = market_price * 1.1;
-	let hedge_price_units = calculate_perp_price(hedge_price_usdc, usdc_token.wei_decimals);
+	let hedge_price_units = calculate_corewriter_price(hedge_price_usdc);
 
 	info!(
 		"Opening hedge position: margin={:.2} USDC, leverage={:.2}x (max={}), size_units={}, price_units={}, price_usdc={}",
