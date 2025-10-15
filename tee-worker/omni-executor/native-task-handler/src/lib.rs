@@ -1201,7 +1201,7 @@ pub async fn handle_native_task<
 				&collateral_ticker,
 				&collateral_size,
 				lending_ratio,
-				&client_id,
+				client_id,
 			)
 			.await
 		},
@@ -1791,6 +1791,7 @@ async fn print_account_state(
 	info!("==========================================");
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn handle_request_loan<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -1927,12 +1928,11 @@ async fn handle_request_loan<
 
 	// Action 1: Sell collateral_size as spot to get X USDC
 	// Use CoreWriter encoding: 10^8 * human_readable_value
-	let spot_sell_size_units = calculate_corewriter_size(collateral_size);
+	let spot_sell_size_units = (collateral_size * 100_000_000.0) as u64;
 
 	// TODO: need to confirm:
 	// shall we calculate aggressive sell price (5% below market to ensure fill)
-	let spot_sell_price_usdc = market_price * 0.95;
-	let spot_sell_price_units = calculate_corewriter_price(spot_sell_price_usdc);
+	let spot_sell_price_units = (market_price * 0.95 * 100_000_000.0) as u64;
 
 	// Generate cloids for orders (USD transfers don't use cloids)
 	let spot_sell_cloid = generate_cloid();
@@ -1946,7 +1946,7 @@ async fn handle_request_loan<
 	// Action 1: Build and submit spot sell action
 	info!(
 		"Building spot sell: asset_id={}, size_units={}, price_units={}, cloid={}, size_human={}, price_usdc={}",
-		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, collateral_size, spot_sell_price_usdc
+		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, collateral_size, market_price * 0.95
 	);
 
 	let spot_sell_action = build_spot_sell_order(
@@ -2132,12 +2132,11 @@ async fn handle_request_loan<
 	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
 
 	// Calculate aggressive buy price (10% above market to ensure fill)
-	let hedge_price_usdc = market_price * 1.1;
-	let hedge_price_units = calculate_corewriter_price(hedge_price_usdc);
+	let hedge_price_units = (market_price * 100_000_000.0) as u64;
 
 	info!(
 		"Opening hedge position: margin={:.2} USDC, leverage={:.2}x (max={}), size_units={}, price_units={}, price_usdc={}",
-		usdc_for_perp, effective_leverage, perp_asset.max_leverage, hedge_size_units, hedge_price_units, hedge_price_usdc
+		usdc_for_perp, effective_leverage, perp_asset.max_leverage, hedge_size_units, hedge_price_units, market_price
 	);
 
 	let hedge_action =

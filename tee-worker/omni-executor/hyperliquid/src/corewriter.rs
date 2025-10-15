@@ -63,28 +63,6 @@ pub fn encode_send_raw_action(action_data: Vec<u8>) -> Vec<u8> {
 	result
 }
 
-/// Calculate spot order size for CoreWriter action
-///
-/// Formula: size = human_readable_amount * 10^8
-/// As per HyperLiquid docs: "limitPx and sz should be sent as 10^8 * the human readable value"
-///
-/// # Arguments
-/// * `amount` - Human-readable amount (e.g., 100.5 PURR)
-pub fn calculate_corewriter_size(amount: f64) -> u64 {
-	(amount * 100_000_000.0) as u64
-}
-
-/// Calculate order price for CoreWriter action
-///
-/// Formula: price = usdc_price * 10^8
-/// As per HyperLiquid docs: "limitPx and sz should be sent as 10^8 * the human readable value"
-///
-/// # Arguments
-/// * `usdc_price` - Price in USDC (e.g., 3000.5 USDC per token)
-pub fn calculate_corewriter_price(usdc_price: f64) -> u64 {
-	(usdc_price * 100_000_000.0) as u64
-}
-
 /// Calculate perp order size for CoreWriter action
 ///
 /// Formula:
@@ -116,28 +94,6 @@ pub fn calculate_corewriter_perp_size(
 
 	// Convert to CoreWriter units: 10^8
 	(size * 100_000_000.0) as u64
-}
-
-/// Calculate spot order size for HyperCore API (used for USD transfers)
-///
-/// Formula: size = human_readable_amount * 10^weiDecimals
-/// Then round down to respect minimum tradable increment: 10^(weiDecimals - szDecimals)
-///
-/// # Arguments
-/// * `amount` - Human-readable amount (e.g., 100.5 PURR)
-/// * `wei_decimals` - Token wei decimals from spot meta
-/// * `sz_decimals` - Token size decimals from spot meta
-pub fn calculate_spot_size(amount: f64, wei_decimals: u8, sz_decimals: u8) -> u64 {
-	let multiplier = 10f64.powi(wei_decimals as i32);
-	let size_raw = amount * multiplier;
-
-	// Calculate minimum tradable increment
-	let increment_decimals = wei_decimals.saturating_sub(sz_decimals);
-	let min_increment = 10f64.powi(increment_decimals as i32);
-
-	// Round down to nearest increment
-	let size_rounded = (size_raw / min_increment).floor() * min_increment;
-	size_rounded as u64
 }
 
 pub fn build_spot_sell_order(asset_id: u32, size: u64, price: u64, cloid: u128) -> Vec<u8> {
