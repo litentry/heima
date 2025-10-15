@@ -740,6 +740,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => true,
+					Identity::Apple(..) => true,
 					Identity::Pumpx(..) => true,
 					Identity::Passkey(..) => true,
 				}
@@ -762,6 +763,7 @@ mod tests {
 					Identity::Bitcoin(..) => true,
 					Identity::Solana(..) => true,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -784,6 +786,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -806,6 +809,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -828,6 +832,7 @@ mod tests {
 					Identity::Bitcoin(..) => true,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -850,6 +855,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => true,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
