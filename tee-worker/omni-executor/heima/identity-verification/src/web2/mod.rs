@@ -1,6 +1,7 @@
 pub mod apple;
 pub mod email;
 pub mod google;
+pub mod oauth2_common;
 
 use executor_primitives::{Identity, Web2IdentityType, Web2ValidationData};
 use executor_storage::{Storage, StorageDB, VerificationCodeStorage};

@@ -1,7 +1,7 @@
-use crate::helpers;
 use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
 use serde::Deserialize;
-use url::Url;
+
+pub use super::oauth2_common::AuthorizeData;
 
 const BASE_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const SCOPES: &str = "openid email";
@@ -20,23 +20,8 @@ pub struct IdToken {
 	pub email: String,
 }
 
-pub struct AuthorizeData {
-	pub authorize_url: String,
-	pub state: String,
-}
-
 pub fn get_authorize_data(client_id: &str, redirect_uri: &str) -> AuthorizeData {
-	let state = helpers::generate_alphanumeric_otp(32);
-	let mut authorize_url = Url::parse(BASE_URL).expect("Failed to parse URL");
-	authorize_url.query_pairs_mut().extend_pairs(&[
-		("response_type", "code"),
-		("client_id", client_id),
-		("redirect_uri", redirect_uri),
-		("scope", SCOPES),
-		("state", &state),
-	]);
-
-	AuthorizeData { authorize_url: authorize_url.into(), state }
+	super::oauth2_common::get_authorize_data(BASE_URL, client_id, redirect_uri, SCOPES, false)
 }
 
 pub fn decode_id_token(token: &str) -> Result<IdToken, &'static str> {
