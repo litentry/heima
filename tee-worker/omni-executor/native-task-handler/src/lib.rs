@@ -1932,7 +1932,8 @@ async fn handle_request_loan<
 
 	// TODO: need to confirm:
 	// shall we calculate aggressive sell price (5% below market to ensure fill)
-	let spot_sell_price_units = (market_price * 0.95 * 100_000_000.0) as u64;
+	// let spot_sell_price_units = (market_price * 0.95 * 100_000_000.0) as u64;
+	let spot_sell_price_units = (5.0 * 100_000_000.0) as u64;
 
 	// Generate cloids for orders (USD transfers don't use cloids)
 	let spot_sell_cloid = generate_cloid();
@@ -1946,7 +1947,7 @@ async fn handle_request_loan<
 	// Action 1: Build and submit spot sell action
 	info!(
 		"Building spot sell: asset_id={}, size_units={}, price_units={}, cloid={}, size_human={}, price_usdc={}",
-		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, collateral_size, market_price * 0.95
+		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, collateral_size, 5.0
 	);
 
 	let spot_sell_action = build_spot_sell_order(
