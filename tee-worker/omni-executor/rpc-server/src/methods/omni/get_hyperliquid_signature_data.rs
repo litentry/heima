@@ -32,9 +32,18 @@ pub struct GetHyperliquidSignatureDataParams {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HyperliquidActionType {
-	ApproveAgent { agent_address: String, agent_name: Option<String> },
-	Withdraw3 { amount: String, destination: String },
-	ApproveBuilderFee { max_fee_rate: String, builder: String },
+	ApproveAgent {
+		agent_address: String,
+		agent_name: Option<String>,
+	},
+	Withdraw3 {
+		amount: String,
+		destination: String,
+	},
+	ApproveBuilderFee {
+		max_fee_rate: String,
+		builder: String,
+	},
 	SendAsset {
 		destination: String,
 		source_dex: String,
