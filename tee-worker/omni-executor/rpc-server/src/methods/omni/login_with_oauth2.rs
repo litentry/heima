@@ -25,6 +25,7 @@ pub struct LoginWithOAuth2Params {
 	pub state: String,
 	pub redirect_uri: String,
 	pub uid: String,
+	pub id_token: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -100,6 +101,7 @@ pub fn register_login_with_oauth2<
 				state: params.state.clone(),
 				redirect_uri: params.redirect_uri.clone(),
 				uid: params.uid.clone(),
+				id_token: params.id_token.clone(),
 			};
 
 			let verified_identity =
