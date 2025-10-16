@@ -72,6 +72,7 @@ pub struct PerpAsset {
 
 #[derive(Debug, Deserialize)]
 pub struct OrderStatusResponse {
+	pub status: String,
 	pub order: Option<OrderInfo>,
 }
 
@@ -85,9 +86,14 @@ pub struct OrderInfo {
 
 #[derive(Debug, Deserialize)]
 pub struct OrderDetail {
-	pub asset: u32,
+	// Perp order fields
+	pub asset: Option<u32>,
 	#[serde(rename = "isBuy")]
-	pub is_buy: bool,
+	pub is_buy: Option<bool>,
+	// Spot order fields
+	pub coin: Option<String>,
+	pub side: Option<String>,
+	// Common fields
 	#[serde(rename = "limitPx")]
 	pub limit_px: String,
 	pub sz: String,
