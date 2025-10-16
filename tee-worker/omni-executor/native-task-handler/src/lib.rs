@@ -2116,6 +2116,7 @@ async fn handle_request_loan<
 	)
 	.await;
 
+	/*
 	// Action 3: Open hedge position
 	current_nonce += 1;
 
@@ -2188,6 +2189,8 @@ async fn handle_request_loan<
 	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 3 - Hedge Open")
 		.await;
 
+	*/
+
 	let usdc_received = format!("{:.2}", usdc_to_lend);
 
 	Ok(NativeTaskOk::RequestLoan {
@@ -2195,7 +2198,7 @@ async fn handle_request_loan<
 		hedge_open_cloid: hedge_open_cloid.to_string(),
 		usdc_received,
 		spot_sell_tx_hash,
-		hedge_open_tx_hash: hedge_tx_hash,
+		hedge_open_tx_hash: None,
 	})
 }
 

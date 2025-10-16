@@ -14,7 +14,7 @@ pub fn encode_limit_order_action(
 	cloid: u128,
 ) -> Vec<u8> {
 	let reduce_only = false;
-	let encoded_tif: u8 = 3; // Ioc
+	let encoded_tif: u8 = 2; // Gtc
 
 	let encoded = ethabi::encode(&[
 		ethabi::Token::Uint(asset.into()),
