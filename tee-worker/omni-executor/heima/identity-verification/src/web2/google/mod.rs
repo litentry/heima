@@ -1,4 +1,3 @@
-use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
 use serde::Deserialize;
 
 pub use super::oauth2_common::AuthorizeData;
@@ -25,19 +24,7 @@ pub fn get_authorize_data(client_id: &str, redirect_uri: &str) -> AuthorizeData 
 }
 
 pub fn decode_id_token(token: &str) -> Result<IdToken, &'static str> {
-	let parts: Vec<&str> = token.split('.').collect();
-	if parts.len() != 3 {
-		return Err("Invalid token format");
-	}
-	let payload = base64_decode(parts[1])?;
-	let claims: IdToken = serde_json::from_str(&payload).map_err(|_| "Failed to parse claims")?;
-	Ok(claims)
-}
-
-fn base64_decode(input: &str) -> Result<String, &'static str> {
-	let decoded = &BASE64_URL_SAFE_NO_PAD.decode(input).map_err(|_| "Failed to decode base64")?;
-
-	Ok(String::from_utf8_lossy(decoded).to_string())
+	super::oauth2_common::decode_id_token(token)
 }
 
 #[cfg(test)]
