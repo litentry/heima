@@ -1,11 +1,36 @@
 use crate::helpers;
 use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
+use executor_primitives::OAuth2Provider;
 use serde::de::DeserializeOwned;
 use url::Url;
+
+use super::{apple, google};
 
 pub struct AuthorizeData {
 	pub authorize_url: String,
 	pub state: String,
+	pub nonce: String,
+}
+
+pub struct OAuth2ProviderConfig {
+	pub base_url: &'static str,
+	pub scopes: &'static str,
+	pub use_response_mode: bool,
+}
+
+impl OAuth2ProviderConfig {
+	pub fn from_provider(provider: OAuth2Provider) -> Self {
+		match provider {
+			OAuth2Provider::Google => Self {
+				base_url: google::BASE_URL,
+				scopes: google::SCOPES,
+				use_response_mode: false,
+			},
+			OAuth2Provider::Apple => {
+				Self { base_url: apple::BASE_URL, scopes: apple::SCOPES, use_response_mode: true }
+			},
+		}
+	}
 }
 
 pub fn get_authorize_data(
@@ -16,6 +41,7 @@ pub fn get_authorize_data(
 	include_response_mode: bool,
 ) -> AuthorizeData {
 	let state = helpers::generate_alphanumeric_otp(32);
+	let nonce = helpers::generate_alphanumeric_otp(32);
 	let mut authorize_url = Url::parse(base_url).expect("Failed to parse URL");
 
 	let params = vec![
@@ -24,6 +50,7 @@ pub fn get_authorize_data(
 		("redirect_uri", redirect_uri),
 		("scope", scope),
 		("state", &state),
+		("nonce", &nonce),
 	];
 
 	authorize_url.query_pairs_mut().extend_pairs(&params);
@@ -32,7 +59,7 @@ pub fn get_authorize_data(
 		authorize_url.query_pairs_mut().append_pair("response_mode", "form_post");
 	}
 
-	AuthorizeData { authorize_url: authorize_url.into(), state }
+	AuthorizeData { authorize_url: authorize_url.into(), state, nonce }
 }
 
 pub fn decode_id_token<T: DeserializeOwned>(token: &str) -> Result<T, &'static str> {
