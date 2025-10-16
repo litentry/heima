@@ -11,7 +11,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
-use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, Withdraw3};
+use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, Withdraw3};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,14 @@ pub enum HyperliquidActionType {
 	ApproveAgent { agent_address: String, agent_name: Option<String> },
 	Withdraw3 { amount: String, destination: String },
 	ApproveBuilderFee { max_fee_rate: String, builder: String },
+	SendAsset {
+		destination: String,
+		source_dex: String,
+		destination_dex: String,
+		token: String,
+		amount: String,
+		from_sub_account: String,
+	},
 }
 
 #[derive(Serialize, Clone)]
@@ -56,6 +64,7 @@ pub enum HyperliquidAction {
 	ApproveAgent(ApproveAgent),
 	Withdraw3(Withdraw3),
 	ApproveBuilderFee(ApproveBuilderFee),
+	SendAsset(SendAsset),
 }
 
 fn is_testnet_chain(chain_id: ChainId) -> bool {
@@ -299,6 +308,36 @@ pub fn register_get_hyperliquid_signature_data<
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::ApproveBuilderFee(action), signature)
 				},
+				HyperliquidActionType::SendAsset {
+					destination,
+					source_dex,
+					destination_dex,
+					token,
+					amount,
+					from_sub_account,
+				} => {
+					let _ = validate_ethereum_address(&destination, "destination")
+						.map_err(|e| e.to_error_object())?;
+					// Validate from_sub_account if it's not empty
+					if !from_sub_account.is_empty() {
+						let _ = validate_ethereum_address(&from_sub_account, "from_sub_account")
+							.map_err(|e| e.to_error_object())?;
+					}
+					let action = SendAsset {
+						signature_chain_id: params.chain_id,
+						hyperliquid_chain,
+						destination,
+						source_dex,
+						destination_dex,
+						token,
+						amount,
+						from_sub_account,
+						nonce,
+					};
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					(HyperliquidAction::SendAsset(action), signature)
+				},
 			};
 
 			Ok(GetHyperliquidSignatureDataResponse {
@@ -491,6 +530,114 @@ mod tests {
 			params.action_type,
 			HyperliquidActionType::ApproveBuilderFee { max_fee_rate, builder }
 			if max_fee_rate == "0.01" && builder == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+		));
+	}
+
+	#[test]
+	fn test_send_asset_action_signature() {
+		let action = SendAsset {
+			signature_chain_id: 998,
+			hyperliquid_chain: "Testnet".to_string(),
+			destination: "0x1234567890123456789012345678901234567890".to_string(),
+			source_dex: "".to_string(),
+			destination_dex: "".to_string(),
+			token: "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2".to_string(),
+			amount: "100.0".to_string(),
+			from_sub_account: "".to_string(),
+			nonce: 1234567890,
+		};
+
+		// Test domain generation
+		let domain = action.domain();
+		assert_eq!(domain.name, Some("HyperliquidSignTransaction".into()));
+		assert_eq!(domain.version, Some("1".into()));
+		assert_eq!(domain.chain_id, Some(alloy::primitives::U256::from(998)));
+
+		// Test struct hash generation
+		let struct_hash = action.struct_hash();
+		assert_eq!(struct_hash.len(), 32);
+
+		// Test EIP-712 signing hash generation
+		let signing_hash = action.eip712_signing_hash();
+		assert_eq!(signing_hash.len(), 32);
+	}
+
+	#[test]
+	fn test_params_deserialization_send_asset() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "send_asset",
+			"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"source_dex": "",
+			"destination_dex": "spot",
+			"token": "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2",
+			"amount": "50.5",
+			"from_sub_account": ""
+		},
+		"chain_id": 998
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::SendAsset {
+				destination,
+				source_dex,
+				destination_dex,
+				token,
+				amount,
+				from_sub_account
+			}
+			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+				&& source_dex == ""
+				&& destination_dex == "spot"
+				&& token == "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2"
+				&& amount == "50.5"
+				&& from_sub_account == ""
+		));
+		assert_eq!(params.chain_id, 998);
+	}
+
+	#[test]
+	fn test_params_deserialization_send_asset_with_sub_account() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "send_asset",
+			"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"source_dex": "hyperliquid",
+			"destination_dex": "",
+			"token": "USDC:0x0",
+			"amount": "1000.0",
+			"from_sub_account": "0x9876543210987654321098765432109876543210"
+		},
+		"chain_id": 998
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::SendAsset {
+				destination,
+				source_dex,
+				destination_dex,
+				token,
+				amount,
+				from_sub_account
+			}
+			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+				&& source_dex == "hyperliquid"
+				&& destination_dex == ""
+				&& token == "USDC:0x0"
+				&& amount == "1000.0"
+				&& from_sub_account == "0x9876543210987654321098765432109876543210"
 		));
 	}
 
