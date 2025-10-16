@@ -11,7 +11,7 @@ use executor_crypto::jwt;
 use executor_primitives::{utils::hex::ToHexPrefixed, OAuth2Data, OAuth2Provider};
 use heima_authentication::{
 	auth_token::{AuthOptions, AuthTokenClaims},
-	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS},
+	constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -118,7 +118,7 @@ pub fn register_login_with_oauth2<
 
 			let access_token = create_jwt_for_user(
 				verified_identity.clone(),
-				AUTH_TOKEN_ACCESS_TYPE,
+				AUTH_TOKEN_ID_TYPE,
 				&params.client_id,
 				&ctx.jwt_rsa_private_key,
 			)
