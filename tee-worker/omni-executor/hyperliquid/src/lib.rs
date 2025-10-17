@@ -1,8 +1,10 @@
 mod corewriter;
 mod hypercore_api;
+mod utils;
 
 pub use corewriter::*;
 pub use hypercore_api::*;
+pub use utils::*;
 
 use alloy::primitives::Address;
 
