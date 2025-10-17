@@ -1927,13 +1927,30 @@ async fn handle_request_loan<
 	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Actions").await;
 
 	// Action 1: Sell collateral_size as spot to get X USDC
-	// Use CoreWriter encoding: 10^8 * human_readable_value
-	let spot_sell_size_units = (collateral_size * 100_000_000.0) as u64;
+	// Clamp size and price to comply with HyperLiquid tick/lot size rules
+	let clamped_size = clamp_size(collateral_size, collateral_token.sz_decimals);
 
-	// TODO: need to confirm:
-	// shall we calculate aggressive sell price (5% below market to ensure fill)
-	// let spot_sell_price_units = (market_price * 0.95 * 100_000_000.0) as u64;
-	let spot_sell_price_units = (5.0 * 100_000_000.0) as u64;
+	// Calculate aggressive sell price (2% below market to ensure fill)
+	let target_price = market_price * 0.98;
+	let clamped_price = clamp_price(target_price, collateral_token.sz_decimals, true); // true = spot market
+
+	info!(
+		"Clamped values for spot sell - size: {} -> {}, price: {} -> {}",
+		collateral_size, clamped_size, target_price, clamped_price
+	);
+
+	// Use CoreWriter encoding: 10^8 * human_readable_value
+	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped size: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped size: {}", e)))
+	})?;
+	let clamped_price_f64 = clamped_price.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped price: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped price: {}", e)))
+	})?;
+
+	let spot_sell_size_units = (clamped_size_f64 * 100_000_000.0) as u64;
+	let spot_sell_price_units = (clamped_price_f64 * 100_000_000.0) as u64;
 
 	// Generate cloids for orders (USD transfers don't use cloids)
 	let spot_sell_cloid = generate_cloid();
@@ -1947,7 +1964,7 @@ async fn handle_request_loan<
 	// Action 1: Build and submit spot sell action
 	info!(
 		"Building spot sell: asset_id={}, size_units={}, price_units={}, cloid={}, size_human={}, price_usdc={}",
-		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, collateral_size, 5.0
+		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, clamped_size, clamped_price
 	);
 
 	let spot_sell_action = build_spot_sell_order(
@@ -2096,7 +2113,7 @@ async fn handle_request_loan<
 			smart_wallet_address_str,
 			initial_perp_balance,
 			usdc_for_perp,
-			20,
+			10,
 		)
 		.await
 		.map_err(|e| {
@@ -2121,24 +2138,40 @@ async fn handle_request_loan<
 	// Action 3: Open hedge position
 	current_nonce += 1;
 
-	// Use CoreWriter encoding: 10^8 * human_readable_value
-	let hedge_size_units = calculate_corewriter_perp_size(
-		usdc_for_perp,
-		lending_ratio_f64,
-		market_price,
-		perp_asset.max_leverage,
-	);
-
 	// Calculate effective leverage used
 	let desired_leverage = 1.0 / (1.0 - lending_ratio_f64);
 	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
 
-	// Calculate aggressive buy price (10% above market to ensure fill)
-	let hedge_price_units = (market_price * 100_000_000.0) as u64;
+	// Calculate perp size: (margin * leverage) / price
+	let hedge_size = (usdc_for_perp * effective_leverage) / market_price;
+
+	// Clamp size and price to comply with HyperLiquid tick/lot size rules
+	let clamped_hedge_size = clamp_size(hedge_size, perp_asset.sz_decimals);
+
+	// Use market price for perp order (no adjustment)
+	let clamped_hedge_price = clamp_price(market_price, perp_asset.sz_decimals, false); // false = perp market
 
 	info!(
-		"Opening hedge position: margin={:.2} USDC, leverage={:.2}x (max={}), size_units={}, price_units={}, price_usdc={}",
-		usdc_for_perp, effective_leverage, perp_asset.max_leverage, hedge_size_units, hedge_price_units, market_price
+		"Clamped values for hedge - size: {} -> {}, price: {} -> {}",
+		hedge_size, clamped_hedge_size, market_price, clamped_hedge_price
+	);
+
+	// Use CoreWriter encoding: 10^8 * human_readable_value
+	let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped hedge size: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped hedge size: {}", e)))
+	})?;
+	let clamped_hedge_price_f64 = clamped_hedge_price.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped hedge price: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped hedge price: {}", e)))
+	})?;
+
+	let hedge_size_units = (clamped_hedge_size_f64 * 100_000_000.0) as u64;
+	let hedge_price_units = (clamped_hedge_price_f64 * 100_000_000.0) as u64;
+
+	info!(
+		"Opening hedge position: margin={:.2} USDC, leverage={:.2}x (max={}), size_units={}, price_units={}, size_human={}, price_usdc={}",
+		usdc_for_perp, effective_leverage, perp_asset.max_leverage, hedge_size_units, hedge_price_units, clamped_hedge_size, clamped_hedge_price
 	);
 
 	let hedge_action =
