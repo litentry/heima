@@ -1792,6 +1792,104 @@ async fn print_account_state(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Validates all loan request parameters before executing trades
+/// Returns (user_balance, lending_ratio_f64) on success
+async fn validate_loan_request_parameters(
+	hypercore_client: &hyperliquid::HyperCoreClient,
+	smart_wallet_address: &str,
+	collateral_ticker: &str,
+	collateral_size: f64,
+	collateral_token: &hyperliquid::SpotToken,
+	perp_asset: &hyperliquid::PerpAsset,
+	lending_ratio: u32,
+	spot_market_price: f64,
+	perp_market_price: f64,
+) -> Result<(f64, f64), NativeTaskError> {
+	use hyperliquid::validate_trade_size;
+	// 1. Validate collateral size for spot trading
+	validate_trade_size(collateral_size, collateral_token.sz_decimals, None).map_err(|e| {
+		error!("Invalid collateral size for spot trading: {}", e);
+		NativeTaskError::InternalError(Some(format!("Invalid collateral size: {}", e)))
+	})?;
+
+	info!(
+		"✓ Collateral size {} validated for spot trading (sz_decimals={})",
+		collateral_size, collateral_token.sz_decimals
+	);
+
+	// 2. Calculate estimated values for perp position
+	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
+	let estimated_usdc_from_spot = collateral_size * spot_market_price;
+	let estimated_usdc_for_perp = estimated_usdc_from_spot * (1.0 - lending_ratio_f64);
+	let estimated_leverage = (1.0 / (1.0 - lending_ratio_f64)).min(perp_asset.max_leverage as f64);
+	let estimated_perp_notional = estimated_usdc_for_perp * estimated_leverage;
+
+	// 3. Validate minimum perp order notional value ($10 minimum)
+
+	const MIN_PERP_NOTIONAL: f64 = 10.0; // Hyperliquid: "Perp Order must have minimum value of $10."
+
+	if estimated_perp_notional < MIN_PERP_NOTIONAL {
+		error!(
+			"Perp order notional value too small: estimated ${:.2} (collateral_size={}, spot_price={:.2}, lending_ratio={}%, leverage={:.2}x) - minimum required: ${}",
+			estimated_perp_notional, collateral_size, spot_market_price, lending_ratio, estimated_leverage, MIN_PERP_NOTIONAL
+		);
+		return Err(NativeTaskError::InternalError(Some(format!(
+			"Perp order notional value too small: ${:.2} < ${} minimum. Increase collateral_size or decrease lending_ratio.",
+			estimated_perp_notional, MIN_PERP_NOTIONAL
+		))));
+	}
+
+	info!(
+		"✓ Perp notional value: ${:.2} (margin={:.2}, leverage={:.2}x) >= ${} minimum",
+		estimated_perp_notional, estimated_usdc_for_perp, estimated_leverage, MIN_PERP_NOTIONAL
+	);
+
+	// 4. Validate estimated hedge size can be properly rounded to perp sz_decimals
+	// hedge_size = (margin * leverage) / price
+	let estimated_hedge_size = estimated_perp_notional / perp_market_price;
+
+	validate_trade_size(estimated_hedge_size, perp_asset.sz_decimals, None).map_err(|e| {
+		error!("Invalid estimated hedge size for perp trading: {}", e);
+		NativeTaskError::InternalError(Some(format!(
+			"Invalid estimated hedge size (margin={:.2}, leverage={:.2}x, perp_price={:.2}, size={}): {}",
+			estimated_usdc_for_perp, estimated_leverage, perp_market_price, estimated_hedge_size, e
+		)))
+	})?;
+
+	info!(
+		"✓ Estimated hedge size {} validated for perp trading (sz_decimals={})",
+		estimated_hedge_size, perp_asset.sz_decimals
+	);
+
+	// 5. Validate user balance
+	let user_balance = hypercore_client
+		.get_spot_balance(smart_wallet_address, collateral_ticker)
+		.await
+		.map_err(|e| {
+			error!("Failed to get user balance: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to query balance: {}", e)))
+		})?;
+
+	if user_balance < collateral_size {
+		error!(
+			"Insufficient balance: user has {} but needs {} {}",
+			user_balance, collateral_size, collateral_ticker
+		);
+		return Err(NativeTaskError::InternalError(Some(format!(
+			"Insufficient balance: user has {} but needs {} {}",
+			user_balance, collateral_size, collateral_ticker
+		))));
+	}
+
+	info!(
+		"✓ Balance check passed: user has {} {} (required: {})",
+		user_balance, collateral_ticker, collateral_size
+	);
+
+	Ok((user_balance, lending_ratio_f64))
+}
+
+#[allow(clippy::too_many_arguments)]
 async fn handle_request_loan<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -1887,37 +1985,6 @@ async fn handle_request_loan<
 		perp_asset.max_leverage
 	);
 
-	// Early validation: Check if collateral_size can be properly rounded to spot sz_decimals
-	validate_trade_size(collateral_size, collateral_token.sz_decimals, None).map_err(|e| {
-		error!("Invalid collateral size for spot trading: {}", e);
-		NativeTaskError::InternalError(Some(format!("Invalid collateral size: {}", e)))
-	})?;
-
-	info!(
-		"Collateral size {} validated for spot trading (sz_decimals={})",
-		collateral_size, collateral_token.sz_decimals
-	);
-
-	// Early validation: Check if the amount after applying lending ratio is valid for perp trading
-	// This validates that collateral_size * (1 - lending_ratio%) can be used as valid size for opening positions
-	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
-	let effective_collateral_for_hedge = collateral_size * (1.0 - lending_ratio_f64);
-
-	validate_trade_size(effective_collateral_for_hedge, perp_asset.sz_decimals, None).map_err(
-		|e| {
-			error!("Invalid effective collateral size for perp trading after applying lending ratio: {}", e);
-			NativeTaskError::InternalError(Some(format!(
-			"Invalid effective collateral size (collateral_size={}, lending_ratio={}%, effective={}): {}",
-			collateral_size, lending_ratio, effective_collateral_for_hedge, e
-		)))
-		},
-	)?;
-
-	info!(
-		"Effective collateral size {} (collateral_size={} * (1-{}%)) validated for perp trading (sz_decimals={})",
-		effective_collateral_for_hedge, collateral_size, lending_ratio, perp_asset.sz_decimals
-	);
-
 	// Fetch market prices - use spot price for spot sell, perp price for perp hedge
 	let spot_market_price = hypercore_client
 		.get_spot_mid_price(collateral_ticker, &spot_meta)
@@ -1944,30 +2011,19 @@ async fn handle_request_loan<
 		collateral_ticker, spot_market_price, perp_market_price
 	);
 
-	// Check user balance
-	let user_balance = hypercore_client
-		.get_spot_balance(smart_wallet_address_str, collateral_ticker)
-		.await
-		.map_err(|e| {
-			error!("Failed to get user balance: {}", e);
-			NativeTaskError::InternalError(Some(format!("Failed to query balance: {}", e)))
-		})?;
-
-	if user_balance < collateral_size {
-		error!(
-			"Insufficient balance: user has {} but needs {} {}",
-			user_balance, collateral_size, collateral_ticker
-		);
-		return Err(NativeTaskError::InternalError(Some(format!(
-			"Insufficient balance: user has {} but needs {} {}",
-			user_balance, collateral_size, collateral_ticker
-		))));
-	}
-
-	info!(
-		"Balance check passed: user has {} {} (required: {})",
-		user_balance, collateral_ticker, collateral_size
-	);
+	// Run all early validations
+	let (_user_balance, lending_ratio_f64) = validate_loan_request_parameters(
+		&hypercore_client,
+		smart_wallet_address_str,
+		collateral_ticker,
+		collateral_size,
+		collateral_token,
+		perp_asset,
+		lending_ratio,
+		spot_market_price,
+		perp_market_price,
+	)
+	.await?;
 
 	// Print initial account state
 	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Actions").await;
@@ -2086,7 +2142,6 @@ async fn handle_request_loan<
 		.await;
 
 	// Calculate actual USDC to transfer based on USDC received from the spot sell
-	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
 	let usdc_for_perp = usdc_received * (1.0 - lending_ratio_f64);
 	let usdc_to_lend = usdc_received * lending_ratio_f64;
 
@@ -2184,24 +2239,15 @@ async fn handle_request_loan<
 	current_nonce += 1;
 
 	// Calculate effective leverage used
-	let desired_leverage = 1.0 / (1.0 - lending_ratio_f64);
+	let desired_leverage: f64 = 1.0 / (1.0 - lending_ratio_f64);
 	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
 
 	// Calculate perp size: (margin * leverage) / price
 	let hedge_size = (usdc_for_perp * effective_leverage) / perp_market_price;
 
-	// Early validation: Check if hedge_size can be properly rounded to perp sz_decimals
-	validate_trade_size(hedge_size, perp_asset.sz_decimals, None).map_err(|e| {
-		error!("Invalid hedge size for perp trading: {}", e);
-		NativeTaskError::InternalError(Some(format!(
-			"Invalid hedge size (usdc_for_perp={:.2}, effective_leverage={:.2}, perp_price={:.2}): {}",
-			usdc_for_perp, effective_leverage, perp_market_price, e
-		)))
-	})?;
-
 	info!(
-		"Hedge size {} validated for perp trading (sz_decimals={})",
-		hedge_size, perp_asset.sz_decimals
+		"Calculated hedge size: {} (margin={:.2}, leverage={:.2}x, perp_price={:.2})",
+		hedge_size, usdc_for_perp, effective_leverage, perp_market_price
 	);
 
 	// Clamp size and price to comply with HyperLiquid tick/lot size rules
