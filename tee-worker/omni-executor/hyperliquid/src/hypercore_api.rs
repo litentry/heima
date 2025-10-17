@@ -308,15 +308,65 @@ impl HyperCoreClient {
 			.map_err(|e| format!("Failed to parse allMids response: {}", e))
 	}
 
-	pub async fn get_mid_price(&self, ticker: &str) -> Result<f64, String> {
+	/// Get mid price for a perpetual futures contract
+	/// For perps, the key is just the ticker name (e.g., "PURR", "HYPE")
+	pub async fn get_perp_mid_price(&self, ticker: &str) -> Result<f64, String> {
 		let all_mids = self.get_all_mids().await?;
 		let price_str = all_mids
 			.0
 			.get(ticker)
-			.ok_or_else(|| format!("Price for {} not found in allMids", ticker))?;
+			.ok_or_else(|| format!("Perp price for {} not found in allMids", ticker))?;
 		price_str
 			.parse::<f64>()
-			.map_err(|e| format!("Failed to parse price for {}: {}", ticker, e))
+			.map_err(|e| format!("Failed to parse perp price for {}: {}", ticker, e))
+	}
+
+	/// Get mid price for a spot trading pair (ticker/USDC)
+	/// For spot, we need to:
+	/// 1. Get the token index from spot_meta
+	/// 2. Find the trading pair containing (token_index, usdc_index)
+	/// 3. Get the pair's "name" field
+	/// 4. Use that name as the key in allMids
+	///
+	/// Example: For HYPE (index 1105), find pair (1105, 0) with name "@1035",
+	/// then use "@1035" as the key in allMids
+	pub async fn get_spot_mid_price(
+		&self,
+		ticker: &str,
+		spot_meta: &SpotMetaResponse,
+	) -> Result<f64, String> {
+		// Find the token by ticker
+		let token = spot_meta
+			.tokens
+			.iter()
+			.find(|t| t.name.eq_ignore_ascii_case(ticker))
+			.ok_or_else(|| format!("Token {} not found in spot meta", ticker))?;
+
+		// Find USDC token (index 0)
+		let usdc_token = spot_meta
+			.tokens
+			.iter()
+			.find(|t| t.name.eq_ignore_ascii_case("USDC"))
+			.ok_or_else(|| "USDC token not found in spot meta".to_string())?;
+
+		// Find the trading pair containing both tokens
+		let pair = spot_meta
+			.universe
+			.iter()
+			.find(|p| p.tokens.contains(&token.index) && p.tokens.contains(&usdc_token.index))
+			.ok_or_else(|| format!("No spot pair found for {}/USDC", ticker))?;
+
+		// Get all mid prices
+		let all_mids = self.get_all_mids().await?;
+
+		// Use the pair's name as the key
+		let price_str = all_mids.0.get(&pair.name).ok_or_else(|| {
+			format!("Spot price for {} (pair name: {}) not found in allMids", ticker, pair.name)
+		})?;
+
+		price_str
+			.parse::<f64>()
+			.map_err(|e| format!("Failed to parse spot price for {}: {}", ticker, e))
 	}
 
 	pub async fn get_order_status(

@@ -11,6 +11,13 @@ use alloy::primitives::Address;
 pub const CORE_WRITER_ADDRESS: &str = "0x3333333333333333333333333333333333333333";
 pub const SIMPLE_PAYMASTER_ADDRESS: &str = "0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912"; // staging-v1
 
+// Trading price adjustment ratios
+/// Ratio for spot sell orders (2% below market to ensure fill)
+pub const SPOT_SELL_PRICE_RATIO: f64 = 0.98;
+
+/// Ratio for perp entry orders (currently at market price)
+pub const PERP_ENTRY_PRICE_RATIO: f64 = 1.0;
+
 pub fn get_core_writer_address() -> Address {
 	CORE_WRITER_ADDRESS.parse().unwrap()
 }

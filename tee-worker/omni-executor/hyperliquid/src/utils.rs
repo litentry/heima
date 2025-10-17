@@ -1,6 +1,73 @@
 use super::hypercore_api::{Fill, MetaResponse, SpotMetaResponse};
 use tracing::debug;
 
+/// Validates if a size can be properly truncated to the required sz_decimals
+/// Returns true if the size is valid (truncated size > 0), false otherwise
+///
+/// # Arguments
+/// * `size` - The size to validate
+/// * `sz_decimals` - The size decimals required by the asset
+///
+/// # Examples
+/// ```
+/// // sz_decimals = 0 (integer only)
+/// assert!(validate_size(1.0, 0)); // OK: truncates to 1
+/// assert!(validate_size(1.9, 0)); // OK: truncates to 1 (no % check needed)
+/// assert!(!validate_size(0.9, 0)); // FAIL: truncates to 0
+///
+/// // sz_decimals = 2
+/// assert!(validate_size(1.234, 2)); // OK: truncates to 1.23
+/// assert!(!validate_size(0.004, 2)); // FAIL: truncates to 0
+/// ```
+pub fn validate_size(size: f64, sz_decimals: u8) -> bool {
+	// Truncate (round down) to sz_decimals
+	let multiplier = 10f64.powi(sz_decimals as i32);
+	let truncated = (size * multiplier).floor() / multiplier;
+
+	// Only check if truncated size is greater than zero
+	truncated > 0.0
+}
+
+/// Validates if a size meets minimum requirements for trading
+/// Checks if the size truncates to a valid non-zero value
+///
+/// # Arguments
+/// * `size` - The size to validate
+/// * `sz_decimals` - The size decimals required by the asset
+/// * `min_size` - Optional minimum size (default: smallest unit based on sz_decimals)
+///
+/// # Returns
+/// Ok(()) if valid, Err(String) with reason if invalid
+pub fn validate_trade_size(
+	size: f64,
+	sz_decimals: u8,
+	min_size: Option<f64>,
+) -> Result<(), String> {
+	// Determine minimum size if not provided
+	let min_size = min_size.unwrap_or_else(|| {
+		// Minimum is 1 unit at the given decimal precision
+		10f64.powi(-(sz_decimals as i32))
+	});
+
+	if size < min_size {
+		return Err(format!(
+			"Size {} is below minimum trade size {} (sz_decimals={})",
+			size, min_size, sz_decimals
+		));
+	}
+
+	if !validate_size(size, sz_decimals) {
+		let multiplier = 10f64.powi(sz_decimals as i32);
+		let truncated = (size * multiplier).floor() / multiplier;
+		return Err(format!(
+			"Size {} would truncate to {} with sz_decimals={}, which is invalid (must be > 0)",
+			size, truncated, sz_decimals
+		));
+	}
+
+	Ok(())
+}
+
 /// Get the asset ID for a spot trading pair (ticker/USDC)
 ///
 /// # Arguments
@@ -203,8 +270,8 @@ pub fn clamp_price(price: f64, sz_decimals: u8, is_spot: bool) -> String {
 /// Clamps a size to comply with HyperLiquid lot size rules.
 ///
 /// Size rules:
-/// - Sizes are rounded to the sz_decimals of the asset
-/// - Example: if sz_decimals = 3, then 1.001 is valid but 1.0001 is not
+/// - Sizes are truncated (rounded down) to the sz_decimals of the asset
+/// - Example: if sz_decimals = 3, then 1.001 is valid but 1.0001 truncates to 1.001
 ///
 /// # Arguments
 /// * `size` - The size to clamp
@@ -213,16 +280,16 @@ pub fn clamp_price(price: f64, sz_decimals: u8, is_spot: bool) -> String {
 /// # Returns
 /// The clamped size as a string
 pub fn clamp_size(size: f64, sz_decimals: u8) -> String {
-	// Round to sz_decimals
+	// Truncate (round down) to sz_decimals
 	let multiplier = 10f64.powi(sz_decimals as i32);
-	let rounded = (size * multiplier).round() / multiplier;
+	let truncated = (size * multiplier).floor() / multiplier;
 
 	// Format with the appropriate number of decimals
 	if sz_decimals == 0 {
 		// For integer sizes, format as integer
-		format!("{:.0}", rounded)
+		format!("{:.0}", truncated)
 	} else {
-		let formatted = format!("{:.prec$}", rounded, prec = sz_decimals as usize);
+		let formatted = format!("{:.prec$}", truncated, prec = sz_decimals as usize);
 		// Remove trailing zeros and decimal point if not needed, but only after the decimal point
 		let trimmed = formatted.trim_end_matches('0').trim_end_matches('.');
 		trimmed.to_string()
@@ -235,21 +302,20 @@ mod tests {
 
 	#[test]
 	fn test_clamp_size() {
-		// Test with sz_decimals = 3
-		assert_eq!(clamp_size(1.001, 3), "1.001");
-		assert_eq!(clamp_size(1.0001, 3), "1"); // Should round down
-		assert_eq!(clamp_size(1.0015, 3), "1.002"); // Should round up
+		// Test with sz_decimals = 3 - truncates (rounds down)
+		assert_eq!(clamp_size(1.125, 3), "1.125");
+		assert_eq!(clamp_size(1.9999, 3), "1.999"); // Truncates to 1.999
 		assert_eq!(clamp_size(1.0, 3), "1");
-		assert_eq!(clamp_size(0.999, 3), "0.999");
 
-		// Test with sz_decimals = 0 (integer only)
-		assert_eq!(clamp_size(1.5, 0), "2");
-		assert_eq!(clamp_size(1.4, 0), "1");
+		// Test with sz_decimals = 0 (integer only) - truncates
+		assert_eq!(clamp_size(1.9, 0), "1"); // Truncates to 1
+		assert_eq!(clamp_size(1.4, 0), "1"); // Truncates to 1
 		assert_eq!(clamp_size(10.0, 0), "10");
+		assert_eq!(clamp_size(0.9, 0), "0"); // Truncates to 0
 
-		// Test with sz_decimals = 2
-		assert_eq!(clamp_size(1.234, 2), "1.23");
-		assert_eq!(clamp_size(1.236, 2), "1.24");
+		// Test with sz_decimals = 2 - truncates
+		assert_eq!(clamp_size(1.25, 2), "1.25");
+		assert_eq!(clamp_size(1.999, 2), "1.99"); // Truncates to 1.99
 		assert_eq!(clamp_size(0.01, 2), "0.01");
 	}
 
