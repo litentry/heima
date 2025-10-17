@@ -12,7 +12,7 @@ pub struct IdToken {
 	pub aud: String,
 	pub sub: String,
 	pub email: String,
-	pub email_verified: String,
+	pub email_verified: bool,
 	#[serde(default)]
 	pub nonce: Option<String>,
 	pub iat: u64,
@@ -58,7 +58,7 @@ mod tests {
 			id_token.azp,
 			"686293810069-m0a75pbof1epo2sg92a57ptmk85saglf.apps.googleusercontent.com"
 		);
-		assert_eq!(id_token.email_verified, "true");
+		assert_eq!(id_token.email_verified, true);
 		assert_eq!(id_token.at_hash, Some("PnbwBER3NuAkNytZeGl3pg".to_string()));
 		assert_eq!(
 			id_token.aud,
