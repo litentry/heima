@@ -3,6 +3,7 @@ mod auth_utils;
 mod config;
 mod detailed_error;
 mod error_code;
+mod google_oauth2_factory;
 mod mailer_factory;
 mod methods;
 mod middlewares;
