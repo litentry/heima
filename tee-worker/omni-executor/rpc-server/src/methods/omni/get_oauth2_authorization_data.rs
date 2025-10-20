@@ -18,7 +18,7 @@ use tracing::error;
 struct GetOAuth2AuthorizationDataParams {
 	pub provider: String, // "google" or "apple"
 	pub uid: String,      // A unique identifier for the user/session requesting the OAuth2 URL
-	pub redirect_uri: String,
+	pub redirect_uri: Option<String>,
 	pub client_id: String,
 }
 
@@ -26,7 +26,8 @@ struct GetOAuth2AuthorizationDataParams {
 struct OAuth2AuthorizationData {
 	pub authorize_url: String,
 	pub client_id: String,
-	pub redirect_uri: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub redirect_uri: Option<String>,
 	pub state: String,
 	pub nonce: String,
 	pub scope: String,
@@ -87,7 +88,7 @@ pub fn register_get_oauth2_authorization_data<
 			let authorize_data = oauth2_common::get_authorize_data(
 				provider_config.base_url,
 				&oauth2_config.client_id,
-				&params.redirect_uri,
+				params.redirect_uri.as_deref(),
 				provider_config.scopes,
 				provider_config.use_response_mode,
 			);

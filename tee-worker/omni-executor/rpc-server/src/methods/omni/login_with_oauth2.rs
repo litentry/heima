@@ -23,7 +23,7 @@ pub struct LoginWithOAuth2Params {
 	pub provider: String,
 	pub code: String,
 	pub state: String,
-	pub redirect_uri: String,
+	pub redirect_uri: Option<String>,
 	pub uid: String,
 	pub id_token: String,
 }
