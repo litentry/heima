@@ -180,6 +180,15 @@ pub struct Fill {
 	pub builder_fee: Option<String>,
 }
 
+/// Specifies what condition to wait for when polling an order
+#[derive(Debug, Clone, Copy)]
+pub enum OrderWaitCondition {
+	/// Wait until the order is filled
+	Filled,
+	/// Wait until the order is opened (retrievable via API)
+	Opened,
+}
+
 pub struct HyperCoreClient {
 	api_url: String,
 	client: reqwest::Client,
@@ -382,42 +391,69 @@ impl HyperCoreClient {
 			.map_err(|e| format!("Failed to parse order status response: {}", e))
 	}
 
-	pub async fn wait_for_order_completion(
+	/// Waits for an order to reach a specific condition by polling the HyperLiquid API.
+	///
+	/// # Arguments
+	/// * `user_address` - The user's wallet address
+	/// * `cloid` - The client order ID
+	/// * `max_wait_seconds` - Maximum time to wait before timing out
+	/// * `condition` - The condition to wait for (Filled or Opened)
+	///
+	/// # Returns
+	/// * `Ok(true)` - Order reached the desired condition
+	/// * `Ok(false)` - Order was rejected, canceled, or expired
+	/// * `Err(String)` - Timeout or API error
+	pub async fn wait_for_order(
 		&self,
 		user_address: &str,
 		cloid: &str,
 		max_wait_seconds: u64,
+		condition: OrderWaitCondition,
 	) -> Result<bool, String> {
 		let start_time = std::time::Instant::now();
 		let max_duration = Duration::from_secs(max_wait_seconds);
+		let condition_name = match condition {
+			OrderWaitCondition::Filled => "completion",
+			OrderWaitCondition::Opened => "to be opened",
+		};
 
 		loop {
 			if start_time.elapsed() >= max_duration {
 				return Err(format!(
-					"Timeout waiting for order completion after {} seconds",
-					max_wait_seconds
+					"Timeout waiting for order {} after {} seconds",
+					condition_name, max_wait_seconds
 				));
 			}
 
 			let status = self.get_order_status(user_address, cloid).await?;
 
 			if let Some(order_info) = status.order {
-				match order_info.status.as_str() {
-					"filled" => {
-						debug!("Order {} filled successfully", cloid);
-						return Ok(true);
+				let order_status = order_info.status.as_str();
+
+				// Check if the condition is satisfied
+				let is_satisfied = match condition {
+					OrderWaitCondition::Filled => order_status == "filled",
+					OrderWaitCondition::Opened => {
+						matches!(order_status, "open" | "partial_fill" | "filled")
 					},
-					"rejected" | "canceled" | "expired" => {
-						error!("Order {} failed with status: {}", cloid, order_info.status);
-						return Ok(false);
-					},
-					"open" | "partial_fill" => {
-						debug!("Order {} still pending: {}", cloid, order_info.status);
-					},
-					_ => {
-						debug!("Order {} unknown status: {}", cloid, order_info.status);
-					},
+				};
+
+				if is_satisfied {
+					debug!(
+						"Order {} satisfied condition {:?} with status: {}",
+						cloid, condition, order_status
+					);
+					return Ok(true);
 				}
+
+				// Check for failure states
+				if matches!(order_status, "rejected" | "canceled" | "expired") {
+					error!("Order {} failed with status: {}", cloid, order_status);
+					return Ok(false);
+				}
+
+				// Still pending
+				debug!("Order {} still pending: {}", cloid, order_status);
 			} else {
 				debug!("Order {} not found yet, waiting...", cloid);
 			}

@@ -2096,7 +2096,12 @@ async fn handle_request_loan<
 	// Wait for order to be placed and filled by polling HyperCore API
 	info!("Polling HyperCore API for spot sell order completion (cloid: {})...", spot_sell_cloid);
 	let order_filled = hypercore_client
-		.wait_for_order_completion(smart_wallet_address_str, &spot_sell_cloid.to_string(), 20)
+		.wait_for_order(
+			smart_wallet_address_str,
+			&spot_sell_cloid.to_string(),
+			20,
+			hyperliquid::OrderWaitCondition::Filled,
+		)
 		.await
 		.map_err(|e| {
 			error!("Spot sell order did not complete: {}", e);
@@ -2214,7 +2219,7 @@ async fn handle_request_loan<
 			smart_wallet_address_str,
 			initial_perp_balance,
 			usdc_for_perp,
-			10,
+			20,
 		)
 		.await
 		.map_err(|e| {
@@ -2306,24 +2311,29 @@ async fn handle_request_loan<
 
 	info!("Action 3: Hedge position submitted with tx_hash: {:?}", hedge_tx_hash);
 
-	// Wait for order to be placed and filled by polling HyperCore API
-	info!("Polling HyperCore API for hedge order completion (cloid: {})...", hedge_open_cloid);
-	let hedge_filled = hypercore_client
-		.wait_for_order_completion(smart_wallet_address_str, &hedge_open_cloid.to_string(), 20)
+	// Wait for order to be successfully opened (retrievable via HyperCore API)
+	info!("Polling HyperCore API to verify hedge order is opened (cloid: {})...", hedge_open_cloid);
+	let order_opened = hypercore_client
+		.wait_for_order(
+			smart_wallet_address_str,
+			&hedge_open_cloid.to_string(),
+			20,
+			hyperliquid::OrderWaitCondition::Opened,
+		)
 		.await
 		.map_err(|e| {
-			error!("Hedge order did not complete: {}", e);
-			NativeTaskError::InternalError(Some(format!("Hedge order failed: {}", e)))
+			error!("Hedge order was not successfully opened: {}", e);
+			NativeTaskError::InternalError(Some(format!("Hedge order failed to open: {}", e)))
 		})?;
 
-	if !hedge_filled {
+	if !order_opened {
 		error!("Hedge order was rejected or canceled");
 		return Err(NativeTaskError::InternalError(Some(
 			"Hedge order was rejected or canceled".to_string(),
 		)));
 	}
 
-	info!("Action 3: Hedge order filled successfully");
+	info!("Action 3: Hedge order successfully opened");
 
 	// Print final account state after Action 3
 	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 3 - Hedge Open")
