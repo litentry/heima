@@ -11,7 +11,7 @@ use executor_crypto::jwt;
 use executor_primitives::{utils::hex::ToHexPrefixed, OAuth2Data, OAuth2Provider};
 use heima_authentication::{
 	auth_token::{AuthOptions, AuthTokenClaims},
-	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS},
+	constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -23,8 +23,9 @@ pub struct LoginWithOAuth2Params {
 	pub provider: String,
 	pub code: String,
 	pub state: String,
-	pub redirect_uri: String,
+	pub redirect_uri: Option<String>,
 	pub uid: String,
+	pub id_token: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -36,6 +37,7 @@ pub struct LoginWithOAuth2Response {
 fn parse_oauth2_provider(provider: &str) -> Result<OAuth2Provider, ErrorCode> {
 	match provider.to_lowercase().as_str() {
 		"google" => Ok(OAuth2Provider::Google),
+		"apple" => Ok(OAuth2Provider::Apple),
 		_ => {
 			error!("Unsupported OAuth2 provider: {}", provider);
 			Err(ErrorCode::InvalidParams)
@@ -89,7 +91,7 @@ pub fn register_login_with_oauth2<
 				DetailedError::new(PARSE_ERROR_CODE, "Invalid provider")
 					.with_field("provider")
 					.with_received(&params.provider)
-					.with_expected("google")
+					.with_expected("google, apple")
 					.to_error_object()
 			})?;
 
@@ -99,6 +101,7 @@ pub fn register_login_with_oauth2<
 				state: params.state.clone(),
 				redirect_uri: params.redirect_uri.clone(),
 				uid: params.uid.clone(),
+				id_token: params.id_token.clone(),
 			};
 
 			let verified_identity =
@@ -117,7 +120,7 @@ pub fn register_login_with_oauth2<
 
 			let access_token = create_jwt_for_user(
 				verified_identity.clone(),
-				AUTH_TOKEN_ACCESS_TYPE,
+				AUTH_TOKEN_ID_TYPE,
 				&params.client_id,
 				&ctx.jwt_rsa_private_key,
 			)
@@ -129,7 +132,7 @@ pub fn register_login_with_oauth2<
 			})?;
 
 			let user_id = match &verified_identity {
-				Identity::Google(identity_string) => {
+				Identity::Google(identity_string) | Identity::Apple(identity_string) => {
 					std::str::from_utf8(identity_string.inner_ref())
 						.map_err(|_| {
 							error!("Failed to convert identity to string");
