@@ -34,12 +34,12 @@
         "typescript": "^5.9.3"
     },
     "dependencies": {
-        "@polkadot/api": "^16.4.8",
-        "@polkadot/api-augment": "^16.4.8",
-        "@polkadot/keyring": "^13.5.6",
-        "@polkadot/types": "^16.4.8",
-        "@polkadot/util": "^13.5.6",
-        "@polkadot/util-crypto": "^13.5.6",
+        "@polkadot/api": "^16.4.9",
+        "@polkadot/api-augment": "^16.4.9",
+        "@polkadot/keyring": "^13.5.7",
+        "@polkadot/types": "^16.4.9",
+        "@polkadot/util": "^13.5.7",
+        "@polkadot/util-crypto": "^13.5.7",
         "@types/bn.js": "^5.2.0",
         "add": "^2.0.6",
         "bn.js": "^5.2.2",
