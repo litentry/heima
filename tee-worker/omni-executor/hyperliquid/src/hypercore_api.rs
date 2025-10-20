@@ -6,21 +6,14 @@ const HYPERCORE_API_MAINNET: &str = "https://api.hyperliquid.xyz/info";
 const HYPERCORE_API_TESTNET: &str = "https://api.hyperliquid-testnet.xyz/info";
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "camelCase")]
 enum HyperCoreRequest {
-	#[serde(rename = "spotMeta")]
 	SpotMeta,
-	#[serde(rename = "meta")]
 	Meta,
-	#[serde(rename = "allMids")]
 	AllMids,
-	#[serde(rename = "orderStatus")]
 	OrderStatus { user: String, oid: String },
-	#[serde(rename = "spotClearinghouseState")]
 	SpotClearinghouseState { user: String },
-	#[serde(rename = "clearinghouseState")]
 	ClearinghouseState { user: String },
-	#[serde(rename = "userFills")]
 	UserFills { user: String },
 }
 
@@ -31,25 +24,22 @@ pub struct SpotMetaResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SpotPair {
 	pub tokens: Vec<u32>,
 	pub name: String,
 	pub index: u32,
-	#[serde(rename = "isCanonical")]
 	pub is_canonical: bool,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SpotToken {
 	pub name: String,
-	#[serde(rename = "szDecimals")]
 	pub sz_decimals: u8,
-	#[serde(rename = "weiDecimals")]
 	pub wei_decimals: u8,
 	pub index: u32,
-	#[serde(rename = "tokenId")]
 	pub token_id: String,
-	#[serde(rename = "isCanonical")]
 	pub is_canonical: bool,
 }
 
@@ -62,11 +52,10 @@ pub struct MetaResponse {
 pub struct AllMidsResponse(pub std::collections::HashMap<String, String>);
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PerpAsset {
 	pub name: String,
-	#[serde(rename = "szDecimals")]
 	pub sz_decimals: u8,
-	#[serde(rename = "maxLeverage")]
 	pub max_leverage: u32,
 }
 
@@ -77,27 +66,25 @@ pub struct OrderStatusResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OrderInfo {
 	pub order: OrderDetail,
 	pub status: String,
-	#[serde(rename = "statusTimestamp")]
 	pub status_timestamp: u64,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OrderDetail {
 	// Perp order fields
 	pub asset: Option<u32>,
-	#[serde(rename = "isBuy")]
 	pub is_buy: Option<bool>,
 	// Spot order fields
 	pub coin: Option<String>,
 	pub side: Option<String>,
 	// Common fields
-	#[serde(rename = "limitPx")]
 	pub limit_px: String,
 	pub sz: String,
-	#[serde(rename = "reduceOnly")]
 	pub reduce_only: bool,
 	pub cloid: Option<String>,
 }
@@ -115,17 +102,16 @@ pub struct SpotBalance {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ClearinghouseStateResponse {
-	#[serde(rename = "assetPositions")]
 	pub asset_positions: Vec<AssetPosition>,
-	#[serde(rename = "marginSummary")]
 	pub margin_summary: MarginSummary,
-	#[serde(rename = "crossMarginSummary")]
 	pub cross_margin_summary: CrossMarginSummary,
 	pub withdrawable: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct AssetPosition {
 	pub position: PositionData,
 	#[serde(rename = "type")]
@@ -133,79 +119,64 @@ pub struct AssetPosition {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct PositionData {
 	pub coin: String,
-	#[serde(rename = "entryPx")]
 	pub entry_px: Option<String>,
 	pub leverage: Leverage,
-	#[serde(rename = "liquidationPx")]
 	pub liquidation_px: Option<String>,
-	#[serde(rename = "marginUsed")]
 	pub margin_used: String,
-	#[serde(rename = "maxTrade")]
 	pub max_trade: String,
-	#[serde(rename = "positionValue")]
 	pub position_value: String,
-	#[serde(rename = "returnOnEquity")]
 	pub return_on_equity: String,
 	pub szi: String,
-	#[serde(rename = "unrealizedPnl")]
 	pub unrealized_pnl: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Leverage {
 	#[serde(rename = "type")]
 	pub leverage_type: String,
 	pub value: u32,
-	#[serde(rename = "rawUsd")]
 	pub raw_usd: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MarginSummary {
-	#[serde(rename = "accountValue")]
 	pub account_value: String,
-	#[serde(rename = "totalMarginUsed")]
 	pub total_margin_used: String,
-	#[serde(rename = "totalNtlPos")]
 	pub total_ntl_pos: String,
-	#[serde(rename = "totalRawUsd")]
 	pub total_raw_usd: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CrossMarginSummary {
-	#[serde(rename = "accountValue")]
 	pub account_value: String,
-	#[serde(rename = "totalMarginUsed")]
 	pub total_margin_used: String,
-	#[serde(rename = "totalNtlPos")]
 	pub total_ntl_pos: String,
-	#[serde(rename = "totalRawUsd")]
 	pub total_raw_usd: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Fill {
 	pub coin: String,
 	pub px: String,
 	pub sz: String,
 	pub side: String,
 	pub time: u64,
-	#[serde(rename = "startPosition")]
 	pub start_position: String,
 	pub dir: String,
-	#[serde(rename = "closedPnl")]
 	pub closed_pnl: String,
 	pub hash: String,
 	pub oid: u64,
 	pub cloid: Option<String>,
 	pub tid: u64,
 	pub fee: String,
-	#[serde(rename = "feeToken")]
 	pub fee_token: String,
-	#[serde(rename = "builderFee")]
 	pub builder_fee: Option<String>,
 }
 
