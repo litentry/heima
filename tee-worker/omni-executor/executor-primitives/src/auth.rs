@@ -189,7 +189,7 @@ pub struct OAuth2Data {
 	pub provider: OAuth2Provider,
 	pub code: String,
 	pub state: String,
-	pub redirect_uri: String,
+	pub redirect_uri: Option<String>,
 	pub uid: String, // A unique identifier for the user/session requesting the OAuth2
 	pub id_token: String,
 }
