@@ -14,6 +14,7 @@ use sp_core::{blake2_256, crypto::AccountId32 as AccountId, H256};
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub enum OAuth2Provider {
 	Google,
+	Apple,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -100,6 +101,9 @@ pub fn verify_tca_oauth2_authentication(
 		OAuth2Provider::Google => {
 			verify_google_oauth2(data_providers_config, sender_identity_hash, omni_account, payload)
 		},
+		OAuth2Provider::Apple => Err(AuthenticationError::OAuth2Error(String::from(
+			"Apple OAuth2 not yet supported in identity worker",
+		))),
 	}
 }
 
