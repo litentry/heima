@@ -37,14 +37,14 @@ mod tests {
 		let authorize_data = super::super::oauth2_common::get_authorize_data(
 			BASE_URL,
 			client_id,
-			redirect_uri,
+			Some(redirect_uri),
 			SCOPES,
 			true,
 		);
 
 		let authorize_url = Url::parse(&authorize_data.authorize_url).unwrap();
 		std::println!("{:?}", authorize_url.as_str());
-		let expected_url = format!("https://appleid.apple.com/auth/authorize?response_type=code&client_id=com.example.app&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback&scope=email&state={}&nonce={}&response_mode=form_post", authorize_data.state, authorize_data.nonce);
+		let expected_url = format!("https://appleid.apple.com/auth/authorize?response_type=code&client_id=com.example.app&scope=email&state={}&nonce={}&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback&response_mode=form_post", authorize_data.state, authorize_data.nonce);
 
 		assert_eq!(authorize_url.as_str(), expected_url);
 	}

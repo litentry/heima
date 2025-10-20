@@ -36,14 +36,14 @@ mod tests {
 		let authorize_data = super::super::oauth2_common::get_authorize_data(
 			BASE_URL,
 			client_id,
-			redirect_uri,
+			Some(redirect_uri),
 			SCOPES,
 			false,
 		);
 
 		let authorize_url = Url::parse(&authorize_data.authorize_url).unwrap();
 		std::println!("{:?}", authorize_url.as_str());
-		let expected_url = format!("https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=client_id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=openid+email&state={}&nonce={}", authorize_data.state, authorize_data.nonce);
+		let expected_url = format!("https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=client_id&scope=openid+email&state={}&nonce={}&redirect_uri=http%3A%2F%2Flocalhost%3A8080", authorize_data.state, authorize_data.nonce);
 
 		assert_eq!(authorize_url.as_str(), expected_url);
 	}
