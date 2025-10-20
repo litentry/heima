@@ -36,7 +36,7 @@ impl OAuth2ProviderConfig {
 pub fn get_authorize_data(
 	base_url: &str,
 	client_id: &str,
-	redirect_uri: &str,
+	redirect_uri: Option<&str>,
 	scope: &str,
 	include_response_mode: bool,
 ) -> AuthorizeData {
@@ -44,14 +44,17 @@ pub fn get_authorize_data(
 	let nonce = helpers::generate_alphanumeric_otp(32);
 	let mut authorize_url = Url::parse(base_url).expect("Failed to parse URL");
 
-	let params = vec![
+	let mut params = vec![
 		("response_type", "code"),
 		("client_id", client_id),
-		("redirect_uri", redirect_uri),
 		("scope", scope),
 		("state", &state),
 		("nonce", &nonce),
 	];
+
+	if let Some(uri) = redirect_uri {
+		params.push(("redirect_uri", uri));
+	}
 
 	authorize_url.query_pairs_mut().extend_pairs(&params);
 

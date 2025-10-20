@@ -33,18 +33,23 @@ impl OAuth2Client {
 	pub async fn exchange_code_for_token(
 		&self,
 		code: String,
-		redirect_uri: String,
+		redirect_uri: Option<String>,
 	) -> Result<String, String> {
+		let mut params = vec![
+			("code", code),
+			("client_id", self.client_id.clone()),
+			("client_secret", self.client_secret.clone()),
+			("grant_type", "authorization_code".to_string()),
+		];
+
+		if let Some(uri) = redirect_uri {
+			params.push(("redirect_uri", uri));
+		}
+
 		let response = self
 			.client
 			.post(&self.token_endpoint)
-			.form(&[
-				("code", code),
-				("client_id", self.client_id.clone()),
-				("client_secret", self.client_secret.clone()),
-				("redirect_uri", redirect_uri),
-				("grant_type", "authorization_code".to_string()),
-			])
+			.form(&params)
 			.send()
 			.await
 			.map_err(|e| e.to_string())?
