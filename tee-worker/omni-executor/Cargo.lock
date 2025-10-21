@@ -4965,7 +4965,7 @@ dependencies = [
  "sp-runtime",
  "sp-std 14.0.0 (git+https://github.com/paritytech/polkadot-sdk?branch=stable2412)",
  "strum 0.26.3",
- "strum_macros 0.26.4",
+ "strum_macros 0.27.2",
  "x509-cert",
 ]
 
