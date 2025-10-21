@@ -77,7 +77,7 @@ bitflags = { version = "2.9.3" }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 der = { version = "0.7", default-features = false }
-derive_more = { version = "1.0" }
+derive_more = { version = "2.0" }
 env_logger = { version = "0.10.2" }
 environmental = { version = "1.1.2", default-features = false }
 impl-trait-for-tuples = { version = "0.2.2" }
