@@ -302,3 +302,61 @@ export async function estimateUserOpGas(
         throw error;
     }
 }
+
+// Interfaces for loan request test
+interface RequestLoanTestParams {
+    user_operation: SerializablePackedUserOperation;
+    chain_id: number;
+    wallet_index: number;
+    omni_account: string;
+    client_id: string;
+    collateral_ticker: string;
+    collateral_size: string;
+    lending_ratio: number;
+}
+
+interface RequestLoanTestResponse {
+    spot_sell_cloid: string;
+    hedge_open_cloid: string;
+    usdc_received: string;
+    spot_sell_tx_hash: string | null;
+    hedge_open_tx_hash: string | null;
+}
+
+// Request a loan through the TEE worker (test version with UserOperation)
+export async function requestLoanTest(
+    userOperation: SerializablePackedUserOperation,
+    chainId: number,
+    walletIndex: number,
+    omniAccount: string,
+    clientId: string,
+    collateralTicker: string,
+    collateralSize: string,
+    lendingRatio: number
+): Promise<RequestLoanTestResponse> {
+    const params: RequestLoanTestParams = {
+        user_operation: userOperation,
+        chain_id: chainId,
+        wallet_index: walletIndex,
+        omni_account: omniAccount,
+        client_id: clientId,
+        collateral_ticker: collateralTicker,
+        collateral_size: collateralSize,
+        lending_ratio: lendingRatio,
+    };
+
+    console.log("[TEE Worker] Requesting loan test", params);
+
+    try {
+        const response = await makeRpcRequest<RequestLoanTestResponse>(
+            "omni_requestLoanTest",
+            params
+        );
+
+        console.log("[TEE Worker] Loan request test response:", response);
+        return response;
+    } catch (error) {
+        console.error("[TEE Worker] Loan request test failed:", error);
+        throw error;
+    }
+}

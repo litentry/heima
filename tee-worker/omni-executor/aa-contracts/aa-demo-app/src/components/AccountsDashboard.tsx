@@ -178,7 +178,7 @@ export function AccountsDashboard({
                     decimals: token.decimals,
                 });
             } catch (error) {
-                console.error(`Error fetching wallet ${token.symbol} balance:`, error);
+                // Silently handle token balance fetch errors (token might not exist on this network)
                 balances.push({
                     symbol: token.symbol,
                     balance: BigInt(0),
@@ -236,7 +236,7 @@ export function AccountsDashboard({
                     decimals: token.decimals,
                 });
             } catch (error) {
-                console.error(`Error fetching ${token.symbol} balance:`, error);
+                // Silently handle token balance fetch errors (token might not exist on this network)
                 balances.push({
                     symbol: token.symbol,
                     balance: BigInt(0),

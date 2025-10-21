@@ -307,12 +307,16 @@ export function createUserOperation(params: {
         validationGasLimit?: bigint;
         postOpGasLimit?: bigint;
         data?: `0x${string}`;
-    };
+    } | `0x${string}`; // Allow direct hex string
     forGasEstimation?: boolean;
 }): UserOperation {
     // Encode paymasterAndData if paymaster is provided
     let paymasterAndData: `0x${string}` = "0x";
-    if (params.paymaster && params.paymaster.address !== "0x0000000000000000000000000000000000000000") {
+
+    // Check if paymaster is a direct hex string
+    if (typeof params.paymaster === 'string') {
+        paymasterAndData = params.paymaster;
+    } else if (params.paymaster && params.paymaster.address !== "0x0000000000000000000000000000000000000000") {
         paymasterAndData = encodePaymasterAndData(
             params.paymaster.address,
             params.paymaster.validationGasLimit,
@@ -773,7 +777,7 @@ export function toSerializablePackedUserOperation(
         account_gas_limits: packedOp.accountGasLimits,
         pre_verification_gas: Number(packedOp.preVerificationGas), // Convert bigint to number
         gas_fees: packedOp.gasFees,
-        paymaster_and_data: packedOp.paymasterAndData,
+        paymaster_and_data: packedOp.paymasterAndData, // Always include, will be "0x" if empty
         signature: packedOp.signature === "0x" ? undefined : packedOp.signature,
     };
 }

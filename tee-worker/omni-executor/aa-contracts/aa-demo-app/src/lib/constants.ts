@@ -120,6 +120,11 @@ export const SOLANA_CONFIG = {
     rpcUrl: "https://api.devnet.solana.com",
 };
 
+// Hyperliquid Core configuration
+export const HYPERLIQUID_CORE_CONFIG = {
+    apiUrl: "https://api.hyperliquid-testnet.xyz",
+};
+
 // ERC20 Token configurations
 export const ERC20_TOKENS = {
     USDC: {
@@ -155,14 +160,17 @@ export const SUPPORTED_TOKENS = [
 
 // Paymaster configuration
 export const PAYMASTER_CONFIG = {
-    // Default gas limits for paymaster operations
-    defaultValidationGasLimit: BigInt(100000),
-    defaultPostOpGasLimit: BigInt(50000),
+    // Default gas limits for paymaster operations (from working example)
+    defaultValidationGasLimit: BigInt(1000000), // 0x0f4240
+    defaultPostOpGasLimit: BigInt(100000), // 0x0186a0
     // Whether paymaster is enabled by default
     enabledByDefault: false,
     // ERC20 Paymaster configuration
     erc20PaymasterAvailable: true,
     defaultPaymentToken: "USDC", // Default token for ERC20 paymaster
+    // Wildlend paymaster address (used for loan operations)
+    wildlendPaymasterAddress: (process.env.NEXT_PUBLIC_WILDLEND_PAYMASTER_ADDRESS ||
+        "0x6255b9f4a4e80bc20ee389fd35de9d2c029d5912") as `0x${string}`,
 } as const;
 
 // Paymaster types

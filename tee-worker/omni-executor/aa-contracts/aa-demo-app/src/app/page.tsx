@@ -9,6 +9,8 @@ import { CreateOmniAccount } from "@/components/CreateOmniAccount";
 import { AuthorizedSigners } from "@/components/AuthorizedSigners";
 import { AuthorizeTEEWorker } from "@/components/AuthorizeTEEWorker";
 import { TEETokenTransfer } from "@/components/TEETokenTransfer";
+import { HyperliquidBalances } from "@/components/HyperliquidBalances";
+import { RequestLoan } from "@/components/RequestLoan";
 import { ClientOnly } from "@/components/ClientOnly";
 import { Check, Mail } from "lucide-react";
 import { getTEEWorkerAddress } from "@/lib/tee-worker-client";
@@ -170,41 +172,48 @@ function HomeContent() {
         }
     }, [hasContract, fetchSigners]);
 
-    // Check if TEE worker is already authorized after fetching signers
+    // Check if TEE worker is already authorized by reading from the contract
     useEffect(() => {
         const checkTeeWorkerAuthorization = async () => {
-            // Skip if we already have the TEE worker address in state
-            if (teeWorkerAddress) {
-                return;
-            }
-
-            if (!omniAccountHash || !hasContract || authorizedSigners.length === 0) {
+            if (!omniAccountHash || !hasContract || !omniAccountAddress || !publicClient) {
                 return;
             }
 
             try {
                 // Fetch the TEE worker address
                 const workerAddress = await getTEEWorkerAddress(omniAccountHash);
+                setTeeWorkerAddress(workerAddress);
 
-                // Check if the worker address is in the authorized signers list (case-insensitive)
-                const isWorkerAuthorized = authorizedSigners.some(
-                    signer => signer.toLowerCase() === workerAddress.toLowerCase()
-                );
+                // Read from the contract directly to check if worker is authorized
+                const isAuthorized = await publicClient.readContract({
+                    address: omniAccountAddress as `0x${string}`,
+                    abi: [
+                        {
+                            inputs: [{ name: "signer", type: "address" }],
+                            name: "isRootSigner",
+                            outputs: [{ name: "", type: "bool" }],
+                            stateMutability: "view",
+                            type: "function",
+                        },
+                    ],
+                    functionName: "isRootSigner",
+                    args: [workerAddress as `0x${string}`],
+                });
 
-                if (isWorkerAuthorized) {
-                    // TEE worker is already authorized, update the states
-                    setTeeWorkerAddress(workerAddress);
-                    setIsTeeWorkerAuthorized(true);
-                    console.log("TEE worker already authorized:", workerAddress);
-                }
+                console.log("TEE worker authorization status:", {
+                    workerAddress,
+                    isAuthorized,
+                });
+
+                setIsTeeWorkerAuthorized(!!isAuthorized);
             } catch (error) {
-                // Don't break the app if we can't fetch the TEE worker address
                 console.error("Error checking TEE worker authorization:", error);
+                setIsTeeWorkerAuthorized(false);
             }
         };
 
         checkTeeWorkerAuthorization();
-    }, [omniAccountHash, hasContract, authorizedSigners, teeWorkerAddress]);
+    }, [omniAccountHash, hasContract, omniAccountAddress, publicClient]);
 
     // Monitor AA wallet ETH balance
     const [ethBalance, setEthBalance] = useState<bigint>(BigInt(0));
@@ -313,8 +322,8 @@ function HomeContent() {
         },
         {
             id: 5,
-            title: "Send Token Transfer",
-            description: "Transfer tokens through the TEE worker",
+            title: "Hyperliquid Dashboard",
+            description: "View balances and request loans",
             completed: false,
         },
     ];
@@ -417,7 +426,7 @@ function HomeContent() {
                                         onAddressCalculated={setOmniAccountAddress}
                                         onOmniAccountCalculated={setOmniAccountHash}
                                         ethBalance={ethBalance}
-                                        isAccountCreated={isAuthorized}
+                                        isAccountCreated={hasContract}
                                     />
                                 </div>
                             )}
@@ -473,6 +482,7 @@ function HomeContent() {
                                     <AuthorizeTEEWorker
                                         omniAccountAddress={omniAccountAddress}
                                         omniAccountHash={omniAccountHash}
+                                        isDeployed={hasContract}
                                         onWorkerAuthorized={(workerAddress) => {
                                             console.log("TEE Worker authorized:", workerAddress);
                                             setTeeWorkerAddress(workerAddress);
@@ -501,18 +511,25 @@ function HomeContent() {
                             )}
 
                             {currentStep >= 5 && (
-                                <div>
-                                    <h2 className="text-xl font-semibold mb-4">
-                                        Step 5: Send Token Transfer
-                                    </h2>
-                                    <p className="text-gray-600 mb-6">
-                                        Transfer ETH, USDC, or USDT through your Omni Account using the TEE worker.
-                                    </p>
-                                    <TEETokenTransfer
+                                <div className="space-y-8">
+                                    <div>
+                                        <h2 className="text-xl font-semibold mb-4">
+                                            Step 5: Hyperliquid Core Dashboard
+                                        </h2>
+                                        <p className="text-gray-600 mb-6">
+                                            View your balances, positions, and request loans using your Hyperliquid assets.
+                                        </p>
+                                    </div>
+
+                                    {/* Loan Request Panel */}
+                                    <RequestLoan
                                         omniAccountAddress={omniAccountAddress}
                                         omniAccountHash={omniAccountHash}
-                                        isDeployed={hasContract}
-                                        teeWorkerAddress={teeWorkerAddress}
+                                    />
+
+                                    {/* Balances and Positions */}
+                                    <HyperliquidBalances
+                                        omniAccountAddress={omniAccountAddress}
                                     />
                                 </div>
                             )}

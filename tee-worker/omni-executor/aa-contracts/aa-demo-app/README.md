@@ -173,6 +173,8 @@ The application automatically configures the network based on your `NEXT_PUBLIC_
 - Polygon Mumbai (80001)
 - Base (8453)
 - Base Sepolia (84532)
+- Hyperliquid (999)
+- Hyperliquid Testnet (998)
 - Local Anvil (1337)
 
 **For Custom or Unlisted Networks:**
