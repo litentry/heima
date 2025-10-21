@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::handle_omni_native_task;
 use crate::detailed_error::DetailedError;
 use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
@@ -25,11 +24,10 @@ use crate::validation_helpers::{
 	validate_user_operations, validate_wallet_index,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_submit_user_op, NativeTaskError, NativeTaskOk};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
@@ -87,34 +85,66 @@ pub fn register_submit_user_op<
 			validate_omni_account_length(&address_bytes, "omni_account")
 				.map_err(PumpxRpcError::from)?;
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::SubmitUserOp(
-					AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
-						error!("Failed to decode AccountId from bytes: {:?}", e);
-						PumpxRpcError::from(DetailedError::account_parse_error(
-							&user.omni_account,
-							&format!("Failed to decode account: {:?}", e),
-						))
-					})?,
-					params.user_operations.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
-				user.client_id,
-			);
+			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
+				error!("Failed to decode AccountId from bytes: {:?}", e);
+				PumpxRpcError::from(DetailedError::account_parse_error(
+					&user.omni_account,
+					&format!("Failed to decode account: {:?}", e),
+				))
+			})?;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::SubmitUserOp(transaction_hash) => {
+			// Call the handler directly
+			let result = handle_submit_user_op(
+				ctx.to_task_handler_context(),
+				omni_account,
+				params.user_operations.clone(),
+				params.chain_id,
+				params.wallet_index,
+				user.client_id,
+			)
+			.await;
+
+			// Process response
+			match result {
+				Ok(NativeTaskOk::SubmitUserOp(transaction_hash)) => {
 					Ok(SubmitUserOpResponse { transaction_hash })
 				},
-				_ => {
+				Ok(_) => {
 					error!("Unexpected response type from native task handler");
 					Err(DetailedError::unexpected_response_type("SubmitUserOp", "Unknown").into())
 				},
-			})
-			.await
+				Err(NativeTaskError::ChainNotSupported(chain_id)) => {
+					Err(PumpxRpcError::from(DetailedError::chain_not_supported(chain_id)))
+				},
+				Err(NativeTaskError::InvalidUserOperation(desc)) => {
+					Err(PumpxRpcError::from(DetailedError::invalid_user_operation_error(&desc)))
+				},
+				Err(NativeTaskError::SignatureServiceUnavailable) => {
+					Err(PumpxRpcError::from(DetailedError::signature_service_unavailable()))
+				},
+				Err(NativeTaskError::InternalError(message)) => {
+					error!("Internal error in native task");
+					match message {
+						Some(msg) => Err(PumpxRpcError::from_code_and_message(
+							crate::error_code::INTERNAL_ERROR_CODE,
+							msg,
+						)),
+						None => Err(PumpxRpcError::from_error_code(
+							jsonrpsee::types::ErrorCode::InternalError,
+						)),
+					}
+				},
+				Err(e) => {
+					error!("Native task error: {:?}", e);
+					Err(PumpxRpcError::from(
+						DetailedError::new(
+							crate::error_code::INTERNAL_ERROR_CODE,
+							"Operation failed",
+						)
+						.with_suggestion("Please try again"),
+					))
+				},
+			}
 		})
 		.expect("Failed to register omni_submitUserOp method");
 }

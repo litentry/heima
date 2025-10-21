@@ -1,4 +1,4 @@
-use super::common::{check_omni_api_response, handle_omni_native_task};
+use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE, *},
@@ -7,7 +7,6 @@ use crate::{
 	Decode, Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::*;
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::{
@@ -17,7 +16,7 @@ use heima_primitives::{
 };
 use heima_utils::decode_hex;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_request_intent, NativeTaskError, NativeTaskOk};
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
@@ -292,15 +291,20 @@ pub fn register_submit_swap_order<
 					)
 				})?,
 			);
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(omni_account, params.intent_id, Box::new(intent)),
-				None,
-				None,
-				user.client_id,
-			);
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::IntentSwapResponse(swap_response) => {
+			// Call handle_request_intent directly
+			let task_result = handle_request_intent(
+				ctx.to_task_handler_context(),
+				omni_account,
+				params.intent_id,
+				intent,
+				user.client_id,
+			)
+			.await;
+
+			// Handle the result with comprehensive error handling
+			match task_result {
+				Ok(NativeTaskOk::IntentSwapResponse(swap_response)) => {
 					if params.order_type == PumpxOrderType::Market {
 						let market_order_response: SendOrderTxResponse =
 							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
@@ -349,15 +353,36 @@ pub fn register_submit_swap_order<
 						Ok(response)
 					}
 				},
-				_ => {
-					error!("Unexpected response type");
+				Ok(_) => {
+					error!("Unexpected response type from handle_request_intent");
 					Err(PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 							.with_reason("Unexpected response type from native task handler"),
 					))
 				},
-			})
-			.await
+				Err(NativeTaskError::IntentNonceMismatch) => {
+					error!("Intent nonce mismatch");
+					Err(PumpxRpcError::from(
+						DetailedError::new(INVALID_PARAMS_CODE, "Intent nonce mismatch")
+							.with_reason("Intent ID does not match expected value"),
+					))
+				},
+				Err(NativeTaskError::InternalError(msg)) => {
+					error!("Internal error during intent processing: {:?}", msg);
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
+							msg.unwrap_or_else(|| "Unknown internal error".to_string()),
+						),
+					))
+				},
+				Err(e) => {
+					error!("Error processing intent: {:?}", e);
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason(format!("Failed to process intent: {:?}", e)),
+					))
+				},
+			}
 		})
 		.expect("Failed to register omni_submitSwapOrder method");
 }

@@ -1,4 +1,3 @@
-use super::common::handle_omni_native_task;
 use crate::methods::omni::{common::check_auth, PumpxRpcError};
 use crate::{
 	detailed_error::DetailedError,
@@ -7,11 +6,10 @@ use crate::{
 	Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::*;
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_pumpx_notify_limit_order_result, NativeTaskError, NativeTaskOk};
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -63,30 +61,53 @@ pub fn register_notify_limit_order_result<
 						.with_reason("Failed to parse omni account from authentication token"),
 				));
 			};
+			let omni_account = AccountId::from(address);
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxNotifyLimitOrderResult(
-					AccountId::from(address),
-					params.intent_id,
-					params.result,
-					params.message,
-				),
-				None,
-				None,
+			let result = handle_pumpx_notify_limit_order_result(
+				ctx.to_task_handler_context(),
+				omni_account,
+				params.intent_id,
+				params.result,
+				params.message,
 				user.client_id,
-			);
+			)
+			.await;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
-				_ => {
+			match result {
+				Ok(NativeTaskOk::PumpxNotifyLimitOrderResult) => Ok(()),
+				Ok(_) => {
 					error!("Unexpected response type");
 					Err(PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 							.with_reason("Unexpected response type from native task handler"),
 					))
 				},
-			})
-			.await
+				Err(NativeTaskError::PumpxApiError(api_error)) => {
+					error!("Pumpx API error: {:?}", api_error);
+					match api_error {
+						native_task_handler::PumpxApiError::InvalidInput => {
+							Err(PumpxRpcError::from(
+								DetailedError::new(INVALID_PARAMS_CODE, "Invalid input")
+									.with_reason("Result must be 'ok' or 'nok'"),
+							))
+						},
+						_ => Err(PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Pumpx API error")
+								.with_reason(format!("{:?}", api_error)),
+						)),
+					}
+				},
+				Err(e) => {
+					error!("Failed to notify limit order result: {:?}", e);
+					Err(PumpxRpcError::from(
+						DetailedError::new(
+							INTERNAL_ERROR_CODE,
+							"Failed to notify limit order result",
+						)
+						.with_reason(format!("{:?}", e)),
+					))
+				},
+			}
 		})
 		.expect("Failed to register omni_notifyLimitOrderResult method");
 }

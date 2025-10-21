@@ -1,4 +1,4 @@
-use super::common::{check_omni_api_response, handle_omni_native_task};
+use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::*,
@@ -11,11 +11,11 @@ use crate::{
 	Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::*;
+use executor_core::native_task::PumxWalletIndex;
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_pumpx_transfer_withdraw, NativeTaskError, NativeTaskOk};
 use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
 use serde::Serialize;
 use tracing::{debug, error};
@@ -35,31 +35,6 @@ pub struct TransferWithdrawParams {
 #[derive(Serialize, Clone)]
 pub struct TransferWithdrawResponse {
 	pub backend_response: CreateTransferTxResponse,
-}
-
-impl TransferWithdrawParams {
-	pub fn into_native_task_wrapper(
-		self,
-		client_id: String,
-		omni_account: AccountId,
-	) -> NativeTaskWrapper<NativeTask> {
-		NativeTaskWrapper::new(
-			NativeTask::PumpxTransferWidthdraw(
-				omni_account,
-				self.request_id,
-				self.chain_id,
-				self.wallet_index,
-				self.recipient_address,
-				self.token_ca,
-				self.amount,
-				self.google_code,
-				self.lang,
-			),
-			None,
-			None,
-			client_id,
-		)
-	}
 }
 
 pub fn register_transfer_withdraw<
@@ -122,22 +97,78 @@ pub fn register_transfer_withdraw<
 			};
 			let omni_account = AccountId::from(address);
 
-			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
+			let result = handle_pumpx_transfer_withdraw(
+				ctx.to_task_handler_context(),
+				omni_account,
+				params.request_id,
+				params.chain_id,
+				params.wallet_index,
+				params.recipient_address,
+				params.token_ca,
+				params.amount,
+				params.google_code,
+				params.lang,
+				user.client_id,
+			)
+			.await;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxTransferWithdraw(response) => {
+			match result {
+				Ok(NativeTaskOk::PumpxTransferWithdraw(response)) => {
 					check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
 					Ok(TransferWithdrawResponse { backend_response: response })
 				},
-				_ => {
+				Ok(_) => {
 					error!("Unexpected response type from native task handler");
 					Err(DetailedError::unexpected_response_type(
 						"PumpxTransferWithdraw",
 						"Unknown"
 					).into())
 				},
-			})
-			.await
+				Err(NativeTaskError::PumpxApiError(api_error)) => {
+					error!("Pumpx API error: {:?}", api_error);
+					match api_error {
+						native_task_handler::PumpxApiError::GoogleCodeVerificationFailed => {
+							Err(PumpxRpcError::from(DetailedError::new(
+								PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
+								"Google code verification failed"
+							).with_suggestion("Please check your Google verification code and try again")))
+						},
+						native_task_handler::PumpxApiError::CreateTransferTxFailed => {
+							Err(PumpxRpcError::from(DetailedError::new(
+								INTERNAL_ERROR_CODE,
+								"Failed to create transfer transaction"
+							).with_suggestion("Please check your transfer parameters and try again")))
+						},
+						_ => {
+							Err(PumpxRpcError::from(DetailedError::new(
+								INTERNAL_ERROR_CODE,
+								"Pumpx API error"
+							).with_reason(format!("{:?}", api_error))))
+						}
+					}
+				},
+				Err(NativeTaskError::ChainNotSupported(chain_id)) => {
+					error!("Chain not supported: {}", chain_id);
+					Err(PumpxRpcError::from(DetailedError::new(
+						INVALID_CHAIN_ID_CODE,
+						"Chain not supported"
+					).with_reason(format!("Chain ID {} is not supported", chain_id))))
+				},
+				Err(NativeTaskError::InternalError(msg)) => {
+					error!("Internal error: {:?}", msg);
+					Err(PumpxRpcError::from(DetailedError::new(
+						INTERNAL_ERROR_CODE,
+						"Internal error"
+					).with_reason(msg.unwrap_or_else(|| "Unknown internal error".to_string()))))
+				},
+				Err(e) => {
+					error!("Failed to create transfer withdraw: {:?}", e);
+					Err(PumpxRpcError::from(DetailedError::new(
+						INTERNAL_ERROR_CODE,
+						"Failed to create transfer withdraw"
+					).with_reason(format!("{:?}", e))))
+				},
+			}
 		})
 		.expect("Failed to register omni_transferWithdraw method");
 }

@@ -1,15 +1,13 @@
-use super::common::handle_omni_native_task;
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_request_loan, NativeTaskError, NativeTaskOk};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
@@ -123,50 +121,104 @@ pub fn register_request_loan_test<
 				));
 			}
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestLoanTest(
-					AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
-						error!("Failed to decode AccountId from bytes");
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Failed to decode AccountId from bytes"),
-						)
-					})?,
-					params.user_operation.clone(),
-					params.chain_id,
-					params.wallet_index,
-					collateral_ticker,
-					params.collateral_size,
-					params.lending_ratio,
-				),
-				None,
-				None,
-				params.client_id,
-			);
+			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
+				error!("Failed to decode AccountId from bytes");
+				PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to decode AccountId from bytes"),
+				)
+			})?;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::RequestLoan {
+			let result = handle_request_loan(
+				ctx.to_task_handler_context(),
+				omni_account,
+				params.user_operation.clone(),
+				params.chain_id,
+				params.wallet_index,
+				&collateral_ticker,
+				&params.collateral_size,
+				params.lending_ratio,
+				&params.client_id,
+			)
+			.await;
+
+			match result {
+				Ok(NativeTaskOk::RequestLoan {
 					spot_sell_cloid,
 					hedge_open_cloid,
 					usdc_received,
 					spot_sell_tx_hash,
 					hedge_open_tx_hash,
-				} => Ok(RequestLoanTestResponse {
+				}) => Ok(RequestLoanTestResponse {
 					spot_sell_cloid,
 					hedge_open_cloid,
 					usdc_received,
 					spot_sell_tx_hash,
 					hedge_open_tx_hash,
 				}),
-				_ => {
+				Ok(_) => {
 					error!("Unexpected response type");
 					Err(PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 							.with_reason("Unexpected response type from native task handler"),
 					))
 				},
-			})
-			.await
+				Err(NativeTaskError::ChainNotSupported(chain_id)) => {
+					error!("Chain not supported: {}", chain_id);
+					Err(PumpxRpcError::from(
+						DetailedError::new(
+							crate::error_code::INVALID_CHAIN_ID_CODE,
+							"Chain not supported",
+						)
+						.with_reason(format!("Chain ID {} is not supported", chain_id)),
+					))
+				},
+				Err(NativeTaskError::InvalidUserOperation(msg)) => {
+					error!("Invalid user operation: {}", msg);
+					Err(PumpxRpcError::from(
+						DetailedError::new(
+							crate::error_code::INVALID_USER_OPERATION_CODE,
+							"Invalid user operation",
+						)
+						.with_reason(msg),
+					))
+				},
+				Err(NativeTaskError::GasEstimationFailed) => {
+					error!("Gas estimation failed");
+					Err(PumpxRpcError::from(
+						DetailedError::new(
+							crate::error_code::GAS_ESTIMATION_FAILED_CODE,
+							"Gas estimation failed",
+						)
+						.with_suggestion("Please check the user operation parameters"),
+					))
+				},
+				Err(NativeTaskError::SignatureServiceUnavailable) => {
+					error!("Signature service unavailable");
+					Err(PumpxRpcError::from(
+						DetailedError::new(
+							crate::error_code::SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+							"Signature service unavailable",
+						)
+						.with_suggestion("Please try again later"),
+					))
+				},
+				Err(NativeTaskError::InternalError(msg)) => {
+					error!("Internal error: {:?}", msg);
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
+							msg.unwrap_or_else(|| "Unknown internal error".to_string()),
+						),
+					))
+				},
+				Err(e) => {
+					error!("Failed to request loan: {:?}", e);
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Failed to request loan")
+							.with_reason(format!("{:?}", e)),
+					))
+				},
+			}
 		})
 		.expect("Failed to register omni_requestLoanTest method");
 }

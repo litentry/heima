@@ -30,13 +30,10 @@ use pumpx::{
 };
 use signer_client::{ChainType, SignerClient};
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
 pub use aes256_key_store::Aes256KeyStore;
 pub use types::{NativeTaskError, NativeTaskOk, PumpxApiError, PumpxSignerError};
-
-pub type ResponseSender = oneshot::Sender<Vec<u8>>;
 
 // ============================================================================
 // ERC20 Paymaster Exchange Rate Processing
@@ -454,12 +451,10 @@ async fn calculate_erc20_token_cost(
 	})
 }
 
-pub type NativeTaskChannelType = (NativeTaskWrapper<NativeTask>, ResponseSender);
-pub type NativeTaskSender = mpsc::Sender<NativeTaskChannelType>;
+// Removed: Channel-based types (NativeTaskChannelType, NativeTaskSender, ResponseSender)
+// All RPC methods now call handlers directly without channels
 
 pub type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;
-
-pub const MAX_CONCURRENT_TASKS: usize = 512; // TODO: make it configurable (if we go for semaphore)
 
 // Gas estimation constants
 /// Maximum verification gas limit to prevent DoS attacks
@@ -544,6 +539,694 @@ impl<
 	}
 }
 
+// ============================================================================
+// Extracted Handler Functions
+// ============================================================================
+
+/// Handle SubmitUserOp task
+#[allow(clippy::too_many_arguments)]
+pub async fn handle_submit_user_op<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	serializable_user_ops: Vec<SerializablePackedUserOperation>,
+	chain_id: ChainId,
+	wallet_index: u32,
+	client_id: String,
+) -> NativeTaskResponse {
+	info!(
+		"Processing SubmitUserOp for {} UserOperations on chain_id: {}",
+		serializable_user_ops.len(),
+		chain_id
+	);
+
+	// Get EntryPoint client for this chain (needed for both signing and submission)
+	let entry_point_client = match ctx.get_entry_point_client(chain_id) {
+		Some(client) => client,
+		None => {
+			error!("No EntryPoint client configured for chain_id: {}", chain_id);
+			return Err(NativeTaskError::ChainNotSupported(chain_id));
+		},
+	};
+
+	// Process each UserOperation in the batch
+	let mut aa_user_ops = Vec::new();
+
+	for (index, serializable_user_op) in serializable_user_ops.iter().enumerate() {
+		// Convert SerializablePackedUserOperation to PackedUserOperation
+		let mut packed_user_op = match convert_to_packed_user_op(serializable_user_op.clone()) {
+			Ok(user_op) => user_op,
+			Err(e) => {
+				error!("Failed to convert UserOperation {}: {}", index, e);
+				return Err(NativeTaskError::InvalidUserOperation(format!(
+					"Invalid user operation at index {}",
+					index
+				)));
+			},
+		};
+
+		// Check userOp signature status and validate paymaster usage
+		if packed_user_op.signature.is_empty() {
+			// UNSIGNED userOp: If paymaster specified, must be whitelisted
+			if !packed_user_op.paymasterAndData.is_empty() {
+				if let Some(paymaster_address) =
+					extract_paymaster_address(&packed_user_op.paymasterAndData)
+				{
+					if !is_whitelisted_paymaster(&paymaster_address, &ctx.whitelisted_paymaster) {
+						error!(
+							"UserOperation {} uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
+							index, paymaster_address
+						);
+						return Err(NativeTaskError::InvalidUserOperation(format!(
+							"UserOperation at index {} uses non-whitelisted paymaster {}",
+							index, paymaster_address
+						)));
+					}
+				}
+
+				match process_erc20_paymaster_data(
+					ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
+					&packed_user_op.paymasterAndData,
+					chain_id,
+				)
+				.await
+				{
+					Ok(Some(updated_paymaster_data)) => {
+						packed_user_op.paymasterAndData = updated_paymaster_data;
+						info!("Updated ERC20 paymaster data for UserOperation {}", index);
+					},
+					Ok(None) => {
+						// Not an ERC20 paymaster, continue as normal
+						debug!("UserOperation {} does not use ERC20 paymaster", index);
+					},
+					Err(e) => {
+						error!(
+							"Failed to process ERC20 paymaster data for UserOperation {}: {}",
+							index, e
+						);
+						return Err(NativeTaskError::InvalidUserOperation(format!(
+							"ERC20 paymaster processing failed for operation at index {}: {}",
+							index, e
+						)));
+					},
+				}
+			}
+
+			info!("Requesting signature from pumpx signer for UserOperation {}", index);
+
+			// Log UserOp details for debugging
+			info!(
+				"UserOp details - Sender: {}, Nonce: {}, InitCode length: {}, CallData length: {}",
+				packed_user_op.sender,
+				packed_user_op.nonce,
+				packed_user_op.initCode.len(),
+				packed_user_op.callData.len()
+			);
+
+			let entry_point_address = entry_point_client.entry_point_address();
+
+			let user_op_hash_bytes =
+				calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+			let message_to_sign = user_op_hash_bytes.to_vec();
+
+			info!(
+				"Signing UserOp hash: 0x{}, EntryPoint: {}, ChainID: {}",
+				hex::encode(user_op_hash_bytes),
+				entry_point_address,
+				chain_id
+			);
+
+			// Request signature from pumpx signer for EVM chain
+			let signature_result = ctx
+				.pumpx_signer_client
+				.request_signature(
+					ChainType::Evm,
+					wallet_index,
+					omni_account.clone().into(),
+					message_to_sign,
+				)
+				.await;
+
+			let signature = match signature_result {
+				Ok(sig) => substrate_to_ethereum_signature(&sig).unwrap().to_vec(),
+				Err(_) => {
+					error!("Failed to sign user operation {}", index);
+					return Err(NativeTaskError::SignatureServiceUnavailable);
+				},
+			};
+
+			// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
+			let mut signature_with_prefix: Vec<u8> = vec![0x01];
+			signature_with_prefix.extend_from_slice(&signature);
+			packed_user_op.signature = Bytes::from(signature_with_prefix);
+			info!("UserOperation {} signed successfully", index);
+		} else {
+			// SIGNED userOp: Only allowed if no paymaster specified
+			if !packed_user_op.paymasterAndData.is_empty() {
+				error!(
+					"UserOperation {} is signed but has paymaster data. Signed userOps are only allowed without paymaster.",
+					index
+				);
+				return Err(NativeTaskError::InvalidUserOperation(format!(
+					"UserOperation at index {} is signed but specifies a paymaster",
+					index
+				)));
+			}
+			info!("UserOperation {} is signed with no paymaster, processing", index);
+		}
+
+		// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
+		let aa_user_op = aa_contracts_client::PackedUserOperation {
+			sender: packed_user_op.sender,
+			nonce: packed_user_op.nonce,
+			initCode: packed_user_op.initCode.clone(),
+			callData: packed_user_op.callData.clone(),
+			accountGasLimits: packed_user_op.accountGasLimits,
+			preVerificationGas: packed_user_op.preVerificationGas,
+			gasFees: packed_user_op.gasFees,
+			paymasterAndData: packed_user_op.paymasterAndData.clone(),
+			signature: packed_user_op.signature.clone(),
+		};
+		aa_user_ops.push(aa_user_op);
+	}
+
+	// Get beneficiary address from the EntryPoint client's wallet
+	let beneficiary = match entry_point_client.get_wallet_address().await {
+		Ok(address) => address,
+		Err(_) => {
+			let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
+			error!("{}", err_msg.clone());
+			return Err(NativeTaskError::InternalError(Some(err_msg)));
+		},
+	};
+
+	// Run batch simulation for all UserOperations before submission
+	info!("Running batch simulation for {} UserOperations", aa_user_ops.len());
+	match entry_point_client.simulate_handle_ops(&aa_user_ops, beneficiary).await {
+		Ok(simulation_results) => {
+			for (index, result) in simulation_results.iter().enumerate() {
+				info!(
+					"UserOperation {} simulation successful. PreOpGas: {}, Paid: {}, AccountValidation: {}, PaymasterValidation: {}",
+					index,
+					result.preOpGas,
+					result.paid,
+					result.accountValidationData,
+					result.paymasterValidationData
+				);
+			}
+			info!("All {} UserOperations passed batch simulation checks", aa_user_ops.len());
+		},
+		Err(e) => {
+			let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
+			error!("{}", err_msg.clone());
+			return Err(NativeTaskError::InvalidUserOperation(err_msg));
+		},
+	}
+
+	// Submit all UserOperations via EntryPoint.handleOps() with retry logic
+	let transaction_hash =
+		match entry_point_client.handle_ops_with_retry(&aa_user_ops, beneficiary).await {
+			Ok(tx_hash) => {
+				// Return the actual transaction hash from handle_ops
+				Some(tx_hash)
+			},
+			Err(_) => {
+				let err_msg =
+					"Failed to submit UserOperations to EntryPoint via handleOps after retries"
+						.to_string();
+				error!("{}", err_msg.clone());
+				return Err(NativeTaskError::InternalError(Some(err_msg)));
+			},
+		};
+
+	Ok(NativeTaskOk::SubmitUserOp(transaction_hash))
+}
+
+/// Handle EstimateUserOpGas task
+pub async fn handle_estimate_user_op_gas<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	serializable_user_op: SerializablePackedUserOperation,
+	chain_id: ChainId,
+	wallet_index: u32,
+	client_id: String,
+) -> NativeTaskResponse {
+	info!(
+		"Processing EstimateUserOpGas for account {:?}, wallet_index: {}, chain_id: {}",
+		omni_account, wallet_index, chain_id
+	);
+
+	// Get EntryPoint client for this chain
+	let entry_point_client = match ctx.get_entry_point_client(chain_id) {
+		Some(client) => client,
+		None => {
+			error!("No EntryPoint client configured for chain_id: {}", chain_id);
+			return Err(NativeTaskError::ChainNotSupported(chain_id));
+		},
+	};
+
+	// Convert SerializablePackedUserOperation to PackedUserOperation
+	let packed_user_op = match convert_to_packed_user_op(serializable_user_op.clone()) {
+		Ok(user_op) => user_op,
+		Err(e) => {
+			error!("Failed to convert UserOperation: {}", e);
+			return Err(NativeTaskError::InvalidUserOperation(
+				"Invalid user operation format".to_string(),
+			));
+		},
+	};
+
+	// Perform gas estimation (wallet_index can be used for wallet-specific optimizations)
+	match estimate_user_op_gas(
+		entry_point_client,
+		packed_user_op,
+		chain_id,
+		ctx.binance_api_client.as_ref(),
+	)
+	.await
+	{
+		Ok(gas_estimates) => {
+			info!("Gas estimation successful: {:?}", gas_estimates);
+			Ok(gas_estimates)
+		},
+		Err(e) => {
+			error!("Gas estimation failed: {}", e);
+			Err(NativeTaskError::GasEstimationFailed)
+		},
+	}
+}
+
+/// Handle PumpxRequestJwt task
+pub async fn handle_pumpx_request_jwt<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	_sender: Identity,
+	email: String,
+	invite_code: Option<String>,
+	google_code: String,
+	language: Option<String>,
+	client_id: String,
+) -> NativeTaskResponse {
+	let expires_at = Utc::now()
+		.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+		.expect("Failed to calculate expiration")
+		.timestamp();
+	let auth_options = AuthOptions { expires_at };
+
+	debug!("Calling pumpx get_account_user_id, email: {}", email);
+	let res = match ctx.pumpx_api.get_account_user_id(email.clone()).await {
+		Ok(res) => res,
+		Err(e) => {
+			error!("Failed to get_account_user_id for email {}: {:?}", email, e);
+			return Err(NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed));
+		},
+	};
+	debug!("Response pumpx get_account_user_id: {:?}", res);
+
+	let Some(user_id) = res.data.user_id else {
+		error!("Response data.user_id of call get_account_user_id is none");
+		return Err(NativeTaskError::PumpxApiError(PumpxApiError::GetAccountUserIdFailed));
+	};
+
+	debug!("get_account_user_id ok, email: {}, user_id: {}", email, user_id);
+	let omni_account =
+		Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx).to_omni_account(&client_id);
+
+	let access_token_claims = AuthTokenClaims::new(
+		omni_account.to_hex(),
+		AUTH_TOKEN_ACCESS_TYPE.to_string(),
+		client_id.to_string(),
+		auth_options.clone(),
+	);
+	let Ok(access_token) = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key) else {
+		error!("Failed to create access token");
+		return Err(NativeTaskError::AuthTokenCreationFailed);
+	};
+
+	debug!(
+		"Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}",
+		user_id, email, invite_code, google_code
+	);
+	let Ok(backend_response) = ctx
+		.pumpx_api
+		.user_connect(
+			&access_token,
+			user_id.clone(),
+			email.clone(),
+			invite_code,
+			google_code,
+			language,
+		)
+		.await
+	else {
+		error!("Failed to connect user");
+		return Err(NativeTaskError::PumpxApiError(PumpxApiError::UserConnectionFailed));
+	};
+	debug!("Response pumpx user_connect: {:?}", backend_response);
+
+	// check google auth value
+	if !backend_response.data.google_auth_check.unwrap_or(false) {
+		error!("Google code verification failed from user_connect");
+		return Err(NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed));
+	}
+
+	let id_token_claims = AuthTokenClaims::new(
+		omni_account.to_hex(),
+		AUTH_TOKEN_ID_TYPE.to_string(),
+		client_id.to_string(),
+		auth_options,
+	);
+	let Ok(id_token) = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key) else {
+		error!("Failed to create id token");
+		return Err(NativeTaskError::AuthTokenCreationFailed);
+	};
+
+	let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+	if storage
+		.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
+		.is_err()
+	{
+		error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
+	};
+
+	if storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
+		error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
+	};
+
+	Ok(NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response })
+}
+
+/// Handle PumpxExportWallet task
+#[allow(clippy::too_many_arguments)]
+pub async fn handle_pumpx_export_wallet<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	google_code: String,
+	pumpx_chain_id: u32,
+	pumpx_wallet_index: u32,
+	expected_wallet_address: String,
+	client_id: String,
+) -> NativeTaskResponse {
+	let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+	let Ok(Some(access_token)) = storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+	else {
+		error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
+		return Err(NativeTaskError::InternalError(None));
+	};
+
+	let verify_success =
+		verify_google_code(ctx.pumpx_api.as_ref().as_ref(), &access_token, google_code, None).await;
+	if !verify_success {
+		error!("Failed to verify google code within NativeTask::PumpxExportWallet");
+		return Err(NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed));
+	}
+
+	let Some(chain) = ChainType::from_pumpx_chain_id(pumpx_chain_id) else {
+		error!("Failed to map pumpx chain_id {}", pumpx_chain_id);
+		return Err(NativeTaskError::ChainNotSupported(pumpx_chain_id as u64));
+	};
+
+	let Ok(mut wallet) = ctx
+		.pumpx_signer_client
+		.export_wallet(
+			chain,
+			pumpx_wallet_index,
+			omni_account.clone().into(),
+			// TODO: theoretically we could pass the aes_key from initial RPC to signer, so that
+			//       we don't have to do double encryption/decryption
+			ctx.aes256_key.to_vec(),
+			expected_wallet_address,
+		)
+		.await
+	else {
+		error!("Failed to export wallet from pumpx-signer");
+		return Err(NativeTaskError::SignatureServiceUnavailable);
+	};
+	let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
+		error!("Failed to decrypt wallet");
+		return Err(NativeTaskError::InternalError(None));
+	};
+
+	let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
+	if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account) {
+		let profile = maybe_profile
+			.map(|mut p| {
+				p.wallet_exported = true;
+				p
+			})
+			.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
+		if let Err(e) = omni_account_profile_storage.insert(&omni_account, profile) {
+			error!("Failed to update pumpx account profile: {:?}", e);
+			return Err(NativeTaskError::InternalError(None));
+		};
+	} else {
+		error!("Failed to get pumpx account profile");
+		return Err(NativeTaskError::InternalError(None));
+	}
+	Ok(NativeTaskOk::PumpxExportWallet(decrypted_wallet))
+}
+
+/// Handle PumpxAddWallet task
+pub async fn handle_pumpx_add_wallet<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	client_id: String,
+) -> NativeTaskResponse {
+	let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+	let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE)) else {
+		error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
+		return Err(NativeTaskError::InternalError(None));
+	};
+
+	// Call Pumpx API to add wallet
+	debug!("Calling pumpx add_wallet");
+	let Ok(backend_response) = ctx.pumpx_api.add_wallet(&access_token, None).await else {
+		error!("Failed to add wallet through Pumpx API");
+		return Err(NativeTaskError::PumpxApiError(PumpxApiError::AddWalletFailed));
+	};
+
+	Ok(NativeTaskOk::PumpxAddWallet(backend_response))
+}
+
+/// Handle PumpxSignLimitOrder task
+pub async fn handle_pumpx_sign_limit_order<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	chain_id: u32,
+	wallet_index: u32,
+	unsigned_tx: Vec<Vec<u8>>,
+	client_id: String,
+) -> NativeTaskResponse {
+	let Some(chain) = ChainType::from_pumpx_chain_id(chain_id) else {
+		error!("Failed to map pumpx chain_id {}", chain_id);
+		return Err(NativeTaskError::ChainNotSupported(chain_id as u64));
+	};
+	let Ok(signed_txs) = ctx
+		.pumpx_signer_client
+		.request_signatures(chain, wallet_index, omni_account.into(), unsigned_tx)
+		.await
+	else {
+		error!("Failed to request signatures from pumpx-signer");
+		return Err(NativeTaskError::SignatureServiceUnavailable);
+	};
+	Ok(NativeTaskOk::PumpxSignLimitOrder(signed_txs))
+}
+
+/// Handle PumpxTransferWidthdraw task
+#[allow(clippy::too_many_arguments)]
+pub async fn handle_pumpx_transfer_withdraw<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	request_id: Option<u32>,
+	chain_id: u32,
+	wallet_index: u32,
+	recipient_address: String,
+	token_ca: String,
+	amount: String,
+	google_code: String,
+	language: Option<String>,
+	client_id: String,
+) -> NativeTaskResponse {
+	// 1. Verify we have a valid Pumpx "access" token for the user
+	let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+	let Ok(Some(access_token)) = storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+	else {
+		error!("Failed to get access_token within NativeTask::PumpxTransferWidthdraw");
+		return Err(NativeTaskError::InternalError(None));
+	};
+
+	// 2. Verify google code in every case
+	let verify_success = verify_google_code(
+		ctx.pumpx_api.as_ref().as_ref(),
+		&access_token,
+		google_code,
+		language.clone(),
+	)
+	.await;
+	if !verify_success {
+		error!("Failed to verify google code within NativeTask::PumpxTransferWidthdraw");
+		return Err(NativeTaskError::PumpxApiError(PumpxApiError::GoogleCodeVerificationFailed));
+	}
+
+	// 3. Create a transfer tx and send to backend
+	let body = CreateTransferTxBody {
+		request_id,
+		chain_id,
+		wallet_index,
+		recipient_address,
+		token_ca,
+		amount,
+	};
+
+	debug!("Calling pumpx create_transfer_tx, body {:?}", body);
+	match ctx.pumpx_api.create_transfer_tx(&access_token, body, language.clone()).await {
+		Ok(res) => Ok(NativeTaskOk::PumpxTransferWithdraw(res)),
+		Err(e) => {
+			error!("Failed to create transfer tx: {}", e);
+			Err(NativeTaskError::PumpxApiError(PumpxApiError::CreateTransferTxFailed))
+		},
+	}
+}
+
+/// Handle PumpxNotifyLimitOrderResult task
+pub async fn handle_pumpx_notify_limit_order_result<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	_omni_account: executor_primitives::AccountId,
+	intent_id: u32,
+	result: String,
+	message: Option<String>,
+	client_id: String,
+) -> NativeTaskResponse {
+	if result != "ok" && result != "nok" {
+		error!("Invalid result value: {}. Must be 'ok' or 'nok'", result);
+		return Err(NativeTaskError::PumpxApiError(PumpxApiError::InvalidInput));
+	}
+
+	if let Some(msg) = message {
+		info!("Limit order result message for intent_id {}: {}", intent_id, msg);
+	}
+
+	Ok(NativeTaskOk::PumpxNotifyLimitOrderResult)
+}
+
+/// Handle RequestIntent task
+pub async fn handle_request_intent<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	intent_id: u32,
+	intent: Intent,
+	client_id: String,
+) -> NativeTaskResponse {
+	debug!("Intent requested, intent_id: {}", intent_id);
+
+	let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
+	let stored_intent_id = match intent_id_storage.get(&omni_account) {
+		Ok(id) => id.unwrap_or_default(),
+		Err(_) => {
+			error!("Failed to read intent from store");
+			return Err(NativeTaskError::InternalError(None));
+		},
+	};
+
+	if intent_id == stored_intent_id + 1 {
+		if intent_id_storage.insert(&omni_account, intent_id).is_err() {
+			error!("Failed to save intent id");
+			return Err(NativeTaskError::InternalError(None));
+		}
+	} else {
+		error!(
+			"Intent id different than expected, expected: {:?}, got: {:?}",
+			stored_intent_id + 1,
+			intent_id
+		);
+		return Err(NativeTaskError::IntentNonceMismatch);
+	}
+
+	let result = match intent {
+		Intent::SystemRemark(_)
+		| Intent::TransferNative(_)
+		| Intent::CallEthereum(_)
+		| Intent::TransferEthereum(_)
+		| Intent::TransferSolana(_) => {
+			info!("Intent temporarily rejected, intent_id: {}", intent_id);
+			Err(NativeTaskError::InternalError(None))
+		},
+		Intent::Swap(..) => {
+			let response = match ctx
+				.cross_chain_intent_executor
+				.execute(&omni_account, intent_id, intent.clone())
+				.await
+			{
+				Ok((response, _)) => response,
+				Err(e) => {
+					error!("Error executing intent: {:?}", e);
+					ctx.cross_chain_intent_executor.on_execution_error().await;
+					None
+				},
+			};
+			if let Some(response) = response {
+				Ok(NativeTaskOk::IntentSwapResponse(response))
+			} else {
+				Err(NativeTaskError::InternalError(None))
+			}
+		},
+	};
+
+	result
+}
+
 pub async fn handle_native_task<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -592,62 +1275,8 @@ pub async fn handle_native_task<
 		},
 		NativeTask::RequestIntent(omni_account, intent_id, intent) => {
 			let intent = *intent;
-			debug!("Intent requested, intent_id: {}", intent_id);
-
-			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
-			let stored_intent_id = match intent_id_storage.get(&omni_account) {
-				Ok(id) => id.unwrap_or_default(),
-				Err(_) => {
-					error!("Failed to read intent from store");
-					return Err(NativeTaskError::InternalError(None));
-				},
-			};
-
-			if intent_id == stored_intent_id + 1 {
-				if intent_id_storage.insert(&omni_account, intent_id).is_err() {
-					error!("Failed to save intent id");
-					return Err(NativeTaskError::InternalError(None));
-				}
-			} else {
-				error!(
-					"Intent id different than expected, expected: {:?}, got: {:?}",
-					stored_intent_id + 1,
-					intent_id
-				);
-				return Err(NativeTaskError::IntentNonceMismatch);
-			}
-
-			let result = match intent {
-				Intent::SystemRemark(_)
-				| Intent::TransferNative(_)
-				| Intent::CallEthereum(_)
-				| Intent::TransferEthereum(_)
-				| Intent::TransferSolana(_) => {
-					info!("Intent temporarily rejected, intent_id: {}", intent_id);
-					Err(NativeTaskError::InternalError(None))
-				},
-				Intent::Swap(..) => {
-					let response = match ctx
-						.cross_chain_intent_executor
-						.execute(&omni_account, intent_id, intent.clone())
-						.await
-					{
-						Ok((response, _)) => response,
-						Err(e) => {
-							error!("Error executing intent: {:?}", e);
-							ctx.cross_chain_intent_executor.on_execution_error().await;
-							None
-						},
-					};
-					if let Some(response) = response {
-						Ok(NativeTaskOk::IntentSwapResponse(response))
-					} else {
-						Err(NativeTaskError::InternalError(None))
-					}
-				},
-			};
-
-			result
+			handle_request_intent(ctx.clone(), omni_account, intent_id, intent, client_id.clone())
+				.await
 		},
 		NativeTask::PumpxRequestJwt(_sender, email, invite_code, google_code, language) => {
 			let expires_at = Utc::now()
@@ -1890,7 +2519,7 @@ async fn validate_loan_request_parameters(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn handle_request_loan<
+pub async fn handle_request_loan<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,

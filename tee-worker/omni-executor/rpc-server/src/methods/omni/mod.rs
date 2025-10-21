@@ -19,8 +19,9 @@ use get_shielding_key::*;
 mod request_email_verification_code;
 use request_email_verification_code::*;
 
-mod submit_native_task;
-use submit_native_task::*;
+// Removed: omni_submitNativeTask - replaced with dedicated RPC methods
+// mod submit_native_task;
+// use submit_native_task::*;
 
 mod get_web3_sign_in_message;
 use get_web3_sign_in_message::*;
@@ -104,7 +105,7 @@ pub fn register_omni<
 	register_get_health(module);
 	register_get_next_intent_id(module);
 	register_get_shielding_key(module);
-	register_submit_native_task(module);
+	// Removed: register_submit_native_task(module); - replaced with dedicated RPC methods
 	register_request_email_verification_code(module);
 	register_get_oauth2_authorization_data(module);
 	register_get_web3_sign_in_message(module);

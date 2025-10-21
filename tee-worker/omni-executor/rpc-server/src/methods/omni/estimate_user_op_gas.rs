@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::{handle_omni_native_task, PumpxRpcError};
+use super::common::PumpxRpcError;
 use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::validation_helpers::{
@@ -22,11 +22,10 @@ use crate::validation_helpers::{
 };
 use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_estimate_user_op_gas, NativeTaskError, NativeTaskOk};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
@@ -125,20 +124,20 @@ pub fn register_estimate_user_op_gas<
 			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
 				.map_err(PumpxRpcError::from)?;
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::EstimateUserOpGas(
-					account_id,
-					params.user_operation.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
+			// Call the handler directly
+			let result = handle_estimate_user_op_gas(
+				ctx.to_task_handler_context(),
+				account_id,
+				params.user_operation.clone(),
+				params.chain_id,
+				params.wallet_index,
 				params.client_id,
-			);
+			)
+			.await;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::EstimateUserOpGas {
+			// Process response
+			match result {
+				Ok(NativeTaskOk::EstimateUserOpGas {
 					call_gas_limit,
 					verification_gas_limit,
 					pre_verification_gas,
@@ -147,7 +146,7 @@ pub fn register_estimate_user_op_gas<
 					max_fee_per_gas,
 					max_priority_fee_per_gas,
 					estimated_token_cost,
-				} => {
+				}) => {
 					// Convert token cost estimate to RPC format if present
 					let token_cost_info = estimated_token_cost.map(|cost| {
 						// Format the amount as a human-readable value
@@ -175,15 +174,45 @@ pub fn register_estimate_user_op_gas<
 						estimated_token_cost: token_cost_info,
 					})
 				},
-				_ => {
+				Ok(_) => {
 					error!("Unexpected response type");
 					Err(PumpxRpcError::from(DetailedError::unexpected_response_type(
 						"EstimateUserOpGas response",
 						"Unknown response type",
 					)))
 				},
-			})
-			.await
+				Err(NativeTaskError::ChainNotSupported(chain_id)) => {
+					Err(PumpxRpcError::from(DetailedError::chain_not_supported(chain_id)))
+				},
+				Err(NativeTaskError::InvalidUserOperation(desc)) => {
+					Err(PumpxRpcError::from(DetailedError::invalid_user_operation_error(&desc)))
+				},
+				Err(NativeTaskError::GasEstimationFailed) => {
+					Err(PumpxRpcError::from(DetailedError::gas_estimation_failed()))
+				},
+				Err(NativeTaskError::InternalError(message)) => {
+					error!("Internal error in native task");
+					match message {
+						Some(msg) => Err(PumpxRpcError::from_code_and_message(
+							crate::error_code::INTERNAL_ERROR_CODE,
+							msg,
+						)),
+						None => Err(PumpxRpcError::from_error_code(
+							jsonrpsee::types::ErrorCode::InternalError,
+						)),
+					}
+				},
+				Err(e) => {
+					error!("Native task error: {:?}", e);
+					Err(PumpxRpcError::from(
+						DetailedError::new(
+							crate::error_code::INTERNAL_ERROR_CODE,
+							"Operation failed",
+						)
+						.with_suggestion("Please try again"),
+					))
+				},
+			}
 		})
 		.expect("Failed to register omni_estimateUserOpGas method");
 }

@@ -1,4 +1,3 @@
-use super::common::handle_omni_native_task;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
@@ -13,7 +12,7 @@ use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_pumpx_export_wallet, NativeTaskError, NativeTaskOk};
 use rsa::Oaep;
 use sha2::Sha256;
 use tracing::{debug, error};
@@ -25,27 +24,6 @@ pub struct ExportWalletParams {
 	pub chain_id: PumpxChainId,
 	pub wallet_index: PumxWalletIndex,
 	pub wallet_address: String,
-}
-
-impl ExportWalletParams {
-	pub fn into_native_task_wrapper(
-		self,
-		client_id: String,
-		omni_account: AccountId,
-	) -> NativeTaskWrapper<NativeTask> {
-		NativeTaskWrapper::new(
-			NativeTask::PumpxExportWallet(
-				omni_account,
-				self.google_code,
-				self.chain_id,
-				self.wallet_index,
-				self.wallet_address,
-			),
-			None,
-			None,
-			client_id,
-		)
-	}
 }
 
 pub fn register_export_wallet<
@@ -105,23 +83,69 @@ pub fn register_export_wallet<
 				).with_field("key").with_reason("The decrypted key is not a valid 256-bit AES key").with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)"))
 			})?;
 
-			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
+			let result = handle_pumpx_export_wallet(
+				ctx.to_task_handler_context(),
+				omni_account,
+				params.google_code,
+				params.chain_id,
+				params.wallet_index,
+				params.wallet_address,
+				user.client_id,
+			)
+			.await;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxExportWallet(wallet) => {
+			match result {
+				Ok(NativeTaskOk::PumpxExportWallet(wallet)) => {
 					let encrypted_wallet: SerdeAesOutput =
 						aes_encrypt_default(&aes_key, &wallet).into();
 					Ok(encrypted_wallet)
 				},
-				_ => {
+				Ok(_) => {
 					error!("Unexpected response type");
 					Err(PumpxRpcError::from(DetailedError::new(
 						INTERNAL_ERROR_CODE,
 						"Internal error"
 					).with_reason("Unexpected response type from native task handler")))
 				},
-			})
-			.await
+				Err(NativeTaskError::PumpxApiError(pumpx_error)) => {
+					error!("Pumpx API error: {:?}", pumpx_error);
+					match pumpx_error {
+						native_task_handler::PumpxApiError::GoogleCodeVerificationFailed => {
+							Err(PumpxRpcError::from(DetailedError::new(
+								PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
+								"Google code verification failed"
+							).with_suggestion("Please check your Google verification code and try again")))
+						},
+						_ => {
+							Err(PumpxRpcError::from(DetailedError::new(
+								INTERNAL_ERROR_CODE,
+								"Pumpx API error"
+							).with_reason(format!("{:?}", pumpx_error))))
+						}
+					}
+				},
+				Err(NativeTaskError::ChainNotSupported(chain_id)) => {
+					error!("Chain not supported: {}", chain_id);
+					Err(PumpxRpcError::from(DetailedError::new(
+						INVALID_CHAIN_ID_CODE,
+						"Chain not supported"
+					).with_reason(format!("Chain ID {} is not supported", chain_id))))
+				},
+				Err(NativeTaskError::PumpxSignerError(signer_error)) => {
+					error!("Pumpx signer error: {:?}", signer_error);
+					Err(PumpxRpcError::from(DetailedError::new(
+						PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
+						"Wallet export failed"
+					).with_reason(format!("{:?}", signer_error))))
+				},
+				Err(e) => {
+					error!("Failed to export wallet: {:?}", e);
+					Err(PumpxRpcError::from(DetailedError::new(
+						INTERNAL_ERROR_CODE,
+						"Failed to export wallet"
+					).with_reason(format!("{:?}", e))))
+				},
+			}
 		})
 		.expect("Failed to register omni_exportWallet method");
 }

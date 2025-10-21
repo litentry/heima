@@ -1,4 +1,4 @@
-use super::common::{check_omni_api_response, handle_omni_native_task};
+use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
@@ -8,11 +8,10 @@ use crate::{
 	Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::*;
 use executor_primitives::OmniAuth;
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use native_task_handler::{handle_pumpx_request_jwt, NativeTaskError, NativeTaskOk};
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
 use tracing::{debug, error};
@@ -35,19 +34,8 @@ pub struct RequestJwtResponse {
 }
 
 impl RequestJwtParams {
-	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
-		NativeTaskWrapper::new(
-			NativeTask::PumpxRequestJwt(
-				Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Email), // actually unused
-				self.user_email.clone(),
-				self.invite_code,
-				self.google_code,
-				self.language,
-			),
-			None,
-			Some(OmniAuth::Email(self.client_id.clone(), self.user_email, self.email_code)),
-			self.client_id,
-		)
+	pub fn get_omni_auth(&self) -> OmniAuth {
+		OmniAuth::Email(self.client_id.clone(), self.user_email.clone(), self.email_code.clone())
 	}
 }
 
@@ -75,42 +63,78 @@ pub fn register_request_jwt<
 				params.user_email, params.client_id
 			);
 
-			let wrapper = params.into_native_task_wrapper();
-
-			if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
-					return Err(PumpxRpcError::from(
-						DetailedError::new(REQUIRE_AUTHENTICATION_CODE, "Authentication required")
-							.with_suggestion("Please provide authentication credentials"),
-					));
-				};
-				verify_auth(ctx.clone(), auth).await.map_err(|e| {
-					error!("Failed to verify auth: {:?}, reason: {:?}", wrapper.auth, e);
-					PumpxRpcError::from(
-						DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"Authentication verification failed",
-						)
-						.with_suggestion("Please check your authentication credentials"),
+			// Verify email authentication
+			let auth = params.get_omni_auth();
+			verify_auth(ctx.clone(), &auth).await.map_err(|e| {
+				error!("Failed to verify auth: {:?}, reason: {:?}", auth, e);
+				PumpxRpcError::from(
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
 					)
-				})?;
-			}
+					.with_suggestion("Please check your authentication credentials"),
+				)
+			})?;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response } => {
+			// Call the handler directly
+			let sender =
+				Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email);
+			let result = handle_pumpx_request_jwt(
+				ctx.to_task_handler_context(),
+				sender,
+				params.user_email.clone(),
+				params.invite_code,
+				params.google_code,
+				params.language,
+				params.client_id,
+			)
+			.await;
+
+			// Process response
+			match result {
+				Ok(NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response }) => {
 					check_omni_api_response(backend_response.clone(), "Request pumpx jwt".into())?;
 					Ok(RequestJwtResponse { access_token, id_token, backend_response })
 				},
-				_ => {
+				Ok(_) => {
 					error!("Unexpected response type");
 					Err(PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 							.with_reason("Unexpected response type from native task handler"),
 					))
 				},
-			})
-			.await
+				Err(NativeTaskError::PumpxApiError(e)) => {
+					error!("Pumpx API error: {:?}", e);
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Pumpx API error")
+							.with_suggestion("Please try again"),
+					))
+				},
+				Err(NativeTaskError::AuthTokenCreationFailed) => {
+					Err(PumpxRpcError::from(DetailedError::new(
+						INTERNAL_ERROR_CODE,
+						"Failed to create authentication token",
+					)))
+				},
+				Err(NativeTaskError::InternalError(message)) => {
+					error!("Internal error in native task");
+					match message {
+						Some(msg) => {
+							Err(PumpxRpcError::from_code_and_message(INTERNAL_ERROR_CODE, msg))
+						},
+						None => Err(PumpxRpcError::from_error_code(
+							jsonrpsee::types::ErrorCode::InternalError,
+						)),
+					}
+				},
+				Err(e) => {
+					error!("Native task error: {:?}", e);
+					Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Operation failed")
+							.with_suggestion("Please try again"),
+					))
+				},
+			}
 		})
 		.expect("Failed to register omni_requestJwt method");
 }
