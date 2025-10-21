@@ -65,6 +65,16 @@ pub enum NativeTask {
 	),
 	#[codec(index = 25)]
 	PumpxNotifyLimitOrderResult(AccountId, u32, String, Option<String>),
+	#[codec(index = 27)]
+	RequestLoanTest(
+		AccountId,
+		SerializablePackedUserOperation, // skeleton UserOp with sender, gas settings, paymasterAndData, initCode
+		ChainId,                         // chain_id
+		u32,                             // wallet_index
+		String,                          // collateral_ticker (e.g., "ETH", "PURR", uppercase)
+		String,                          // collateral_size (balance of collateral in smart wallet spot)
+		u32,                             // lending_ratio (percentage, e.g., 50 = 50%)
+	),
 }
 
 impl NativeTaskTrait for NativeTask {

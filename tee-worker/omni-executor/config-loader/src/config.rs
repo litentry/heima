@@ -40,8 +40,6 @@ const DEFAULT_MAILER_TYPE: &str = "sendgrid";
 const DEFAULT_MAILER_API_KEY: &str = "";
 const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
 const DEFAULT_MAILER_FROM_NAME: &str = "Heima Verify";
-const DEFAULT_GOOGLE_CLIENT_ID: &str = "";
-const DEFAULT_GOOGLE_CLIENT_SECRET: &str = "";
 const DEFAULT_ETHEREUM_URL: &str = "https://eth-mainnet.g.alchemy.com/v2/";
 const DEFAULT_SOLANA_URL: &str = "https://solana-mainnet.g.alchemy.com/v2/";
 const DEFAULT_BSC_URL: &str = "https://bnb-mainnet.g.alchemy.com/v2/";
@@ -87,10 +85,15 @@ impl Default for MailerConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct OAuth2Config {
+	pub client_id: String,
+	pub client_secret: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConfigLoader {
 	pub mailer_configs: HashMap<String, MailerConfig>,
-	pub google_client_id: String,
-	pub google_client_secret: String,
+	pub oauth2_configs: HashMap<String, HashMap<String, OAuth2Config>>, // client -> provider -> config
 	pub ethereum_url: String,
 	pub solana_url: String,
 	pub bsc_url: String,
@@ -137,24 +140,6 @@ impl ConfigLoader {
 		info!("Executing: {}", std::env::args().collect::<Vec<_>>().join(" "));
 
 		let vars: HashMap<&str, EnvVar> = HashMap::from([
-			(
-				"google_client_id",
-				EnvVar {
-					env_key: "OE_GOOGLE_CLIENT_ID",
-					default: DEFAULT_GOOGLE_CLIENT_ID,
-					sensitive: false,
-					optional: false,
-				},
-			),
-			(
-				"google_client_secret",
-				EnvVar {
-					env_key: "OE_GOOGLE_CLIENT_SECRET",
-					default: DEFAULT_GOOGLE_CLIENT_SECRET,
-					sensitive: true,
-					optional: false,
-				},
-			),
 			(
 				"ethereum_url",
 				EnvVar {
@@ -350,11 +335,11 @@ impl ConfigLoader {
 		let get_opt = |key: &str| get_env_value(&vars[key]);
 
 		let mailer_configs = Self::load_mailer_configs();
+		let oauth2_configs = Self::load_oauth2_configs();
 
 		ConfigLoader {
 			mailer_configs,
-			google_client_id: get("google_client_id"),
-			google_client_secret: get("google_client_secret"),
+			oauth2_configs,
 			ethereum_url: append_key(&get("ethereum_url")),
 			solana_url: append_key(&get("solana_url")),
 			bsc_url: append_key(&get("bsc_url")),
@@ -465,5 +450,84 @@ impl ConfigLoader {
 		let mut clients: Vec<String> = self.mailer_configs.keys().cloned().collect();
 		clients.sort();
 		clients
+	}
+
+	/// Load OAuth2 configurations for all supported providers from environment variables
+	/// Format: OE_{PROVIDER}_CLIENT_ID_{CLIENT}, OE_{PROVIDER}_CLIENT_SECRET_{CLIENT}
+	/// PROVIDER can be GOOGLE, APPLE, etc.
+	/// CLIENT can be WILDMETA, HEIMA, etc.
+	fn load_oauth2_configs() -> HashMap<String, HashMap<String, OAuth2Config>> {
+		let providers = vec!["GOOGLE", "APPLE"];
+		let mut all_configs: HashMap<String, HashMap<String, OAuth2Config>> = HashMap::new();
+
+		for provider in providers {
+			let provider_lower = provider.to_lowercase();
+			let prefix = format!("OE_{}_CLIENT_ID_", provider);
+
+			let env_vars: HashMap<String, String> = std::env::vars().collect();
+			let mut clients = std::collections::HashSet::new();
+
+			for key in env_vars.keys() {
+				if key.starts_with(&prefix) {
+					if let Some(client) = key.strip_prefix(&prefix) {
+						info!(
+							"Found {} OAuth2 configuration for client: {}",
+							provider_lower, client
+						);
+						clients.insert(client.to_lowercase());
+					}
+				}
+			}
+
+			info!("Total discovered {} OAuth2 clients: {:?}", provider_lower, clients);
+
+			if clients.is_empty() {
+				warn!(
+					"No {} OAuth2 configurations found in environment variables.",
+					provider_lower
+				);
+				continue;
+			}
+
+			for client in clients {
+				let client_upper = client.to_uppercase();
+
+				let client_id =
+					std::env::var(format!("OE_{}_CLIENT_ID_{}", provider, client_upper))
+						.unwrap_or_default();
+				let client_secret =
+					std::env::var(format!("OE_{}_CLIENT_SECRET_{}", provider, client_upper))
+						.unwrap_or_default();
+
+				if client_id.is_empty() || client_secret.is_empty() {
+					warn!(
+						"Incomplete {} OAuth2 config for client '{}': client_id_empty={}, client_secret_empty={}",
+						provider_lower,
+						client,
+						client_id.is_empty(),
+						client_secret.is_empty()
+					);
+					continue;
+				}
+
+				let config = OAuth2Config { client_id, client_secret };
+
+				info!("Loaded {} OAuth2 config for client '{}'", provider_lower, client);
+
+				all_configs
+					.entry(client.clone())
+					.or_default()
+					.insert(provider_lower.clone(), config);
+			}
+		}
+
+		all_configs
+	}
+
+	/// Get OAuth2 configuration for a specific client and provider
+	pub fn get_oauth2_config(&self, client_id: &str, provider: &str) -> Option<OAuth2Config> {
+		let client_key = client_id.to_lowercase();
+		let provider_key = provider.to_lowercase();
+		self.oauth2_configs.get(&client_key)?.get(&provider_key).cloned()
 	}
 }

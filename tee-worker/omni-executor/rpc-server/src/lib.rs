@@ -6,6 +6,7 @@ mod error_code;
 mod mailer_factory;
 mod methods;
 mod middlewares;
+mod oauth2_factory;
 mod server;
 mod task;
 mod validation_helpers;

@@ -1178,6 +1178,33 @@ pub async fn handle_native_task<
 
 			Ok(NativeTaskOk::SubmitUserOp(transaction_hash))
 		},
+		NativeTask::RequestLoanTest(
+			omni_account,
+			user_operation,
+			chain_id,
+			wallet_index,
+			collateral_ticker,
+			collateral_size,
+			lending_ratio,
+		) => {
+			info!(
+				"Processing RequestLoanTest for {:?}, chain_id: {}, wallet_index: {}, sender: {}, collateral: {}, collateral_size: {}, lending_ratio: {}",
+				omni_account, chain_id, wallet_index, user_operation.sender, collateral_ticker, collateral_size, lending_ratio
+			);
+
+			handle_request_loan(
+				ctx,
+				omni_account,
+				user_operation,
+				chain_id,
+				wallet_index,
+				&collateral_ticker,
+				&collateral_size,
+				lending_ratio,
+				client_id,
+			)
+			.await
+		},
 	}
 }
 
@@ -1698,6 +1725,733 @@ fn extract_paymaster_gas_limits(paymaster_and_data: &Bytes) -> (u128, u128) {
 		// Paymaster present but no gas limits specified, use defaults
 		debug!("Paymaster present but gas limits not specified, using defaults");
 		(DEFAULT_PAYMASTER_VERIFICATION_GAS, DEFAULT_PAYMASTER_POST_OP_GAS)
+	}
+}
+
+async fn print_account_state(
+	hypercore_client: &hyperliquid::HyperCoreClient,
+	user_address: &str,
+	label: &str,
+) {
+	use tracing::info;
+
+	info!("========== Account State: {} ==========", label);
+
+	// Print spot balances
+	match hypercore_client.get_spot_clearinghouse_state(user_address).await {
+		Ok(spot_state) => {
+			info!("Spot Balances:");
+			for balance in &spot_state.balances {
+				let total: f64 = balance.total.parse().unwrap_or(0.0);
+				let hold: f64 = balance.hold.parse().unwrap_or(0.0);
+				if total > 0.0 || hold > 0.0 {
+					info!("  {} - Total: {}, Hold: {}", balance.coin, balance.total, balance.hold);
+				}
+			}
+		},
+		Err(e) => {
+			info!("Failed to fetch spot balances: {}", e);
+		},
+	}
+
+	// Print perp clearinghouse state
+	match hypercore_client.get_perp_clearinghouse_state(user_address).await {
+		Ok(perp_state) => {
+			info!("Perp Margin Summary:");
+			info!(
+				"  Account Value: {}, Total Margin Used: {}, Withdrawable: {}",
+				perp_state.margin_summary.account_value,
+				perp_state.margin_summary.total_margin_used,
+				perp_state.withdrawable
+			);
+
+			if !perp_state.asset_positions.is_empty() {
+				info!("Open Positions:");
+				for asset_pos in &perp_state.asset_positions {
+					let pos = &asset_pos.position;
+					info!(
+						"  {} - Size: {}, Entry Px: {}, Position Value: {}, Unrealized PnL: {}, Leverage: {}x",
+						pos.coin,
+						pos.szi,
+						pos.entry_px.as_ref().unwrap_or(&"N/A".to_string()),
+						pos.position_value,
+						pos.unrealized_pnl,
+						pos.leverage.value
+					);
+				}
+			} else {
+				info!("Open Positions: None");
+			}
+		},
+		Err(e) => {
+			info!("Failed to fetch perp clearinghouse state: {}", e);
+		},
+	}
+
+	info!("==========================================");
+}
+
+#[allow(clippy::too_many_arguments)]
+/// Validates all loan request parameters before executing trades
+/// Returns (user_balance, lending_ratio_f64) on success
+async fn validate_loan_request_parameters(
+	hypercore_client: &hyperliquid::HyperCoreClient,
+	smart_wallet_address: &str,
+	collateral_ticker: &str,
+	collateral_size: f64,
+	collateral_token: &hyperliquid::SpotToken,
+	perp_asset: &hyperliquid::PerpAsset,
+	lending_ratio: u32,
+	spot_market_price: f64,
+	perp_market_price: f64,
+) -> Result<(f64, f64), NativeTaskError> {
+	use hyperliquid::validate_trade_size;
+	// 1. Validate collateral size for spot trading
+	validate_trade_size(collateral_size, collateral_token.sz_decimals, None).map_err(|e| {
+		error!("Invalid collateral size for spot trading: {}", e);
+		NativeTaskError::InternalError(Some(format!("Invalid collateral size: {}", e)))
+	})?;
+
+	info!(
+		"✓ Collateral size {} validated for spot trading (sz_decimals={})",
+		collateral_size, collateral_token.sz_decimals
+	);
+
+	// 2. Calculate estimated values for perp position
+	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
+	let estimated_usdc_from_spot = collateral_size * spot_market_price;
+	let estimated_usdc_for_perp = estimated_usdc_from_spot * (1.0 - lending_ratio_f64);
+	let estimated_leverage = (1.0 / (1.0 - lending_ratio_f64)).min(perp_asset.max_leverage as f64);
+	let estimated_perp_notional = estimated_usdc_for_perp * estimated_leverage;
+
+	// 3. Validate minimum perp order notional value ($10 minimum)
+
+	const MIN_PERP_NOTIONAL: f64 = 10.0; // Hyperliquid: "Perp Order must have minimum value of $10."
+
+	if estimated_perp_notional < MIN_PERP_NOTIONAL {
+		error!(
+			"Perp order notional value too small: estimated ${:.2} (collateral_size={}, spot_price={:.2}, lending_ratio={}%, leverage={:.2}x) - minimum required: ${}",
+			estimated_perp_notional, collateral_size, spot_market_price, lending_ratio, estimated_leverage, MIN_PERP_NOTIONAL
+		);
+		return Err(NativeTaskError::InternalError(Some(format!(
+			"Perp order notional value too small: ${:.2} < ${} minimum. Increase collateral_size or decrease lending_ratio.",
+			estimated_perp_notional, MIN_PERP_NOTIONAL
+		))));
+	}
+
+	info!(
+		"✓ Perp notional value: ${:.2} (margin={:.2}, leverage={:.2}x) >= ${} minimum",
+		estimated_perp_notional, estimated_usdc_for_perp, estimated_leverage, MIN_PERP_NOTIONAL
+	);
+
+	// 4. Validate estimated hedge size can be properly rounded to perp sz_decimals
+	// hedge_size = (margin * leverage) / price
+	let estimated_hedge_size = estimated_perp_notional / perp_market_price;
+
+	validate_trade_size(estimated_hedge_size, perp_asset.sz_decimals, None).map_err(|e| {
+		error!("Invalid estimated hedge size for perp trading: {}", e);
+		NativeTaskError::InternalError(Some(format!(
+			"Invalid estimated hedge size (margin={:.2}, leverage={:.2}x, perp_price={:.2}, size={}): {}",
+			estimated_usdc_for_perp, estimated_leverage, perp_market_price, estimated_hedge_size, e
+		)))
+	})?;
+
+	info!(
+		"✓ Estimated hedge size {} validated for perp trading (sz_decimals={})",
+		estimated_hedge_size, perp_asset.sz_decimals
+	);
+
+	// 5. Validate user balance
+	let user_balance = hypercore_client
+		.get_spot_balance(smart_wallet_address, collateral_ticker)
+		.await
+		.map_err(|e| {
+			error!("Failed to get user balance: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to query balance: {}", e)))
+		})?;
+
+	if user_balance < collateral_size {
+		error!(
+			"Insufficient balance: user has {} but needs {} {}",
+			user_balance, collateral_size, collateral_ticker
+		);
+		return Err(NativeTaskError::InternalError(Some(format!(
+			"Insufficient balance: user has {} but needs {} {}",
+			user_balance, collateral_size, collateral_ticker
+		))));
+	}
+
+	info!(
+		"✓ Balance check passed: user has {} {} (required: {})",
+		user_balance, collateral_ticker, collateral_size
+	);
+
+	Ok((user_balance, lending_ratio_f64))
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn handle_request_loan<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: executor_primitives::AccountId,
+	skeleton_user_op: executor_core::types::SerializablePackedUserOperation,
+	chain_id: u64,
+	wallet_index: u32,
+	collateral_ticker: &str,
+	collateral_size_str: &str,
+	lending_ratio: u32,
+	client_id: &str,
+) -> NativeTaskResponse {
+	use hyperliquid::*;
+
+	// Extract smart wallet address from the skeleton UserOp
+	let smart_wallet_address_str = &skeleton_user_op.sender;
+
+	let hypercore_client = HyperCoreClient::new(chain_id).map_err(|e| {
+		error!("Failed to create HyperCore client: {}", e);
+		NativeTaskError::ChainNotSupported(chain_id)
+	})?;
+
+	let collateral_size = collateral_size_str.parse::<f64>().map_err(|e| {
+		error!("Failed to parse collateral_size: {}", e);
+		NativeTaskError::InternalError(Some(format!("Invalid collateral_size: {}", e)))
+	})?;
+
+	// Fetch metadata from HyperCore
+	let spot_meta = hypercore_client.get_spot_meta().await.map_err(|e| {
+		error!("Failed to get spot meta: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	let meta = hypercore_client.get_meta().await.map_err(|e| {
+		error!("Failed to get perp meta: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	// Get asset IDs
+	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
+		error!("Failed to get spot asset ID: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	let perp_asset_id = get_perp_asset_id(collateral_ticker, &meta).map_err(|e| {
+		error!("Failed to get perp asset ID: {}", e);
+		NativeTaskError::InternalError(Some(e))
+	})?;
+
+	info!(
+		"Resolved asset IDs - spot: {}, perp: {} for ticker: {}",
+		spot_asset_id, perp_asset_id, collateral_ticker
+	);
+
+	// Get token metadata for size/price calculations
+	let collateral_token = spot_meta
+		.tokens
+		.iter()
+		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
+		.ok_or_else(|| {
+			error!("Token {} not found in spot meta", collateral_ticker);
+			NativeTaskError::InternalError(Some(format!(
+				"Token {} not found in spot meta",
+				collateral_ticker
+			)))
+		})?;
+
+	let usdc_token = spot_meta
+		.tokens
+		.iter()
+		.find(|t| t.name.eq_ignore_ascii_case("USDC"))
+		.ok_or_else(|| {
+			error!("USDC token not found in spot meta");
+			NativeTaskError::InternalError(Some("USDC token not found in spot meta".to_string()))
+		})?;
+
+	let perp_asset = meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
+		error!("Perp asset {} not found in meta", perp_asset_id);
+		NativeTaskError::InternalError(Some(format!("Perp asset {} not found", perp_asset_id)))
+	})?;
+
+	info!(
+		"Token metadata - collateral: weiDecimals={}, szDecimals={}, USDC: weiDecimals={}, perp: szDecimals={}, maxLeverage={}",
+		collateral_token.wei_decimals,
+		collateral_token.sz_decimals,
+		usdc_token.wei_decimals,
+		perp_asset.sz_decimals,
+		perp_asset.max_leverage
+	);
+
+	// Fetch market prices - use spot price for spot sell, perp price for perp hedge
+	let spot_market_price = hypercore_client
+		.get_spot_mid_price(collateral_ticker, &spot_meta)
+		.await
+		.map_err(|e| {
+			error!("Failed to get spot market price for {}: {}", collateral_ticker, e);
+			NativeTaskError::InternalError(Some(format!(
+				"Failed to get spot market price for {}: {}",
+				collateral_ticker, e
+			)))
+		})?;
+
+	let perp_market_price =
+		hypercore_client.get_perp_mid_price(collateral_ticker).await.map_err(|e| {
+			error!("Failed to get perp market price for {}: {}", collateral_ticker, e);
+			NativeTaskError::InternalError(Some(format!(
+				"Failed to get perp market price for {}: {}",
+				collateral_ticker, e
+			)))
+		})?;
+
+	info!(
+		"Market prices for {} - spot: {} USDC, perp: {} USDC",
+		collateral_ticker, spot_market_price, perp_market_price
+	);
+
+	// Run all early validations
+	let (_user_balance, lending_ratio_f64) = validate_loan_request_parameters(
+		&hypercore_client,
+		smart_wallet_address_str,
+		collateral_ticker,
+		collateral_size,
+		collateral_token,
+		perp_asset,
+		lending_ratio,
+		spot_market_price,
+		perp_market_price,
+	)
+	.await?;
+
+	// Print initial account state
+	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Actions").await;
+
+	// Action 1: Sell collateral_size as spot to get X USDC
+	// Clamp size and price to comply with HyperLiquid tick/lot size rules
+	let clamped_size = clamp_size(collateral_size, collateral_token.sz_decimals);
+
+	// Calculate aggressive sell price using configured ratio
+	let target_price = spot_market_price * SPOT_SELL_PRICE_RATIO;
+	let clamped_price = clamp_price(target_price, collateral_token.sz_decimals, true); // true = spot market
+
+	info!(
+		"Clamped values for spot sell - size: {} -> {}, price: {} -> {}",
+		collateral_size, clamped_size, target_price, clamped_price
+	);
+
+	// Use CoreWriter encoding: 10^8 * human_readable_value
+	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped size: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped size: {}", e)))
+	})?;
+	let clamped_price_f64 = clamped_price.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped price: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped price: {}", e)))
+	})?;
+
+	let spot_sell_size_units = (clamped_size_f64 * 100_000_000.0) as u64;
+	let spot_sell_price_units = (clamped_price_f64 * 100_000_000.0) as u64;
+
+	// Generate cloids for orders (USD transfers don't use cloids)
+	let spot_sell_cloid = generate_cloid();
+	let hedge_open_cloid = generate_cloid() + 1;
+
+	info!(
+		"Generated cloids - spot_sell: {} (hex: 0x{:032x}), hedge_open: {} (hex: 0x{:032x})",
+		spot_sell_cloid, spot_sell_cloid, hedge_open_cloid, hedge_open_cloid
+	);
+
+	// Action 1: Build and submit spot sell action
+	info!(
+		"Building spot sell: asset_id={}, size_units={}, price_units={}, cloid={}, size_human={}, price_usdc={}",
+		spot_asset_id, spot_sell_size_units, spot_sell_price_units, spot_sell_cloid, clamped_size, clamped_price
+	);
+
+	let spot_sell_action = build_spot_sell_order(
+		spot_asset_id,
+		spot_sell_size_units,
+		spot_sell_price_units,
+		spot_sell_cloid,
+	);
+	let spot_sell_corewriter_calldata = encode_send_raw_action(spot_sell_action);
+
+	let spot_sell_calldata =
+		encode_omni_account_execute(get_core_writer_address(), spot_sell_corewriter_calldata);
+
+	let spot_sell_tx_hash = submit_corewriter_userop(
+		ctx.clone(),
+		&omni_account,
+		&skeleton_user_op,
+		chain_id,
+		wallet_index,
+		spot_sell_calldata,
+		client_id,
+	)
+	.await?;
+
+	info!("Action 1: Spot sell submitted with tx_hash: {:?}", spot_sell_tx_hash);
+
+	// Wait for order to be placed and filled by polling HyperCore API
+	info!("Polling HyperCore API for spot sell order completion (cloid: {})...", spot_sell_cloid);
+	let order_filled = hypercore_client
+		.wait_for_order(
+			smart_wallet_address_str,
+			&spot_sell_cloid.to_string(),
+			20,
+			hyperliquid::OrderWaitCondition::Filled,
+		)
+		.await
+		.map_err(|e| {
+			error!("Spot sell order did not complete: {}", e);
+			NativeTaskError::InternalError(Some(format!("Spot sell order failed: {}", e)))
+		})?;
+
+	if !order_filled {
+		error!("Spot sell order was rejected or canceled");
+		return Err(NativeTaskError::InternalError(Some(
+			"Spot sell order was rejected or canceled".to_string(),
+		)));
+	}
+
+	info!("Action 1: Spot sell order filled successfully");
+
+	// Get the actual fill to see how much USDC we received
+	let spot_sell_fill = hypercore_client
+		.get_fill_by_cloid(smart_wallet_address_str, spot_sell_cloid)
+		.await
+		.map_err(|e| {
+			error!("Failed to get fill for spot sell order: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to get fill: {}", e)))
+		})?;
+
+	let usdc_received = calculate_usdc_received_from_spot_sell(&spot_sell_fill).map_err(|e| {
+		error!("Failed to calculate USDC received: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to calculate USDC: {}", e)))
+	})?;
+
+	info!(
+		"Action 1: Spot sell completed - sold {} {} at price {} (filled: {}), received {:.2} USDC (fee: {} {})",
+		collateral_size,
+		collateral_ticker,
+		spot_sell_fill.px,
+		spot_sell_fill.sz,
+		usdc_received,
+		spot_sell_fill.fee,
+		spot_sell_fill.fee_token
+	);
+
+	// Print account state after Action 1
+	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 1 - Spot Sell")
+		.await;
+
+	// Calculate actual USDC to transfer based on USDC received from the spot sell
+	let usdc_for_perp = usdc_received * (1.0 - lending_ratio_f64);
+	let usdc_to_lend = usdc_received * lending_ratio_f64;
+
+	info!(
+		"USDC allocation: total_received={:.2}, for_perp={:.2} ({:.0}%), to_lend={:.2} ({:.0}%)",
+		usdc_received,
+		usdc_for_perp,
+		(1.0 - lending_ratio_f64) * 100.0,
+		usdc_to_lend,
+		lending_ratio_f64 * 100.0
+	);
+
+	// Action 2: Move usdc_for_perp into perps within HyperCore
+	let mut current_nonce = skeleton_user_op.nonce + 1;
+	let usdc_for_perp_units = (usdc_for_perp * 1_000_000.0) as u64;
+	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
+	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
+
+	let usd_transfer_calldata =
+		encode_omni_account_execute(get_core_writer_address(), usd_transfer_corewriter_calldata);
+
+	// Create updated skeleton with incremented nonce for Action 2
+	let mut skeleton_action2 = skeleton_user_op.clone();
+	skeleton_action2.nonce = current_nonce;
+	skeleton_action2.init_code = "0x".to_string();
+
+	let usd_transfer_tx_hash = submit_corewriter_userop(
+		ctx.clone(),
+		&omni_account,
+		&skeleton_action2,
+		chain_id,
+		wallet_index,
+		usd_transfer_calldata,
+		client_id,
+	)
+	.await?;
+
+	info!("Action 2: USD class transfer submitted: {:?}", usd_transfer_tx_hash);
+
+	// Get initial perp balance before transfer
+	let initial_perp_balance = hypercore_client
+		.get_perp_clearinghouse_state(smart_wallet_address_str)
+		.await
+		.map_err(|e| {
+			error!("Failed to get initial perp balance: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to query perp balance: {}", e)))
+		})?
+		.cross_margin_summary
+		.account_value
+		.parse::<f64>()
+		.map_err(|e| {
+			error!("Failed to parse initial perp balance: {}", e);
+			NativeTaskError::InternalError(Some(format!("Failed to parse perp balance: {}", e)))
+		})?;
+
+	info!(
+		"Action 2: Initial perp balance: {:.2} USDC, expecting increase of {:.2} USDC",
+		initial_perp_balance, usdc_for_perp
+	);
+
+	// Wait for USD transfer to complete by polling for perp account balance increase
+	info!(
+		"Polling HyperCore API for perp balance to increase by {:.2} USDC (from {:.2} to {:.2})...",
+		usdc_for_perp,
+		initial_perp_balance,
+		initial_perp_balance + usdc_for_perp
+	);
+	let actual_perp_balance = hypercore_client
+		.wait_for_perp_balance_increase(
+			smart_wallet_address_str,
+			initial_perp_balance,
+			usdc_for_perp,
+			20,
+		)
+		.await
+		.map_err(|e| {
+			error!("USD transfer to perp did not complete: {}", e);
+			NativeTaskError::InternalError(Some(format!("USD transfer failed: {}", e)))
+		})?;
+
+	info!(
+		"Action 2: USD class transfer completed successfully - perp account value: {:.2} USDC (increased by {:.2} from {:.2})",
+		actual_perp_balance, actual_perp_balance - initial_perp_balance, initial_perp_balance
+	);
+
+	// Print account state after Action 2
+	print_account_state(
+		&hypercore_client,
+		smart_wallet_address_str,
+		"After Action 2 - USD Transfer to Perp",
+	)
+	.await;
+
+	// Action 3: Open hedge position
+	current_nonce += 1;
+
+	// Calculate effective leverage used
+	let desired_leverage: f64 = 1.0 / (1.0 - lending_ratio_f64);
+	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
+
+	// Calculate perp size: (margin * leverage) / price
+	let hedge_size = (usdc_for_perp * effective_leverage) / perp_market_price;
+
+	info!(
+		"Calculated hedge size: {} (margin={:.2}, leverage={:.2}x, perp_price={:.2})",
+		hedge_size, usdc_for_perp, effective_leverage, perp_market_price
+	);
+
+	// Clamp size and price to comply with HyperLiquid tick/lot size rules
+	let clamped_hedge_size = clamp_size(hedge_size, perp_asset.sz_decimals);
+
+	// Use configured ratio for perp entry price
+	let target_hedge_price = perp_market_price * PERP_ENTRY_PRICE_RATIO;
+	let clamped_hedge_price = clamp_price(target_hedge_price, perp_asset.sz_decimals, false); // false = perp market
+
+	info!(
+		"Clamped values for hedge - size: {} -> {}, price: {} -> {}",
+		hedge_size, clamped_hedge_size, target_hedge_price, clamped_hedge_price
+	);
+
+	// Use CoreWriter encoding: 10^8 * human_readable_value
+	let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped hedge size: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped hedge size: {}", e)))
+	})?;
+	let clamped_hedge_price_f64 = clamped_hedge_price.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped hedge price: {}", e);
+		NativeTaskError::InternalError(Some(format!("Failed to parse clamped hedge price: {}", e)))
+	})?;
+
+	let hedge_size_units = (clamped_hedge_size_f64 * 100_000_000.0) as u64;
+	let hedge_price_units = (clamped_hedge_price_f64 * 100_000_000.0) as u64;
+
+	info!(
+		"Opening hedge position: margin={:.2} USDC, leverage={:.2}x (max={}), size_units={}, price_units={}, size_human={}, price_usdc={}",
+		usdc_for_perp, effective_leverage, perp_asset.max_leverage, hedge_size_units, hedge_price_units, clamped_hedge_size, clamped_hedge_price
+	);
+
+	let hedge_action =
+		build_perp_long_order(perp_asset_id, hedge_size_units, hedge_price_units, hedge_open_cloid);
+	let hedge_corewriter_calldata = encode_send_raw_action(hedge_action);
+
+	let hedge_calldata =
+		encode_omni_account_execute(get_core_writer_address(), hedge_corewriter_calldata);
+
+	// Create updated skeleton with incremented nonce for Action 3
+	// Clear init_code since wallet is already deployed after Action 1
+	let mut skeleton_action3 = skeleton_user_op.clone();
+	skeleton_action3.nonce = current_nonce;
+	skeleton_action3.init_code = "0x".to_string();
+
+	let hedge_tx_hash = submit_corewriter_userop(
+		ctx.clone(),
+		&omni_account,
+		&skeleton_action3,
+		chain_id,
+		wallet_index,
+		hedge_calldata,
+		client_id,
+	)
+	.await?;
+
+	info!("Action 3: Hedge position submitted with tx_hash: {:?}", hedge_tx_hash);
+
+	// Wait for order to be successfully opened (retrievable via HyperCore API)
+	info!("Polling HyperCore API to verify hedge order is opened (cloid: {})...", hedge_open_cloid);
+	let order_opened = hypercore_client
+		.wait_for_order(
+			smart_wallet_address_str,
+			&hedge_open_cloid.to_string(),
+			20,
+			hyperliquid::OrderWaitCondition::Opened,
+		)
+		.await
+		.map_err(|e| {
+			error!("Hedge order was not successfully opened: {}", e);
+			NativeTaskError::InternalError(Some(format!("Hedge order failed to open: {}", e)))
+		})?;
+
+	if !order_opened {
+		error!("Hedge order was rejected or canceled");
+		return Err(NativeTaskError::InternalError(Some(
+			"Hedge order was rejected or canceled".to_string(),
+		)));
+	}
+
+	info!("Action 3: Hedge order successfully opened");
+
+	// Print final account state after Action 3
+	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 3 - Hedge Open")
+		.await;
+
+	let usdc_received = format!("{:.2}", usdc_to_lend);
+
+	Ok(NativeTaskOk::RequestLoan {
+		spot_sell_cloid: spot_sell_cloid.to_string(),
+		hedge_open_cloid: hedge_open_cloid.to_string(),
+		usdc_received,
+		spot_sell_tx_hash,
+		hedge_open_tx_hash: None,
+	})
+}
+
+async fn submit_corewriter_userop<
+	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<
+		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	>,
+	omni_account: &executor_primitives::AccountId,
+	skeleton_user_op: &executor_core::types::SerializablePackedUserOperation,
+	chain_id: u64,
+	wallet_index: u32,
+	call_data: String,
+	client_id: &str,
+) -> Result<Option<String>, NativeTaskError> {
+	use executor_core::types::SerializablePackedUserOperation;
+	use hyperliquid::*;
+
+	let smart_wallet_address = &skeleton_user_op.sender;
+
+	let entry_point_client = ctx.get_entry_point_client(chain_id).ok_or_else(|| {
+		error!("No EntryPoint client for chain_id: {}", chain_id);
+		NativeTaskError::ChainNotSupported(chain_id)
+	})?;
+
+	// Nonce handling: Always use nonce from skeleton_user_op and increment locally between actions
+	// The skeleton_user_op.nonce comes from RPC initially, then caller increments it for each subsequent action
+	// TODO: This assumes no concurrent transactions are sent from this smart wallet at the same time
+	// If concurrent transactions are possible, we need to implement proper nonce synchronization
+	let nonce = skeleton_user_op.nonce;
+	info!("Using nonce {} for smart wallet {}", nonce, smart_wallet_address);
+
+	// Use gas settings from skeleton UserOp if provided, otherwise calculate
+	let (gas_fees, account_gas_limits, pre_verification_gas) =
+		if !skeleton_user_op.gas_fees.is_empty()
+			&& skeleton_user_op.gas_fees != "0x"
+			&& !skeleton_user_op.account_gas_limits.is_empty()
+			&& skeleton_user_op.account_gas_limits != "0x"
+		{
+			info!("Using gas settings from skeleton UserOp");
+			(
+				skeleton_user_op.gas_fees.clone(),
+				skeleton_user_op.account_gas_limits.clone(),
+				skeleton_user_op.pre_verification_gas,
+			)
+		} else {
+			info!("Calculating gas fees");
+			let (max_fee_per_gas, max_priority_fee_per_gas) =
+				entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
+					error!("Failed to calculate gas fees: {:?}", e);
+					NativeTaskError::InternalError(Some("Failed to calculate gas fees".to_string()))
+				})?;
+			(
+				pack_gas_fees(max_fee_per_gas.to::<u128>(), max_priority_fee_per_gas.to::<u128>()),
+				pack_account_gas_limits(1_000_000, 2_000_000),
+				100_000,
+			)
+		};
+
+	// Init_code handling: Use whatever is in skeleton_user_op (empty or not)
+	// For first action, skeleton contains init_code if wallet needs creation
+	// For subsequent actions, skeleton should have empty init_code since wallet is already deployed
+	let init_code = skeleton_user_op.init_code.clone();
+
+	// Build UserOp
+	let user_op = SerializablePackedUserOperation {
+		sender: smart_wallet_address.to_string(),
+		nonce,
+		init_code,
+		call_data,
+		account_gas_limits,
+		pre_verification_gas,
+		gas_fees,
+		paymaster_and_data: if !skeleton_user_op.paymaster_and_data.is_empty()
+			&& skeleton_user_op.paymaster_and_data != "0x"
+		{
+			skeleton_user_op.paymaster_and_data.clone()
+		} else {
+			encode_simple_paymaster()
+		},
+		signature: None, // Will be signed by SubmitUserOp handler
+	};
+
+	// Submit via existing SubmitUserOp handler
+	let wrapper = executor_core::native_task::NativeTaskWrapper::new(
+		executor_core::native_task::NativeTask::SubmitUserOp(
+			omni_account.clone(),
+			vec![user_op],
+			chain_id,
+			wallet_index,
+		),
+		None,
+		None,
+		client_id.to_string(),
+	);
+
+	match Box::pin(handle_native_task(ctx, wrapper)).await {
+		Ok(NativeTaskOk::SubmitUserOp(tx_hash)) => Ok(tx_hash),
+		Ok(_) => Err(NativeTaskError::InternalError(Some(
+			"Unexpected response from SubmitUserOp".to_string(),
+		))),
+		Err(e) => Err(e),
 	}
 }
 

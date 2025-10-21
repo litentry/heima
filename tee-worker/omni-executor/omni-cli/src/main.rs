@@ -191,7 +191,7 @@ enum Commands {
 
 	/// Request JWT token for authentication
 	RequestJwt {
-		#[arg(long)]
+		#[arg(long, default_value = "wildmeta")]
 		client_id: String,
 
 		#[arg(long)]
@@ -212,7 +212,7 @@ enum Commands {
 
 	/// Request email verification code
 	RequestEmailVerificationCode {
-		#[arg(long)]
+		#[arg(long, default_value = "wildmeta")]
 		client_id: String,
 
 		#[arg(long)]
@@ -230,7 +230,7 @@ enum Commands {
 		#[arg(long)]
 		omni_account: String,
 
-		#[arg(long)]
+		#[arg(long, default_value = "wildmeta")]
 		client_id: String,
 
 		#[arg(long)]
@@ -284,7 +284,7 @@ enum Commands {
 		)]
 		oa_type: String,
 
-		#[arg(long)]
+		#[arg(long, default_value = "wildmeta")]
 		client_id: String,
 
 		#[arg(long)]
@@ -314,7 +314,7 @@ enum Commands {
 		)]
 		oa_type: String,
 
-		#[arg(long)]
+		#[arg(long, default_value = "wildmeta")]
 		client_id: String,
 
 		#[arg(long)]
@@ -341,7 +341,7 @@ enum Commands {
 		#[arg(long)]
 		email: String,
 
-		#[arg(long)]
+		#[arg(long, default_value = "wildmeta")]
 		client_id: String,
 	},
 

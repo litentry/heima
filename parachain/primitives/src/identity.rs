@@ -335,6 +335,9 @@ pub enum Identity {
 
 	#[codec(index = 10)]
 	Passkey(IdentityString),
+
+	#[codec(index = 11)]
+	Apple(IdentityString),
 }
 
 impl Identity {
@@ -348,6 +351,7 @@ impl Identity {
 				| Self::Google(..)
 				| Self::Pumpx(..)
 				| Self::Passkey(..)
+				| Self::Apple(..)
 		)
 	}
 
@@ -383,7 +387,8 @@ impl Identity {
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
-			| Identity::Passkey(_) => Vec::new(),
+			| Identity::Passkey(_)
+			| Identity::Apple(_) => Vec::new(),
 		}
 	}
 
@@ -402,7 +407,8 @@ impl Identity {
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
-			| Identity::Passkey(_) => networks.is_empty(),
+			| Identity::Passkey(_)
+			| Identity::Apple(_) => networks.is_empty(),
 		}
 	}
 
@@ -425,6 +431,7 @@ impl Identity {
 			| Identity::Github(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
+			| Identity::Apple(_)
 			| Identity::Pumpx(_)
 			| Identity::Passkey(_) => None,
 		}
@@ -482,6 +489,10 @@ impl Identity {
 			},
 			Identity::Google(handle) => {
 				hasher.update(b"google");
+				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+			},
+			Identity::Apple(handle) => {
+				hasher.update(b"apple");
 				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
 			},
 			Identity::Pumpx(handle) => {
@@ -594,6 +605,11 @@ impl Identity {
 					str::from_utf8(handle.inner_ref())
 						.map_err(|_| "google handle conversion error")?
 				),
+				Identity::Apple(handle) => format!(
+					"apple:{}",
+					str::from_utf8(handle.inner_ref())
+						.map_err(|_| "apple handle conversion error")?
+				),
 				Identity::Pumpx(handle) => format!(
 					"pumpx:{}",
 					str::from_utf8(handle.inner_ref())
@@ -629,6 +645,9 @@ impl Identity {
 			Web2IdentityType::Google => {
 				Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
 			},
+			Web2IdentityType::Apple => {
+				Identity::Apple(IdentityString::new(handle.as_bytes().to_vec()))
+			},
 			Web2IdentityType::Pumpx => {
 				Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
 			},
@@ -646,6 +665,7 @@ pub enum Web2IdentityType {
 	Github,
 	Email,
 	Google,
+	Apple,
 	Pumpx,
 	Passkey,
 }
@@ -726,6 +746,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => true,
+					Identity::Apple(..) => true,
 					Identity::Pumpx(..) => true,
 					Identity::Passkey(..) => true,
 				}
@@ -748,6 +769,7 @@ mod tests {
 					Identity::Bitcoin(..) => true,
 					Identity::Solana(..) => true,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -770,6 +792,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -792,6 +815,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -814,6 +838,7 @@ mod tests {
 					Identity::Bitcoin(..) => true,
 					Identity::Solana(..) => false,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
@@ -836,6 +861,7 @@ mod tests {
 					Identity::Bitcoin(..) => false,
 					Identity::Solana(..) => true,
 					Identity::Google(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Pumpx(..) => false,
 					Identity::Passkey(..) => false,
 				}
