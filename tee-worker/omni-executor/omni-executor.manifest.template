@@ -70,8 +70,10 @@ loader.env.OE_MAILER_TYPE_WILDMETA = { passthrough = true }
 loader.env.OE_MAILER_API_KEY_WILDMETA = { passthrough = true }
 loader.env.OE_MAILER_FROM_EMAIL_WILDMETA = { passthrough = true }
 loader.env.OE_MAILER_FROM_NAME_WILDMETA = { passthrough = true }
-loader.env.OE_GOOGLE_CLIENT_ID = { passthrough = true }
-loader.env.OE_GOOGLE_CLIENT_SECRET = { passthrough = true }
+loader.env.OE_GOOGLE_CLIENT_ID_WILDMETA = { passthrough = true }
+loader.env.OE_GOOGLE_CLIENT_SECRET_WILDMETA = { passthrough = true }
+loader.env.OE_APPLE_CLIENT_ID_WILDMETA = { passthrough = true }
+loader.env.OE_APPLE_CLIENT_SECRET_WILDMETA = { passthrough = true }
 loader.env.OE_ETHEREUM_URL = { passthrough = true }
 loader.env.OE_SOLANA_URL = { passthrough = true }
 loader.env.OE_BSC_URL = { passthrough = true }
