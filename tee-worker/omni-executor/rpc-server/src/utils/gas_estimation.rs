@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::native_task_types::NativeTaskOk;
+use crate::native_task_types::GasEstimateResponse;
 use crate::utils::paymaster::calculate_erc20_token_cost;
 use crate::utils::user_op::pack_account_gas_limits;
 use aa_contracts_client::EntryPointClient;
@@ -53,7 +53,7 @@ pub async fn estimate_user_op_gas(
 	user_op: aa_contracts_client::PackedUserOperation,
 	chain_id: ChainId,
 	binance_api: &dyn BinancePaymasterApi,
-) -> Result<NativeTaskOk, String> {
+) -> Result<GasEstimateResponse, String> {
 	// Step 1: Simulate validation to get base gas requirements
 	let validation_result = entry_point_client
 		.simulate_validation(user_op.clone())
@@ -113,7 +113,7 @@ pub async fn estimate_user_op_gas(
 	})?;
 
 	// Build initial response with gas estimates
-	let gas_response = NativeTaskOk::EstimateUserOpGas {
+	let gas_response = GasEstimateResponse {
 		call_gas_limit,
 		verification_gas_limit,
 		pre_verification_gas,
@@ -139,7 +139,7 @@ pub async fn estimate_user_op_gas(
 	};
 
 	// Update response with token cost estimate
-	let final_response = NativeTaskOk::EstimateUserOpGas {
+	let final_response = GasEstimateResponse {
 		call_gas_limit,
 		verification_gas_limit,
 		pre_verification_gas,

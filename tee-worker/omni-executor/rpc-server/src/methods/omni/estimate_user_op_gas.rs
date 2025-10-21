@@ -16,7 +16,6 @@
 
 use super::common::PumpxRpcError;
 use crate::detailed_error::DetailedError;
-use crate::native_task_types::NativeTaskOk;
 use crate::server::RpcContext;
 use crate::utils::gas_estimation::estimate_user_op_gas;
 use crate::utils::user_op::convert_to_packed_user_op;
@@ -159,18 +158,9 @@ pub fn register_estimate_user_op_gas<
 
 			// Process response
 			match result {
-				Ok(NativeTaskOk::EstimateUserOpGas {
-					call_gas_limit,
-					verification_gas_limit,
-					pre_verification_gas,
-					paymaster_verification_gas_limit,
-					paymaster_post_op_gas_limit,
-					max_fee_per_gas,
-					max_priority_fee_per_gas,
-					estimated_token_cost,
-				}) => {
+				Ok(gas_estimate) => {
 					// Convert token cost estimate to RPC format if present
-					let token_cost_info = estimated_token_cost.map(|cost| {
+					let token_cost_info = gas_estimate.estimated_token_cost.map(|cost| {
 						// Format the amount as a human-readable value
 						let formatted_amount = format_token_amount(cost.amount, cost.decimals);
 
@@ -185,23 +175,19 @@ pub fn register_estimate_user_op_gas<
 					});
 
 					Ok(EstimateUserOpGasResponse {
-						call_gas_limit: call_gas_limit.to_string(),
-						verification_gas_limit: verification_gas_limit.to_string(),
-						pre_verification_gas: pre_verification_gas.to_string(),
-						paymaster_verification_gas_limit: paymaster_verification_gas_limit
+						call_gas_limit: gas_estimate.call_gas_limit.to_string(),
+						verification_gas_limit: gas_estimate.verification_gas_limit.to_string(),
+						pre_verification_gas: gas_estimate.pre_verification_gas.to_string(),
+						paymaster_verification_gas_limit: gas_estimate
+							.paymaster_verification_gas_limit
 							.to_string(),
-						paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
-						max_fee_per_gas: max_fee_per_gas.to_string(),
-						max_priority_fee_per_gas: max_priority_fee_per_gas.to_string(),
+						paymaster_post_op_gas_limit: gas_estimate
+							.paymaster_post_op_gas_limit
+							.to_string(),
+						max_fee_per_gas: gas_estimate.max_fee_per_gas.to_string(),
+						max_priority_fee_per_gas: gas_estimate.max_priority_fee_per_gas.to_string(),
 						estimated_token_cost: token_cost_info,
 					})
-				},
-				Ok(_) => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(DetailedError::unexpected_response_type(
-						"EstimateUserOpGas response",
-						"Unknown response type",
-					)))
 				},
 				Err(e) => {
 					error!("Gas estimation failed: {}", e);

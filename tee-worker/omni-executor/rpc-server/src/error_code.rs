@@ -1,7 +1,5 @@
 // we should use -32000 to -32099 for implementation defined error codes,
 // see https://www.jsonrpc.org/specification#error_object
-use crate::native_task_types::{NativeTaskError, PumpxApiError, PumpxSignerError};
-use tracing::error;
 
 // Standard JSON-RPC error codes
 pub const PARSE_ERROR_CODE: i32 = -32700;
@@ -68,46 +66,3 @@ pub const UNEXPECTED_RESPONSE_TYPE_CODE: i32 = -32180;
 pub const INVALID_USER_OPERATION_CODE: i32 = -32201;
 pub const GAS_ESTIMATION_FAILED_CODE: i32 = -32202;
 pub const SIGNATURE_SERVICE_UNAVAILABLE_CODE: i32 = -32203;
-
-pub fn get_native_task_error_code(error: &NativeTaskError) -> i32 {
-	match error {
-		NativeTaskError::UnauthorizedSender => UNAUTHORIZED_SENDER_CODE,
-		NativeTaskError::AuthTokenCreationFailed => AUTH_TOKEN_CREATION_FAILED_CODE,
-		NativeTaskError::InvalidMemberIdentity => INVALID_MEMBER_IDENTITY_CODE,
-		NativeTaskError::ValidationDataVerificationFailed => {
-			VALIDATION_DATA_VERIFICATION_FAILED_CODE
-		},
-		NativeTaskError::UnsupportedIdentityType => UNSUPPORTED_IDENTITY_TYPE_CODE,
-		NativeTaskError::PumpxApiError(api_error) => match api_error {
-			PumpxApiError::GoogleCodeVerificationFailed => {
-				PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE
-			},
-			PumpxApiError::UserConnectionFailed => PUMPX_API_USER_CONNECTION_FAILED_CODE,
-			PumpxApiError::UnknownError => PUMPX_API_ERROR_CODE,
-			PumpxApiError::AddWalletFailed => PUMPX_API_ADD_WALLET_FAILED_CODE,
-			PumpxApiError::CreateTransferUnsignedTxFailed => {
-				PUMPX_API_CREATE_TRANSFER_UNSIGNED_TX_FAILED_CODE
-			},
-			PumpxApiError::SendTransferTxFailed => PUMPX_API_SEND_TRANSFER_TX_FAILED_CODE,
-			PumpxApiError::InvalidInput => PUMPX_API_INVALID_INPUT_FAILED_CODE,
-			PumpxApiError::CreateTransferTxFailed => PUMPX_API_CREATE_TRANSFER_TX_FAILED_CODE,
-			PumpxApiError::GetAccountUserIdFailed => PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-		},
-		NativeTaskError::PumpxSignerError(signer_error) => match signer_error {
-			PumpxSignerError::RequestSignatureFailed => PUMPX_SIGNER_REQUEST_SIGNATURE_FAILED_CODE,
-			PumpxSignerError::RequestWalletFailed => PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
-		},
-		NativeTaskError::InternalError(_) => {
-			error!("Internal error: {:?}", error);
-			// This should not happen, we return the generic interal error code already from the api
-			INTERNAL_ERROR_CODE
-		},
-		NativeTaskError::IntentNonceMismatch => INTENT_NONCE_MISMATCH_ERROR_CODE,
-		NativeTaskError::UnsupportedChain => INVALID_CHAIN_ID_CODE,
-
-		NativeTaskError::ChainNotSupported(_) => INVALID_CHAIN_ID_CODE,
-		NativeTaskError::InvalidUserOperation(_) => INVALID_USER_OPERATION_CODE,
-		NativeTaskError::GasEstimationFailed => GAS_ESTIMATION_FAILED_CODE,
-		NativeTaskError::SignatureServiceUnavailable => SIGNATURE_SERVICE_UNAVAILABLE_CODE,
-	}
-}

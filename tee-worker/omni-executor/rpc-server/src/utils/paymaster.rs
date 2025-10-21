@@ -19,7 +19,7 @@ use binance_api::BinancePaymasterApi;
 use std::collections::HashMap;
 use tracing::{debug, error, info};
 
-use crate::native_task_types::{NativeTaskOk, TokenCostEstimate};
+use crate::native_task_types::{GasEstimateResponse, TokenCostEstimate};
 
 // ============================================================================
 // ERC20 Paymaster Exchange Rate Processing
@@ -335,7 +335,7 @@ pub async fn process_erc20_paymaster_data(
 pub async fn calculate_erc20_token_cost(
 	binance_api: &dyn BinancePaymasterApi,
 	paymaster_and_data: &Bytes,
-	gas_estimates: &NativeTaskOk,
+	gas_estimates: &GasEstimateResponse,
 	user_op: &aa_contracts_client::PackedUserOperation,
 	chain_id: u64,
 ) -> Option<TokenCostEstimate> {
@@ -373,32 +373,12 @@ pub async fn calculate_erc20_token_cost(
 		},
 	};
 
-	// Extract gas limits from estimates (pattern match on NativeTaskOk)
-	let (
-		call_gas,
-		verification_gas,
-		pre_verification_gas,
-		paymaster_verification_gas,
-		paymaster_post_op_gas,
-	) = if let NativeTaskOk::EstimateUserOpGas {
-		call_gas_limit,
-		verification_gas_limit,
-		pre_verification_gas,
-		paymaster_verification_gas_limit,
-		paymaster_post_op_gas_limit,
-		..
-	} = gas_estimates
-	{
-		(
-			*call_gas_limit,
-			*verification_gas_limit,
-			*pre_verification_gas,
-			*paymaster_verification_gas_limit,
-			*paymaster_post_op_gas_limit,
-		)
-	} else {
-		return None;
-	};
+	// Extract gas limits from estimates
+	let call_gas = gas_estimates.call_gas_limit;
+	let verification_gas = gas_estimates.verification_gas_limit;
+	let pre_verification_gas = gas_estimates.pre_verification_gas;
+	let paymaster_verification_gas = gas_estimates.paymaster_verification_gas_limit;
+	let paymaster_post_op_gas = gas_estimates.paymaster_post_op_gas_limit;
 
 	// Extract gas price from the UserOp's gasFees field
 	// gasFees format: maxFeePerGas (16 bytes) | maxPriorityFeePerGas (16 bytes)

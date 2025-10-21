@@ -71,7 +71,7 @@ pub fn register_add_wallet<
 					error!("Failed to add wallet through Pumpx API: {:?}", e);
 					PumpxRpcError::from(
 						DetailedError::new(
-							INTERNAL_ERROR_CODE,
+							PUMPX_API_ADD_WALLET_FAILED_CODE,
 							"Failed to add wallet through Pumpx API",
 						)
 						.with_reason(format!("{:?}", e)),

@@ -3,7 +3,6 @@ use crate::{
 	detailed_error::DetailedError,
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
-	native_task_types::{NativeTaskError, NativeTaskOk, PumpxApiError},
 	server::RpcContext,
 	utils::pumpx::verify_google_code,
 	validation_helpers::{
@@ -140,71 +139,17 @@ pub fn register_transfer_withdraw<
 			};
 
 			debug!("Calling pumpx create_transfer_tx, body {:?}", body);
-			let result = match ctx.pumpx_api.create_transfer_tx(&access_token, body, params.lang.clone()).await {
-				Ok(res) => Ok(NativeTaskOk::PumpxTransferWithdraw(res)),
-				Err(e) => {
+			let response = ctx.pumpx_api.create_transfer_tx(&access_token, body, params.lang.clone()).await
+				.map_err(|e| {
 					error!("Failed to create transfer tx: {}", e);
-					Err(NativeTaskError::PumpxApiError(PumpxApiError::CreateTransferTxFailed))
-				},
-			};
+					PumpxRpcError::from(DetailedError::new(
+						INTERNAL_ERROR_CODE,
+						"Failed to create transfer transaction"
+					).with_suggestion("Please check your transfer parameters and try again"))
+				})?;
 
-			match result {
-				Ok(NativeTaskOk::PumpxTransferWithdraw(response)) => {
-					check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
-					Ok(TransferWithdrawResponse { backend_response: response })
-				},
-				Ok(_) => {
-					error!("Unexpected response type from native task handler");
-					Err(DetailedError::unexpected_response_type(
-						"PumpxTransferWithdraw",
-						"Unknown"
-					).into())
-				},
-				Err(NativeTaskError::PumpxApiError(api_error)) => {
-					error!("Pumpx API error: {:?}", api_error);
-					match api_error {
-						PumpxApiError::GoogleCodeVerificationFailed => {
-							Err(PumpxRpcError::from(DetailedError::new(
-								PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
-								"Google code verification failed"
-							).with_suggestion("Please check your Google verification code and try again")))
-						},
-						PumpxApiError::CreateTransferTxFailed => {
-							Err(PumpxRpcError::from(DetailedError::new(
-								INTERNAL_ERROR_CODE,
-								"Failed to create transfer transaction"
-							).with_suggestion("Please check your transfer parameters and try again")))
-						},
-						_ => {
-							Err(PumpxRpcError::from(DetailedError::new(
-								INTERNAL_ERROR_CODE,
-								"Pumpx API error"
-							).with_reason(format!("{:?}", api_error))))
-						}
-					}
-				},
-				Err(NativeTaskError::ChainNotSupported(chain_id)) => {
-					error!("Chain not supported: {}", chain_id);
-					Err(PumpxRpcError::from(DetailedError::new(
-						INVALID_CHAIN_ID_CODE,
-						"Chain not supported"
-					).with_reason(format!("Chain ID {} is not supported", chain_id))))
-				},
-				Err(NativeTaskError::InternalError(msg)) => {
-					error!("Internal error: {:?}", msg);
-					Err(PumpxRpcError::from(DetailedError::new(
-						INTERNAL_ERROR_CODE,
-						"Internal error"
-					).with_reason(msg.unwrap_or_else(|| "Unknown internal error".to_string()))))
-				},
-				Err(e) => {
-					error!("Failed to create transfer withdraw: {:?}", e);
-					Err(PumpxRpcError::from(DetailedError::new(
-						INTERNAL_ERROR_CODE,
-						"Failed to create transfer withdraw"
-					).with_reason(format!("{:?}", e))))
-				},
-			}
+			check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
+			Ok(TransferWithdrawResponse { backend_response: response })
 		})
 		.expect("Failed to register omni_transferWithdraw method");
 }

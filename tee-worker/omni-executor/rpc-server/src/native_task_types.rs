@@ -27,6 +27,19 @@ pub struct TokenCostEstimate {
 	pub exchange_rate: u128,
 }
 
+/// Gas estimation response for UserOperation
+#[derive(Debug, Serialize, Deserialize, Clone, Encode, Decode, PartialEq, Eq)]
+pub struct GasEstimateResponse {
+	pub call_gas_limit: u128,
+	pub verification_gas_limit: u128,
+	pub pre_verification_gas: u128,
+	pub paymaster_verification_gas_limit: u128,
+	pub paymaster_post_op_gas_limit: u128,
+	pub max_fee_per_gas: u128,
+	pub max_priority_fee_per_gas: u128,
+	pub estimated_token_cost: Option<TokenCostEstimate>,
+}
+
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
 pub enum NativeTaskOk {
 	ExtrinsicReport {
