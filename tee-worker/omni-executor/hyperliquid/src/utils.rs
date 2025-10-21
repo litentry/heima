@@ -10,6 +10,7 @@ use tracing::debug;
 ///
 /// # Examples
 /// ```
+/// use hyperliquid::validate_size;
 /// // sz_decimals = 0 (integer only)
 /// assert!(validate_size(1.0, 0)); // OK: truncates to 1
 /// assert!(validate_size(1.9, 0)); // OK: truncates to 1 (no % check needed)
