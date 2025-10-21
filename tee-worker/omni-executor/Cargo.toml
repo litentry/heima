@@ -13,6 +13,7 @@ members = [
     "executor-primitives",
     "heima/authentication",
     "heima/identity-verification",
+    "hyperliquid",
     "intent/asset-lock",
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
@@ -50,6 +51,7 @@ chrono = "0.4.40"
 ciborium = "0.2"
 clap = "4.5.17"
 email_address = "0.2"
+ethabi = "18.0"
 ethers = "2.0"
 futures = "0.3.31"
 hex = "0.4"
@@ -112,6 +114,7 @@ executor-primitives = { path = "executor-primitives" }
 executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
+hyperliquid = { path = "hyperliquid" }
 intent-asset-lock = { path = "intent/asset-lock" }
 intent-token-query = { path = "intent/token-query" }
 mock-server = { path = "mock-server" }

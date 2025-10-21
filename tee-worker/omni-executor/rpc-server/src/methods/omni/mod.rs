@@ -87,6 +87,11 @@ mod verify_email_verification_code_test;
 #[cfg(feature = "test-endpoints")]
 use verify_email_verification_code_test::*;
 
+#[cfg(feature = "test-endpoints")]
+mod request_loan_test;
+#[cfg(feature = "test-endpoints")]
+use request_loan_test::*;
+
 pub fn register_omni<
 	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
@@ -129,4 +134,7 @@ pub fn register_omni<
 
 	#[cfg(feature = "test-endpoints")]
 	register_verify_email_verification_code_test(module);
+
+	#[cfg(feature = "test-endpoints")]
+	register_request_loan_test(module);
 }

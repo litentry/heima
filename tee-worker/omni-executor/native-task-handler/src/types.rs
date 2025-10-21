@@ -63,6 +63,13 @@ pub enum NativeTaskOk {
 		max_priority_fee_per_gas: u128,
 		estimated_token_cost: Option<TokenCostEstimate>,
 	},
+	RequestLoan {
+		spot_sell_cloid: String,
+		hedge_open_cloid: String,
+		usdc_received: String, // human-readable USDC amount received
+		spot_sell_tx_hash: Option<String>,
+		hedge_open_tx_hash: Option<String>,
+	},
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]

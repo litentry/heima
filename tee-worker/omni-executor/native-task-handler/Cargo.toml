@@ -24,6 +24,7 @@ executor-primitives = { workspace = true }
 executor-storage = { workspace = true }
 heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
+hyperliquid = { workspace = true }
 pumpx = { workspace = true }
 signer-client = { workspace = true }
 sp-core = { workspace = true }
