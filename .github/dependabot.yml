@@ -5,6 +5,10 @@ updates:
       - "/parachain"
       - "/tee-worker/omni-executor"
     labels: ["automated-pr"]
+    groups:
+      cargo:
+        patterns:
+          - "*"
     # Handle updates for crates from github.com/paritytech/substrate manually.
     ignore:
       - dependency-name: "substrate-*"
