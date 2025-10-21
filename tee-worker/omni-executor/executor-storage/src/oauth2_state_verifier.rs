@@ -1,5 +1,5 @@
 use crate::Storage;
-use executor_primitives::Hash;
+use executor_primitives::{Hash, OAuth2VerificationData};
 use rocksdb::DB;
 use std::sync::Arc;
 
@@ -15,7 +15,7 @@ impl OAuth2StateVerifierStorage {
 	}
 }
 
-impl Storage<Hash, String> for OAuth2StateVerifierStorage {
+impl Storage<Hash, OAuth2VerificationData> for OAuth2StateVerifierStorage {
 	fn db(&self) -> Arc<crate::StorageDB> {
 		self.db.clone()
 	}

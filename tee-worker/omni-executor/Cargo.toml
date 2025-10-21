@@ -70,7 +70,7 @@ parity-scale-codec = "3.6.12"
 rand = "0.8.5"
 regex = "1.7"
 reqwest = { version = "0.12", features = ["json"] }
-ring = "0.16.20"
+ring = "0.17.14"
 rsa = "0.9.7"
 ruint = "1.13.1"
 rust_decimal = "1.37.1"

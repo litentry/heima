@@ -10,8 +10,8 @@ use get_health::*;
 mod get_next_intent_id;
 use get_next_intent_id::*;
 
-mod get_oauth2_google_authorization_url;
-use get_oauth2_google_authorization_url::*;
+mod get_oauth2_authorization_data;
+use get_oauth2_authorization_data::*;
 
 mod get_shielding_key;
 use get_shielding_key::*;
@@ -83,6 +83,11 @@ mod submit_user_op_test;
 use submit_user_op_test::*;
 
 #[cfg(feature = "test-endpoints")]
+mod verify_email_verification_code_test;
+#[cfg(feature = "test-endpoints")]
+use verify_email_verification_code_test::*;
+
+#[cfg(feature = "test-endpoints")]
 mod request_loan_test;
 #[cfg(feature = "test-endpoints")]
 use request_loan_test::*;
@@ -101,7 +106,7 @@ pub fn register_omni<
 	register_get_shielding_key(module);
 	register_submit_native_task(module);
 	register_request_email_verification_code(module);
-	register_get_oauth2_google_authorization_url(module);
+	register_get_oauth2_authorization_data(module);
 	register_get_web3_sign_in_message(module);
 	register_user_login(module);
 	register_login_with_oauth2(module);
@@ -126,6 +131,9 @@ pub fn register_omni<
 
 	#[cfg(feature = "test-endpoints")]
 	register_submit_user_op_test(module);
+
+	#[cfg(feature = "test-endpoints")]
+	register_verify_email_verification_code_test(module);
 
 	#[cfg(feature = "test-endpoints")]
 	register_request_loan_test(module);

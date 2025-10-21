@@ -1,5 +1,5 @@
-use crate::google_oauth2_factory::GoogleOAuth2Factory;
 use crate::mailer_factory::MailerFactory;
+use crate::oauth2_factory::OAuth2ConfigFactory;
 use crate::{
 	methods::register_methods,
 	middlewares::{HttpMiddleware, RpcMiddleware},
@@ -31,7 +31,7 @@ pub(crate) struct RpcContext<
 	pub shielding_key: ShieldingKey,
 	pub storage_db: Arc<StorageDB>,
 	pub mailer_factory: Arc<MailerFactory>,
-	pub google_oauth2_factory: Arc<GoogleOAuth2Factory>,
+	pub oauth2_factory: Arc<OAuth2ConfigFactory>,
 	pub jwt_rsa_private_key: Vec<u8>,
 	pub pumpx_api: Arc<Box<dyn PumpxApi>>,
 	// we could save copying client (and other objects) around when P-1527 is done
@@ -61,7 +61,7 @@ impl<
 		shielding_key: ShieldingKey,
 		storage_db: Arc<StorageDB>,
 		mailer_factory: Arc<MailerFactory>,
-		google_oauth2_factory: Arc<GoogleOAuth2Factory>,
+		oauth2_factory: Arc<OAuth2ConfigFactory>,
 		jwt_rsa_private_key: Vec<u8>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		signer_client: Arc<Box<dyn SignerClient>>,
@@ -81,7 +81,7 @@ impl<
 			shielding_key,
 			storage_db,
 			mailer_factory,
-			google_oauth2_factory,
+			oauth2_factory,
 			jwt_rsa_private_key,
 			pumpx_api,
 			signer_client,
@@ -146,13 +146,13 @@ pub async fn start_server<
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let config_loader_arc = Arc::new(config_loader.clone());
 	let mailer_factory = Arc::new(MailerFactory::new(config_loader_arc.clone()));
-	let google_oauth2_factory = Arc::new(GoogleOAuth2Factory::new(config_loader_arc));
+	let oauth2_factory = Arc::new(OAuth2ConfigFactory::new(config_loader_arc));
 
 	let ctx = RpcContext::new(
 		shielding_key,
 		storage_db,
 		mailer_factory,
-		google_oauth2_factory,
+		oauth2_factory,
 		jwt_rsa_private_key.clone(),
 		pumpx_api,
 		signer_client,
