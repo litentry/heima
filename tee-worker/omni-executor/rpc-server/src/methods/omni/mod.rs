@@ -131,6 +131,7 @@ pub fn register_omni<
 	#[cfg(feature = "test-endpoints")]
 	register_verify_email_verification_code_test(module);
 
-	#[cfg(feature = "test-endpoints")]
-	register_request_loan_test(module);
+	// TODO: Refactor handle_request_loan from native-task-handler to enable this test endpoint
+	// #[cfg(feature = "test-endpoints")]
+	// register_request_loan_test(module);
 }

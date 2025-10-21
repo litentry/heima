@@ -3,7 +3,9 @@ use crate::{
 	detailed_error::DetailedError,
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
+	native_task_types::{NativeTaskError, NativeTaskOk, PumpxApiError},
 	server::RpcContext,
+	utils::pumpx::verify_google_code,
 	validation_helpers::{
 		validate_amount, validate_chain_id, validate_ethereum_address, validate_omni_account_hex,
 		validate_omni_account_length, validate_token_address, validate_wallet_index,
@@ -13,10 +15,11 @@ use crate::{
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::PumxWalletIndex;
 use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
+use executor_storage::{HeimaJwtStorage, Storage};
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use native_task_handler::{handle_pumpx_transfer_withdraw, NativeTaskError, NativeTaskOk};
-use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
+use pumpx::methods::create_transfer_tx::{CreateTransferTxBody, CreateTransferTxResponse};
 use serde::Serialize;
 use tracing::{debug, error};
 
@@ -97,20 +100,53 @@ pub fn register_transfer_withdraw<
 			};
 			let omni_account = AccountId::from(address);
 
-			let result = handle_pumpx_transfer_withdraw(
-				ctx.to_task_handler_context(),
-				omni_account,
-				params.request_id,
-				params.chain_id,
-				params.wallet_index,
-				params.recipient_address,
-				params.token_ca,
-				params.amount,
+			// Inline handle_pumpx_transfer_withdraw logic
+			// 1. Verify we have a valid Pumpx "access" token for the user
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			let Ok(Some(access_token)) = storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+			else {
+				error!("Failed to get access_token within TransferWidthdraw");
+				return Err(PumpxRpcError::from(DetailedError::new(
+					INTERNAL_ERROR_CODE,
+					"Internal error"
+				).with_reason("Failed to get access token")));
+			};
+
+			// 2. Verify google code
+			let verify_success = verify_google_code(
+				ctx.pumpx_api.as_ref().as_ref(),
+				&access_token,
 				params.google_code,
-				params.lang,
-				user.client_id,
+				params.lang.clone(),
 			)
 			.await;
+
+			if !verify_success {
+				error!("Failed to verify google code within TransferWidthdraw");
+				return Err(PumpxRpcError::from(DetailedError::new(
+					PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
+					"Google code verification failed"
+				).with_suggestion("Please check your Google verification code and try again")));
+			}
+
+			// 3. Create a transfer tx and send to backend
+			let body = CreateTransferTxBody {
+				request_id: params.request_id,
+				chain_id: params.chain_id,
+				wallet_index: params.wallet_index,
+				recipient_address: params.recipient_address,
+				token_ca: params.token_ca,
+				amount: params.amount,
+			};
+
+			debug!("Calling pumpx create_transfer_tx, body {:?}", body);
+			let result = match ctx.pumpx_api.create_transfer_tx(&access_token, body, params.lang.clone()).await {
+				Ok(res) => Ok(NativeTaskOk::PumpxTransferWithdraw(res)),
+				Err(e) => {
+					error!("Failed to create transfer tx: {}", e);
+					Err(NativeTaskError::PumpxApiError(PumpxApiError::CreateTransferTxFailed))
+				},
+			};
 
 			match result {
 				Ok(NativeTaskOk::PumpxTransferWithdraw(response)) => {
@@ -127,13 +163,13 @@ pub fn register_transfer_withdraw<
 				Err(NativeTaskError::PumpxApiError(api_error)) => {
 					error!("Pumpx API error: {:?}", api_error);
 					match api_error {
-						native_task_handler::PumpxApiError::GoogleCodeVerificationFailed => {
+						PumpxApiError::GoogleCodeVerificationFailed => {
 							Err(PumpxRpcError::from(DetailedError::new(
 								PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
 								"Google code verification failed"
 							).with_suggestion("Please check your Google verification code and try again")))
 						},
-						native_task_handler::PumpxApiError::CreateTransferTxFailed => {
+						PumpxApiError::CreateTransferTxFailed => {
 							Err(PumpxRpcError::from(DetailedError::new(
 								INTERNAL_ERROR_CODE,
 								"Failed to create transfer transaction"

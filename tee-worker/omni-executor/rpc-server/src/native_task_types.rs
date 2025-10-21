@@ -1,5 +1,9 @@
 use executor_primitives::Hash;
 use parity_scale_codec::{Decode, Encode};
+use pumpx::methods::add_wallet::AddWalletResponse;
+use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
+use pumpx::methods::user_connect::UserConnectResponse;
+use serde::{Deserialize, Serialize};
 
 // Simple replacement for TransactionStatus
 #[derive(Encode, Decode, Debug, PartialEq, Eq)]
@@ -9,10 +13,6 @@ pub enum TransactionStatus<Hash> {
 	Invalid,
 	Dropped,
 }
-use pumpx::methods::add_wallet::AddWalletResponse;
-use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
-use pumpx::methods::user_connect::UserConnectResponse;
-use serde::{Deserialize, Serialize};
 
 /// Information about estimated token cost for ERC20 paymaster operations
 #[derive(Debug, Serialize, Deserialize, Clone, Encode, Decode, PartialEq, Eq)]
@@ -108,3 +108,5 @@ pub enum PumpxSignerError {
 	RequestSignatureFailed,
 	RequestWalletFailed,
 }
+
+pub type NativeTaskResponse = Result<NativeTaskOk, NativeTaskError>;

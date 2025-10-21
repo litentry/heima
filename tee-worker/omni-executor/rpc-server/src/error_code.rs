@@ -1,6 +1,6 @@
 // we should use -32000 to -32099 for implementation defined error codes,
 // see https://www.jsonrpc.org/specification#error_object
-use native_task_handler::{NativeTaskError, PumpxApiError, PumpxSignerError};
+use crate::native_task_types::{NativeTaskError, PumpxApiError, PumpxSignerError};
 use tracing::error;
 
 // Standard JSON-RPC error codes

@@ -38,7 +38,6 @@ executor-storage = { workspace = true }
 heima-identity-verification = { workspace = true }
 intent-asset-lock = { workspace = true }
 mock-server = { workspace = true }
-native-task-handler = { workspace = true }
 pumpx = { workspace = true }
 rpc-server = { workspace = true }
 signer-client = { workspace = true }

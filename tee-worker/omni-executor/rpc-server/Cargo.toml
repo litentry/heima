@@ -40,7 +40,6 @@ heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
 heima-primitives = { workspace = true }
 heima-utils = { workspace = true }
-native-task-handler = { workspace = true }
 oauth-providers = { workspace = true }
 pumpx = { workspace = true }
 signer-client = { workspace = true }

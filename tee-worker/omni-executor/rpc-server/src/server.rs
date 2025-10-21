@@ -13,11 +13,9 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::aes256::Aes256Key;
 use executor_storage::{StorageDB, WildmetaTimestampStorage};
 use jsonrpsee::{server::Server, RpcModule};
-use native_task_handler::TaskHandlerContext;
 use pumpx::PumpxApi;
 use signer_client::SignerClient;
 use std::collections::HashMap;
-// Removed unused PhantomData import
 use std::marker::{Send, Sync};
 use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
@@ -97,25 +95,6 @@ impl<
 			aes256_key,
 			entry_point_clients,
 		}
-	}
-
-	pub fn to_task_handler_context(
-		&self,
-	) -> Arc<
-		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	> {
-		Arc::new(TaskHandlerContext::new(
-			self.storage_db.clone(),
-			self.jwt_rsa_private_key.clone(),
-			self.aes256_key,
-			self.ethereum_intent_executor.clone(),
-			self.solana_intent_executor.clone(),
-			self.cross_chain_intent_executor.clone(),
-			self.pumpx_api.clone(),
-			self.signer_client.clone(),
-			self.binance_api_client.clone(),
-			self.entry_point_clients.clone(),
-		))
 	}
 }
 

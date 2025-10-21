@@ -36,12 +36,12 @@ use executor_core::wallet_metrics::Wallet;
 use executor_core::wallet_metrics::{
 	start_wallet_metrics, WalletBalanceFetcher, WalletId, WalletMetrics, WalletNetworkType,
 };
+use executor_core::Aes256KeyStore;
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_storage::init_storage;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use native_task_handler::Aes256KeyStore;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};

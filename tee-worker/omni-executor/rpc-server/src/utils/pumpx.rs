@@ -14,18 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod aes256_key_store;
-pub mod ecdsa_key_store;
-pub mod ed25519_key_store;
-pub mod event_handler;
-pub mod fetcher;
-pub mod intent_executor;
-pub mod key_store;
-pub mod listener;
-pub mod native_task;
-pub mod shielding_key_store;
-pub mod sync_checkpoint_repository;
-pub mod types;
-pub mod wallet_metrics;
+use pumpx::PumpxApi;
+use tracing::{debug, error};
 
-pub use aes256_key_store::Aes256KeyStore;
+/// Verify a Google authentication code using the Pumpx API
+pub async fn verify_google_code(
+	pumpx_api: &dyn PumpxApi,
+	access_token: &str,
+	google_code: String,
+	language: Option<String>,
+) -> bool {
+	debug!("Calling pumpx verify_google_code, code: {}", google_code);
+	let verify_result = pumpx_api.verify_google_code(access_token, google_code, language).await;
+	verify_result.map_or_else(
+		|e| {
+			error!("Google code verification request failed: {:?}", e);
+			false
+		},
+		|res| {
+			res.data.result.map_or_else(
+				|| {
+					error!("Google code verification response result is none");
+					false
+				},
+				|success| success,
+			)
+		},
+	)
+}

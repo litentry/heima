@@ -16,7 +16,10 @@
 
 use super::common::PumpxRpcError;
 use crate::detailed_error::DetailedError;
+use crate::native_task_types::NativeTaskOk;
 use crate::server::RpcContext;
+use crate::utils::gas_estimation::estimate_user_op_gas;
+use crate::utils::user_op::convert_to_packed_user_op;
 use crate::validation_helpers::{
 	validate_ethereum_address, validate_omni_account_hex, validate_omni_account_length,
 };
@@ -25,10 +28,9 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
-use native_task_handler::{handle_estimate_user_op_gas, NativeTaskError, NativeTaskOk};
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 /// Format a token amount with decimals to a human-readable string
 fn format_token_amount(amount: u128, decimals: u8) -> String {
@@ -124,14 +126,34 @@ pub fn register_estimate_user_op_gas<
 			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
 				.map_err(PumpxRpcError::from)?;
 
-			// Call the handler directly
-			let result = handle_estimate_user_op_gas(
-				ctx.to_task_handler_context(),
-				account_id,
-				params.user_operation.clone(),
+			// Inlined handler logic from handle_estimate_user_op_gas
+			info!(
+				"Processing EstimateUserOpGas for account {:?}, wallet_index: {}, chain_id: {}",
+				account_id, params.wallet_index, params.chain_id
+			);
+
+			// Get EntryPoint client for this chain
+			let entry_point_client =
+				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
+					error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
+					PumpxRpcError::from(DetailedError::chain_not_supported(params.chain_id))
+				})?;
+
+			// Convert SerializablePackedUserOperation to PackedUserOperation
+			let packed_user_op =
+				convert_to_packed_user_op(params.user_operation.clone()).map_err(|e| {
+					error!("Failed to convert UserOperation: {}", e);
+					PumpxRpcError::from(DetailedError::invalid_user_operation_error(
+						"Invalid user operation format",
+					))
+				})?;
+
+			// Perform gas estimation
+			let result = estimate_user_op_gas(
+				entry_point_client.clone(),
+				packed_user_op,
 				params.chain_id,
-				params.wallet_index,
-				params.client_id,
+				ctx.binance_api_client.as_ref(),
 			)
 			.await;
 
@@ -181,36 +203,9 @@ pub fn register_estimate_user_op_gas<
 						"Unknown response type",
 					)))
 				},
-				Err(NativeTaskError::ChainNotSupported(chain_id)) => {
-					Err(PumpxRpcError::from(DetailedError::chain_not_supported(chain_id)))
-				},
-				Err(NativeTaskError::InvalidUserOperation(desc)) => {
-					Err(PumpxRpcError::from(DetailedError::invalid_user_operation_error(&desc)))
-				},
-				Err(NativeTaskError::GasEstimationFailed) => {
-					Err(PumpxRpcError::from(DetailedError::gas_estimation_failed()))
-				},
-				Err(NativeTaskError::InternalError(message)) => {
-					error!("Internal error in native task");
-					match message {
-						Some(msg) => Err(PumpxRpcError::from_code_and_message(
-							crate::error_code::INTERNAL_ERROR_CODE,
-							msg,
-						)),
-						None => Err(PumpxRpcError::from_error_code(
-							jsonrpsee::types::ErrorCode::InternalError,
-						)),
-					}
-				},
 				Err(e) => {
-					error!("Native task error: {:?}", e);
-					Err(PumpxRpcError::from(
-						DetailedError::new(
-							crate::error_code::INTERNAL_ERROR_CODE,
-							"Operation failed",
-						)
-						.with_suggestion("Please try again"),
-					))
+					error!("Gas estimation failed: {}", e);
+					Err(PumpxRpcError::from(DetailedError::gas_estimation_failed()))
 				},
 			}
 		})
