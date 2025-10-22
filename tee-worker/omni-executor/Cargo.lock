@@ -3998,6 +3998,7 @@ dependencies = [
  "executor-primitives",
  "parity-scale-codec",
  "rocksdb",
+ "serde",
  "tracing",
  "tracing-subscriber",
 ]

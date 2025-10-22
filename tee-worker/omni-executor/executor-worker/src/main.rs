@@ -470,6 +470,10 @@ async fn main() -> Result<(), ()> {
 			let wildmeta_timestamp_storage =
 				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
 
+			// Create loan record storage
+			let loan_record_storage =
+				Arc::new(executor_storage::LoanRecordStorage::new(storage_db.clone()));
+
 			// Parse wildmeta backend ECDSA public key from hex
 			let wildmeta_backend_ecdsa_pubkey = {
 				use executor_primitives::utils::hex::decode_hex;
@@ -520,6 +524,7 @@ async fn main() -> Result<(), ()> {
 				binance_api,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
+				loan_record_storage,
 				wildmeta_backend_ecdsa_pubkey,
 				evm_accounting_ecdsa_signer_key,
 				bundler_key_export_authorized_pubkey,

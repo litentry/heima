@@ -41,6 +41,7 @@ pub struct SubmitUserOpTestParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub omni_account: String,
+	#[allow(dead_code)]
 	pub client_id: String,
 }
 

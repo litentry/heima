@@ -16,6 +16,7 @@ use binance_api::BinancePaymasterApi;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
+use executor_storage::{LoanRecord, Storage};
 use hyperliquid::*;
 use jsonrpsee::RpcModule;
 use parity_scale_codec::Decode;
@@ -329,7 +330,7 @@ async fn submit_corewriter_userop<
 	chain_id: u64,
 	wallet_index: u32,
 	call_data: String,
-	client_id: &str,
+	_client_id: &str,
 ) -> Result<Option<String>, PumpxRpcError> {
 	let smart_wallet_address = &skeleton_user_op.sender;
 
@@ -864,6 +865,34 @@ async fn handle_request_loan_impl<
 		"USDC allocation: total_received={:.2}, for_perp={:.2}, to_lend={:.2}",
 		usdc_received, usdc_for_perp, usdc_to_lend
 	);
+
+	// Store loan record in storage
+	let loan_record = LoanRecord {
+		collateral_ticker: collateral_ticker.to_string(),
+		collateral_size: collateral_size_str.to_string(),
+		usdc_sold: format!("{:.2}", usdc_received),
+		usdc_loaned: format!("{:.2}", usdc_to_lend),
+		spot_sell_cloid: spot_sell_cloid.to_string(),
+		hedge_open_cloid: hedge_open_cloid.to_string(),
+	};
+
+	let storage_key = executor_storage::loan_record::Key {
+		account_id: omni_account.clone(),
+		nonce: skeleton_user_op.nonce as u64,
+	};
+
+	if ctx.loan_record_storage.insert(&storage_key, loan_record.clone()).is_err() {
+		error!(
+			"Failed to store loan record for omni_account {:?}, nonce {}",
+			omni_account, skeleton_user_op.nonce
+		);
+		// Don't fail the entire operation, just log the error
+	} else {
+		info!(
+			"Stored loan record for omni_account {:?}, nonce {}",
+			omni_account, skeleton_user_op.nonce
+		);
+	}
 
 	// Action 2: Move USDC into perps
 	let mut current_nonce = skeleton_user_op.nonce + 1;
