@@ -93,22 +93,13 @@ where
 	Ok(())
 }
 
-pub struct User {
-	pub omni_account: String,
-	#[allow(dead_code)]
-	pub client_id: String,
-}
-
 /// This is used to verify that the request is authenticated.
 /// If the RpcExtensions is not found, it indicates that the request is not authenticated.
 /// If the RpcExtensions is found, it contains the sender's omni account extracted from the JWT.
 /// Check rpc_middleware.rs
-pub fn check_auth(ext: &Extensions) -> Result<User, ()> {
+pub fn check_auth(ext: &Extensions) -> Result<String, ()> {
 	if let Some(rpc_extensions) = ext.get::<RpcExtensions>() {
-		return Ok(User {
-			omni_account: rpc_extensions.sender.clone(),
-			client_id: rpc_extensions.client_id.clone(),
-		});
+		return Ok(rpc_extensions.sender.clone());
 	}
 	Err(())
 }

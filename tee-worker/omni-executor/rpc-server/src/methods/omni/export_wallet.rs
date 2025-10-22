@@ -34,7 +34,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 ) {
 	module
 		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(DetailedError::new(
 					AUTH_VERIFICATION_FAILED_CODE,
@@ -52,14 +52,14 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 
 			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
+			let Ok(address) = Address32::from_hex(&omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from(DetailedError::new(
 					INTERNAL_ERROR_CODE,
 					"Internal error"
 				).with_reason("Failed to parse omni account from authentication token")));
 			};
-			let omni_account = AccountId::from(address);
+			let omni_account_id = AccountId::from(address);
 
 			let aes_key = ctx
 				.shielding_key
@@ -82,7 +82,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 
 			// Inlined handler logic from handle_pumpx_export_wallet
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) = storage.get(&(omni_account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
 				return Err(PumpxRpcError::from(
@@ -133,7 +133,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				.export_wallet(
 					chain,
 					params.wallet_index,
-					omni_account.clone().into(),
+					omni_account_id.clone().into(),
 					ctx.aes256_key.to_vec(),
 					params.wallet_address,
 				)
@@ -157,14 +157,14 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 			};
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
-			if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account) {
+			if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account_id) {
 				let profile = maybe_profile
 					.map(|mut p| {
 						p.wallet_exported = true;
 						p
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
-				if let Err(e) = omni_account_profile_storage.insert(&omni_account, profile) {
+				if let Err(e) = omni_account_profile_storage.insert(&omni_account_id, profile) {
 					error!("Failed to update pumpx account profile: {:?}", e);
 					return Err(PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")

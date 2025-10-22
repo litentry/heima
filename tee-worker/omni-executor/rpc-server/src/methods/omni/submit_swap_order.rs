@@ -110,7 +110,7 @@ pub fn register_submit_swap_order<
 ) {
 	module
 		.register_async_method("omni_submitSwapOrder", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
@@ -131,7 +131,7 @@ pub fn register_submit_swap_order<
 
 			debug!("Received omni_submitSwapOrder, params: {:?}", params);
 
-			let Ok(omni_account) = AccountId::from_str(&user.omni_account) else {
+			let Ok(omni_account_id) = AccountId::from_str(&omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from(
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
@@ -175,7 +175,7 @@ pub fn register_submit_swap_order<
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
-				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+				storage.get(&(omni_account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access token from storage");
 				return Err(PumpxRpcError::from(
@@ -291,7 +291,7 @@ pub fn register_submit_swap_order<
 			debug!("Intent requested, intent_id: {}", params.intent_id);
 
 			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
-			let stored_intent_id = match intent_id_storage.get(&omni_account) {
+			let stored_intent_id = match intent_id_storage.get(&omni_account_id) {
 				Ok(id) => id.unwrap_or_default(),
 				Err(_) => {
 					error!("Failed to read intent from store");
@@ -303,7 +303,7 @@ pub fn register_submit_swap_order<
 			};
 
 			if params.intent_id == stored_intent_id + 1 {
-				if intent_id_storage.insert(&omni_account, params.intent_id).is_err() {
+				if intent_id_storage.insert(&omni_account_id, params.intent_id).is_err() {
 					error!("Failed to save intent id");
 					return Err(PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
@@ -337,7 +337,7 @@ pub fn register_submit_swap_order<
 				Intent::Swap(..) => {
 					let response = match ctx
 						.cross_chain_intent_executor
-						.execute(&omni_account, params.intent_id, intent.clone())
+						.execute(&omni_account_id, params.intent_id, intent.clone())
 						.await
 					{
 						Ok((response, _)) => response,

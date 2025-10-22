@@ -29,7 +29,6 @@ accounting-contract-client = { workspace = true }
 binance-api = { workspace = true }
 config-loader = { workspace = true }
 cross-chain-intent-executor = { workspace = true }
-ethereum-intent-executor = { workspace = true }
 ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
@@ -42,7 +41,6 @@ pumpx = { workspace = true }
 rpc-server = { workspace = true }
 signer-client = { workspace = true }
 solana = { workspace = true }
-solana-intent-executor = { workspace = true }
 wildmeta-api = { workspace = true }
 
 [features]

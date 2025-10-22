@@ -46,7 +46,7 @@ pub fn register_transfer_withdraw<
 ) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(DetailedError::new(
 					AUTH_VERIFICATION_FAILED_CODE,
@@ -80,25 +80,25 @@ pub fn register_transfer_withdraw<
 			validate_amount(&params.amount, "amount")
 				.map_err(PumpxRpcError::from)?;
 
-			let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
+			let address_bytes = validate_omni_account_hex(&omni_account, "omni_account")
 				.map_err(PumpxRpcError::from)?;
 
 			validate_omni_account_length(&address_bytes, "omni_account")
 				.map_err(PumpxRpcError::from)?;
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
+			let Ok(address) = Address32::from_hex(&omni_account) else {
 				error!("Failed to parse from omni account after validation");
 				return Err(DetailedError::account_parse_error(
-					&user.omni_account,
+					&omni_account,
 					"Address32 conversion failed"
 				).into());
 			};
-			let omni_account = AccountId::from(address);
+			let omni_account_id = AccountId::from(address);
 
 			// Inline handle_pumpx_transfer_withdraw logic
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) = storage.get(&(omni_account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access_token within TransferWidthdraw");
 				return Err(PumpxRpcError::from(DetailedError::new(

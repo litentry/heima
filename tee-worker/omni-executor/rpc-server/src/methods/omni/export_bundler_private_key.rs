@@ -238,11 +238,12 @@ pub fn register_export_bundler_private_key<
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{hex_encode, start_server, ShieldingKey};
+	use crate::{start_server, ShieldingKey};
 	use binance_api::mocks::MockBinanceApiClient;
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_crypto::{ecdsa, PairTrait};
+	use executor_primitives::utils::hex::hex_encode;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
 	use pumpx::PumpxApiClient;
@@ -313,8 +314,6 @@ mod tests {
 		let wildmeta_timestamp_storage =
 			Arc::new(WildmetaTimestampStorage::new(storage_db.clone()));
 
-		let (solana_intent_executor, _) = MockedIntentExecutor::new();
-		let (ethereum_intent_executor, _) = MockedIntentExecutor::new();
 		let (cross_chain_intent_executor, _) = MockedIntentExecutor::new();
 
 		let aes_key = TEST_AES_KEY;
@@ -334,8 +333,6 @@ mod tests {
 			[0u8; 33],
 			bundler_key,
 			authorized_pubkey,
-			Arc::new(ethereum_intent_executor),
-			Arc::new(solana_intent_executor),
 			Arc::new(cross_chain_intent_executor),
 			aes_key,
 			Arc::new(entry_point_clients),

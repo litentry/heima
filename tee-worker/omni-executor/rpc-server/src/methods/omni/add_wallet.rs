@@ -25,7 +25,7 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 ) {
 	module
 		.register_async_method("omni_addWallet", |_params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
@@ -38,18 +38,18 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 
 			debug!("Received omni_addWallet");
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
+			let Ok(address) = Address32::from_hex(&omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from(
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 						.with_reason("Failed to parse omni account from authentication token"),
 				));
 			};
-			let omni_account = AccountId::from(address);
+			let omni_account_id = AccountId::from(address);
 
 			// Inlined handler logic from handle_pumpx_add_wallet
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) = storage.get(&(omni_account_id, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
 				return Err(PumpxRpcError::from(

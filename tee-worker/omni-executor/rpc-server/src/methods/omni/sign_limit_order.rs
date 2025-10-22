@@ -56,7 +56,7 @@ pub fn register_sign_limit_order_params<
 ) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
@@ -77,14 +77,14 @@ pub fn register_sign_limit_order_params<
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
+			let Ok(address) = Address32::from_hex(&omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from(
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 						.with_reason("Failed to parse omni account from authentication token"),
 				));
 			};
-			let omni_account = AccountId::from(address);
+			let omni_account_id = AccountId::from(address);
 
 			// Inline handle_pumpx_sign_limit_order logic
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
@@ -105,7 +105,7 @@ pub fn register_sign_limit_order_params<
 				.request_signatures(
 					chain,
 					params.wallet_index,
-					omni_account.into(),
+					omni_account_id.into(),
 					unsigned_tx_vec,
 				)
 				.await

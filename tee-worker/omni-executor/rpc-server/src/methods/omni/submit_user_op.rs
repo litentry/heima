@@ -57,7 +57,7 @@ pub fn register_submit_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 ) {
 	module
 		.register_async_method("omni_submitUserOp", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication failed")
@@ -81,16 +81,16 @@ pub fn register_submit_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			validate_user_operations(&params.user_operations).map_err(PumpxRpcError::from)?;
 
-			let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
+			let address_bytes = validate_omni_account_hex(&omni_account, "omni_account")
 				.map_err(PumpxRpcError::from)?;
 
 			validate_omni_account_length(&address_bytes, "omni_account")
 				.map_err(PumpxRpcError::from)?;
 
-			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
+			let omni_account_id = AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
 				error!("Failed to decode AccountId from bytes: {:?}", e);
 				PumpxRpcError::from(DetailedError::account_parse_error(
-					&user.omni_account,
+					&omni_account,
 					&format!("Failed to decode account: {:?}", e),
 				))
 			})?;
@@ -210,7 +210,7 @@ pub fn register_submit_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 						.request_signature(
 							ChainType::Evm,
 							params.wallet_index,
-							omni_account.clone().into(),
+							omni_account_id.clone().into(),
 							message_to_sign,
 						)
 						.await;

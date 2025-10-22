@@ -26,7 +26,6 @@ use clap::Parser;
 use cli::{Cli, Commands, ExportBundlerKeyArgs};
 use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
-use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
 use executor_core::ed25519_key_store::Ed25519KeyStore;
@@ -47,7 +46,6 @@ use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use rust_decimal::Decimal;
 use solana::SolanaRpcClient;
-use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::Path;
@@ -177,13 +175,6 @@ async fn main() -> Result<(), ()> {
 					config_loader.pumpx_signer_url.clone(),
 					pumpx_signer_pair,
 				)));
-
-			// TODO: remove it
-			let _ethereum_intent_executor = EthereumIntentExecutor::new(
-				&config_loader.ethereum_url,
-				&args.delegation_contract_address,
-			)?;
-			let _solana_intent_executor = SolanaIntentExecutor::new(&config_loader.solana_url)?;
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
 			rpc_endpoint_registry.insert(Chain::Solana, config_loader.solana_url.to_string());

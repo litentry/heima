@@ -11,8 +11,8 @@ pub fn register_test_protected_method<
 ) {
 	module
 		.register_method("omni_testProtectedMethod", |_, _, ext| {
-			if let Ok(user) = check_auth(ext) {
-				return Ok::<String, ErrorObject>(user.omni_account);
+			if let Ok(omni_account) = check_auth(ext) {
+				return Ok::<String, ErrorObject>(omni_account);
 			}
 			panic!("RpcExtensions not found in request extensions");
 		})
@@ -65,8 +65,6 @@ mod test {
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
 
-		let (solana_intent_executor, _solana_mock_recv) = MockedIntentExecutor::new();
-		let (ethereum_intent_executor, _ethereum_mock_recv) = MockedIntentExecutor::new();
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 		let aes_key = [0u8; 32];
 		let entry_point_clients = HashMap::new();
@@ -85,8 +83,6 @@ mod test {
 			[0u8; 33], // Test ECDSA public key
 			[0u8; 32], // Test bundler private key
 			[0u8; 33], // Test bundler export authorized pubkey
-			Arc::new(ethereum_intent_executor),
-			Arc::new(solana_intent_executor),
 			Arc::new(cross_chain_intent_executor),
 			aes_key,
 			Arc::new(entry_point_clients),
