@@ -1,4 +1,4 @@
-use super::common::{check_omni_api_response, handle_omni_native_task};
+use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE, *},
@@ -7,8 +7,7 @@ use crate::{
 	Decode, Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::*;
-use executor_storage::{HeimaJwtStorage, Storage};
+use executor_storage::{HeimaJwtStorage, IntentIdStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::{
 	AccountId, Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
@@ -17,13 +16,12 @@ use heima_primitives::{
 };
 use heima_utils::decode_hex;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use serde::Serialize;
 use std::str::FromStr;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
@@ -106,17 +104,13 @@ struct BackendResponse {
 }
 
 pub fn register_submit_swap_order<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_submitSwapOrder", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
@@ -137,7 +131,7 @@ pub fn register_submit_swap_order<
 
 			debug!("Received omni_submitSwapOrder, params: {:?}", params);
 
-			let Ok(omni_account) = AccountId::from_str(&user.omni_account) else {
+			let Ok(omni_account_id) = AccountId::from_str(&omni_account) else {
 				error!("Failed to parse from omni account token");
 				return Err(PumpxRpcError::from(
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
@@ -181,7 +175,7 @@ pub fn register_submit_swap_order<
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) =
-				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+				storage.get(&(omni_account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access token from storage");
 				return Err(PumpxRpcError::from(
@@ -292,72 +286,116 @@ pub fn register_submit_swap_order<
 					)
 				})?,
 			);
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::RequestIntent(omni_account, params.intent_id, Box::new(intent)),
-				None,
-				None,
-				user.client_id,
-			);
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::IntentSwapResponse(swap_response) => {
-					if params.order_type == PumpxOrderType::Market {
-						let market_order_response: SendOrderTxResponse =
-							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
-								error!("Failed to decode market order response: {:?}", e);
-								PumpxRpcError::from(
-									DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-										.with_reason(format!(
-											"Failed to decode market order response: {:?}",
-											e
-										)),
-								)
-							})?;
-						check_omni_api_response(
-							market_order_response.clone(),
-							"Market order".into(),
-						)?;
-						let response = PumpxSubmitSwapOrderResponse {
-							backend_response: BackendResponse {
-								limit_order_response: None,
-								market_order_response: Some(market_order_response),
-							},
-						};
-						Ok(response)
+			// Inlined handler logic from handle_request_intent
+			debug!("Intent requested, intent_id: {}", params.intent_id);
+
+			let intent_id_storage = IntentIdStorage::new(ctx.storage_db.clone());
+			let stored_intent_id = match intent_id_storage.get(&omni_account_id) {
+				Ok(id) => id.unwrap_or_default(),
+				Err(_) => {
+					error!("Failed to read intent from store");
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Failed to read intent from store"),
+					));
+				},
+			};
+
+			if params.intent_id == stored_intent_id + 1 {
+				if intent_id_storage.insert(&omni_account_id, params.intent_id).is_err() {
+					error!("Failed to save intent id");
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Failed to save intent id"),
+					));
+				}
+			} else {
+				error!(
+					"Intent id different than expected, expected: {:?}, got: {:?}",
+					stored_intent_id + 1,
+					params.intent_id
+				);
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INVALID_PARAMS_CODE, "Intent nonce mismatch")
+						.with_reason("Intent ID does not match expected value"),
+				));
+			}
+
+			let swap_response = match intent {
+				Intent::SystemRemark(_)
+				| Intent::TransferNative(_)
+				| Intent::CallEthereum(_)
+				| Intent::TransferEthereum(_)
+				| Intent::TransferSolana(_) => {
+					info!("Intent temporarily rejected, intent_id: {}", params.intent_id);
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("This intent type is temporarily not supported"),
+					));
+				},
+				Intent::Swap(..) => {
+					let response = match ctx
+						.cross_chain_intent_executor
+						.execute(&omni_account_id, params.intent_id, intent.clone())
+						.await
+					{
+						Ok((response, _)) => response,
+						Err(e) => {
+							error!("Error executing intent: {:?}", e);
+							ctx.cross_chain_intent_executor.on_execution_error().await;
+							None
+						},
+					};
+					if let Some(response) = response {
+						response
 					} else {
-						let limit_order_response: OrderInfoResponse =
-							Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
-								error!("Failed to decode limit order response: {:?}", e);
-								PumpxRpcError::from(
-									DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-										.with_reason(format!(
-											"Failed to decode limit order response: {:?}",
-											e
-										)),
-								)
-							})?;
-						check_omni_api_response(
-							limit_order_response.clone(),
-							"Limit order".into(),
-						)?;
-						let response = PumpxSubmitSwapOrderResponse {
-							backend_response: BackendResponse {
-								limit_order_response: Some(limit_order_response),
-								market_order_response: None,
-							},
-						};
-						Ok(response)
+						return Err(PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason("Intent execution failed"),
+						));
 					}
 				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
-			})
-			.await
+			};
+
+			// Process the swap response based on order type
+			if params.order_type == PumpxOrderType::Market {
+				let market_order_response: SendOrderTxResponse =
+					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
+						error!("Failed to decode market order response: {:?}", e);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
+								format!("Failed to decode market order response: {:?}", e),
+							),
+						)
+					})?;
+				check_omni_api_response(market_order_response.clone(), "Market order".into())?;
+				let response = PumpxSubmitSwapOrderResponse {
+					backend_response: BackendResponse {
+						limit_order_response: None,
+						market_order_response: Some(market_order_response),
+					},
+				};
+				Ok(response)
+			} else {
+				let limit_order_response: OrderInfoResponse =
+					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
+						error!("Failed to decode limit order response: {:?}", e);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
+								format!("Failed to decode limit order response: {:?}", e),
+							),
+						)
+					})?;
+				check_omni_api_response(limit_order_response.clone(), "Limit order".into())?;
+				let response = PumpxSubmitSwapOrderResponse {
+					backend_response: BackendResponse {
+						limit_order_response: Some(limit_order_response),
+						market_order_response: None,
+					},
+				};
+				Ok(response)
+			}
 		})
 		.expect("Failed to register omni_submitSwapOrder method");
 }
