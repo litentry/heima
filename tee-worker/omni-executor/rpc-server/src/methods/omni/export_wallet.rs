@@ -29,14 +29,8 @@ pub struct ExportWalletParams {
 	pub wallet_address: String,
 }
 
-pub fn register_export_wallet<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {

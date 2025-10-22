@@ -45,14 +45,8 @@ impl RequestJwtParams {
 	}
 }
 
-pub fn register_request_jwt<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_requestJwt", |params, ctx, _ext| async move {

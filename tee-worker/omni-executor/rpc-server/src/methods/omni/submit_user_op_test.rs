@@ -50,13 +50,9 @@ pub struct SubmitUserOpTestResponse {
 }
 
 pub fn register_submit_user_op_test<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_submitUserOpTest", |params, ctx, _ext| async move {

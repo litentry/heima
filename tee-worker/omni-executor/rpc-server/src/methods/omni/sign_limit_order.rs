@@ -50,13 +50,9 @@ pub struct SignLimitOrderResponse {
 }
 
 pub fn register_sign_limit_order_params<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {

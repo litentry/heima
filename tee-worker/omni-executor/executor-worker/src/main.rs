@@ -178,11 +178,12 @@ async fn main() -> Result<(), ()> {
 					pumpx_signer_pair,
 				)));
 
-			let ethereum_intent_executor = EthereumIntentExecutor::new(
+			// TODO: remove it
+			let _ethereum_intent_executor = EthereumIntentExecutor::new(
 				&config_loader.ethereum_url,
 				&args.delegation_contract_address,
 			)?;
-			let solana_intent_executor = SolanaIntentExecutor::new(&config_loader.solana_url)?;
+			let _solana_intent_executor = SolanaIntentExecutor::new(&config_loader.solana_url)?;
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
 			rpc_endpoint_registry.insert(Chain::Solana, config_loader.solana_url.to_string());
@@ -531,8 +532,6 @@ async fn main() -> Result<(), ()> {
 				wildmeta_backend_ecdsa_pubkey,
 				evm_accounting_ecdsa_signer_key,
 				bundler_key_export_authorized_pubkey,
-				Arc::new(ethereum_intent_executor),
-				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),
 				aes256_key,
 				entry_point_clients,

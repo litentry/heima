@@ -164,13 +164,9 @@ fn verify_signature(
 }
 
 pub fn register_export_bundler_private_key<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_method("omni_exportBundlerPrivateKey", |params, ctx, _ext| {

@@ -59,6 +59,7 @@ pub struct EstimateUserOpGasParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub omni_account: String,
+	#[allow(dead_code)]
 	pub client_id: String,
 }
 
@@ -88,13 +89,9 @@ pub struct EstimateUserOpGasResponse {
 }
 
 pub fn register_estimate_user_op_gas<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {

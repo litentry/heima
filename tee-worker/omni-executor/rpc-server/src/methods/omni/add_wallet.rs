@@ -20,14 +20,8 @@ pub struct RPCAddWalletResponse {
 	pub backend_response: AddWalletResponse,
 }
 
-pub fn register_add_wallet<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_addWallet", |_params, ctx, ext| async move {

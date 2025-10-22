@@ -40,13 +40,9 @@ pub struct TransferWithdrawResponse {
 }
 
 pub fn register_transfer_withdraw<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, ext| async move {
@@ -143,7 +139,7 @@ pub fn register_transfer_withdraw<
 				.map_err(|e| {
 					error!("Failed to create transfer tx: {}", e);
 					PumpxRpcError::from(DetailedError::new(
-						INTERNAL_ERROR_CODE,
+						PUMPX_API_CREATE_TRANSFER_TX_FAILED_CODE,
 						"Failed to create transfer transaction"
 					).with_suggestion("Please check your transfer parameters and try again"))
 				})?;

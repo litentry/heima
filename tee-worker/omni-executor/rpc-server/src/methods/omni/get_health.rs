@@ -18,14 +18,8 @@ use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 
-pub fn register_get_health<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+pub fn register_get_health<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_method("omni_getHealth", |_, _, _| Ok::<String, ErrorObject>("OK".to_string()))

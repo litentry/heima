@@ -95,6 +95,7 @@ where
 
 pub struct User {
 	pub omni_account: String,
+	#[allow(dead_code)]
 	pub client_id: String,
 }
 

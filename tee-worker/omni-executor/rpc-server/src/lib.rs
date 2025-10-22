@@ -15,10 +15,7 @@ mod verify_auth;
 
 pub use auth_token_key_store::AuthTokenKeyStore;
 pub use executor_crypto::shielding_key::ShieldingKey;
-pub use native_task_types::{
-	GasEstimateResponse, NativeTaskError, NativeTaskOk, NativeTaskResponse, PumpxApiError,
-	PumpxSignerError, TokenCostEstimate, TransactionStatus,
-};
+pub use native_task_types::{GasEstimateResponse, TokenCostEstimate};
 pub use server::start_server;
 
 // Removed unused hex imports - they may be used in other modules

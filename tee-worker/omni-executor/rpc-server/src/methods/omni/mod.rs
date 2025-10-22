@@ -89,14 +89,8 @@ mod request_loan_test;
 #[cfg(feature = "test-endpoints")]
 use request_loan_test::*;
 
-pub fn register_omni<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	register_get_health(module);
 	register_get_next_intent_id(module);
@@ -131,7 +125,6 @@ pub fn register_omni<
 	#[cfg(feature = "test-endpoints")]
 	register_verify_email_verification_code_test(module);
 
-	// TODO: Refactor handle_request_loan from native-task-handler to enable this test endpoint
-	// #[cfg(feature = "test-endpoints")]
-	// register_request_loan_test(module);
+	#[cfg(feature = "test-endpoints")]
+	register_request_loan_test(module);
 }
