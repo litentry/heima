@@ -175,7 +175,6 @@ pub fn extract_tcb_info_from_raw_dcap_quote(
 	Ok((fmspc, tcb_info))
 }
 
-#[allow(deprecated)]
 pub fn verify_dcap_quote(
 	dcap_quote_raw: &[u8],
 	verification_time: u64,
