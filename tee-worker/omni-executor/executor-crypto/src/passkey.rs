@@ -134,11 +134,11 @@ impl PasskeyVerifier {
 		}
 		let rp_id_hash_from_auth_data = &auth_data_bytes[0..32];
 		let expected_rp_id_hash = Sha256::digest(expected_rp_id.as_bytes());
-		if rp_id_hash_from_auth_data != expected_rp_id_hash.as_slice() {
+		if rp_id_hash_from_auth_data != &expected_rp_id_hash[..] {
 			return Err(PasskeyError::ParseError(format!(
 				"RP ID hash mismatch. Expected RP ID: '{}', hash: {:02x?}, but got: {:02x?}",
 				expected_rp_id,
-				expected_rp_id_hash.as_slice(),
+				&expected_rp_id_hash[..],
 				rp_id_hash_from_auth_data
 			)));
 		}
