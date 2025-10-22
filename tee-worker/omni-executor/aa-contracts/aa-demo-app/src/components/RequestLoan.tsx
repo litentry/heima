@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { useChainId, usePublicClient } from "wagmi";
+import { useChainId, usePublicClient, useAccount } from "wagmi";
 import { DollarSign, AlertCircle, CheckCircle, Loader2, TrendingUp } from "lucide-react";
-import { requestLoanTest } from "@/lib/tee-worker-client";
-import { HYPERLIQUID_CORE_CONFIG, DEFAULT_CLIENT_ID, CONTRACTS, PAYMASTER_CONFIG } from "@/lib/constants";
-import { createUserOperation, packUserOperation, toSerializablePackedUserOperation, estimateUserOpGasFromWorker } from "@/lib/aa-utils";
+import { requestLoanTest, getTEEWorkerAddress } from "@/lib/tee-worker-client";
+import { HYPERLIQUID_CORE_CONFIG, DEFAULT_CLIENT_ID, CONTRACTS, PAYMASTER_CONFIG, OwnerType } from "@/lib/constants";
+import { createUserOperation, packUserOperation, toSerializablePackedUserOperation, estimateUserOpGasFromWorker, generateInitCode, stringToBytes, calculateOmniAccount } from "@/lib/aa-utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RequestLoanProps {
     omniAccountAddress: string;
     omniAccountHash: string;
+    onAccountCreated?: () => void;
 }
 
 interface AssetInfo {
@@ -20,11 +22,13 @@ interface AssetPrice {
     price: number;
 }
 
-export function RequestLoan({ omniAccountAddress, omniAccountHash }: RequestLoanProps) {
+export function RequestLoan({ omniAccountAddress, omniAccountHash, onAccountCreated }: RequestLoanProps) {
     console.log("RequestLoan component rendering with address:", omniAccountAddress);
 
     const chainId = useChainId();
     const publicClient = usePublicClient();
+    const { address: evmAddress } = useAccount();
+    const { authType, identifier } = useAuth();
     const [collateralTicker, setCollateralTicker] = useState<string>("");
     const [collateralSize, setCollateralSize] = useState<string>("");
     const [lendingRatio, setLendingRatio] = useState<number>(80);
@@ -32,6 +36,7 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash }: RequestLoan
     const [assetPrices, setAssetPrices] = useState<Map<string, number>>(new Map());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [accountExists, setAccountExists] = useState<boolean>(false);
     const [success, setSuccess] = useState<{
         spotSellCloid: string;
         hedgeOpenCloid: string;
@@ -130,6 +135,30 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash }: RequestLoan
         }
     }, []);
 
+    // Check if account exists on-chain
+    useEffect(() => {
+        const checkAccountExists = async () => {
+            if (!omniAccountAddress || !publicClient) {
+                setAccountExists(false);
+                return;
+            }
+
+            try {
+                const code = await publicClient.getCode({
+                    address: omniAccountAddress as `0x${string}`,
+                });
+                const exists = !!code && code !== "0x";
+                setAccountExists(exists);
+                console.log("Account exists:", exists);
+            } catch (error) {
+                console.error("Error checking account existence:", error);
+                setAccountExists(false);
+            }
+        };
+
+        checkAccountExists();
+    }, [omniAccountAddress, publicClient]);
+
     useEffect(() => {
         console.log("RequestLoan useEffect triggered:", { omniAccountAddress });
         if (omniAccountAddress) {
@@ -175,6 +204,56 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash }: RequestLoan
                 throw new Error("Public client not available");
             }
 
+            // Determine if we need to include initCode (account doesn't exist yet)
+            let initCode: `0x${string}` = "0x";
+
+            if (!accountExists) {
+                console.log("Account does not exist, generating initCode...");
+
+                // Calculate parameters for account creation
+                let calculatedOmniAccount: `0x${string}`;
+                let rootSigner: `0x${string}`;
+                let ownerType: number;
+
+                if (authType === "email") {
+                    // For email accounts, use the provided omniAccountHash
+                    calculatedOmniAccount = omniAccountHash as `0x${string}`;
+                    // Get TEE worker as root signer
+                    rootSigner = await getTEEWorkerAddress(omniAccountHash) as `0x${string}`;
+                    ownerType = OwnerType.Email;
+                } else {
+                    // For wallet accounts
+                    if (!evmAddress) {
+                        throw new Error("Wallet not connected");
+                    }
+                    calculatedOmniAccount = calculateOmniAccount(
+                        evmAddress,
+                        DEFAULT_CLIENT_ID,
+                        "evm",
+                    );
+                    rootSigner = evmAddress as `0x${string}`;
+                    ownerType = OwnerType.Evm;
+                }
+
+                const clientIdBytes = stringToBytes(DEFAULT_CLIENT_ID);
+
+                // Generate initCode for account deployment
+                initCode = generateInitCode(
+                    CONTRACTS.OmniAccountFactory.address,
+                    calculatedOmniAccount,
+                    ownerType,
+                    clientIdBytes,
+                    rootSigner,
+                ) as `0x${string}`;
+
+                console.log("Generated initCode for new account:", {
+                    calculatedOmniAccount,
+                    rootSigner,
+                    ownerType,
+                    initCodeLength: initCode.length,
+                });
+            }
+
             // Get current nonce
             const nonce = (await publicClient.readContract({
                 address: CONTRACTS.EntryPoint.address,
@@ -188,7 +267,7 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash }: RequestLoan
                 sender: omniAccountAddress as `0x${string}`,
                 nonce,
                 callData: "0x",
-                // initCode: "0x", // Omit initCode - account already deployed
+                initCode, // Include initCode if account doesn't exist
                 gasParams: {
                     callGasLimit: BigInt(100000),      // 0x186a0 from example
                     verificationGasLimit: BigInt(1000000), // 0xf4240 from example
@@ -222,6 +301,12 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash }: RequestLoan
                 spotSellTxHash: response.spot_sell_tx_hash,
                 hedgeOpenTxHash: response.hedge_open_tx_hash,
             });
+
+            // If account was just created, notify parent
+            if (!accountExists && onAccountCreated) {
+                onAccountCreated();
+                setAccountExists(true);
+            }
 
             // Clear form
             setCollateralSize("");
@@ -273,9 +358,26 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash }: RequestLoan
                 Use your Hyperliquid assets as collateral to borrow USDC. The system will sell your collateral on spot and open a hedging position.
             </p>
 
+            {/* Account creation notice */}
+            {!accountExists && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start">
+                        <AlertCircle className="h-5 w-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                        <div className="text-sm text-blue-700">
+                            <p className="font-medium mb-1">First Transaction</p>
+                            <p>
+                                Your Omni Account will be automatically created with this transaction.
+                                {authType === "wallet" ? " Your wallet will be set as the root signer." : " The TEE worker will be set as the root signer."}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Debug info */}
             <div className="mb-4 p-2 bg-gray-50 rounded text-xs font-mono">
                 <p>Address: {omniAccountAddress || "Not set"}</p>
+                <p>Account exists: {accountExists ? "Yes" : "No"}</p>
                 <p>Available assets: {availableAssets.length}</p>
                 <p>Chain ID: {chainId}</p>
             </div>

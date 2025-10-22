@@ -4,11 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { WalletConnect } from "@/components/WalletConnect";
 import { AccountsDashboard } from "@/components/AccountsDashboard";
-import { FundingGuide } from "@/components/FundingGuide";
-import { CreateOmniAccount } from "@/components/CreateOmniAccount";
 import { AuthorizedSigners } from "@/components/AuthorizedSigners";
-import { AuthorizeTEEWorker } from "@/components/AuthorizeTEEWorker";
-import { TEETokenTransfer } from "@/components/TEETokenTransfer";
 import { HyperliquidBalances } from "@/components/HyperliquidBalances";
 import { RequestLoan } from "@/components/RequestLoan";
 import { ClientOnly } from "@/components/ClientOnly";
@@ -282,18 +278,13 @@ function HomeContent() {
         } else if (!omniAccountAddress) {
             // Stay on step 1 until we have the omni account address
             setCurrentStep(1);
-        } else if (!isFunded) {
+        } else if (!hasContract || (!isTeeWorkerAuthorized && authType === "wallet")) {
+            // Stay on step 2 until account is created with root signer
             setCurrentStep(2);
-        } else if (!hasContract) {
-            // Stay on step 3 until contract is deployed
-            setCurrentStep(3);
-        } else if (!isTeeWorkerAuthorized && authType === "wallet") {
-            // Email accounts have TEE worker auto-authorized
-            setCurrentStep(4);
         } else {
-            setCurrentStep(5);
+            setCurrentStep(3);
         }
-    }, [authType, isAuthenticated, omniAccountAddress, isFunded, hasContract, authorizedSigners, isTeeWorkerAuthorized]);
+    }, [authType, isAuthenticated, omniAccountAddress, hasContract, authorizedSigners, isTeeWorkerAuthorized]);
 
     const steps = [
         {
@@ -304,26 +295,14 @@ function HomeContent() {
         },
         {
             id: 2,
-            title: "Fund with ETH",
-            description: "Send ETH to your Omni Account for gas",
-            completed: !!isFunded,
+            title: "Request Loan",
+            description: "Submit loan request with your Hyperliquid assets",
+            completed: hasContract && (isTeeWorkerAuthorized || authType === "email"),
         },
         {
             id: 3,
-            title: "Create Omni Account",
-            description: "Deploy your smart account contract",
-            completed: hasContract,
-        },
-        {
-            id: 4,
-            title: authType === "email" ? "TEE Worker Ready" : "Authorize TEE Worker",
-            description: authType === "email" ? "TEE worker is auto-authorized" : "Add TEE worker as authorized signer",
-            completed: isTeeWorkerAuthorized || (authType === "email" && hasContract),
-        },
-        {
-            id: 5,
             title: "Hyperliquid Dashboard",
-            description: "View balances and request loans",
+            description: "View balances and positions",
             completed: false,
         },
     ];
@@ -432,92 +411,38 @@ function HomeContent() {
                             )}
 
                             {currentStep >= 2 && currentStep <= 2 && (
-                                <div>
-                                    <h2 className="text-xl font-semibold mb-4">
-                                        Step 2: Fund Your Omni Account with ETH
-                                    </h2>
-                                    <p className="text-gray-600 mb-6">
-                                        Send ETH to your Omni Account address to pay for gas fees.
-                                    </p>
-                                    <FundingGuide
-                                        omniAccountAddress={omniAccountAddress}
-                                        ethBalance={ethBalance}
-                                        fetchEthBalance={fetchEthBalance}
-                                        onFundingComplete={() => {
-                                            console.log("ETH funding complete callback triggered");
-                                            fetchEthBalance();
-                                        }}
-                                    />
-                                </div>
-                            )}
+                                <div className="space-y-8">
+                                    <div>
+                                        <h2 className="text-xl font-semibold mb-4">
+                                            Step 2: Request Loan
+                                        </h2>
+                                        <p className="text-gray-600 mb-6">
+                                            Submit your first transaction to request a loan. Your Omni Account will be automatically created with this transaction.
+                                        </p>
+                                    </div>
 
-                            {currentStep >= 3 && currentStep <= 3 && (
-                                <div>
-                                    <h2 className="text-xl font-semibold mb-4">
-                                        Step 3: Create Your Omni Account
-                                    </h2>
-                                    <p className="text-gray-600 mb-6">
-                                        Deploy your smart account contract on the blockchain.
-                                    </p>
-                                    <CreateOmniAccount
+                                    {/* Loan Request Panel */}
+                                    <RequestLoan
                                         omniAccountAddress={omniAccountAddress}
-                                        isFunded={isFunded}
+                                        omniAccountHash={omniAccountHash}
                                         onAccountCreated={() => {
-                                            console.log("Account created callback triggered");
+                                            console.log("Account created via first transaction");
                                             setHasContract(true);
+                                            setIsTeeWorkerAuthorized(true);
                                             fetchSigners();
                                         }}
                                     />
                                 </div>
                             )}
 
-                            {currentStep >= 4 && currentStep <= 4 && authType === "wallet" && (
-                                <div>
-                                    <h2 className="text-xl font-semibold mb-4">
-                                        Step 4: Authorize TEE Worker
-                                    </h2>
-                                    <p className="text-gray-600 mb-6">
-                                        Add the TEE Worker as an authorized signer to enable secure transaction execution.
-                                    </p>
-                                    <AuthorizeTEEWorker
-                                        omniAccountAddress={omniAccountAddress}
-                                        omniAccountHash={omniAccountHash}
-                                        isDeployed={hasContract}
-                                        onWorkerAuthorized={(workerAddress) => {
-                                            console.log("TEE Worker authorized:", workerAddress);
-                                            setTeeWorkerAddress(workerAddress);
-                                            setIsTeeWorkerAuthorized(true);
-                                            fetchSigners(); // Refresh signers list
-                                        }}
-                                    />
-                                </div>
-                            )}
-
-                            {currentStep >= 4 && currentStep <= 4 && authType === "email" && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                                    <div className="flex items-start space-x-3">
-                                        <Check className="w-6 h-6 text-green-600 flex-shrink-0" />
-                                        <div>
-                                            <h3 className="text-lg font-semibold text-green-900">
-                                                TEE Worker Auto-Authorized
-                                            </h3>
-                                            <p className="text-green-700 mt-2">
-                                                For email accounts, the TEE worker is automatically authorized as the primary signer.
-                                                You can proceed to send transactions.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {currentStep >= 5 && (
+                            {currentStep >= 3 && (
                                 <div className="space-y-8">
                                     <div>
                                         <h2 className="text-xl font-semibold mb-4">
-                                            Step 5: Hyperliquid Core Dashboard
+                                            Step 3: Hyperliquid Dashboard
                                         </h2>
                                         <p className="text-gray-600 mb-6">
-                                            View your balances, positions, and request loans using your Hyperliquid assets.
+                                            View your balances, positions, and manage your loans.
                                         </p>
                                     </div>
 
@@ -535,7 +460,7 @@ function HomeContent() {
                             )}
 
                             {/* Authorized Signers - Always visible after account creation */}
-                            {isAuthorized && authorizedSigners.length > 0 && currentStep >= 4 && (
+                            {isAuthorized && authorizedSigners.length > 0 && currentStep >= 3 && (
                                 <div className="mt-8 pt-8 border-t">
                                     <AuthorizedSigners
                                         omniAccountAddress={omniAccountAddress}
