@@ -6,7 +6,7 @@ edition.workspace = true
 
 [dependencies]
 parity-scale-codec = { workspace = true, features = ["derive"] }
-rocksdb = "0.23.0"
+rocksdb = "0.24.0"
 tracing = { workspace = true }
 
 # Local dependencies
