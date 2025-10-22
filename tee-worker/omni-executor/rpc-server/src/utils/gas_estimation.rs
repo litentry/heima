@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::native_task_types::GasEstimateResponse;
 use crate::utils::paymaster::calculate_erc20_token_cost;
+use crate::utils::types::GasEstimateResponse;
 use crate::utils::user_op::pack_account_gas_limits;
 use aa_contracts_client::EntryPointClient;
 use alloy::primitives::{Address, Bytes, U256};

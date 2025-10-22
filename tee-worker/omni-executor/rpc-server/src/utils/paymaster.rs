@@ -19,7 +19,7 @@ use binance_api::BinancePaymasterApi;
 use std::collections::HashMap;
 use tracing::{debug, error, info};
 
-use crate::native_task_types::{GasEstimateResponse, TokenCostEstimate};
+use crate::utils::types::{GasEstimateResponse, TokenCostEstimate};
 
 // ============================================================================
 // ERC20 Paymaster Exchange Rate Processing
