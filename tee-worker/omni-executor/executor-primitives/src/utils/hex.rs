@@ -15,39 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use hex::FromHexError;
-use parity_scale_codec::{Decode, Error as CodecError};
 use std::{string::String, vec::Vec};
-
-#[derive(Debug)]
-pub enum Error {
-	Hex(FromHexError),
-	Codec(CodecError),
-}
-
-impl std::fmt::Display for Error {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Error::Hex(e) => write!(f, "Hex error: {}", e),
-			Error::Codec(e) => write!(f, "Codec error: {}", e),
-		}
-	}
-}
-
-/// Trait to decode a hex string to a given output.
-pub trait FromHexPrefixed {
-	type Output;
-
-	fn from_hex(msg: &str) -> Result<Self::Output, Error>;
-}
-
-impl<T: Decode> FromHexPrefixed for T {
-	type Output = T;
-
-	fn from_hex(msg: &str) -> Result<Self::Output, Error> {
-		let byte_array = decode_hex(msg).map_err(Error::Hex)?;
-		Decode::decode(&mut byte_array.as_slice()).map_err(Error::Codec)
-	}
-}
 
 /// Hex encodes given data and preappends a "0x".
 pub fn hex_encode(data: &[u8]) -> String {
@@ -71,7 +39,6 @@ pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>, FromHexError> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use parity_scale_codec::{Decode, Encode};
 	use std::string::ToString;
 
 	#[test]
