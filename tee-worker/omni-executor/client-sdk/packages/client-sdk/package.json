@@ -9,7 +9,7 @@
   "types": "./dist/index.d.ts",
   "dependencies": {},
   "devDependencies": {
-    "@polkadot/keyring": "^13.5.6",
+    "@polkadot/keyring": "^13.5.7",
     "@polkadot/rpc-provider": "*",
     "@types/ws": "^8.5.13"
   },
