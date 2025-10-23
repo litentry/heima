@@ -410,8 +410,8 @@ async fn handle_payback_loan_impl<
 		)
 	})?;
 
-	let close_size_units = (clamped_close_size_f64 * 100_000_000.0) as u64;
-	let close_price_units = (clamped_close_price_f64 * 100_000_000.0) as u64;
+	let close_size_units = to_price_units(clamped_close_size_f64);
+	let close_price_units = to_price_units(clamped_close_price_f64);
 
 	// Build and submit close order
 	let close_action = build_perp_close_order(
@@ -497,7 +497,7 @@ async fn handle_payback_loan_impl<
 	info!("Withdrawable USDC from perp: {}", withdrawable_usdc);
 
 	// Transfer all withdrawable USDC from perp to spot
-	let transfer_amount_units = (withdrawable_usdc * 1_000_000.0) as u64;
+	let transfer_amount_units = to_usdc_units(withdrawable_usdc);
 	let transfer_action = build_usd_class_transfer_to_spot(transfer_amount_units);
 	let transfer_corewriter_calldata = encode_send_raw_action(transfer_action);
 	let transfer_calldata =
@@ -584,8 +584,8 @@ async fn handle_payback_loan_impl<
 		)
 	})?;
 
-	let buy_size_units = (clamped_buy_size_f64 * 100_000_000.0) as u64;
-	let buy_price_units = (clamped_buy_price_f64 * 100_000_000.0) as u64;
+	let buy_size_units = to_price_units(clamped_buy_size_f64);
+	let buy_price_units = to_price_units(clamped_buy_price_f64);
 
 	let spot_buy_action =
 		build_spot_buy_order(spot_asset_id, buy_size_units, buy_price_units, spot_buy_cloid);

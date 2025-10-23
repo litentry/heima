@@ -2,6 +2,7 @@ use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
+use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_userop;
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
@@ -10,7 +11,6 @@ use executor_primitives::{AccountId, ChainId};
 use executor_storage::{LoanRecord, Storage};
 use hyperliquid::*;
 use jsonrpsee::RpcModule;
-use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -53,28 +53,13 @@ pub fn register_request_loan_test<
 
 			debug!("Received omni_requestLoanTest, params: {:?}", params);
 
-			let address_bytes =
-				hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
-					.map_err(|_| {
-						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Failed to decode omni account hex string"),
-						)
-					})?;
-
-			if address_bytes.len() != 32 {
-				error!(
-					"Invalid omni account length: expected 32 bytes, got {}",
-					address_bytes.len()
-				);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-						"Invalid omni account length: expected 32 bytes, got {}",
-						address_bytes.len()
-					)),
-				));
-			}
+			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
+				error!("Failed to parse omni account");
+				PumpxRpcError::from(
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Failed to parse omni account"),
+				)
+			})?;
 
 			// Validate sender address
 			params.user_operation.sender.parse::<Address>().map_err(|e| {
@@ -119,14 +104,6 @@ pub fn register_request_loan_test<
 						.with_expected("0-100 (percentage)"),
 				));
 			}
-
-			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
-				error!("Failed to decode AccountId from bytes");
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to decode AccountId from bytes"),
-				)
-			})?;
 
 			// Call the inlined handler logic
 			handle_request_loan_impl(
@@ -332,18 +309,6 @@ async fn handle_request_loan_impl<
 			)
 		})?;
 
-	let _usdc_token = spot_meta
-		.tokens
-		.iter()
-		.find(|t| t.name.eq_ignore_ascii_case("USDC"))
-		.ok_or_else(|| {
-			error!("USDC token not found in spot meta");
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason("USDC token not found in spot meta"),
-			)
-		})?;
-
 	let perp_asset = meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
 		error!("Perp asset {} not found in meta", perp_asset_id);
 		PumpxRpcError::from(
@@ -426,8 +391,8 @@ async fn handle_request_loan_impl<
 		)
 	})?;
 
-	let spot_sell_size_units = (clamped_size_f64 * 100_000_000.0) as u64;
-	let spot_sell_price_units = (clamped_price_f64 * 100_000_000.0) as u64;
+	let spot_sell_size_units = to_price_units(clamped_size_f64);
+	let spot_sell_price_units = to_price_units(clamped_price_f64);
 
 	let spot_sell_cloid = generate_cloid();
 	let hedge_open_cloid = generate_cloid() + 1;
@@ -554,7 +519,7 @@ async fn handle_request_loan_impl<
 
 	// Action 2: Move USDC into perps
 	let mut current_nonce = skeleton_user_op.nonce + 1;
-	let usdc_for_perp_units = (usdc_for_perp * 1_000_000.0) as u64;
+	let usdc_for_perp_units = to_usdc_units(usdc_for_perp);
 	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
 	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
 	let usd_transfer_calldata =
@@ -648,8 +613,8 @@ async fn handle_request_loan_impl<
 		)
 	})?;
 
-	let hedge_size_units = (clamped_hedge_size_f64 * 100_000_000.0) as u64;
-	let hedge_price_units = (clamped_hedge_price_f64 * 100_000_000.0) as u64;
+	let hedge_size_units = to_price_units(clamped_hedge_size_f64);
+	let hedge_price_units = to_price_units(clamped_hedge_price_f64);
 
 	let hedge_action =
 		build_perp_long_order(perp_asset_id, hedge_size_units, hedge_price_units, hedge_open_cloid);
@@ -661,7 +626,7 @@ async fn handle_request_loan_impl<
 	skeleton_action3.nonce = current_nonce;
 	skeleton_action3.init_code = "0x".to_string();
 
-	let _hedge_tx_hash = submit_corewriter_userop(
+	let hedge_open_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
 		&skeleton_action3,
@@ -713,6 +678,6 @@ async fn handle_request_loan_impl<
 		hedge_open_cloid: hedge_open_cloid.to_string(),
 		usdc_received: usdc_received_str,
 		spot_sell_tx_hash,
-		hedge_open_tx_hash: None,
+		hedge_open_tx_hash,
 	})
 }

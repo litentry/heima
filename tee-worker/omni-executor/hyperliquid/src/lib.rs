@@ -24,6 +24,23 @@ pub const PERP_CLOSE_PRICE_RATIO: f64 = 0.98;
 /// Ratio for spot buy orders (2% above market to ensure fill)
 pub const SPOT_BUY_PRICE_RATIO: f64 = 1.02;
 
+// Unit conversion multipliers
+/// Multiplier for converting decimal prices to HyperLiquid price units (8 decimals)
+pub const PRICE_UNIT_MULTIPLIER: f64 = 100_000_000.0;
+
+/// Multiplier for converting decimal USDC amounts to USDC units (6 decimals)
+pub const USDC_UNIT_MULTIPLIER: f64 = 1_000_000.0;
+
+/// Convert a decimal price value to HyperLiquid price units (8 decimals)
+pub fn to_price_units(value: f64) -> u64 {
+	(value * PRICE_UNIT_MULTIPLIER) as u64
+}
+
+/// Convert a decimal USDC amount to USDC units (6 decimals)
+pub fn to_usdc_units(value: f64) -> u64 {
+	(value * USDC_UNIT_MULTIPLIER) as u64
+}
+
 pub fn get_core_writer_address() -> Address {
 	CORE_WRITER_ADDRESS.parse().unwrap()
 }
