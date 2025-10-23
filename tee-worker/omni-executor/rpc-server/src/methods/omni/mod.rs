@@ -89,6 +89,11 @@ mod request_loan_test;
 #[cfg(feature = "test-endpoints")]
 use request_loan_test::*;
 
+#[cfg(feature = "test-endpoints")]
+mod query_loan_test;
+#[cfg(feature = "test-endpoints")]
+use query_loan_test::*;
+
 pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
@@ -127,4 +132,7 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	#[cfg(feature = "test-endpoints")]
 	register_request_loan_test(module);
+
+	#[cfg(feature = "test-endpoints")]
+	register_query_loan_test(module);
 }

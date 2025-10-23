@@ -11,7 +11,7 @@ use config_loader::ConfigLoader;
 use ethereum_rpc::AlloyRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::aes256::Aes256Key;
-use executor_storage::{StorageDB, WildmetaTimestampStorage};
+use executor_storage::{LoanRecordStorage, StorageDB, WildmetaTimestampStorage};
 use jsonrpsee::{server::Server, RpcModule};
 use pumpx::PumpxApi;
 use signer_client::SignerClient;
@@ -34,6 +34,8 @@ pub(crate) struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + S
 	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
+	#[cfg_attr(not(feature = "test-endpoints"), allow(dead_code))]
+	pub loan_record_storage: Arc<LoanRecordStorage>,
 	pub wildmeta_backend_ecdsa_pubkey: [u8; 33], // Compressed ECDSA public key for wildmeta backend signature verification
 	pub bundler_private_key: [u8; 32],           // Bundler (accounting ECDSA) private key for export
 	pub bundler_key_export_authorized_pubkey: [u8; 33], // Compressed ECDSA public key authorized to export bundler key
@@ -57,6 +59,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 		binance_api_client: Arc<dyn BinancePaymasterApi>,
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
+		loan_record_storage: Arc<LoanRecordStorage>,
 		wildmeta_backend_ecdsa_pubkey: [u8; 33],
 		bundler_private_key: [u8; 32],
 		bundler_key_export_authorized_pubkey: [u8; 33],
@@ -75,6 +78,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 			binance_api_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
+			loan_record_storage,
 			wildmeta_backend_ecdsa_pubkey,
 			bundler_private_key,
 			bundler_key_export_authorized_pubkey,
@@ -97,6 +101,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	binance_api_client: Arc<dyn BinancePaymasterApi>,
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
+	loan_record_storage: Arc<LoanRecordStorage>,
 	wildmeta_backend_ecdsa_pubkey: [u8; 33],
 	bundler_private_key: [u8; 32],
 	bundler_key_export_authorized_pubkey: [u8; 33],
@@ -119,6 +124,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		binance_api_client,
 		wildmeta_api,
 		wildmeta_timestamp_storage,
+		loan_record_storage,
 		wildmeta_backend_ecdsa_pubkey,
 		bundler_private_key,
 		bundler_key_export_authorized_pubkey,
