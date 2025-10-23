@@ -1,36 +1,24 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useAccount, useReadContract, usePublicClient } from "wagmi";
-import { useWallet } from "@solana/wallet-adapter-react";
+import React, { useState, useEffect } from "react";
+import { useAccount, useReadContract } from "wagmi";
 import { Copy, Wallet, RefreshCw, Mail } from "lucide-react";
-import { formatUnits } from "viem";
 import { calculateOmniAccount, stringToBytes } from "@/lib/aa-utils";
-import { DEFAULT_CLIENT_ID, CONTRACTS, ERC20_TOKENS, OwnerType } from "@/lib/constants";
+import { DEFAULT_CLIENT_ID, CONTRACTS, OwnerType } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { getTEEWorkerAddress } from "@/lib/tee-worker-client";
 import type { Address } from "viem";
 
-interface TokenBalance {
-    symbol: string;
-    balance: bigint;
-    decimals: number;
-}
-
 interface AccountsDashboardProps {
     onAddressCalculated?: (address: string) => void;
     onOmniAccountCalculated?: (omniAccount: string) => void;
-    ethBalance?: bigint;
     isAccountCreated?: boolean;
 }
 
 export function AccountsDashboard({
     onAddressCalculated,
     onOmniAccountCalculated,
-    ethBalance: propEthBalance,
     isAccountCreated = false,
 }: AccountsDashboardProps = {}) {
     const { address: evmAddress } = useAccount();
-    const { publicKey: solanaAddress } = useWallet();
-    const publicClient = usePublicClient();
     const { authType, identifier, omniAccountHash: authOmniHash } = useAuth();
 
     const [omniAccount, setOmniAccount] = useState<`0x${string}`>("0x");
@@ -42,10 +30,6 @@ export function AccountsDashboard({
         "0x0000000000000000000000000000000000000000" as Address
     );
     const [ownerType, setOwnerType] = useState<number>(OwnerType.Evm);
-    const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
-    const [walletTokenBalances, setWalletTokenBalances] = useState<TokenBalance[]>([]);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [isRefreshingWallet, setIsRefreshingWallet] = useState(false);
     const [isLoadingRootSigner, setIsLoadingRootSigner] = useState(false);
 
     // Set root signer and owner type based on auth type
@@ -133,142 +117,6 @@ export function AccountsDashboard({
         }
     }, [omniAccount, onOmniAccountCalculated]);
 
-    // Available ERC20 tokens
-    const availableTokens = [ERC20_TOKENS.USDC, ERC20_TOKENS.USDT];
-
-    // Fetch connected wallet balances
-    const fetchWalletBalances = useCallback(async () => {
-        if (!evmAddress || !publicClient) return;
-
-        setIsRefreshingWallet(true);
-        const balances: TokenBalance[] = [];
-
-        // Fetch ETH balance for wallet
-        try {
-            const ethBalance = await publicClient.getBalance({
-                address: evmAddress,
-            });
-            balances.push({
-                symbol: "ETH",
-                balance: ethBalance,
-                decimals: 18,
-            });
-        } catch (error) {
-            console.error("Error fetching wallet ETH balance:", error);
-            balances.push({
-                symbol: "ETH",
-                balance: BigInt(0),
-                decimals: 18,
-            });
-        }
-
-        // Fetch ERC20 balances for wallet
-        for (const token of availableTokens) {
-            try {
-                const balance = (await publicClient.readContract({
-                    address: token.address,
-                    abi: token.abi,
-                    functionName: "balanceOf",
-                    args: [evmAddress],
-                })) as bigint;
-
-                balances.push({
-                    symbol: token.symbol,
-                    balance,
-                    decimals: token.decimals,
-                });
-            } catch (error) {
-                // Silently handle token balance fetch errors (token might not exist on this network)
-                balances.push({
-                    symbol: token.symbol,
-                    balance: BigInt(0),
-                    decimals: token.decimals,
-                });
-            }
-        }
-
-        setWalletTokenBalances(balances);
-        setIsRefreshingWallet(false);
-    }, [evmAddress, publicClient]);
-
-    // Fetch all token balances including ETH
-    const fetchTokenBalances = useCallback(async () => {
-        if (!omniAccountAddress || !publicClient || !isAccountCreated) return;
-
-        setIsRefreshing(true);
-        const balances: TokenBalance[] = [];
-
-        // Fetch ETH balance
-        try {
-            const ethBalance =
-                propEthBalance !== undefined
-                    ? propEthBalance
-                    : await publicClient.getBalance({
-                        address: omniAccountAddress as `0x${string}`,
-                    });
-            balances.push({
-                symbol: "ETH",
-                balance: ethBalance,
-                decimals: 18,
-            });
-        } catch (error) {
-            console.error("Error fetching ETH balance:", error);
-            balances.push({
-                symbol: "ETH",
-                balance: BigInt(0),
-                decimals: 18,
-            });
-        }
-
-        // Fetch ERC20 balances
-        for (const token of availableTokens) {
-            try {
-                const balance = (await publicClient.readContract({
-                    address: token.address,
-                    abi: token.abi,
-                    functionName: "balanceOf",
-                    args: [omniAccountAddress],
-                })) as bigint;
-
-                balances.push({
-                    symbol: token.symbol,
-                    balance,
-                    decimals: token.decimals,
-                });
-            } catch (error) {
-                // Silently handle token balance fetch errors (token might not exist on this network)
-                balances.push({
-                    symbol: token.symbol,
-                    balance: BigInt(0),
-                    decimals: token.decimals,
-                });
-            }
-        }
-
-        setTokenBalances(balances);
-        setIsRefreshing(false);
-    }, [omniAccountAddress, publicClient, propEthBalance, isAccountCreated]);
-
-    // Initial balance fetch
-    useEffect(() => {
-        fetchTokenBalances();
-        fetchWalletBalances();
-    }, [fetchTokenBalances, fetchWalletBalances]);
-
-    // Poll balances every 10 seconds
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (omniAccountAddress && isAccountCreated) {
-                fetchTokenBalances();
-            }
-            if (evmAddress) {
-                fetchWalletBalances();
-            }
-        }, 10000);
-
-        return () => clearInterval(interval);
-    }, [omniAccountAddress, evmAddress, fetchTokenBalances, fetchWalletBalances, isAccountCreated]);
-
     const copyToClipboard = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -303,208 +151,67 @@ export function AccountsDashboard({
 
     return (
         <div className="w-full p-6 bg-white rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-center">Accounts Overview</h2>
-
-            <div className="space-y-8">
-                {/* Connected Account Section */}
-                {isAuthenticated && (
-                    <div className="space-y-4">
-                        <div className="border-b pb-2">
-                            <h3 className="text-xl font-semibold text-gray-900">
-                                {authType === "email" ? "Your Email Account" : "Your Wallet"}
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">
+            <div className="space-y-6">
+                {/* Connected Account */}
+                <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-3">
+                        {authType === "email" ? (
+                            <Mail className="h-5 w-5 text-gray-500" />
+                        ) : (
+                            <Wallet className="h-5 w-5 text-gray-500" />
+                        )}
+                        <div>
+                            <div className="text-sm text-gray-600">
+                                {authType === "email" ? "Email" : "Connected Wallet"}
+                            </div>
+                            <div className="font-medium">
                                 {authType === "email"
-                                    ? "This email address controls your smart account via TEE worker"
-                                    : "This is your connected wallet that controls the smart account"}
-                            </p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <div className="flex items-center justify-between mb-4">
-                                <span className="text-sm font-medium text-gray-700">
-                                    {authType === "email" ? "Email:" : "Address:"}
-                                </span>
-                                <div className="flex items-center space-x-2">
-                                    {authType === "email" ? (
-                                        <>
-                                            <Mail className="h-4 w-4 text-gray-500" />
-                                            <span className="text-sm font-medium">
-                                                {identifier}
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="text-sm font-mono">
-                                                {truncateAddress(identifier || "")}
-                                            </span>
-                                            <button
-                                                onClick={() => copyToClipboard(identifier || "")}
-                                                className="p-1 hover:bg-gray-200 rounded"
-                                            >
-                                                <Copy className="h-4 w-4 text-gray-500" />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Wallet Balances - Only for wallet auth */}
-                            {authType === "wallet" && (
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-gray-700">Balances:</span>
-                                        <button
-                                            onClick={() => fetchWalletBalances()}
-                                            disabled={isRefreshingWallet}
-                                            className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                                        >
-                                            <RefreshCw
-                                                className={`h-3 w-3 ${isRefreshingWallet ? "animate-spin" : ""}`}
-                                            />
-                                        </button>
-                                    </div>
-                                    {walletTokenBalances.map((tb) => (
-                                    <div
-                                        key={tb.symbol}
-                                        className="pl-4 flex justify-between items-center py-1"
-                                    >
-                                        <span className="text-sm text-gray-600">{tb.symbol}</span>
-                                        <span className="font-mono text-sm">
-                                            {formatUnits(tb.balance, tb.decimals)}
-                                        </span>
-                                    </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {solanaAddress && (
-                    <div className="space-y-3">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                            Connected Solana Wallet
-                        </h3>
-                        <div className="bg-gray-50 p-3 rounded-lg">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">Address:</span>
-                                <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-mono">
-                                        {truncateAddress(solanaAddress.toString())}
-                                    </span>
-                                    <button
-                                        onClick={() => copyToClipboard(solanaAddress.toString())}
-                                        className="p-1 hover:bg-gray-200 rounded"
-                                    >
-                                        <Copy className="h-4 w-4 text-gray-500" />
-                                    </button>
-                                </div>
+                                    ? identifier
+                                    : truncateAddress(identifier || "")}
                             </div>
                         </div>
                     </div>
-                )}
-
-                {/* Client ID Section */}
-                <div className="space-y-2">
-                    <div className="border-b pb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">Client ID</h3>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">ID:</span>
-                            <div className="flex items-center space-x-2">
-                                <span className="text-sm font-mono">{clientId}</span>
-                                <button
-                                    onClick={() => copyToClipboard(clientId)}
-                                    className="p-1 hover:bg-gray-200 rounded"
-                                >
-                                    <Copy className="h-4 w-4 text-gray-500" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    {authType === "wallet" && identifier && (
+                        <button
+                            onClick={() => copyToClipboard(identifier)}
+                            className="p-2 hover:bg-gray-200 rounded transition-colors"
+                        >
+                            <Copy className="h-4 w-4 text-gray-500" />
+                        </button>
+                    )}
                 </div>
 
-                {/* Smart Account Section */}
+                {/* Smart Account Address */}
                 {(omniAccountAddress || isLoadingRootSigner) && (
-                    <div className="space-y-4">
-                        <div className="border-b pb-2">
-                            <h3 className="text-xl font-semibold text-gray-900">
-                                Smart Account (Omni Account)
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                                {authType === "email"
-                                    ? "Your Omni Account address is calculated using your email and TEE worker"
-                                    : "Your Omni Account address is pre-calculated using your wallet address and client ID"}
-                            </p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <div className="space-y-4">
-                                {/* Omni Account Address */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-gray-700">Address:</span>
-                                        {omniAccountAddress && (
-                                            <button
-                                                onClick={() => copyToClipboard(omniAccountAddress as string)}
-                                                className="p-1 hover:bg-gray-200 rounded"
-                                            >
-                                                <Copy className="h-4 w-4 text-gray-500" />
-                                            </button>
-                                        )}
-                                    </div>
-                                    {isLoadingRootSigner ? (
-                                        <div className="flex items-center text-gray-600 bg-gray-100 p-2 rounded border border-gray-200">
-                                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                            Fetching TEE worker address...
-                                        </div>
-                                    ) : omniAccountAddress ? (
-                                        <div className="text-sm font-mono text-green-800 break-all bg-green-100 p-2 rounded border border-green-200">
-                                            {omniAccountAddress as string}
-                                        </div>
-                                    ) : (
-                                        <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded border border-gray-200">
-                                            Unable to calculate address
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Omni Account Balances */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-gray-700">Balances:</span>
-                                        {isAccountCreated && (
-                                            <button
-                                                onClick={() => fetchTokenBalances()}
-                                                disabled={isRefreshing}
-                                                className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                                            >
-                                                <RefreshCw
-                                                    className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`}
-                                                />
-                                            </button>
-                                        )}
-                                    </div>
-                                    {!isAccountCreated ? (
-                                        <div className="text-sm text-gray-500 italic pl-4">
-                                            Account not created on-chain yet
-                                        </div>
-                                    ) : (
-                                        tokenBalances.map((tb) => (
-                                            <div
-                                                key={tb.symbol}
-                                                className="pl-4 flex justify-between items-center py-1"
-                                            >
-                                                <span className="text-sm text-gray-600">{tb.symbol}</span>
-                                                <span className="font-mono text-sm">
-                                                    {formatUnits(tb.balance, tb.decimals)}
-                                                </span>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium text-gray-700">Smart Account Address</div>
+                        {isLoadingRootSigner ? (
+                            <div className="flex items-center text-gray-600 bg-gray-100 p-3 rounded">
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Loading...
                             </div>
-                        </div>
+                        ) : omniAccountAddress ? (
+                            <div className="flex items-center justify-between bg-green-50 p-3 rounded border border-green-200">
+                                <div className="text-sm font-mono text-green-800 break-all">
+                                    {omniAccountAddress as string}
+                                </div>
+                                <button
+                                    onClick={() => copyToClipboard(omniAccountAddress as string)}
+                                    className="ml-2 p-2 hover:bg-green-100 rounded transition-colors flex-shrink-0"
+                                >
+                                    <Copy className="h-4 w-4 text-green-700" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="text-sm text-gray-500 bg-gray-100 p-3 rounded">
+                                Unable to calculate address
+                            </div>
+                        )}
+                        {!isAccountCreated && omniAccountAddress && (
+                            <div className="text-sm text-gray-500 italic">
+                                Account will be created with your first transaction
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
