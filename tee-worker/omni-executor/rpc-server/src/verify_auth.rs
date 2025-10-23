@@ -2,8 +2,8 @@ use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hash, Hashable, Identity,
-	OAuth2Data, OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
+	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
 use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
@@ -93,7 +93,7 @@ pub fn verify_web3_authentication(
 		.map_err(|_| AuthenticationError::VerificationCodeNotFound)?;
 	let message = HeimaMessagePayload {
 		client_id: client_id.to_string(),
-		omni_account: omni_account.to_hex(),
+		omni_account: hex_encode(omni_account.as_ref()),
 		message_code,
 	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
@@ -267,7 +267,7 @@ mod tests {
 	use alloy_signer_local::PrivateKeySigner;
 	use executor_crypto::{ed25519, sr25519, PairTrait};
 	use executor_primitives::{
-		signature::EthereumSignature, utils::hex::ToHexPrefixed, Hashable, Identity,
+		signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity,
 	};
 	use heima_identity_verification::helpers::generate_otp;
 	use tempfile::tempdir;
@@ -291,7 +291,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -325,7 +325,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: solana_omni_account.to_hex(),
+			omni_account: hex_encode(solana_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -358,7 +358,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: evm_omni_account.to_hex(),
+			omni_account: hex_encode(evm_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -394,7 +394,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -424,7 +424,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -458,7 +458,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code: "invalid_code".to_string(), // Use an invalid code
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 

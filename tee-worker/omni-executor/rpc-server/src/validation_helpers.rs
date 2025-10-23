@@ -43,39 +43,6 @@ pub fn validate_ethereum_address(
 	})
 }
 
-pub fn validate_omni_account_hex(
-	hex_str: &str,
-	field_name: &str,
-) -> Result<Vec<u8>, Box<DetailedError>> {
-	let hex_str = hex_str.strip_prefix("0x").unwrap_or(hex_str);
-
-	hex::decode(hex_str).map_err(|e| {
-		Box::new(
-			DetailedError::invalid_hex_format(field_name, hex_str, Some(32))
-				.with_reason(format!("Hex decode error: {}", e)),
-		)
-	})
-}
-
-pub fn validate_omni_account_length(
-	bytes: &[u8],
-	field_name: &str,
-) -> Result<(), Box<DetailedError>> {
-	if bytes.len() != 32 {
-		return Err(Box::new(
-			DetailedError::new(
-				crate::error_code::INVALID_ACCOUNT_LENGTH_CODE,
-				"Invalid account length",
-			)
-			.with_field(field_name)
-			.with_expected("32 bytes")
-			.with_received(format!("{} bytes", bytes.len()))
-			.with_suggestion("Omni accounts must be exactly 32 bytes"),
-		));
-	}
-	Ok(())
-}
-
 pub fn validate_amount(amount_str: &str, field_name: &str) -> Result<u128, Box<DetailedError>> {
 	// Check if empty
 	if amount_str.is_empty() {
@@ -277,42 +244,6 @@ mod tests {
 		for addr in invalid_addresses {
 			assert!(validate_ethereum_address(addr, "test").is_err());
 		}
-	}
-
-	#[test]
-	fn test_validate_omni_account_hex_valid() {
-		let hex_32_bytes = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let result = validate_omni_account_hex(hex_32_bytes, "test");
-		assert!(result.is_ok());
-		assert_eq!(result.unwrap().len(), 32);
-	}
-
-	#[test]
-	fn test_validate_omni_account_hex_without_prefix() {
-		let hex_32_bytes = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let result = validate_omni_account_hex(hex_32_bytes, "test");
-		assert!(result.is_ok());
-		assert_eq!(result.unwrap().len(), 32);
-	}
-
-	#[test]
-	fn test_validate_omni_account_hex_invalid() {
-		let invalid_hex = "0xGGGG567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		assert!(validate_omni_account_hex(invalid_hex, "test").is_err());
-	}
-
-	#[test]
-	fn test_validate_omni_account_length_valid() {
-		let bytes_32 = vec![0u8; 32];
-		assert!(validate_omni_account_length(&bytes_32, "test").is_ok());
-	}
-
-	#[test]
-	fn test_validate_omni_account_length_invalid() {
-		let bytes_31 = vec![0u8; 31];
-		let bytes_33 = vec![0u8; 33];
-		assert!(validate_omni_account_length(&bytes_31, "test").is_err());
-		assert!(validate_omni_account_length(&bytes_33, "test").is_err());
 	}
 
 	#[test]

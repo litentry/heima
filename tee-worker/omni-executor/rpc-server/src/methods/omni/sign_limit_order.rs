@@ -15,15 +15,14 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
+use crate::utils::omni::to_omni_account;
 use ethers::types::Bytes;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{PumpxChainId, PumxWalletIndex};
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
-use heima_primitives::Address32;
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
 use pumpx::signer_client::PumpxChainId as _;
@@ -56,7 +55,7 @@ pub fn register_sign_limit_order_params<
 ) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
-			let omni_account = check_auth(&ext).map_err(|e| {
+			let oa_str = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
@@ -77,14 +76,12 @@ pub fn register_sign_limit_order_params<
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
-			let Ok(address) = Address32::from_hex(&omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
-				));
-			};
-			let omni_account_id = AccountId::from(address);
+			let omni_account = to_omni_account(&oa_str).map_err(|_| {
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
+				))
+			})?;
 
 			// Inline handle_pumpx_sign_limit_order logic
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
@@ -105,7 +102,7 @@ pub fn register_sign_limit_order_params<
 				.request_signatures(
 					chain,
 					params.wallet_index,
-					omni_account_id.into(),
+					omni_account.into(),
 					unsigned_tx_vec,
 				)
 				.await

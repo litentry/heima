@@ -27,7 +27,7 @@ mod test {
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_crypto::jwt;
-	use executor_primitives::utils::hex::ToHexPrefixed;
+	use executor_primitives::utils::hex::hex_encode;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use heima_authentication::{
 		auth_token::{AuthOptions, AuthTokenClaims},
@@ -104,7 +104,7 @@ mod test {
 			.to_omni_account(CLIENT_ID_HEIMA);
 
 		let access_token_claims = AuthTokenClaims::new(
-			omni_account.to_hex(),
+			hex_encode(omni_account.as_ref()),
 			AUTH_TOKEN_ID_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			auth_options.clone(),
@@ -118,6 +118,6 @@ mod test {
 		let response: String =
 			client.request("omni_testProtectedMethod", rpc_params![]).await.unwrap();
 
-		assert_eq!(response, omni_account.to_hex());
+		assert_eq!(response, hex_encode(omni_account.as_ref()));
 	}
 }

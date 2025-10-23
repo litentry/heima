@@ -4,19 +4,18 @@ use crate::{
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
+	utils::omni::to_omni_account,
 	utils::pumpx::verify_google_code,
 	validation_helpers::{
-		validate_amount, validate_chain_id, validate_ethereum_address, validate_omni_account_hex,
-		validate_omni_account_length, validate_token_address, validate_wallet_index,
+		validate_amount, validate_chain_id, validate_ethereum_address, validate_token_address,
+		validate_wallet_index,
 	},
 	Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::PumxWalletIndex;
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
-use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use pumpx::methods::create_transfer_tx::{CreateTransferTxBody, CreateTransferTxResponse};
 use serde::Serialize;
@@ -46,7 +45,7 @@ pub fn register_transfer_withdraw<
 ) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, ext| async move {
-			let omni_account = check_auth(&ext).map_err(|e| {
+			let oa_str = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(DetailedError::new(
 					AUTH_VERIFICATION_FAILED_CODE,
@@ -80,25 +79,17 @@ pub fn register_transfer_withdraw<
 			validate_amount(&params.amount, "amount")
 				.map_err(PumpxRpcError::from)?;
 
-			let address_bytes = validate_omni_account_hex(&omni_account, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			validate_omni_account_length(&address_bytes, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			let Ok(address) = Address32::from_hex(&omni_account) else {
-				error!("Failed to parse from omni account after validation");
-				return Err(DetailedError::account_parse_error(
-					&omni_account,
-					"Address32 conversion failed"
-				).into());
-			};
-			let omni_account_id = AccountId::from(address);
+			let omni_account = to_omni_account(&oa_str).map_err(|_| {
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
+				))
+			})?;
 
 			// Inline handle_pumpx_transfer_withdraw logic
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access_token within TransferWidthdraw");
 				return Err(PumpxRpcError::from(DetailedError::new(
