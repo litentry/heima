@@ -8,13 +8,14 @@ use crate::{
 use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::jwt;
-use executor_primitives::{utils::hex::ToHexPrefixed, OAuth2Data, OAuth2Provider};
+use executor_primitives::{utils::hex::hex_encode, OAuth2Data, OAuth2Provider};
 use heima_authentication::{
 	auth_token::{AuthOptions, AuthTokenClaims},
 	constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parity_scale_codec::Encode;
 use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -58,7 +59,7 @@ fn create_jwt_for_user(
 	let auth_options = AuthOptions { expires_at };
 	let omni_account = identity.to_omni_account(client_id);
 	let token_claims = AuthTokenClaims::new(
-		omni_account.to_hex(),
+		hex_encode(&omni_account.encode()),
 		token_type.to_string(),
 		client_id.to_string(),
 		auth_options,

@@ -27,7 +27,7 @@ mod test {
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_crypto::jwt;
-	use executor_primitives::utils::hex::ToHexPrefixed;
+	use executor_primitives::utils::hex::hex_encode;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use heima_authentication::{
 		auth_token::{AuthOptions, AuthTokenClaims},
@@ -37,6 +37,7 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
+	use parity_scale_codec::Encode;
 	use pumpx::PumpxApiClient;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use signer_client::{mocks::MockSignerClient, SignerClient};
@@ -104,7 +105,7 @@ mod test {
 			.to_omni_account(CLIENT_ID_HEIMA);
 
 		let access_token_claims = AuthTokenClaims::new(
-			omni_account.to_hex(),
+			hex_encode(&omni_account.encode()),
 			AUTH_TOKEN_ID_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			auth_options.clone(),
@@ -118,6 +119,6 @@ mod test {
 		let response: String =
 			client.request("omni_testProtectedMethod", rpc_params![]).await.unwrap();
 
-		assert_eq!(response, omni_account.to_hex());
+		assert_eq!(response, hex_encode(&omni_account.encode()));
 	}
 }

@@ -111,7 +111,8 @@ mod tests {
 
 	use super::*;
 	use chrono::{Days, Utc};
-	use executor_primitives::{utils::hex::ToHexPrefixed, Identity, Web2IdentityType};
+	use executor_primitives::{utils::hex::hex_encode, Identity, Web2IdentityType};
+	use parity_scale_codec::Encode;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 
 	#[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -142,7 +143,7 @@ mod tests {
 		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
-			omni_account.to_hex(),
+			hex_encode(&omni_account.encode()),
 			AUTH_TOKEN_ID_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
@@ -166,7 +167,7 @@ mod tests {
 		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
-			omni_account.to_hex(),
+			hex_encode(&omni_account.encode()),
 			AUTH_TOKEN_ID_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at: 100 },
@@ -242,7 +243,7 @@ mod tests {
 		let omni_account = email_identity.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
-			omni_account.to_hex(),
+			hex_encode(&omni_account.encode()),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },

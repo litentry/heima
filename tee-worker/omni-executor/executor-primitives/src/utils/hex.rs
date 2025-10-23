@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use hex::FromHexError;
-use parity_scale_codec::{Decode, Encode, Error as CodecError};
+use parity_scale_codec::{Decode, Error as CodecError};
 use std::{string::String, vec::Vec};
 
 #[derive(Debug)]
@@ -30,17 +30,6 @@ impl std::fmt::Display for Error {
 			Error::Hex(e) => write!(f, "Hex error: {}", e),
 			Error::Codec(e) => write!(f, "Codec error: {}", e),
 		}
-	}
-}
-
-/// Trait to encode a given value to a hex string, prefixed with "0x".
-pub trait ToHexPrefixed {
-	fn to_hex(&self) -> String;
-}
-
-impl<T: Encode> ToHexPrefixed for T {
-	fn to_hex(&self) -> String {
-		hex_encode(&self.encode())
 	}
 }
 
@@ -103,16 +92,6 @@ mod tests {
 		let hex_encoded_data = hex_encode(&data.encode());
 		let decoded_data =
 			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
-
-		assert_eq!(data, decoded_data);
-	}
-
-	#[test]
-	fn to_hex_from_hex_works() {
-		let data = "Hello World!".to_string();
-
-		let hex_encoded_data = data.to_hex();
-		let decoded_data = String::from_hex(&hex_encoded_data).unwrap();
 
 		assert_eq!(data, decoded_data);
 	}

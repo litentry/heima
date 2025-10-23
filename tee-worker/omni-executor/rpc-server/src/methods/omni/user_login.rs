@@ -7,7 +7,7 @@ use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::jwt;
 use executor_primitives::{
-	to_omni_auth, utils::hex::ToHexPrefixed, ClientAuth, OmniAuth, UserAuth, UserId,
+	to_omni_auth, utils::hex::hex_encode, ClientAuth, OmniAuth, UserAuth, UserId,
 };
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::{
@@ -18,6 +18,7 @@ use heima_authentication::{
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parity_scale_codec::Encode;
 use pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
 use tracing::error;
 
@@ -139,7 +140,7 @@ fn create_jwt_for_user(
 	let auth_options = AuthOptions { expires_at };
 	let omni_account = identity.to_omni_account(client_id);
 	let token_claims = AuthTokenClaims::new(
-		omni_account.to_hex(),
+		hex_encode(&omni_account.encode()),
 		token_type.to_string(),
 		client_id.to_string(),
 		auth_options.clone(),

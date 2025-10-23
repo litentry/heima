@@ -1,12 +1,13 @@
 use crate::server::RpcContext;
 use crate::ErrorCode;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::utils::hex::ToHexPrefixed;
+use executor_primitives::utils::hex::hex_encode;
 use executor_storage::{Storage, VerificationCodeStorage};
 use heima_authentication::web3::HeimaMessagePayload;
 use heima_identity_verification::helpers::generate_otp;
 use heima_primitives::{AccountId, Hashable};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use parity_scale_codec::Encode;
 use serde::Deserialize;
 use std::str::FromStr;
 use tracing::error;
@@ -45,7 +46,7 @@ pub fn register_get_web3_sign_in_message<
 
 			Ok::<HeimaMessagePayload, ErrorObject>(HeimaMessagePayload {
 				message_code,
-				omni_account: omni_account.to_hex(),
+				omni_account: hex_encode(&omni_account.encode()),
 				client_id: params.client_id,
 			})
 		})
