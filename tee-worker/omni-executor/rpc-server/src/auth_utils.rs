@@ -6,7 +6,7 @@ use executor_core::types::SerializablePackedUserOperation;
 use executor_crypto::ecdsa;
 use executor_primitives::{
 	signature::{EthereumSignature, HeimaMultiSignature},
-	utils::hex::{decode_hex, FromHexPrefixed},
+	utils::hex::decode_hex,
 	ChainId,
 };
 use executor_storage::{Storage, WildmetaTimestampStorage};
@@ -34,8 +34,12 @@ pub fn verify_wildmeta_signature(
 		})?;
 	let heima_sig = HeimaMultiSignature::Ethereum(ethereum_signature);
 
-	let agent_address = Address20::from_hex(agent_address).map_err(|e| {
-		error!("Failed to parse agent address: {:?}", e);
+	let agent_address_bytes = decode_hex(agent_address).map_err(|e| {
+		error!("Failed to decode signature: {:?}", e);
+		ErrorObject::from(ErrorCode::ParseError)
+	})?;
+	let agent_address = Address20::try_from(agent_address_bytes.as_slice()).map_err(|_| {
+		error!("Failed to parse agent address");
 		ErrorObject::from(ErrorCode::ParseError)
 	})?;
 

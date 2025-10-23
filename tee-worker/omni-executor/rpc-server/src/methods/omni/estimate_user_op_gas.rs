@@ -16,18 +16,17 @@
 
 use super::common::PumpxRpcError;
 use crate::detailed_error::DetailedError;
+use crate::error_code::PARSE_ERROR_CODE;
 use crate::server::RpcContext;
 use crate::utils::gas_estimation::estimate_user_op_gas;
+use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::convert_to_packed_user_op;
-use crate::validation_helpers::{
-	validate_ethereum_address, validate_omni_account_hex, validate_omni_account_length,
-};
+use crate::validation_helpers::validate_ethereum_address;
 use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{AccountId, ChainId};
+use executor_primitives::ChainId;
 use jsonrpsee::RpcModule;
-use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 
@@ -108,14 +107,10 @@ pub fn register_estimate_user_op_gas<
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
-			let account_bytes = validate_omni_account_hex(&params.omni_account, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-			validate_omni_account_length(&account_bytes, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-			let account_id = AccountId::decode(&mut &account_bytes[..]).map_err(|e| {
-				PumpxRpcError::from(DetailedError::account_parse_error(
-					&params.omni_account,
-					&e.to_string(),
+			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
 				))
 			})?;
 
@@ -125,7 +120,7 @@ pub fn register_estimate_user_op_gas<
 			// Inlined handler logic from handle_estimate_user_op_gas
 			info!(
 				"Processing EstimateUserOpGas for account {:?}, wallet_index: {}, chain_id: {}",
-				account_id, params.wallet_index, params.chain_id
+				omni_account, params.wallet_index, params.chain_id
 			);
 
 			// Get EntryPoint client for this chain
