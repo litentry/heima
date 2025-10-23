@@ -39,27 +39,24 @@ pub fn decode_hex<T: AsRef<[u8]>>(message: T) -> Result<Vec<u8>, FromHexError> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::string::ToString;
 
 	#[test]
 	fn hex_encode_decode_works() {
-		let data = "Hello World!".to_string();
+		let data = "Hello World!".as_bytes();
 
-		let hex_encoded_data = hex_encode(&data.encode());
-		let decoded_data =
-			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
+		let hex_encoded_data = hex_encode(data);
+		let decoded_data = decode_hex(&hex_encoded_data).unwrap();
 
-		assert_eq!(data, decoded_data);
+		assert_eq!(data, decoded_data.as_slice());
 	}
 
 	#[test]
 	fn hex_encode_decode_works_empty_input() {
-		let data = String::new();
+		let data = "".as_bytes();
 
-		let hex_encoded_data = hex_encode(&data.encode());
-		let decoded_data =
-			String::decode(&mut decode_hex(hex_encoded_data).unwrap().as_slice()).unwrap();
+		let hex_encoded_data = hex_encode(data);
+		let decoded_data = decode_hex(&hex_encoded_data).unwrap();
 
-		assert_eq!(data, decoded_data);
+		assert_eq!(data, decoded_data.as_slice());
 	}
 }
