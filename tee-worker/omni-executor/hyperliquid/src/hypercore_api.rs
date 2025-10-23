@@ -466,8 +466,10 @@ impl HyperCoreClient {
 	/// This is useful for verifying that a USD class transfer has completed.
 	///
 	/// # Arguments
+	/// * `user_address` - The user's wallet address
 	/// * `initial_balance` - The perp balance before the transfer
 	/// * `expected_increase` - The amount we expect the balance to increase by
+	/// * `max_wait_seconds` - Maximum time to wait before timing out
 	pub async fn wait_for_perp_balance_increase(
 		&self,
 		user_address: &str,
@@ -508,6 +510,58 @@ impl HyperCoreClient {
 					account_value - initial_balance
 				);
 				return Ok(account_value);
+			}
+
+			tokio::time::sleep(Duration::from_secs(2)).await;
+		}
+	}
+
+	/// Waits for the spot balance of a specific token to increase by at least the expected amount.
+	/// This is useful for verifying that a transfer from perp to spot has completed.
+	///
+	/// # Arguments
+	/// * `user_address` - The user's wallet address
+	/// * `ticker` - The token ticker (e.g., "USDC", "ETH")
+	/// * `initial_balance` - The spot balance before the transfer
+	/// * `expected_increase` - The amount we expect the balance to increase by
+	/// * `max_wait_seconds` - Maximum time to wait before timing out
+	pub async fn wait_for_spot_balance_increase(
+		&self,
+		user_address: &str,
+		ticker: &str,
+		initial_balance: f64,
+		expected_increase: f64,
+		max_wait_seconds: u64,
+	) -> Result<f64, String> {
+		let start_time = std::time::Instant::now();
+		let max_duration = Duration::from_secs(max_wait_seconds);
+		let tolerance = 0.01; // 1 cent tolerance for floating point comparison
+		let expected_final_balance = initial_balance + expected_increase;
+
+		loop {
+			if start_time.elapsed() >= max_duration {
+				return Err(format!(
+					"Timeout waiting for spot {} balance to increase from {:.2} by {:.2} (to {:.2}) after {} seconds",
+					ticker, initial_balance, expected_increase, expected_final_balance, max_wait_seconds
+				));
+			}
+
+			let current_balance = self.get_spot_balance(user_address, ticker).await?;
+
+			debug!(
+				"Current spot {} balance: {:.2}, initial: {:.2}, expected final: {:.2}",
+				ticker, current_balance, initial_balance, expected_final_balance
+			);
+
+			// Check if balance has increased by the expected amount (with tolerance)
+			if current_balance >= expected_final_balance - tolerance {
+				debug!(
+					"Spot {} balance increased successfully: {:.2} (increased by {:.2})",
+					ticker,
+					current_balance,
+					current_balance - initial_balance
+				);
+				return Ok(current_balance);
 			}
 
 			tokio::time::sleep(Duration::from_secs(2)).await;

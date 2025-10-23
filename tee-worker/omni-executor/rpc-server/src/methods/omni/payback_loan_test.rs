@@ -2,6 +2,7 @@ use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
+use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_userop;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -9,7 +10,6 @@ use executor_primitives::AccountId;
 use executor_storage::Storage;
 use hyperliquid::*;
 use jsonrpsee::RpcModule;
-use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -30,6 +30,7 @@ pub struct PaybackLoanTestResponse {
 	pub hedge_close_cloid: String,
 	pub spot_buy_cloid: String,
 	pub hedge_close_tx_hash: Option<String>,
+	pub usd_transfer_tx_hash: Option<String>,
 	pub spot_buy_tx_hash: Option<String>,
 }
 
@@ -50,35 +51,12 @@ pub fn register_payback_loan_test<
 
 			debug!("Received omni_paybackLoanTest, params: {:?}", params);
 
-			let address_bytes =
-				hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
-					.map_err(|_| {
-						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Failed to decode omni account hex string"),
-						)
-					})?;
-
-			if address_bytes.len() != 32 {
-				error!(
-					"Invalid omni account length: expected 32 bytes, got {}",
-					address_bytes.len()
-				);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-						"Invalid omni account length: expected 32 bytes, got {}",
-						address_bytes.len()
-					)),
-				));
-			}
-
-			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
-				error!("Failed to decode AccountId from bytes");
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to decode AccountId from bytes"),
-				)
+			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
+				error!("Failed to parse omni account");
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
+				))
 			})?;
 
 			// Call the handler implementation
@@ -151,7 +129,7 @@ async fn handle_payback_loan_impl<
 		)
 	})?;
 
-	let _hedge_open_cloid = loan_record.hedge_open_cloid.parse::<u128>().map_err(|e| {
+	let hedge_open_cloid = loan_record.hedge_open_cloid.parse::<u128>().map_err(|e| {
 		error!("Failed to parse hedge_open_cloid: {}", e);
 		PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
@@ -205,8 +183,47 @@ async fn handle_payback_loan_impl<
 
 	info!("✓ USDC balance check passed: user has sufficient USDC");
 
-	// Step 3: Check hedge position status
-	info!("Checking hedge position status...");
+	// Step 3: Check hedge position status by verifying the specific position for this loan
+	info!(
+		"Checking hedge position status for loan nonce {} with hedge_open_cloid {}",
+		loan_nonce, hedge_open_cloid
+	);
+
+	// First, get the fill that opened the hedge to verify we're looking at the right position
+	let hedge_open_fill = hypercore_client
+		.get_fill_by_cloid(smart_wallet_address_str, hedge_open_cloid)
+		.await
+		.map_err(|e| {
+			error!("Failed to get hedge open fill for cloid {}: {}", hedge_open_cloid, e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Hedge position not found")
+					.with_reason(format!("Cannot find the original hedge open order (cloid: {}). It may have been liquidated or manually closed.", hedge_open_cloid)),
+			)
+		})?;
+
+	info!(
+		"Found hedge open fill: coin={}, size={}, price={}, cloid={}",
+		hedge_open_fill.coin,
+		hedge_open_fill.sz,
+		hedge_open_fill.px,
+		hedge_open_fill.cloid.as_ref().unwrap_or(&"N/A".to_string())
+	);
+
+	// Verify the fill is for the expected collateral ticker
+	if !hedge_open_fill.coin.eq_ignore_ascii_case(&collateral_ticker) {
+		error!(
+			"Mismatch: hedge open fill is for {} but loan record says {}",
+			hedge_open_fill.coin, collateral_ticker
+		);
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Data inconsistency").with_reason(format!(
+				"Hedge open fill ticker ({}) doesn't match loan collateral ticker ({})",
+				hedge_open_fill.coin, collateral_ticker
+			)),
+		));
+	}
+
+	// Now get current perp state to check if the position still exists
 	let perp_state = hypercore_client
 		.get_perp_clearinghouse_state(smart_wallet_address_str)
 		.await
@@ -218,16 +235,22 @@ async fn handle_payback_loan_impl<
 			)
 		})?;
 
-	// Find the hedge position for the collateral ticker
+	// Find the position for this specific collateral
 	let hedge_position = perp_state
 		.asset_positions
 		.iter()
 		.find(|pos| pos.position.coin.eq_ignore_ascii_case(&collateral_ticker))
 		.ok_or_else(|| {
-			error!("Hedge position for {} not found", collateral_ticker);
+			error!(
+				"Hedge position for {} (from loan nonce {}) not found in current positions",
+				collateral_ticker, loan_nonce
+			);
 			PumpxRpcError::from(
 				DetailedError::new(INTERNAL_ERROR_CODE, "Hedge position not found")
-					.with_reason(format!("No open hedge position found for {}", collateral_ticker)),
+					.with_reason(format!(
+						"The hedge position for {} (opened with cloid {}) no longer exists. It may have been liquidated or manually closed.",
+						collateral_ticker, hedge_open_cloid
+					)),
 			)
 		})?;
 
@@ -239,22 +262,33 @@ async fn handle_payback_loan_impl<
 		)
 	})?;
 
+	let hedge_open_size = hedge_open_fill.sz.parse::<f64>().map_err(|e| {
+		error!("Failed to parse hedge open size: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid hedge open size: {}", e)),
+		)
+	})?;
+
 	// Check if position has been liquidated (size should be > 0 for long position)
 	if position_size <= 0.0 {
 		error!("Hedge position has been liquidated or closed (size: {})", position_size);
 		return Err(PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated or closed").with_reason(
 				format!(
-					"The hedge position for {} has been liquidated or closed",
-					collateral_ticker
+					"The hedge position for {} (loan nonce {}) has been liquidated or closed",
+					collateral_ticker, loan_nonce
 				),
 			),
 		));
 	}
 
+	// Verify the position size is reasonable relative to the original hedge
+	// Note: If user has multiple positions for the same ticker, we can only verify one exists
+	// The position size might be larger if user added to it, or smaller if partially closed
 	info!(
-		"✓ Hedge position check passed: {} position with size {}",
-		collateral_ticker, position_size
+		"✓ Hedge position check passed: {} position with current size {} (original hedge: {})",
+		collateral_ticker, position_size, hedge_open_size
 	);
 
 	// Fetch metadata
@@ -404,7 +438,6 @@ async fn handle_payback_loan_impl<
 
 	info!("Action 1: Hedge close order submitted with tx_hash: {:?}", hedge_close_tx_hash);
 
-	// Action 2: Wait for position to close
 	info!("Waiting for hedge position to close...");
 
 	// Wait for the close order to be filled
@@ -438,7 +471,7 @@ async fn handle_payback_loan_impl<
 		.print_account_state(smart_wallet_address_str, "After Action 1 - Hedge Closed")
 		.await;
 
-	// Action 3: Transfer USDC from perp to spot
+	// Action 2: Transfer USDC from perp to spot
 	info!("Action 2: Transferring USDC from perp to spot...");
 
 	// Get current perp balance to determine how much USDC to transfer
@@ -476,7 +509,7 @@ async fn handle_payback_loan_impl<
 	skeleton_action2.nonce = skeleton_user_op.nonce + 1;
 	skeleton_action2.init_code = "0x".to_string();
 
-	let _usd_transfer_tx_hash = submit_corewriter_userop(
+	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
 		&skeleton_action2,
@@ -487,7 +520,7 @@ async fn handle_payback_loan_impl<
 	)
 	.await?;
 
-	info!("Action 2: USD transfer to spot submitted");
+	info!("Action 2: USD transfer to spot submitted with tx_hash: {:?}", usd_transfer_tx_hash);
 
 	// Wait for transfer to complete by checking spot balance increase
 	let initial_spot_usdc = hypercore_client
@@ -501,45 +534,29 @@ async fn handle_payback_loan_impl<
 			)
 		})?;
 
-	// Poll for USDC to appear in spot account
-	let max_wait_seconds = 30;
-	let start_time = std::time::Instant::now();
-	let tolerance = 0.01;
+	hypercore_client
+		.wait_for_spot_balance_increase(
+			smart_wallet_address_str,
+			"USDC",
+			initial_spot_usdc,
+			withdrawable_usdc,
+			30,
+		)
+		.await
+		.map_err(|e| {
+			error!("USD transfer to spot failed: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Transfer timeout").with_reason(e),
+			)
+		})?;
 
-	loop {
-		if start_time.elapsed().as_secs() >= max_wait_seconds {
-			return Err(PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Transfer timeout").with_reason(format!(
-					"USDC transfer to spot did not complete within {} seconds",
-					max_wait_seconds
-				)),
-			));
-		}
-
-		let current_spot_usdc = hypercore_client
-			.get_spot_balance(smart_wallet_address_str, "USDC")
-			.await
-			.map_err(|e| {
-				error!("Failed to get current spot USDC balance: {}", e);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Failed to query spot USDC balance: {}", e)),
-				)
-			})?;
-
-		if current_spot_usdc >= initial_spot_usdc + withdrawable_usdc - tolerance {
-			info!("Action 2: USDC transfer completed (spot balance: {})", current_spot_usdc);
-			break;
-		}
-
-		tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-	}
+	info!("Action 2: USDC transfer completed");
 
 	hypercore_client
 		.print_account_state(smart_wallet_address_str, "After Action 2 - USD Transfer to Spot")
 		.await;
 
-	// Action 4: Spot buy collateral
+	// Action 3: Spot buy collateral
 	info!("Action 3: Buying back collateral in spot market...");
 
 	// Calculate how much collateral to buy (target: collateral_size)
@@ -649,6 +666,7 @@ async fn handle_payback_loan_impl<
 		hedge_close_cloid: hedge_close_cloid.to_string(),
 		spot_buy_cloid: spot_buy_cloid.to_string(),
 		hedge_close_tx_hash,
+		usd_transfer_tx_hash,
 		spot_buy_tx_hash,
 	})
 }
