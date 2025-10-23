@@ -1,3 +1,4 @@
+use crate::utils::user_op::convert_to_packed_user_op;
 use crate::{error_code::AUTH_VERIFICATION_FAILED_CODE, ErrorCode};
 use aa_contracts_client::calculate_user_operation_hash;
 use alloy::primitives::Address;
@@ -11,7 +12,6 @@ use executor_primitives::{
 use executor_storage::{Storage, WildmetaTimestampStorage};
 use heima_primitives::{Address20, Identity};
 use jsonrpsee::types::ErrorObject;
-use native_task_handler::convert_to_packed_user_op;
 use std::sync::Arc;
 use tracing::error;
 

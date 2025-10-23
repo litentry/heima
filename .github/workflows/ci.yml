@@ -205,7 +205,7 @@ jobs:
           cargo fmt -- --check
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20.x'
 
@@ -680,7 +680,7 @@ jobs:
           docker load < heima.tar.gz
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20.x'
 
@@ -816,7 +816,7 @@ jobs:
           docker images
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20.x'
 
@@ -914,7 +914,7 @@ jobs:
           docker images
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20.x'
 

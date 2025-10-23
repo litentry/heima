@@ -14,22 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::{handle_omni_native_task, PumpxRpcError};
+use super::common::PumpxRpcError;
 use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
+use crate::utils::gas_estimation::estimate_user_op_gas;
+use crate::utils::user_op::convert_to_packed_user_op;
 use crate::validation_helpers::{
 	validate_ethereum_address, validate_omni_account_hex, validate_omni_account_length,
 };
 use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::{NativeTask, NativeTaskWrapper};
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 /// Format a token amount with decimals to a human-readable string
 fn format_token_amount(amount: u128, decimals: u8) -> String {
@@ -59,6 +59,7 @@ pub struct EstimateUserOpGasParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub omni_account: String,
+	#[allow(dead_code)]
 	pub client_id: String,
 }
 
@@ -88,13 +89,9 @@ pub struct EstimateUserOpGasResponse {
 }
 
 pub fn register_estimate_user_op_gas<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {
@@ -125,31 +122,42 @@ pub fn register_estimate_user_op_gas<
 			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
 				.map_err(PumpxRpcError::from)?;
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::EstimateUserOpGas(
-					account_id,
-					params.user_operation.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
-				params.client_id,
+			// Inlined handler logic from handle_estimate_user_op_gas
+			info!(
+				"Processing EstimateUserOpGas for account {:?}, wallet_index: {}, chain_id: {}",
+				account_id, params.wallet_index, params.chain_id
 			);
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::EstimateUserOpGas {
-					call_gas_limit,
-					verification_gas_limit,
-					pre_verification_gas,
-					paymaster_verification_gas_limit,
-					paymaster_post_op_gas_limit,
-					max_fee_per_gas,
-					max_priority_fee_per_gas,
-					estimated_token_cost,
-				} => {
+			// Get EntryPoint client for this chain
+			let entry_point_client =
+				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
+					error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
+					PumpxRpcError::from(DetailedError::chain_not_supported(params.chain_id))
+				})?;
+
+			// Convert SerializablePackedUserOperation to PackedUserOperation
+			let packed_user_op =
+				convert_to_packed_user_op(params.user_operation.clone()).map_err(|e| {
+					error!("Failed to convert UserOperation: {}", e);
+					PumpxRpcError::from(DetailedError::invalid_user_operation_error(
+						"Invalid user operation format",
+					))
+				})?;
+
+			// Perform gas estimation
+			let result = estimate_user_op_gas(
+				entry_point_client.clone(),
+				packed_user_op,
+				params.chain_id,
+				ctx.binance_api_client.as_ref(),
+			)
+			.await;
+
+			// Process response
+			match result {
+				Ok(gas_estimate) => {
 					// Convert token cost estimate to RPC format if present
-					let token_cost_info = estimated_token_cost.map(|cost| {
+					let token_cost_info = gas_estimate.estimated_token_cost.map(|cost| {
 						// Format the amount as a human-readable value
 						let formatted_amount = format_token_amount(cost.amount, cost.decimals);
 
@@ -164,26 +172,25 @@ pub fn register_estimate_user_op_gas<
 					});
 
 					Ok(EstimateUserOpGasResponse {
-						call_gas_limit: call_gas_limit.to_string(),
-						verification_gas_limit: verification_gas_limit.to_string(),
-						pre_verification_gas: pre_verification_gas.to_string(),
-						paymaster_verification_gas_limit: paymaster_verification_gas_limit
+						call_gas_limit: gas_estimate.call_gas_limit.to_string(),
+						verification_gas_limit: gas_estimate.verification_gas_limit.to_string(),
+						pre_verification_gas: gas_estimate.pre_verification_gas.to_string(),
+						paymaster_verification_gas_limit: gas_estimate
+							.paymaster_verification_gas_limit
 							.to_string(),
-						paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
-						max_fee_per_gas: max_fee_per_gas.to_string(),
-						max_priority_fee_per_gas: max_priority_fee_per_gas.to_string(),
+						paymaster_post_op_gas_limit: gas_estimate
+							.paymaster_post_op_gas_limit
+							.to_string(),
+						max_fee_per_gas: gas_estimate.max_fee_per_gas.to_string(),
+						max_priority_fee_per_gas: gas_estimate.max_priority_fee_per_gas.to_string(),
 						estimated_token_cost: token_cost_info,
 					})
 				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(DetailedError::unexpected_response_type(
-						"EstimateUserOpGas response",
-						"Unknown response type",
-					)))
+				Err(e) => {
+					error!("Gas estimation failed: {}", e);
+					Err(PumpxRpcError::from(DetailedError::gas_estimation_failed()))
 				},
-			})
-			.await
+			}
 		})
 		.expect("Failed to register omni_estimateUserOpGas method");
 }
