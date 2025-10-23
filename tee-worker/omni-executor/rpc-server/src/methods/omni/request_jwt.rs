@@ -18,7 +18,6 @@ use heima_authentication::{
 };
 use heima_primitives::{Identity, Web2IdentityType};
 use jsonrpsee::RpcModule;
-use parity_scale_codec::Encode;
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
 use tracing::{debug, error};
@@ -112,7 +111,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				.to_omni_account(&params.client_id);
 
 			let access_token_claims: AuthTokenClaims = AuthTokenClaims::new(
-				hex_encode(&omni_account.encode()),
+				hex_encode(omni_account.as_ref()),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				params.client_id.to_string(),
 				auth_options.clone(),
@@ -163,7 +162,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			}
 
 			let id_token_claims = AuthTokenClaims::new(
-				hex_encode(&omni_account.encode()),
+				hex_encode(omni_account.as_ref()),
 				AUTH_TOKEN_ID_TYPE.to_string(),
 				params.client_id.to_string(),
 				auth_options,

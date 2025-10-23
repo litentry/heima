@@ -21,7 +21,6 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::hex_encode, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parity_scale_codec::Encode;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -50,7 +49,7 @@ pub fn register_get_omni_account<
 			let account =
 				Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email)
 					.to_omni_account(&params.client_id);
-			Ok::<String, ErrorObject>(hex_encode(&account.encode()))
+			Ok::<String, ErrorObject>(hex_encode(account.as_ref()))
 		})
 		.expect("Failed to register omni_getOmniAccount method");
 }

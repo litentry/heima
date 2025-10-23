@@ -93,7 +93,7 @@ pub fn verify_web3_authentication(
 		.map_err(|_| AuthenticationError::VerificationCodeNotFound)?;
 	let message = HeimaMessagePayload {
 		client_id: client_id.to_string(),
-		omni_account: hex_encode(&omni_account.encode()),
+		omni_account: hex_encode(omni_account.as_ref()),
 		message_code,
 	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
@@ -291,7 +291,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: hex_encode(&alice_omni_account.encode()),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -325,7 +325,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: hex_encode(&solana_omni_account.encode()),
+			omni_account: hex_encode(solana_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -358,7 +358,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: hex_encode(&evm_omni_account.encode()),
+			omni_account: hex_encode(evm_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -394,7 +394,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: hex_encode(&alice_omni_account.encode()),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -424,7 +424,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: hex_encode(&alice_omni_account.encode()),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -458,7 +458,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code: "invalid_code".to_string(), // Use an invalid code
-			omni_account: hex_encode(&alice_omni_account.encode()),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 

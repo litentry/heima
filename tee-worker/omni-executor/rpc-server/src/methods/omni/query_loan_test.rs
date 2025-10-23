@@ -96,7 +96,6 @@ mod test {
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use parity_scale_codec::Encode;
 	use pumpx::PumpxApiClient;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use signer_client::{mocks::MockSignerClient, SignerClient};
@@ -177,7 +176,7 @@ mod test {
 		let response: QueryLoanTestResponse = client
 			.request(
 				"omni_queryLoanTest",
-				rpc_params![hex_encode(&omni_account.encode()), Some(nonce)],
+				rpc_params![hex_encode(omni_account.as_ref()), Some(nonce)],
 			)
 			.await
 			.unwrap();
@@ -296,7 +295,7 @@ mod test {
 		let response: QueryLoanTestResponse = client
 			.request(
 				"omni_queryLoanTest",
-				rpc_params![hex_encode(&omni_account.encode()), None::<u64>],
+				rpc_params![hex_encode(omni_account.as_ref()), None::<u64>],
 			)
 			.await
 			.unwrap();
@@ -384,7 +383,7 @@ mod test {
 		let response: QueryLoanTestResponse = client
 			.request(
 				"omni_queryLoanTest",
-				rpc_params![hex_encode(&omni_account.encode()), Some(999u64)],
+				rpc_params![hex_encode(omni_account.as_ref()), Some(999u64)],
 			)
 			.await
 			.unwrap();
@@ -463,7 +462,7 @@ mod test {
 		let response: QueryLoanTestResponse = client
 			.request(
 				"omni_queryLoanTest",
-				rpc_params![hex_encode(&query_account.encode()), None::<u64>],
+				rpc_params![hex_encode(query_account.as_ref()), None::<u64>],
 			)
 			.await
 			.unwrap();

@@ -15,7 +15,6 @@ use heima_authentication::{
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use parity_scale_codec::Encode;
 use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -59,7 +58,7 @@ fn create_jwt_for_user(
 	let auth_options = AuthOptions { expires_at };
 	let omni_account = identity.to_omni_account(client_id);
 	let token_claims = AuthTokenClaims::new(
-		hex_encode(&omni_account.encode()),
+		hex_encode(omni_account.as_ref()),
 		token_type.to_string(),
 		client_id.to_string(),
 		auth_options,
