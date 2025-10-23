@@ -145,7 +145,7 @@ pub fn convert_to_packed_user_op(
 
 /// Helper function to submit a CoreWriter userOp
 #[allow(clippy::too_many_arguments)]
-pub async fn submit_corewriter_userop<
+pub(crate) async fn submit_corewriter_userop<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,

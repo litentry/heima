@@ -664,4 +664,67 @@ impl HyperCoreClient {
 			})
 			.ok_or_else(|| format!("No fill found with cloid: {}", cloid))
 	}
+
+	/// Helper function to print account state for debugging
+	pub async fn print_account_state(&self, user_address: &str, label: &str) {
+		tracing::info!("========== Account State: {} ==========", label);
+
+		// Print spot balances
+		match self.get_spot_clearinghouse_state(user_address).await {
+			Ok(spot_state) => {
+				tracing::info!("Spot Balances:");
+				for balance in &spot_state.balances {
+					let total: f64 = balance.total.parse().unwrap_or(0.0);
+					let hold: f64 = balance.hold.parse().unwrap_or(0.0);
+					if total > 0.0 || hold > 0.0 {
+						tracing::info!(
+							"  {} - Total: {}, Hold: {}",
+							balance.coin,
+							balance.total,
+							balance.hold
+						);
+					}
+				}
+			},
+			Err(e) => {
+				tracing::info!("Failed to fetch spot balances: {}", e);
+			},
+		}
+
+		// Print perp clearinghouse state
+		match self.get_perp_clearinghouse_state(user_address).await {
+			Ok(perp_state) => {
+				tracing::info!("Perp Margin Summary:");
+				tracing::info!(
+					"  Account Value: {}, Total Margin Used: {}, Withdrawable: {}",
+					perp_state.margin_summary.account_value,
+					perp_state.margin_summary.total_margin_used,
+					perp_state.withdrawable
+				);
+
+				if !perp_state.asset_positions.is_empty() {
+					tracing::info!("Open Positions:");
+					for asset_pos in &perp_state.asset_positions {
+						let pos = &asset_pos.position;
+						tracing::info!(
+							"  {} - Size: {}, Entry Px: {}, Position Value: {}, Unrealized PnL: {}, Leverage: {}x",
+							pos.coin,
+							pos.szi,
+							pos.entry_px.as_ref().unwrap_or(&"N/A".to_string()),
+							pos.position_value,
+							pos.unrealized_pnl,
+							pos.leverage.value
+						);
+					}
+				} else {
+					tracing::info!("Open Positions: None");
+				}
+			},
+			Err(e) => {
+				tracing::info!("Failed to fetch perp clearinghouse state: {}", e);
+			},
+		}
+
+		tracing::info!("==========================================");
+	}
 }

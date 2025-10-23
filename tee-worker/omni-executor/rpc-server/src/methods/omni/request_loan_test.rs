@@ -145,64 +145,6 @@ pub fn register_request_loan_test<
 		.expect("Failed to register omni_requestLoanTest method");
 }
 
-// Helper function to print account state
-async fn print_account_state(hypercore_client: &HyperCoreClient, user_address: &str, label: &str) {
-	info!("========== Account State: {} ==========", label);
-
-	// Print spot balances
-	match hypercore_client.get_spot_clearinghouse_state(user_address).await {
-		Ok(spot_state) => {
-			info!("Spot Balances:");
-			for balance in &spot_state.balances {
-				let total: f64 = balance.total.parse().unwrap_or(0.0);
-				let hold: f64 = balance.hold.parse().unwrap_or(0.0);
-				if total > 0.0 || hold > 0.0 {
-					info!("  {} - Total: {}, Hold: {}", balance.coin, balance.total, balance.hold);
-				}
-			}
-		},
-		Err(e) => {
-			info!("Failed to fetch spot balances: {}", e);
-		},
-	}
-
-	// Print perp clearinghouse state
-	match hypercore_client.get_perp_clearinghouse_state(user_address).await {
-		Ok(perp_state) => {
-			info!("Perp Margin Summary:");
-			info!(
-				"  Account Value: {}, Total Margin Used: {}, Withdrawable: {}",
-				perp_state.margin_summary.account_value,
-				perp_state.margin_summary.total_margin_used,
-				perp_state.withdrawable
-			);
-
-			if !perp_state.asset_positions.is_empty() {
-				info!("Open Positions:");
-				for asset_pos in &perp_state.asset_positions {
-					let pos = &asset_pos.position;
-					info!(
-						"  {} - Size: {}, Entry Px: {}, Position Value: {}, Unrealized PnL: {}, Leverage: {}x",
-						pos.coin,
-						pos.szi,
-						pos.entry_px.as_ref().unwrap_or(&"N/A".to_string()),
-						pos.position_value,
-						pos.unrealized_pnl,
-						pos.leverage.value
-					);
-				}
-			} else {
-				info!("Open Positions: None");
-			}
-		},
-		Err(e) => {
-			info!("Failed to fetch perp clearinghouse state: {}", e);
-		},
-	}
-
-	info!("==========================================");
-}
-
 // Helper function to validate loan request parameters
 #[allow(clippy::too_many_arguments)]
 async fn validate_loan_request_parameters(
@@ -455,7 +397,9 @@ async fn handle_request_loan_impl<
 	.await?;
 
 	// Print initial account state
-	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Actions").await;
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "Before Actions")
+		.await;
 
 	// Action 1: Sell collateral_size as spot to get X USDC
 	let clamped_size = clamp_size(collateral_size, collateral_token.sz_decimals);
@@ -567,7 +511,8 @@ async fn handle_request_loan_impl<
 
 	info!("Action 1: Spot sell completed - received {:.2} USDC", usdc_received);
 
-	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 1 - Spot Sell")
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "After Action 1 - Spot Sell")
 		.await;
 
 	// Calculate USDC allocation
@@ -673,12 +618,9 @@ async fn handle_request_loan_impl<
 
 	info!("Action 2: USD class transfer completed successfully");
 
-	print_account_state(
-		&hypercore_client,
-		smart_wallet_address_str,
-		"After Action 2 - USD Transfer to Perp",
-	)
-	.await;
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "After Action 2 - USD Transfer to Perp")
+		.await;
 
 	// Action 3: Open hedge position
 	current_nonce += 1;
@@ -760,7 +702,8 @@ async fn handle_request_loan_impl<
 
 	info!("Action 3: Hedge order successfully opened");
 
-	print_account_state(&hypercore_client, smart_wallet_address_str, "After Action 3 - Hedge Open")
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "After Action 3 - Hedge Open")
 		.await;
 
 	let usdc_received_str = format!("{:.2}", usdc_to_lend);

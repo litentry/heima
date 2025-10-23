@@ -21,14 +21,14 @@ pub struct PaybackLoanTestParams {
 	pub wallet_index: u32,
 	pub omni_account: String,
 	pub nonce: u64,
-	pub client_id: String,
 }
 
 #[derive(Serialize, Clone)]
 pub struct PaybackLoanTestResponse {
+	pub collateral_ticker: String,
+	pub collateral_size: String,
 	pub hedge_close_cloid: String,
 	pub spot_buy_cloid: String,
-	pub collateral_bought: String,
 	pub hedge_close_tx_hash: Option<String>,
 	pub spot_buy_tx_hash: Option<String>,
 }
@@ -89,73 +89,13 @@ pub fn register_payback_loan_test<
 				params.chain_id,
 				params.wallet_index,
 				params.nonce,
-				&params.client_id,
 			)
 			.await
 		})
 		.expect("Failed to register omni_paybackLoanTest method");
 }
 
-// Helper function to print account state
-async fn print_account_state(hypercore_client: &HyperCoreClient, user_address: &str, label: &str) {
-	info!("========== Account State: {} ==========", label);
-
-	// Print spot balances
-	match hypercore_client.get_spot_clearinghouse_state(user_address).await {
-		Ok(spot_state) => {
-			info!("Spot Balances:");
-			for balance in &spot_state.balances {
-				let total: f64 = balance.total.parse().unwrap_or(0.0);
-				let hold: f64 = balance.hold.parse().unwrap_or(0.0);
-				if total > 0.0 || hold > 0.0 {
-					info!("  {} - Total: {}, Hold: {}", balance.coin, balance.total, balance.hold);
-				}
-			}
-		},
-		Err(e) => {
-			info!("Failed to fetch spot balances: {}", e);
-		},
-	}
-
-	// Print perp clearinghouse state
-	match hypercore_client.get_perp_clearinghouse_state(user_address).await {
-		Ok(perp_state) => {
-			info!("Perp Margin Summary:");
-			info!(
-				"  Account Value: {}, Total Margin Used: {}, Withdrawable: {}",
-				perp_state.margin_summary.account_value,
-				perp_state.margin_summary.total_margin_used,
-				perp_state.withdrawable
-			);
-
-			if !perp_state.asset_positions.is_empty() {
-				info!("Open Positions:");
-				for asset_pos in &perp_state.asset_positions {
-					let pos = &asset_pos.position;
-					info!(
-						"  {} - Size: {}, Entry Px: {}, Position Value: {}, Unrealized PnL: {}, Leverage: {}x",
-						pos.coin,
-						pos.szi,
-						pos.entry_px.as_ref().unwrap_or(&"N/A".to_string()),
-						pos.position_value,
-						pos.unrealized_pnl,
-						pos.leverage.value
-					);
-				}
-			} else {
-				info!("Open Positions: None");
-			}
-		},
-		Err(e) => {
-			info!("Failed to fetch perp clearinghouse state: {}", e);
-		},
-	}
-
-	info!("==========================================");
-}
-
 // Main handler implementation
-#[allow(clippy::too_many_arguments)]
 async fn handle_payback_loan_impl<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
@@ -165,7 +105,6 @@ async fn handle_payback_loan_impl<
 	chain_id: u64,
 	wallet_index: u32,
 	loan_nonce: u64,
-	_client_id: &str,
 ) -> Result<PaybackLoanTestResponse, PumpxRpcError> {
 	let smart_wallet_address_str = &skeleton_user_op.sender;
 
@@ -230,7 +169,9 @@ async fn handle_payback_loan_impl<
 	})?;
 
 	// Print initial account state
-	print_account_state(&hypercore_client, smart_wallet_address_str, "Before Payback").await;
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "Before Payback")
+		.await;
 
 	// Step 2: Check USDC balance in spot account
 	info!("Checking USDC balance in spot account...");
@@ -457,7 +398,7 @@ async fn handle_payback_loan_impl<
 		chain_id,
 		wallet_index,
 		close_calldata,
-		_client_id,
+		"",
 	)
 	.await?;
 
@@ -493,12 +434,9 @@ async fn handle_payback_loan_impl<
 
 	info!("Action 1: Hedge position closed successfully");
 
-	print_account_state(
-		&hypercore_client,
-		smart_wallet_address_str,
-		"After Action 1 - Hedge Closed",
-	)
-	.await;
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "After Action 1 - Hedge Closed")
+		.await;
 
 	// Action 3: Transfer USDC from perp to spot
 	info!("Action 2: Transferring USDC from perp to spot...");
@@ -545,7 +483,7 @@ async fn handle_payback_loan_impl<
 		chain_id,
 		wallet_index,
 		transfer_calldata,
-		_client_id,
+		"",
 	)
 	.await?;
 
@@ -597,12 +535,9 @@ async fn handle_payback_loan_impl<
 		tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 	}
 
-	print_account_state(
-		&hypercore_client,
-		smart_wallet_address_str,
-		"After Action 2 - USD Transfer to Spot",
-	)
-	.await;
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "After Action 2 - USD Transfer to Spot")
+		.await;
 
 	// Action 4: Spot buy collateral
 	info!("Action 3: Buying back collateral in spot market...");
@@ -654,7 +589,7 @@ async fn handle_payback_loan_impl<
 		chain_id,
 		wallet_index,
 		spot_buy_calldata,
-		_client_id,
+		"",
 	)
 	.await?;
 
@@ -700,21 +635,19 @@ async fn handle_payback_loan_impl<
 			)
 		})?;
 
-	let collateral_bought = spot_buy_fill.sz.clone();
+	let collateral_size = spot_buy_fill.sz.clone();
 
-	info!("Action 3: Bought {} {} in spot market", collateral_bought, collateral_ticker);
+	info!("Action 3: Bought {} {} in spot market", collateral_size, collateral_ticker);
 
-	print_account_state(
-		&hypercore_client,
-		smart_wallet_address_str,
-		"After Action 3 - Spot Buy Complete",
-	)
-	.await;
+	hypercore_client
+		.print_account_state(smart_wallet_address_str, "After Action 3 - Spot Buy Complete")
+		.await;
 
 	Ok(PaybackLoanTestResponse {
+		collateral_ticker,
+		collateral_size,
 		hedge_close_cloid: hedge_close_cloid.to_string(),
 		spot_buy_cloid: spot_buy_cloid.to_string(),
-		collateral_bought,
 		hedge_close_tx_hash,
 		spot_buy_tx_hash,
 	})
