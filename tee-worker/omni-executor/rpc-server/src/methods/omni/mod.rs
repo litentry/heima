@@ -2,7 +2,7 @@ use crate::server::RpcContext;
 use jsonrpsee::RpcModule;
 
 mod common;
-use common::*;
+pub use common::PumpxRpcError;
 
 mod get_health;
 use get_health::*;
@@ -94,6 +94,11 @@ mod query_loan_test;
 #[cfg(feature = "test-endpoints")]
 use query_loan_test::*;
 
+#[cfg(feature = "test-endpoints")]
+mod payback_loan_test;
+#[cfg(feature = "test-endpoints")]
+use payback_loan_test::*;
+
 pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
@@ -135,4 +140,7 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	#[cfg(feature = "test-endpoints")]
 	register_query_loan_test(module);
+
+	#[cfg(feature = "test-endpoints")]
+	register_payback_loan_test(module);
 }

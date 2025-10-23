@@ -18,6 +18,12 @@ pub const SPOT_SELL_PRICE_RATIO: f64 = 0.98;
 /// Ratio for perp entry orders (currently at market price)
 pub const PERP_ENTRY_PRICE_RATIO: f64 = 1.0;
 
+/// Ratio for perp close orders (2% above market to ensure fill when closing long positions)
+pub const PERP_CLOSE_PRICE_RATIO: f64 = 0.98;
+
+/// Ratio for spot buy orders (2% above market to ensure fill)
+pub const SPOT_BUY_PRICE_RATIO: f64 = 1.02;
+
 pub fn get_core_writer_address() -> Address {
 	CORE_WRITER_ADDRESS.parse().unwrap()
 }
