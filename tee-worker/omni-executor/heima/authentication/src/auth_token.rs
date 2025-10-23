@@ -143,7 +143,7 @@ mod tests {
 		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
-			hex_encode(&omni_account.encode()),
+			hex_encode(omni_account.as_ref()),
 			AUTH_TOKEN_ID_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
@@ -167,7 +167,7 @@ mod tests {
 		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
-			hex_encode(&omni_account.encode()),
+			hex_encode(omni_account.as_ref()),
 			AUTH_TOKEN_ID_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at: 100 },
@@ -243,7 +243,7 @@ mod tests {
 		let omni_account = email_identity.to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
-			hex_encode(&omni_account.encode()),
+			hex_encode(omni_account.as_ref()),
 			AUTH_TOKEN_ACCESS_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			AuthOptions { expires_at },
