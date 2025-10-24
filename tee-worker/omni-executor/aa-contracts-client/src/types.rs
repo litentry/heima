@@ -57,7 +57,7 @@ sol! {
 		Email,
 		Twitter,
 		Discord,
-		Github,
+		Apple,
 		Substrate,
 		Evm,
 		Bitcoin,
