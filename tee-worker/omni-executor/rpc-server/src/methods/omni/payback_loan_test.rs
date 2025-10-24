@@ -21,6 +21,10 @@ pub struct PaybackLoanTestParams {
 	pub wallet_index: u32,
 	pub omni_account: String,
 	pub loan_nonce: u64,
+	// expected minimal equity (USDC) on user's perp account = (margin + unrealized PnL)
+	// if the actual equity is smaller, it will error out and not close the position.
+	//
+	// This is just a safety guard to avoid unwanted position close (when e.g user is at big loss)
 	pub min_expected_equity: String,
 }
 
