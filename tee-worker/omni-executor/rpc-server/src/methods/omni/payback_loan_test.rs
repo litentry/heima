@@ -21,6 +21,7 @@ pub struct PaybackLoanTestParams {
 	pub wallet_index: u32,
 	pub omni_account: String,
 	pub loan_nonce: u64,
+	pub min_expected_equity: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -68,6 +69,7 @@ pub fn register_payback_loan_test<
 				params.chain_id,
 				params.wallet_index,
 				params.loan_nonce,
+				params.min_expected_equity,
 			)
 			.await
 		})
@@ -75,11 +77,13 @@ pub fn register_payback_loan_test<
 }
 
 /// Helper to verify hedge position exists and is not liquidated
+/// Returns: (position_size, equity)
+/// where equity = margin_used + unrealized_pnl
 async fn verify_hedge_position(
 	hypercore_client: &HyperCoreClient,
 	smart_wallet_address: &str,
 	collateral_ticker: &str,
-) -> Result<f64, PumpxRpcError> {
+) -> Result<(f64, f64), PumpxRpcError> {
 	let perp_state = hypercore_client
 		.get_perp_clearinghouse_state(smart_wallet_address)
 		.await
@@ -121,7 +125,30 @@ async fn verify_hedge_position(
 		));
 	}
 
-	Ok(position_size)
+	// Calculate equity = margin_used + unrealized_pnl
+	let margin_used = hedge_position.position.margin_used.parse::<f64>().map_err(|e| {
+		error!("Failed to parse margin_used: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid margin_used: {}", e)),
+		)
+	})?;
+
+	let unrealized_pnl = hedge_position.position.unrealized_pnl.parse::<f64>().map_err(|e| {
+		error!("Failed to parse unrealized_pnl: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid unrealized_pnl: {}", e)),
+		)
+	})?;
+
+	let equity = margin_used + unrealized_pnl;
+	info!(
+		"Position equity for {}: margin_used = {}, unrealized_pnl = {}, total equity = {}",
+		collateral_ticker, margin_used, unrealized_pnl, equity
+	);
+
+	Ok((position_size, equity))
 }
 
 // Main handler implementation
@@ -134,8 +161,20 @@ async fn handle_payback_loan_impl<
 	chain_id: u64,
 	wallet_index: u32,
 	loan_nonce: u64,
+	min_expected_equity: String,
 ) -> Result<PaybackLoanTestResponse, PumpxRpcError> {
 	let smart_wallet_address_str = &skeleton_user_op.sender;
+
+	// Parse min_expected_equity
+	let min_expected_equity_f64 = min_expected_equity.parse::<f64>().map_err(|e| {
+		error!("Failed to parse min_expected_equity: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(PARSE_ERROR_CODE, "Invalid parameter")
+				.with_reason(format!("Invalid min_expected_equity value: {}", e)),
+		)
+	})?;
+
+	info!("Minimum expected equity threshold: {} USDC", min_expected_equity_f64);
 
 	// Step 1: Retrieve loan record from storage
 	info!("Retrieving loan record for omni_account {:?}, nonce {}", omni_account, loan_nonce);
@@ -252,61 +291,100 @@ async fn handle_payback_loan_impl<
 			)
 		})?;
 
-	let (should_cancel, should_close, position_size_to_close) =
-		if let Some(order_info) = order_status.order {
-			let status = order_info.status.as_str();
-			info!("Hedge order status: {}", status);
+	let (should_cancel, should_close, position_size_to_close) = if let Some(order_info) =
+		order_status.order
+	{
+		let status = order_info.status.as_str();
+		info!("Hedge order status: {}", status);
 
-			match status {
-				"filled" => {
-					// Case 1: Fully filled - close position
-					info!("Case 1: Order fully filled, will close position");
-					let position_size = verify_hedge_position(
-						&hypercore_client,
-						smart_wallet_address_str,
-						&collateral_ticker,
-					)
-					.await?;
-					(false, true, position_size)
-				},
-				"open" => {
-					// Case 2: Not filled at all - cancel order
-					info!("Case 2: Order not filled, will cancel");
-					(true, false, 0.0)
-				},
-				"partial_fill" => {
-					// Case 3: Partially filled - cancel + close filled part
-					info!("Case 3: Order partially filled, will cancel order and close filled position");
-					let position_size = verify_hedge_position(
-						&hypercore_client,
-						smart_wallet_address_str,
-						&collateral_ticker,
-					)
-					.await?;
-					(true, true, position_size)
-				},
-				"canceled" | "rejected" | "expired" => {
-					error!("Order already in terminal state: {}", status);
+		match status {
+			"filled" => {
+				// Case 1: Fully filled - close position
+				info!("Case 1: Order fully filled, will close position");
+				let (position_size, equity) = verify_hedge_position(
+					&hypercore_client,
+					smart_wallet_address_str,
+					&collateral_ticker,
+				)
+				.await?;
+
+				// Validate equity against minimum threshold
+				if equity < min_expected_equity_f64 {
+					error!(
+						"Position equity ({} USDC) is below minimum expected equity ({} USDC)",
+						equity, min_expected_equity_f64
+					);
 					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Order not active")
-							.with_reason(format!("Order is already {}", status)),
-					));
-				},
-				_ => {
-					error!("Unexpected order status: {}", status);
+							DetailedError::new(INTERNAL_ERROR_CODE, "Equity too low").with_reason(
+								format!(
+									"Position equity ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
+									equity, min_expected_equity_f64
+								),
+							),
+						));
+				}
+				info!("✓ Equity check passed: {} USDC >= {} USDC", equity, min_expected_equity_f64);
+
+				(false, true, position_size)
+			},
+			"open" => {
+				// Case 2: Not filled at all - cancel order
+				info!("Case 2: Order not filled, will cancel");
+				(true, false, 0.0)
+			},
+			"partial_fill" => {
+				// Case 3: Partially filled - cancel + close filled part
+				info!(
+					"Case 3: Order partially filled, will cancel order and close filled position"
+				);
+				let (position_size, equity) = verify_hedge_position(
+					&hypercore_client,
+					smart_wallet_address_str,
+					&collateral_ticker,
+				)
+				.await?;
+
+				// Validate equity against minimum threshold
+				if equity < min_expected_equity_f64 {
+					error!(
+						"Position equity ({} USDC) is below minimum expected equity ({} USDC)",
+						equity, min_expected_equity_f64
+					);
 					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Unexpected order status")
-							.with_reason(format!("Unknown status: {}", status)),
-					));
-				},
-			}
-		} else {
-			error!("Order not found for cloid {}", hedge_open_cloid);
-			return Err(PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Order not found")
-					.with_reason(format!("No order found with cloid {}", hedge_open_cloid)),
-			));
-		};
+							DetailedError::new(INTERNAL_ERROR_CODE, "Equity too low").with_reason(
+								format!(
+									"Position equity ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
+									equity, min_expected_equity_f64
+								),
+							),
+						));
+				}
+				info!("✓ Equity check passed: {} USDC >= {} USDC", equity, min_expected_equity_f64);
+
+				(true, true, position_size)
+			},
+			"canceled" | "rejected" | "expired" => {
+				error!("Order already in terminal state: {}", status);
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Order not active")
+						.with_reason(format!("Order is already {}", status)),
+				));
+			},
+			_ => {
+				error!("Unexpected order status: {}", status);
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Unexpected order status")
+						.with_reason(format!("Unknown status: {}", status)),
+				));
+			},
+		}
+	} else {
+		error!("Order not found for cloid {}", hedge_open_cloid);
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Order not found")
+				.with_reason(format!("No order found with cloid {}", hedge_open_cloid)),
+		));
+	};
 
 	// Fetch metadata
 	let spot_meta = hypercore_client.get_spot_meta().await.map_err(|e| {
