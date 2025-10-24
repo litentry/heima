@@ -143,6 +143,19 @@ pub fn convert_to_packed_user_op(
 	})
 }
 
+/// Prepare a skeleton user op with incremented nonce and cleared init_code if needed
+pub(crate) fn prepare_skeleton_with_nonce(
+	base: &SerializablePackedUserOperation,
+	nonce: u128,
+) -> SerializablePackedUserOperation {
+	let mut skeleton = base.clone();
+	skeleton.nonce = nonce;
+	if nonce > base.nonce {
+		skeleton.init_code = "0x".to_string();
+	}
+	skeleton
+}
+
 /// Helper function to submit a CoreWriter userOp
 #[allow(clippy::too_many_arguments)]
 #[allow(dead_code)]

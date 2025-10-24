@@ -3,7 +3,7 @@ use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::submit_corewriter_userop;
+use crate::utils::user_op::{prepare_skeleton_with_nonce, submit_corewriter_userop};
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -521,18 +521,15 @@ async fn handle_request_loan_impl<
 	let mut current_nonce = skeleton_user_op.nonce + 1;
 	let usdc_for_perp_units = to_usdc_units(usdc_for_perp);
 	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
-	let usd_transfer_corewriter_calldata = encode_send_raw_action(usd_transfer_action);
-	let usd_transfer_calldata =
-		encode_omni_account_execute(get_core_writer_address(), usd_transfer_corewriter_calldata);
-
-	let mut skeleton_action2 = skeleton_user_op.clone();
-	skeleton_action2.nonce = current_nonce;
-	skeleton_action2.init_code = "0x".to_string();
+	let usd_transfer_calldata = encode_omni_account_execute(
+		get_core_writer_address(),
+		encode_send_raw_action(usd_transfer_action),
+	);
 
 	let _usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&skeleton_action2,
+		&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
 		chain_id,
 		wallet_index,
 		usd_transfer_calldata,
@@ -618,18 +615,15 @@ async fn handle_request_loan_impl<
 
 	let hedge_action =
 		build_perp_long_order(perp_asset_id, hedge_size_units, hedge_price_units, hedge_open_cloid);
-	let hedge_corewriter_calldata = encode_send_raw_action(hedge_action);
-	let hedge_calldata =
-		encode_omni_account_execute(get_core_writer_address(), hedge_corewriter_calldata);
-
-	let mut skeleton_action3 = skeleton_user_op.clone();
-	skeleton_action3.nonce = current_nonce;
-	skeleton_action3.init_code = "0x".to_string();
+	let hedge_calldata = encode_omni_account_execute(
+		get_core_writer_address(),
+		encode_send_raw_action(hedge_action),
+	);
 
 	let hedge_open_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&skeleton_action3,
+		&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
 		chain_id,
 		wallet_index,
 		hedge_calldata,

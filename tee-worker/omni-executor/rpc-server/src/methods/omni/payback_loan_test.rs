@@ -3,7 +3,7 @@ use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::submit_corewriter_userop;
+use crate::utils::user_op::{prepare_skeleton_with_nonce, submit_corewriter_userop};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::AccountId;
@@ -72,6 +72,56 @@ pub fn register_payback_loan_test<
 			.await
 		})
 		.expect("Failed to register omni_paybackLoanTest method");
+}
+
+/// Helper to verify hedge position exists and is not liquidated
+async fn verify_hedge_position(
+	hypercore_client: &HyperCoreClient,
+	smart_wallet_address: &str,
+	collateral_ticker: &str,
+) -> Result<f64, PumpxRpcError> {
+	let perp_state = hypercore_client
+		.get_perp_clearinghouse_state(smart_wallet_address)
+		.await
+		.map_err(|e| {
+			error!("Failed to get perp state: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to query perp state: {}", e)),
+			)
+		})?;
+
+	let hedge_position = perp_state
+		.asset_positions
+		.iter()
+		.find(|pos| pos.position.coin.eq_ignore_ascii_case(collateral_ticker))
+		.ok_or_else(|| {
+			error!("Hedge position for {} not found", collateral_ticker);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Position not found").with_reason(format!(
+					"Position for {} not found or liquidated",
+					collateral_ticker
+				)),
+			)
+		})?;
+
+	let position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
+		error!("Failed to parse position size: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid position size: {}", e)),
+		)
+	})?;
+
+	if position_size <= 0.0 {
+		error!("Position liquidated (size: {})", position_size);
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated")
+				.with_reason(format!("Position for {} has been liquidated", collateral_ticker)),
+		));
+	}
+
+	Ok(position_size)
 }
 
 // Main handler implementation
@@ -202,146 +252,61 @@ async fn handle_payback_loan_impl<
 			)
 		})?;
 
-	let (should_cancel, should_close, position_size_to_close) = if let Some(order_info) =
-		order_status.order
-	{
-		let status = order_info.status.as_str();
-		info!("Hedge order status: {}", status);
+	let (should_cancel, should_close, position_size_to_close) =
+		if let Some(order_info) = order_status.order {
+			let status = order_info.status.as_str();
+			info!("Hedge order status: {}", status);
 
-		match status {
-			"filled" => {
-				// Case 1: Fully filled - close position
-				info!("Case 1: Order fully filled, will close position");
-
-				let perp_state = hypercore_client
-					.get_perp_clearinghouse_state(smart_wallet_address_str)
-					.await
-					.map_err(|e| {
-						error!("Failed to get perp state: {}", e);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!("Failed to query perp state: {}", e)),
-						)
-					})?;
-
-				let hedge_position = perp_state
-					.asset_positions
-					.iter()
-					.find(|pos| pos.position.coin.eq_ignore_ascii_case(&collateral_ticker))
-					.ok_or_else(|| {
-						error!(
-							"Hedge position for {} not found (may be liquidated)",
-							collateral_ticker
-						);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated")
-								.with_reason(format!(
-									"Position for {} no longer exists",
-									collateral_ticker
-								)),
-						)
-					})?;
-
-				let position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
-					error!("Failed to parse position size: {}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Invalid position size: {}", e)),
+			match status {
+				"filled" => {
+					// Case 1: Fully filled - close position
+					info!("Case 1: Order fully filled, will close position");
+					let position_size = verify_hedge_position(
+						&hypercore_client,
+						smart_wallet_address_str,
+						&collateral_ticker,
 					)
-				})?;
-
-				if position_size <= 0.0 {
-					error!("Position liquidated (size: {})", position_size);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated").with_reason(
-							format!("Position for {} has been liquidated", collateral_ticker),
-						),
-					));
-				}
-
-				(false, true, position_size)
-			},
-			"open" => {
-				// Case 2: Not filled at all - cancel order
-				info!("Case 2: Order not filled, will cancel");
-				(true, false, 0.0)
-			},
-			"partial_fill" => {
-				// Case 3: Partially filled - cancel + close filled part
-				info!(
-					"Case 3: Order partially filled, will cancel order and close filled position"
-				);
-
-				let perp_state = hypercore_client
-					.get_perp_clearinghouse_state(smart_wallet_address_str)
-					.await
-					.map_err(|e| {
-						error!("Failed to get perp state: {}", e);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!("Failed to query perp state: {}", e)),
-						)
-					})?;
-
-				let hedge_position = perp_state
-					.asset_positions
-					.iter()
-					.find(|pos| pos.position.coin.eq_ignore_ascii_case(&collateral_ticker))
-					.ok_or_else(|| {
-						error!("Hedge position for {} not found", collateral_ticker);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Position not found")
-								.with_reason(format!(
-									"Position for {} not found",
-									collateral_ticker
-								)),
-						)
-					})?;
-
-				let position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
-					error!("Failed to parse position size: {}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Invalid position size: {}", e)),
+					.await?;
+					(false, true, position_size)
+				},
+				"open" => {
+					// Case 2: Not filled at all - cancel order
+					info!("Case 2: Order not filled, will cancel");
+					(true, false, 0.0)
+				},
+				"partial_fill" => {
+					// Case 3: Partially filled - cancel + close filled part
+					info!("Case 3: Order partially filled, will cancel order and close filled position");
+					let position_size = verify_hedge_position(
+						&hypercore_client,
+						smart_wallet_address_str,
+						&collateral_ticker,
 					)
-				})?;
-
-				if position_size <= 0.0 {
-					error!("Position liquidated (size: {})", position_size);
+					.await?;
+					(true, true, position_size)
+				},
+				"canceled" | "rejected" | "expired" => {
+					error!("Order already in terminal state: {}", status);
 					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated").with_reason(
-							format!(
-								"Filled part of position for {} has been liquidated",
-								collateral_ticker
-							),
-						),
+						DetailedError::new(INTERNAL_ERROR_CODE, "Order not active")
+							.with_reason(format!("Order is already {}", status)),
 					));
-				}
-
-				(true, true, position_size)
-			},
-			"canceled" | "rejected" | "expired" => {
-				error!("Order already in terminal state: {}", status);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Order not active")
-						.with_reason(format!("Order is already {}", status)),
-				));
-			},
-			_ => {
-				error!("Unexpected order status: {}", status);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Unexpected order status")
-						.with_reason(format!("Unknown status: {}", status)),
-				));
-			},
-		}
-	} else {
-		error!("Order not found for cloid {}", hedge_open_cloid);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Order not found")
-				.with_reason(format!("No order found with cloid {}", hedge_open_cloid)),
-		));
-	};
+				},
+				_ => {
+					error!("Unexpected order status: {}", status);
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Unexpected order status")
+							.with_reason(format!("Unknown status: {}", status)),
+					));
+				},
+			}
+		} else {
+			error!("Order not found for cloid {}", hedge_open_cloid);
+			return Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Order not found")
+					.with_reason(format!("No order found with cloid {}", hedge_open_cloid)),
+			));
+		};
 
 	// Fetch metadata
 	let spot_meta = hypercore_client.get_spot_meta().await.map_err(|e| {
@@ -435,20 +400,15 @@ async fn handle_payback_loan_impl<
 		info!("Action 1a: Canceling unfilled order...");
 
 		let cancel_action = build_cancel_order_by_cloid(perp_asset_id, hedge_open_cloid);
-		let cancel_corewriter_calldata = encode_send_raw_action(cancel_action);
-		let cancel_calldata =
-			encode_omni_account_execute(get_core_writer_address(), cancel_corewriter_calldata);
-
-		let mut cancel_skeleton = skeleton_user_op.clone();
-		cancel_skeleton.nonce = current_nonce;
-		if current_nonce > skeleton_user_op.nonce {
-			cancel_skeleton.init_code = "0x".to_string();
-		}
+		let cancel_calldata = encode_omni_account_execute(
+			get_core_writer_address(),
+			encode_send_raw_action(cancel_action),
+		);
 
 		let cancel_tx_hash = submit_corewriter_userop(
 			ctx.clone(),
 			&omni_account,
-			&cancel_skeleton,
+			&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
 			chain_id,
 			wallet_index,
 			cancel_calldata,
@@ -527,20 +487,15 @@ async fn handle_payback_loan_impl<
 			close_price_units,
 			hedge_close_cloid,
 		);
-		let close_corewriter_calldata = encode_send_raw_action(close_action);
-		let close_calldata =
-			encode_omni_account_execute(get_core_writer_address(), close_corewriter_calldata);
-
-		let mut close_skeleton = skeleton_user_op.clone();
-		close_skeleton.nonce = current_nonce;
-		if current_nonce > skeleton_user_op.nonce {
-			close_skeleton.init_code = "0x".to_string();
-		}
+		let close_calldata = encode_omni_account_execute(
+			get_core_writer_address(),
+			encode_send_raw_action(close_action),
+		);
 
 		hedge_close_tx_hash = submit_corewriter_userop(
 			ctx.clone(),
 			&omni_account,
-			&close_skeleton,
+			&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
 			chain_id,
 			wallet_index,
 			close_calldata,
@@ -609,18 +564,15 @@ async fn handle_payback_loan_impl<
 
 	let transfer_amount_units = to_usdc_units(withdrawable_usdc);
 	let transfer_action = build_usd_class_transfer_to_spot(transfer_amount_units);
-	let transfer_corewriter_calldata = encode_send_raw_action(transfer_action);
-	let transfer_calldata =
-		encode_omni_account_execute(get_core_writer_address(), transfer_corewriter_calldata);
-
-	let mut transfer_skeleton = skeleton_user_op.clone();
-	transfer_skeleton.nonce = current_nonce;
-	transfer_skeleton.init_code = "0x".to_string();
+	let transfer_calldata = encode_omni_account_execute(
+		get_core_writer_address(),
+		encode_send_raw_action(transfer_action),
+	);
 
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&transfer_skeleton,
+		&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
 		chain_id,
 		wallet_index,
 		transfer_calldata,
@@ -698,18 +650,15 @@ async fn handle_payback_loan_impl<
 
 	let spot_buy_action =
 		build_spot_buy_order(spot_asset_id, buy_size_units, buy_price_units, spot_buy_cloid);
-	let spot_buy_corewriter_calldata = encode_send_raw_action(spot_buy_action);
-	let spot_buy_calldata =
-		encode_omni_account_execute(get_core_writer_address(), spot_buy_corewriter_calldata);
-
-	let mut buy_skeleton = skeleton_user_op.clone();
-	buy_skeleton.nonce = current_nonce;
-	buy_skeleton.init_code = "0x".to_string();
+	let spot_buy_calldata = encode_omni_account_execute(
+		get_core_writer_address(),
+		encode_send_raw_action(spot_buy_action),
+	);
 
 	let spot_buy_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&buy_skeleton,
+		&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
 		chain_id,
 		wallet_index,
 		spot_buy_calldata,
