@@ -14,25 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::handle_omni_native_task;
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
+use crate::utils::omni::to_omni_account;
 use ethers::types::Bytes;
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::NativeTask;
-use executor_core::native_task::NativeTaskWrapper;
-use executor_core::native_task::PumpxChainId;
-use executor_core::native_task::PumxWalletIndex;
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
-use heima_primitives::Address32;
+use executor_core::native_task::{PumpxChainId, PumxWalletIndex};
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use pumpx::signer_client::PumpxChainId as _;
 use serde::Deserialize;
 use serde::Serialize;
+use signer_client::ChainType;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -53,17 +49,13 @@ pub struct SignLimitOrderResponse {
 }
 
 pub fn register_sign_limit_order_params<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let oa_str = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(
@@ -84,42 +76,53 @@ pub fn register_sign_limit_order_params<
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
+			let omni_account = to_omni_account(&oa_str).map_err(|_| {
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
+				))
+			})?;
+
+			// Inline handle_pumpx_sign_limit_order logic
+			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
+				error!("Failed to map pumpx chain_id {}", params.chain_id);
 				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
+					DetailedError::new(
+						crate::error_code::INVALID_CHAIN_ID_CODE,
+						"Chain not supported",
+					)
+					.with_reason(format!("Chain ID {} is not supported", params.chain_id)),
 				));
 			};
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxSignLimitOrder(
-					AccountId::from(address),
-					params.chain_id,
+			let unsigned_tx_vec: Vec<Vec<u8>> =
+				params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect();
+			let Ok(signed_txs) = ctx
+				.signer_client
+				.request_signatures(
+					chain,
 					params.wallet_index,
-					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
-				),
-				None,
-				None,
-				user.client_id,
-			);
+					omni_account.into(),
+					unsigned_tx_vec,
+				)
+				.await
+			else {
+				error!("Failed to request signatures from pumpx-signer");
+				return Err(PumpxRpcError::from(
+					DetailedError::new(
+						crate::error_code::SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+						"Signature service unavailable",
+					)
+					.with_suggestion("Please try again later"),
+				));
+			};
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxSignLimitOrder(signed_txs) => Ok(SignLimitOrderResponse {
-					intent_id: params.intent_id,
-					order_id: params.order_id,
-					chain_id: params.chain_id,
-					signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
-				}),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Unexpected response type from native task handler"),
-					))
-				},
+			Ok(SignLimitOrderResponse {
+				intent_id: params.intent_id,
+				order_id: params.order_id,
+				chain_id: params.chain_id,
+				signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
 			})
-			.await
 		})
 		.expect("Failed to register omni_signLimitOrder method");
 }

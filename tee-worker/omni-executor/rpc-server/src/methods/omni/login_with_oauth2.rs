@@ -8,7 +8,7 @@ use crate::{
 use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::jwt;
-use executor_primitives::{utils::hex::ToHexPrefixed, OAuth2Data, OAuth2Provider};
+use executor_primitives::{utils::hex::hex_encode, OAuth2Data, OAuth2Provider};
 use heima_authentication::{
 	auth_token::{AuthOptions, AuthTokenClaims},
 	constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
@@ -58,7 +58,7 @@ fn create_jwt_for_user(
 	let auth_options = AuthOptions { expires_at };
 	let omni_account = identity.to_omni_account(client_id);
 	let token_claims = AuthTokenClaims::new(
-		omni_account.to_hex(),
+		hex_encode(omni_account.as_ref()),
 		token_type.to_string(),
 		client_id.to_string(),
 		auth_options,
@@ -69,13 +69,9 @@ fn create_jwt_for_user(
 }
 
 pub fn register_login_with_oauth2<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_loginWithOAuth2", |params, ctx, _| async move {

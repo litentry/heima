@@ -18,7 +18,7 @@ use crate::detailed_error::DetailedError;
 use crate::error_code::PARSE_ERROR_CODE;
 use crate::{methods::omni::common::PumpxRpcError, server::RpcContext};
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{utils::hex::ToHexPrefixed, Web2IdentityType};
+use executor_primitives::{utils::hex::hex_encode, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::{Deserialize, Serialize};
@@ -32,13 +32,9 @@ pub struct GetOmniAccountParams {
 
 // Directly converts Identity to OmniAccount using 1:1 mapping
 pub fn register_get_omni_account<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_getOmniAccount", |params, _, _| async move {
@@ -53,7 +49,7 @@ pub fn register_get_omni_account<
 			let account =
 				Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email)
 					.to_omni_account(&params.client_id);
-			Ok::<String, ErrorObject>(account.to_hex())
+			Ok::<String, ErrorObject>(hex_encode(account.as_ref()))
 		})
 		.expect("Failed to register omni_getOmniAccount method");
 }

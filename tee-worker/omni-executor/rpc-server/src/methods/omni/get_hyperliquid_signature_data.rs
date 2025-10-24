@@ -11,7 +11,9 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
-use hyperliquid_rust_sdk::{ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, Withdraw3};
+use hyperliquid_rust_sdk::{
+	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
+};
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
@@ -52,6 +54,10 @@ pub enum HyperliquidActionType {
 		amount: String,
 		from_sub_account: String,
 	},
+	UserDexAbstraction {
+		user: String,
+		enabled: bool,
+	},
 }
 
 #[derive(Serialize, Clone)]
@@ -74,6 +80,7 @@ pub enum HyperliquidAction {
 	Withdraw3(Withdraw3),
 	ApproveBuilderFee(ApproveBuilderFee),
 	SendAsset(SendAsset),
+	UserDexAbstraction(UserDexAbstraction),
 }
 
 fn is_testnet_chain(chain_id: ChainId) -> bool {
@@ -100,13 +107,9 @@ fn is_testnet_chain(chain_id: ChainId) -> bool {
 }
 
 pub fn register_get_hyperliquid_signature_data<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
@@ -347,6 +350,19 @@ pub fn register_get_hyperliquid_signature_data<
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::SendAsset(action), signature)
 				},
+				HyperliquidActionType::UserDexAbstraction { user, enabled } => {
+					let action = UserDexAbstraction {
+						signature_chain_id: params.chain_id,
+						hyperliquid_chain,
+						user: validate_ethereum_address(&user, "user")
+							.map_err(|e| e.to_error_object())?,
+						enabled,
+						nonce,
+					};
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					(HyperliquidAction::UserDexAbstraction(action), signature)
+				},
 			};
 
 			Ok(GetHyperliquidSignatureDataResponse {
@@ -358,12 +374,10 @@ pub fn register_get_hyperliquid_signature_data<
 }
 
 async fn generate_eip712_signature<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	T: Eip712 + Send + Sync,
 >(
-	ctx: &RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+	ctx: &RpcContext<CrossChainIntentExecutor>,
 	action: &T,
 	omni_account: &[u8; 32],
 ) -> Result<String, ErrorObject<'static>> {
@@ -648,6 +662,55 @@ mod tests {
 				&& amount == "1000.0"
 				&& from_sub_account == "0x9876543210987654321098765432109876543210"
 		));
+	}
+
+	#[test]
+	fn test_user_dex_abstraction_action_signature() {
+		let action = UserDexAbstraction {
+			signature_chain_id: 1,
+			hyperliquid_chain: "Mainnet".to_string(),
+			user: Address::from_str("0x1234567890123456789012345678901234567890").unwrap(),
+			enabled: true,
+			nonce: 1234567890,
+		};
+
+		// Test domain generation
+		let domain = action.domain();
+		assert_eq!(domain.name, Some("HyperliquidSignTransaction".into()));
+		assert_eq!(domain.version, Some("1".into()));
+		assert_eq!(domain.chain_id, Some(alloy::primitives::U256::from(1)));
+
+		// Test struct hash generation
+		let struct_hash = action.struct_hash();
+		assert_eq!(struct_hash.len(), 32);
+
+		// Test EIP-712 signing hash generation
+		let signing_hash = action.eip712_signing_hash();
+		assert_eq!(signing_hash.len(), 32);
+	}
+
+	#[test]
+	fn test_params_deserialization_user_dex_abstraction() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "user_dex_abstraction",
+			"user": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"enabled": true
+		},
+		"chain_id": 42161
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::UserDexAbstraction { user, enabled }
+			if user == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10" && enabled == true
+		));
+		assert_eq!(params.chain_id, 42161);
 	}
 
 	#[test]

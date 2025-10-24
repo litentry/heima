@@ -18,14 +18,8 @@ use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 
-pub fn register_get_health<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+pub fn register_get_health<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_method("omni_getHealth", |_, _, _| Ok::<String, ErrorObject>("OK".to_string()))
@@ -69,9 +63,8 @@ mod test {
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
+		let loan_record_storage = Arc::new(executor_storage::LoanRecordStorage::new(db.clone()));
 
-		let (solana_intent_executor, _solana_mock_recv) = MockedIntentExecutor::new();
-		let (ethereum_intent_executor, _ethereum_mock_recv) = MockedIntentExecutor::new();
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 		let aes_key = [0u8; 32];
 		let entry_point_clients = HashMap::new();
@@ -87,11 +80,10 @@ mod test {
 			binance_api_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
+			loan_record_storage,
 			[0u8; 33], // Test ECDSA public key
 			[0u8; 32], // Test bundler private key
 			[0u8; 33], // Test bundler export authorized pubkey
-			Arc::new(ethereum_intent_executor),
-			Arc::new(solana_intent_executor),
 			Arc::new(cross_chain_intent_executor),
 			aes_key,
 			Arc::new(entry_point_clients),

@@ -1,22 +1,23 @@
-use super::common::{check_omni_api_response, handle_omni_native_task};
+use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::*,
 	methods::omni::{common::check_auth, PumpxRpcError},
 	server::RpcContext,
+	utils::omni::to_omni_account,
+	utils::pumpx::verify_google_code,
 	validation_helpers::{
-		validate_amount, validate_chain_id, validate_ethereum_address, validate_omni_account_hex,
-		validate_omni_account_length, validate_token_address, validate_wallet_index,
+		validate_amount, validate_chain_id, validate_ethereum_address, validate_token_address,
+		validate_wallet_index,
 	},
 	Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_core::native_task::*;
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
-use heima_primitives::Address32;
+use executor_core::native_task::PumxWalletIndex;
+use executor_storage::{HeimaJwtStorage, Storage};
+use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
-use pumpx::methods::create_transfer_tx::CreateTransferTxResponse;
+use pumpx::methods::create_transfer_tx::{CreateTransferTxBody, CreateTransferTxResponse};
 use serde::Serialize;
 use tracing::{debug, error};
 
@@ -37,43 +38,14 @@ pub struct TransferWithdrawResponse {
 	pub backend_response: CreateTransferTxResponse,
 }
 
-impl TransferWithdrawParams {
-	pub fn into_native_task_wrapper(
-		self,
-		client_id: String,
-		omni_account: AccountId,
-	) -> NativeTaskWrapper<NativeTask> {
-		NativeTaskWrapper::new(
-			NativeTask::PumpxTransferWidthdraw(
-				omni_account,
-				self.request_id,
-				self.chain_id,
-				self.wallet_index,
-				self.recipient_address,
-				self.token_ca,
-				self.amount,
-				self.google_code,
-				self.lang,
-			),
-			None,
-			None,
-			client_id,
-		)
-	}
-}
-
 pub fn register_transfer_withdraw<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
+			let oa_str = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(DetailedError::new(
 					AUTH_VERIFICATION_FAILED_CODE,
@@ -107,37 +79,64 @@ pub fn register_transfer_withdraw<
 			validate_amount(&params.amount, "amount")
 				.map_err(PumpxRpcError::from)?;
 
-			let address_bytes = validate_omni_account_hex(&user.omni_account, "omni_account")
-				.map_err(PumpxRpcError::from)?;
+			let omni_account = to_omni_account(&oa_str).map_err(|_| {
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
+				))
+			})?;
 
-			validate_omni_account_length(&address_bytes, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account after validation");
-				return Err(DetailedError::account_parse_error(
-					&user.omni_account,
-					"Address32 conversion failed"
-				).into());
+			// Inline handle_pumpx_transfer_withdraw logic
+			// 1. Verify we have a valid Pumpx "access" token for the user
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
+			else {
+				error!("Failed to get access_token within TransferWidthdraw");
+				return Err(PumpxRpcError::from(DetailedError::new(
+					INTERNAL_ERROR_CODE,
+					"Internal error"
+				).with_reason("Failed to get access token")));
 			};
-			let omni_account = AccountId::from(address);
 
-			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
+			// 2. Verify google code
+			let verify_success = verify_google_code(
+				ctx.pumpx_api.as_ref().as_ref(),
+				&access_token,
+				params.google_code,
+				params.lang.clone(),
+			)
+			.await;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxTransferWithdraw(response) => {
-					check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
-					Ok(TransferWithdrawResponse { backend_response: response })
-				},
-				_ => {
-					error!("Unexpected response type from native task handler");
-					Err(DetailedError::unexpected_response_type(
-						"PumpxTransferWithdraw",
-						"Unknown"
-					).into())
-				},
-			})
-			.await
+			if !verify_success {
+				error!("Failed to verify google code within TransferWidthdraw");
+				return Err(PumpxRpcError::from(DetailedError::new(
+					PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
+					"Google code verification failed"
+				).with_suggestion("Please check your Google verification code and try again")));
+			}
+
+			// 3. Create a transfer tx and send to backend
+			let body = CreateTransferTxBody {
+				request_id: params.request_id,
+				chain_id: params.chain_id,
+				wallet_index: params.wallet_index,
+				recipient_address: params.recipient_address,
+				token_ca: params.token_ca,
+				amount: params.amount,
+			};
+
+			debug!("Calling pumpx create_transfer_tx, body {:?}", body);
+			let response = ctx.pumpx_api.create_transfer_tx(&access_token, body, params.lang.clone()).await
+				.map_err(|e| {
+					error!("Failed to create transfer tx: {}", e);
+					PumpxRpcError::from(DetailedError::new(
+						PUMPX_API_CREATE_TRANSFER_TX_FAILED_CODE,
+						"Failed to create transfer transaction"
+					).with_suggestion("Please check your transfer parameters and try again"))
+				})?;
+
+			check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
+			Ok(TransferWithdrawResponse { backend_response: response })
 		})
 		.expect("Failed to register omni_transferWithdraw method");
 }
