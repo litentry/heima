@@ -11,23 +11,17 @@ use config_loader::ConfigLoader;
 use ethereum_rpc::AlloyRpcProvider;
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::aes256::Aes256Key;
-use executor_storage::{StorageDB, WildmetaTimestampStorage};
+use executor_storage::{LoanRecordStorage, StorageDB, WildmetaTimestampStorage};
 use jsonrpsee::{server::Server, RpcModule};
-use native_task_handler::TaskHandlerContext;
 use pumpx::PumpxApi;
 use signer_client::SignerClient;
 use std::collections::HashMap;
-// Removed unused PhantomData import
 use std::marker::{Send, Sync};
 use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
 use wildmeta_api::WildmetaApi;
 
-pub(crate) struct RpcContext<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-> {
+pub(crate) struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static> {
 	pub shielding_key: ShieldingKey,
 	pub storage_db: Arc<StorageDB>,
 	pub mailer_factory: Arc<MailerFactory>,
@@ -40,21 +34,18 @@ pub(crate) struct RpcContext<
 	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
 	pub wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
+	#[cfg_attr(not(feature = "test-endpoints"), allow(dead_code))]
+	pub loan_record_storage: Arc<LoanRecordStorage>,
 	pub wildmeta_backend_ecdsa_pubkey: [u8; 33], // Compressed ECDSA public key for wildmeta backend signature verification
 	pub bundler_private_key: [u8; 32],           // Bundler (accounting ECDSA) private key for export
 	pub bundler_key_export_authorized_pubkey: [u8; 33], // Compressed ECDSA public key authorized to export bundler key
-	pub ethereum_intent_executor: Arc<EthereumIntentExecutor>,
-	pub solana_intent_executor: Arc<SolanaIntentExecutor>,
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub aes256_key: Aes256Key,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 }
 
-impl<
-		EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-		SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-		CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	> RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>
+impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
+	RpcContext<CrossChainIntentExecutor>
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -68,11 +59,10 @@ impl<
 		binance_api_client: Arc<dyn BinancePaymasterApi>,
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
+		loan_record_storage: Arc<LoanRecordStorage>,
 		wildmeta_backend_ecdsa_pubkey: [u8; 33],
 		bundler_private_key: [u8; 32],
 		bundler_key_export_authorized_pubkey: [u8; 33],
-		ethereum_intent_executor: Arc<EthereumIntentExecutor>,
-		solana_intent_executor: Arc<SolanaIntentExecutor>,
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		aes256_key: Aes256Key,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
@@ -88,43 +78,19 @@ impl<
 			binance_api_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
+			loan_record_storage,
 			wildmeta_backend_ecdsa_pubkey,
 			bundler_private_key,
 			bundler_key_export_authorized_pubkey,
-			ethereum_intent_executor,
-			solana_intent_executor,
 			cross_chain_intent_executor,
 			aes256_key,
 			entry_point_clients,
 		}
 	}
-
-	pub fn to_task_handler_context(
-		&self,
-	) -> Arc<
-		TaskHandlerContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	> {
-		Arc::new(TaskHandlerContext::new(
-			self.storage_db.clone(),
-			self.jwt_rsa_private_key.clone(),
-			self.aes256_key,
-			self.ethereum_intent_executor.clone(),
-			self.solana_intent_executor.clone(),
-			self.cross_chain_intent_executor.clone(),
-			self.pumpx_api.clone(),
-			self.signer_client.clone(),
-			self.binance_api_client.clone(),
-			self.entry_point_clients.clone(),
-		))
-	}
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn start_server<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
+pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	port: u16,
 	shielding_key: ShieldingKey,
 	pumpx_api: Arc<Box<dyn PumpxApi>>,
@@ -135,11 +101,10 @@ pub async fn start_server<
 	binance_api_client: Arc<dyn BinancePaymasterApi>,
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
+	loan_record_storage: Arc<LoanRecordStorage>,
 	wildmeta_backend_ecdsa_pubkey: [u8; 33],
 	bundler_private_key: [u8; 32],
 	bundler_key_export_authorized_pubkey: [u8; 33],
-	ethereum_intent_executor: Arc<EthereumIntentExecutor>,
-	solana_intent_executor: Arc<SolanaIntentExecutor>,
 	cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	aes256_key: Aes256Key,
 	entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
@@ -159,11 +124,10 @@ pub async fn start_server<
 		binance_api_client,
 		wildmeta_api,
 		wildmeta_timestamp_storage,
+		loan_record_storage,
 		wildmeta_backend_ecdsa_pubkey,
 		bundler_private_key,
 		bundler_key_export_authorized_pubkey,
-		ethereum_intent_executor,
-		solana_intent_executor,
 		cross_chain_intent_executor,
 		aes256_key,
 		entry_point_clients,

@@ -49,12 +49,8 @@ impl Display for AuthenticationError {
 	}
 }
 
-pub async fn verify_auth<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+pub async fn verify_auth<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	auth: &OmniAuth,
 ) -> Result<(), AuthenticationError> {
 	match auth {
@@ -110,11 +106,9 @@ pub fn verify_web3_authentication(
 }
 
 pub fn verify_email_authentication<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	client_id: &str,
 	email: &str,
 	verification_code: &VerificationCode,
@@ -147,11 +141,9 @@ pub fn verify_auth_token_authentication(
 }
 
 pub async fn verify_oauth2_authentication<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	client_id: &str,
 	payload: &OAuth2Data,
 ) -> Result<Identity, AuthenticationError> {
@@ -159,11 +151,9 @@ pub async fn verify_oauth2_authentication<
 }
 
 async fn verify_oauth2_provider<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	client_id: &str,
 	payload: &OAuth2Data,
 ) -> Result<Identity, AuthenticationError> {

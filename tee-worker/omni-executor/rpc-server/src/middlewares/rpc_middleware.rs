@@ -15,6 +15,7 @@ use tower::layer::util::{Identity, Stack};
 #[derive(Clone, Debug)]
 pub struct RpcExtensions {
 	pub sender: String,
+	#[allow(dead_code)]
 	pub client_id: String,
 }
 

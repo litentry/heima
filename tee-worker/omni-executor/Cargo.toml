@@ -20,7 +20,6 @@ members = [
     "intent/executors/solana",
     "intent/token-query",
     "mock-server",
-    "native-task-handler",
     "oauth-providers",
     "omni-cli",
     "pumpx",
@@ -118,7 +117,6 @@ hyperliquid = { path = "hyperliquid" }
 intent-asset-lock = { path = "intent/asset-lock" }
 intent-token-query = { path = "intent/token-query" }
 mock-server = { path = "mock-server" }
-native-task-handler = { path = "native-task-handler" }
 oauth-providers = { path = "oauth-providers" }
 pumpx = { path = "pumpx" }
 rpc-server = { path = "rpc-server" }

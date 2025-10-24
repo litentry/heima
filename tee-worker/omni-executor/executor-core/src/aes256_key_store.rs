@@ -1,4 +1,4 @@
-use executor_core::key_store::KeyStore;
+use crate::key_store::KeyStore;
 use executor_crypto::aes256::Aes256Key;
 use rand::Rng;
 
