@@ -1,7 +1,7 @@
 use crate::server::RpcContext;
 use crate::ErrorCode;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::utils::hex::ToHexPrefixed;
+use executor_primitives::utils::hex::hex_encode;
 use executor_storage::{Storage, VerificationCodeStorage};
 use heima_authentication::web3::HeimaMessagePayload;
 use heima_identity_verification::helpers::generate_otp;
@@ -45,7 +45,7 @@ pub fn register_get_web3_sign_in_message<
 
 			Ok::<HeimaMessagePayload, ErrorObject>(HeimaMessagePayload {
 				message_code,
-				omni_account: omni_account.to_hex(),
+				omni_account: hex_encode(omni_account.as_ref()),
 				client_id: params.client_id,
 			})
 		})

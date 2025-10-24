@@ -19,23 +19,22 @@ use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
+use crate::utils::omni::to_omni_account;
 use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
 	process_erc20_paymaster_data,
 };
 use crate::utils::user_op::{convert_to_packed_user_op, substrate_to_ethereum_signature};
 use crate::validation_helpers::{
-	validate_chain_id, validate_omni_account_hex, validate_omni_account_length,
-	validate_user_operations, validate_wallet_index,
+	validate_chain_id, validate_user_operations, validate_wallet_index,
 };
 use aa_contracts_client::calculate_user_operation_hash;
 use alloy::primitives::Bytes;
 use binance_api::BinancePaymasterApi;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{AccountId, ChainId};
+use executor_primitives::ChainId;
 use jsonrpsee::RpcModule;
-use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
 use tracing::{debug, error, info};
@@ -57,7 +56,7 @@ pub fn register_submit_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 ) {
 	module
 		.register_async_method("omni_submitUserOp", |params, ctx, ext| async move {
-			let omni_account = check_auth(&ext).map_err(|e| {
+			let oa_str = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
 				PumpxRpcError::from(
 					DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication failed")
@@ -81,17 +80,10 @@ pub fn register_submit_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			validate_user_operations(&params.user_operations).map_err(PumpxRpcError::from)?;
 
-			let address_bytes = validate_omni_account_hex(&omni_account, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			validate_omni_account_length(&address_bytes, "omni_account")
-				.map_err(PumpxRpcError::from)?;
-
-			let omni_account_id = AccountId::decode(&mut &address_bytes[..]).map_err(|e| {
-				error!("Failed to decode AccountId from bytes: {:?}", e);
-				PumpxRpcError::from(DetailedError::account_parse_error(
-					&omni_account,
-					&format!("Failed to decode account: {:?}", e),
+			let omni_account = to_omni_account(&oa_str).map_err(|_| {
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
 				))
 			})?;
 
@@ -210,7 +202,7 @@ pub fn register_submit_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 						.request_signature(
 							ChainType::Evm,
 							params.wallet_index,
-							omni_account_id.clone().into(),
+							omni_account.clone().into(),
 							message_to_sign,
 						)
 						.await;

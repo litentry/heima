@@ -10,7 +10,7 @@ use crate::{
 use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::jwt;
-use executor_primitives::{utils::hex::ToHexPrefixed, OmniAuth};
+use executor_primitives::{utils::hex::hex_encode, OmniAuth};
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::{
 	auth_token::*,
@@ -111,7 +111,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				.to_omni_account(&params.client_id);
 
 			let access_token_claims: AuthTokenClaims = AuthTokenClaims::new(
-				omni_account.to_hex(),
+				hex_encode(omni_account.as_ref()),
 				AUTH_TOKEN_ACCESS_TYPE.to_string(),
 				params.client_id.to_string(),
 				auth_options.clone(),
@@ -162,7 +162,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			}
 
 			let id_token_claims = AuthTokenClaims::new(
-				omni_account.to_hex(),
+				hex_encode(omni_account.as_ref()),
 				AUTH_TOKEN_ID_TYPE.to_string(),
 				params.client_id.to_string(),
 				auth_options,

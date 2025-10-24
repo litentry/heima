@@ -91,7 +91,7 @@ mod test {
 	use binance_api::mocks::MockBinanceApiClient;
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_primitives::utils::hex::ToHexPrefixed;
+	use executor_primitives::utils::hex::hex_encode;
 	use executor_storage::{LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
@@ -174,7 +174,10 @@ mod test {
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
 		let response: QueryLoanTestResponse = client
-			.request("omni_queryLoanTest", rpc_params![omni_account.to_hex(), Some(nonce)])
+			.request(
+				"omni_queryLoanTest",
+				rpc_params![hex_encode(omni_account.as_ref()), Some(nonce)],
+			)
 			.await
 			.unwrap();
 
@@ -290,7 +293,10 @@ mod test {
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
 		let response: QueryLoanTestResponse = client
-			.request("omni_queryLoanTest", rpc_params![omni_account.to_hex(), None::<u64>])
+			.request(
+				"omni_queryLoanTest",
+				rpc_params![hex_encode(omni_account.as_ref()), None::<u64>],
+			)
 			.await
 			.unwrap();
 
@@ -375,7 +381,10 @@ mod test {
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
 		let response: QueryLoanTestResponse = client
-			.request("omni_queryLoanTest", rpc_params![omni_account.to_hex(), Some(999u64)])
+			.request(
+				"omni_queryLoanTest",
+				rpc_params![hex_encode(omni_account.as_ref()), Some(999u64)],
+			)
 			.await
 			.unwrap();
 
@@ -451,7 +460,10 @@ mod test {
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
 		let response: QueryLoanTestResponse = client
-			.request("omni_queryLoanTest", rpc_params![query_account.to_hex(), None::<u64>])
+			.request(
+				"omni_queryLoanTest",
+				rpc_params![hex_encode(query_account.as_ref()), None::<u64>],
+			)
 			.await
 			.unwrap();
 

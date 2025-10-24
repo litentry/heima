@@ -3,7 +3,7 @@ use crate::{
 		BitcoinSignature, EthereumSignature, HeimaMultiSignature, SolanaSignature,
 		SubstrateSignature,
 	},
-	utils::hex::{decode_hex, ToHexPrefixed},
+	utils::hex::{decode_hex, hex_encode},
 	OmniAccountAuthType,
 };
 use base58::{FromBase58, ToBase58};
@@ -123,9 +123,9 @@ impl TryFrom<Identity> for UserId {
 			Identity::Github(handle) => {
 				Ok(UserId::Github(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
-			Identity::Substrate(address) => Ok(UserId::Substrate(address.to_hex())),
-			Identity::Evm(address) => Ok(UserId::Evm(address.to_hex())),
-			Identity::Bitcoin(address) => Ok(UserId::Bitcoin(address.to_hex())),
+			Identity::Substrate(address) => Ok(UserId::Substrate(hex_encode(&address.encode()))),
+			Identity::Evm(address) => Ok(UserId::Evm(hex_encode(&address.encode()))),
+			Identity::Bitcoin(address) => Ok(UserId::Bitcoin(hex_encode(&address.encode()))),
 			Identity::Solana(address) => Ok(UserId::Solana(address.as_ref().to_base58())),
 			Identity::Email(handle) => {
 				Ok(UserId::Email(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
