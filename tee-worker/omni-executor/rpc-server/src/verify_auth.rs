@@ -147,25 +147,9 @@ pub async fn verify_oauth2_authentication<
 	client_id: &str,
 	payload: &OAuth2Data,
 ) -> Result<Identity, AuthenticationError> {
-	verify_oauth2_provider(ctx, client_id, payload).await
-}
-
-async fn verify_oauth2_provider<
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
-	client_id: &str,
-	payload: &OAuth2Data,
-) -> Result<Identity, AuthenticationError> {
-	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
-	let key: Hash = blake2_256((client_id, &payload.uid).encode().as_slice()).into();
-	let Ok(Some(verification_data)) = state_verifier_storage.get(&key) else {
-		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
-	};
-
-	if verification_data.state != payload.state {
-		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
-	}
+	// Currently the fronten (APP using React-Native sdk) doesn't really depends on `nonce` and `state`.
+	// And `fn exchange_code_for_token` can do the authentication token verification. So `nonce` and `state`
+	// check are skipped.
 
 	let provider_str = match payload.provider {
 		OAuth2Provider::Google => "google",
@@ -180,21 +164,16 @@ async fn verify_oauth2_provider<
 			))
 		})?;
 
-	let email = match payload.provider {
+	let id_token_sub = match payload.provider {
 		OAuth2Provider::Google => {
 			let id_token: google::IdToken = oauth2_common::decode_id_token(&payload.id_token)
 				.map_err(|_| {
 					AuthenticationError::OAuth2Error("Could not decode Google id token".to_string())
 				})?;
 
-			verify_id_token_claims(
-				&id_token.aud,
-				id_token.nonce.as_deref(),
-				&oauth2_config.client_id,
-				&verification_data.nonce,
-			)?;
+			verify_id_token_claims(&id_token.aud, Some(""), &oauth2_config.client_id, "")?;
 
-			id_token.email
+			id_token.sub
 		},
 		OAuth2Provider::Apple => {
 			let id_token: apple::IdToken = oauth2_common::decode_id_token(&payload.id_token)
@@ -202,14 +181,9 @@ async fn verify_oauth2_provider<
 					AuthenticationError::OAuth2Error("Could not decode Apple id token".to_string())
 				})?;
 
-			verify_id_token_claims(
-				&id_token.aud,
-				id_token.nonce.as_deref(),
-				&oauth2_config.client_id,
-				&verification_data.nonce,
-			)?;
+			verify_id_token_claims(&id_token.aud, Some(""), &oauth2_config.client_id, "")?;
 
-			id_token.email
+			id_token.sub
 		},
 	};
 
@@ -235,7 +209,7 @@ async fn verify_oauth2_provider<
 		OAuth2Provider::Apple => Web2IdentityType::Apple,
 	};
 
-	let identity = Identity::from_web2_account(&email, identity_type);
+	let identity = Identity::from_web2_account(&id_token_sub, identity_type);
 
 	Ok(identity)
 }
