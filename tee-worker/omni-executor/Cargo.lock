@@ -5291,7 +5291,7 @@ dependencies = [
 [[package]]
 name = "hyperliquid_rust_sdk"
 version = "0.6.0"
-source = "git+https://github.com/BillyWooo/hyperliquid-rust-sdk?branch=usdClassTransfer_sendAsset#74973595c6ad81d2539356dc813592b450c7eb54"
+source = "git+https://github.com/BillyWooo/hyperliquid-rust-sdk?branch=fork_new_feature#aa6887692561dce5bf2187d401d543c3c921add3"
 dependencies = [
  "alloy",
  "chrono",
