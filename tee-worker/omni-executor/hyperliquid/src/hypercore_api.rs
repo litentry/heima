@@ -107,7 +107,9 @@ pub struct ClearinghouseStateResponse {
 	pub asset_positions: Vec<AssetPosition>,
 	pub margin_summary: MarginSummary,
 	pub cross_margin_summary: CrossMarginSummary,
+	pub cross_maintenance_margin_used: String,
 	pub withdrawable: String,
+	pub time: u64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -126,11 +128,12 @@ pub struct PositionData {
 	pub leverage: Leverage,
 	pub liquidation_px: Option<String>,
 	pub margin_used: String,
-	pub max_trade: String,
+	pub max_leverage: u32,
 	pub position_value: String,
 	pub return_on_equity: String,
 	pub szi: String,
 	pub unrealized_pnl: String,
+	// cumFunding is present in the API but we don't need it for our use case
 }
 
 #[derive(Debug, Deserialize, Clone)]
