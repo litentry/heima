@@ -20,17 +20,18 @@ pub struct PaybackLoanTestParams {
 	pub chain_id: u64,
 	pub wallet_index: u32,
 	pub omni_account: String,
-	pub nonce: u64,
+	pub loan_nonce: u64,
 }
 
 #[derive(Serialize, Clone)]
 pub struct PaybackLoanTestResponse {
 	pub collateral_ticker: String,
 	pub collateral_size: String,
-	pub hedge_close_cloid: String,
-	pub spot_buy_cloid: String,
+	pub hedge_cancel_tx_hash: Option<String>,
+	pub hedge_close_cloid: Option<String>,
 	pub hedge_close_tx_hash: Option<String>,
 	pub usd_transfer_tx_hash: Option<String>,
+	pub spot_buy_cloid: Option<String>,
 	pub spot_buy_tx_hash: Option<String>,
 }
 
@@ -66,7 +67,7 @@ pub fn register_payback_loan_test<
 				params.user_operation,
 				params.chain_id,
 				params.wallet_index,
-				params.nonce,
+				params.loan_nonce,
 			)
 			.await
 		})
@@ -183,113 +184,164 @@ async fn handle_payback_loan_impl<
 
 	info!("✓ USDC balance check passed: user has sufficient USDC");
 
-	// Step 3: Check hedge position status by verifying the specific position for this loan
+	// Step 3: Check hedge order status
 	info!(
-		"Checking hedge position status for loan nonce {} with hedge_open_cloid {}",
+		"Checking hedge order status for loan nonce {} with hedge_open_cloid {}",
 		loan_nonce, hedge_open_cloid
 	);
 
-	// First, get the fill that opened the hedge to verify we're looking at the right position
-	let hedge_open_fill = hypercore_client
-		.get_fill_by_cloid(smart_wallet_address_str, hedge_open_cloid)
+	let order_status = hypercore_client
+		.get_order_status(smart_wallet_address_str, &hedge_open_cloid.to_string())
 		.await
 		.map_err(|e| {
-			error!("Failed to get hedge open fill for cloid {}: {}", hedge_open_cloid, e);
+			error!("Failed to get order status for cloid {}: {}", hedge_open_cloid, e);
 			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Hedge position not found")
-					.with_reason(format!("Cannot find the original hedge open order (cloid: {}). It may have been liquidated or manually closed.", hedge_open_cloid)),
-			)
-		})?;
-
-	info!(
-		"Found hedge open fill: coin={}, size={}, price={}, cloid={}",
-		hedge_open_fill.coin,
-		hedge_open_fill.sz,
-		hedge_open_fill.px,
-		hedge_open_fill.cloid.as_ref().unwrap_or(&"N/A".to_string())
-	);
-
-	// Verify the fill is for the expected collateral ticker
-	if !hedge_open_fill.coin.eq_ignore_ascii_case(&collateral_ticker) {
-		error!(
-			"Mismatch: hedge open fill is for {} but loan record says {}",
-			hedge_open_fill.coin, collateral_ticker
-		);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Data inconsistency").with_reason(format!(
-				"Hedge open fill ticker ({}) doesn't match loan collateral ticker ({})",
-				hedge_open_fill.coin, collateral_ticker
-			)),
-		));
-	}
-
-	// Now get current perp state to check if the position still exists
-	let perp_state = hypercore_client
-		.get_perp_clearinghouse_state(smart_wallet_address_str)
-		.await
-		.map_err(|e| {
-			error!("Failed to get perp clearinghouse state: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query perp state: {}", e)),
-			)
-		})?;
-
-	// Find the position for this specific collateral
-	let hedge_position = perp_state
-		.asset_positions
-		.iter()
-		.find(|pos| pos.position.coin.eq_ignore_ascii_case(&collateral_ticker))
-		.ok_or_else(|| {
-			error!(
-				"Hedge position for {} (from loan nonce {}) not found in current positions",
-				collateral_ticker, loan_nonce
-			);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Hedge position not found")
-					.with_reason(format!(
-						"The hedge position for {} (opened with cloid {}) no longer exists. It may have been liquidated or manually closed.",
-						collateral_ticker, hedge_open_cloid
-					)),
-			)
-		})?;
-
-	let position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
-		error!("Failed to parse position size: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid position size: {}", e)),
-		)
-	})?;
-
-	let hedge_open_size = hedge_open_fill.sz.parse::<f64>().map_err(|e| {
-		error!("Failed to parse hedge open size: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid hedge open size: {}", e)),
-		)
-	})?;
-
-	// Check if position has been liquidated (size should be > 0 for long position)
-	if position_size <= 0.0 {
-		error!("Hedge position has been liquidated or closed (size: {})", position_size);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated or closed").with_reason(
-				format!(
-					"The hedge position for {} (loan nonce {}) has been liquidated or closed",
-					collateral_ticker, loan_nonce
+				DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get order status").with_reason(
+					format!("Cannot retrieve order status for cloid {}: {}", hedge_open_cloid, e),
 				),
-			),
-		));
-	}
+			)
+		})?;
 
-	// Verify the position size is reasonable relative to the original hedge
-	// Note: If user has multiple positions for the same ticker, we can only verify one exists
-	// The position size might be larger if user added to it, or smaller if partially closed
-	info!(
-		"✓ Hedge position check passed: {} position with current size {} (original hedge: {})",
-		collateral_ticker, position_size, hedge_open_size
-	);
+	let (should_cancel, should_close, position_size_to_close) = if let Some(order_info) =
+		order_status.order
+	{
+		let status = order_info.status.as_str();
+		info!("Hedge order status: {}", status);
+
+		match status {
+			"filled" => {
+				// Case 1: Fully filled - close position
+				info!("Case 1: Order fully filled, will close position");
+
+				let perp_state = hypercore_client
+					.get_perp_clearinghouse_state(smart_wallet_address_str)
+					.await
+					.map_err(|e| {
+						error!("Failed to get perp state: {}", e);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason(format!("Failed to query perp state: {}", e)),
+						)
+					})?;
+
+				let hedge_position = perp_state
+					.asset_positions
+					.iter()
+					.find(|pos| pos.position.coin.eq_ignore_ascii_case(&collateral_ticker))
+					.ok_or_else(|| {
+						error!(
+							"Hedge position for {} not found (may be liquidated)",
+							collateral_ticker
+						);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated")
+								.with_reason(format!(
+									"Position for {} no longer exists",
+									collateral_ticker
+								)),
+						)
+					})?;
+
+				let position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
+					error!("Failed to parse position size: {}", e);
+					PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason(format!("Invalid position size: {}", e)),
+					)
+				})?;
+
+				if position_size <= 0.0 {
+					error!("Position liquidated (size: {})", position_size);
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated").with_reason(
+							format!("Position for {} has been liquidated", collateral_ticker),
+						),
+					));
+				}
+
+				(false, true, position_size)
+			},
+			"open" => {
+				// Case 2: Not filled at all - cancel order
+				info!("Case 2: Order not filled, will cancel");
+				(true, false, 0.0)
+			},
+			"partial_fill" => {
+				// Case 3: Partially filled - cancel + close filled part
+				info!(
+					"Case 3: Order partially filled, will cancel order and close filled position"
+				);
+
+				let perp_state = hypercore_client
+					.get_perp_clearinghouse_state(smart_wallet_address_str)
+					.await
+					.map_err(|e| {
+						error!("Failed to get perp state: {}", e);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason(format!("Failed to query perp state: {}", e)),
+						)
+					})?;
+
+				let hedge_position = perp_state
+					.asset_positions
+					.iter()
+					.find(|pos| pos.position.coin.eq_ignore_ascii_case(&collateral_ticker))
+					.ok_or_else(|| {
+						error!("Hedge position for {} not found", collateral_ticker);
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Position not found")
+								.with_reason(format!(
+									"Position for {} not found",
+									collateral_ticker
+								)),
+						)
+					})?;
+
+				let position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
+					error!("Failed to parse position size: {}", e);
+					PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason(format!("Invalid position size: {}", e)),
+					)
+				})?;
+
+				if position_size <= 0.0 {
+					error!("Position liquidated (size: {})", position_size);
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated").with_reason(
+							format!(
+								"Filled part of position for {} has been liquidated",
+								collateral_ticker
+							),
+						),
+					));
+				}
+
+				(true, true, position_size)
+			},
+			"canceled" | "rejected" | "expired" => {
+				error!("Order already in terminal state: {}", status);
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Order not active")
+						.with_reason(format!("Order is already {}", status)),
+				));
+			},
+			_ => {
+				error!("Unexpected order status: {}", status);
+				return Err(PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Unexpected order status")
+						.with_reason(format!("Unknown status: {}", status)),
+				));
+			},
+		}
+	} else {
+		error!("Order not found for cloid {}", hedge_open_cloid);
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Order not found")
+				.with_reason(format!("No order found with cloid {}", hedge_open_cloid)),
+		));
+	};
 
 	// Fetch metadata
 	let spot_meta = hypercore_client.get_spot_meta().await.map_err(|e| {
@@ -372,121 +424,180 @@ async fn handle_payback_loan_impl<
 		collateral_ticker, spot_market_price, perp_market_price
 	);
 
-	// Generate cloids for operations
-	let hedge_close_cloid = generate_cloid();
-	let spot_buy_cloid = generate_cloid() + 1;
+	// Track cloids and tx hashes
+	let mut current_nonce = skeleton_user_op.nonce;
+	let mut hedge_cancel_tx_hash = None;
+	let mut hedge_close_cloid_opt = None;
+	let mut hedge_close_tx_hash = None;
 
-	info!(
-		"Generated cloids - hedge_close: {} (hex: 0x{:032x}), spot_buy: {} (hex: 0x{:032x})",
-		hedge_close_cloid, hedge_close_cloid, spot_buy_cloid, spot_buy_cloid
-	);
+	// Action 1a: Cancel order if needed
+	if should_cancel {
+		info!("Action 1a: Canceling unfilled order...");
 
-	// Action 1: Close hedge position
-	info!("Action 1: Closing hedge position...");
+		let cancel_action = build_cancel_order_by_cloid(perp_asset_id, hedge_open_cloid);
+		let cancel_corewriter_calldata = encode_send_raw_action(cancel_action);
+		let cancel_calldata =
+			encode_omni_account_execute(get_core_writer_address(), cancel_corewriter_calldata);
 
-	// Calculate close order parameters
-	let close_size_abs = position_size.abs();
-	let clamped_close_size = clamp_size(close_size_abs, perp_asset.sz_decimals);
-	let target_close_price = perp_market_price * PERP_CLOSE_PRICE_RATIO;
-	let clamped_close_price = clamp_price(target_close_price, perp_asset.sz_decimals, false);
+		let mut cancel_skeleton = skeleton_user_op.clone();
+		cancel_skeleton.nonce = current_nonce;
+		if current_nonce > skeleton_user_op.nonce {
+			cancel_skeleton.init_code = "0x".to_string();
+		}
 
-	info!(
-		"Closing position - size: {} (clamped: {}), price: {} (clamped: {})",
-		close_size_abs, clamped_close_size, target_close_price, clamped_close_price
-	);
-
-	let clamped_close_size_f64 = clamped_close_size.parse::<f64>().map_err(|e| {
-		error!("Failed to parse clamped close size: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to parse clamped close size: {}", e)),
+		let cancel_tx_hash = submit_corewriter_userop(
+			ctx.clone(),
+			&omni_account,
+			&cancel_skeleton,
+			chain_id,
+			wallet_index,
+			cancel_calldata,
+			"",
 		)
-	})?;
-	let clamped_close_price_f64 = clamped_close_price.parse::<f64>().map_err(|e| {
-		error!("Failed to parse clamped close price: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to parse clamped close price: {}", e)),
-		)
-	})?;
+		.await?;
 
-	let close_size_units = to_price_units(clamped_close_size_f64);
-	let close_price_units = to_price_units(clamped_close_price_f64);
+		info!("Action 1a: Cancel order submitted with tx_hash: {:?}", cancel_tx_hash);
+		hedge_cancel_tx_hash = cancel_tx_hash;
+		current_nonce += 1;
 
-	// Build and submit close order
-	let close_action = build_perp_close_order(
-		perp_asset_id,
-		close_size_units,
-		close_price_units,
-		hedge_close_cloid,
-	);
-	let close_corewriter_calldata = encode_send_raw_action(close_action);
-	let close_calldata =
-		encode_omni_account_execute(get_core_writer_address(), close_corewriter_calldata);
+		// Wait for cancel to process
+		let cancel_result = hypercore_client
+			.wait_for_order(
+				smart_wallet_address_str,
+				&hedge_open_cloid.to_string(),
+				30,
+				OrderWaitCondition::Filled,
+			)
+			.await;
 
-	info!("Submitting hedge close order...");
-	let hedge_close_tx_hash = submit_corewriter_userop(
-		ctx.clone(),
-		&omni_account,
-		&skeleton_user_op,
-		chain_id,
-		wallet_index,
-		close_calldata,
-		"",
-	)
-	.await?;
+		match cancel_result {
+			Ok(false) => info!("Order canceled successfully"),
+			Ok(true) => info!("Order filled before cancel could process"),
+			Err(e) => {
+				if e.contains("Timeout") {
+					info!("Cancel timeout (order may already be in terminal state)");
+				} else {
+					error!("Cancel failed: {}", e);
+				}
+			},
+		}
 
-	info!("Action 1: Hedge close order submitted with tx_hash: {:?}", hedge_close_tx_hash);
+		hypercore_client
+			.print_account_state(smart_wallet_address_str, "After Action 1a - Order Canceled")
+			.await;
+	}
 
-	info!("Waiting for hedge position to close...");
+	// Action 1b: Close position if needed
+	if should_close {
+		info!("Action 1b: Closing hedge position...");
 
-	// Wait for the close order to be filled
-	let order_filled = hypercore_client
-		.wait_for_order(
-			smart_wallet_address_str,
-			&hedge_close_cloid.to_string(),
-			30,
-			OrderWaitCondition::Filled,
-		)
-		.await
-		.map_err(|e| {
-			error!("Hedge close order did not complete: {}", e);
+		let hedge_close_cloid = generate_cloid();
+		hedge_close_cloid_opt = Some(hedge_close_cloid.to_string());
+		let close_size_abs = position_size_to_close.abs();
+		let clamped_close_size = clamp_size(close_size_abs, perp_asset.sz_decimals);
+		let target_close_price = perp_market_price * PERP_CLOSE_PRICE_RATIO;
+		let clamped_close_price = clamp_price(target_close_price, perp_asset.sz_decimals, false);
+
+		info!(
+			"Closing position - size: {} (clamped: {}), price: {} (clamped: {})",
+			close_size_abs, clamped_close_size, target_close_price, clamped_close_price
+		);
+
+		let clamped_close_size_f64 = clamped_close_size.parse::<f64>().map_err(|e| {
+			error!("Failed to parse clamped close size: {}", e);
 			PumpxRpcError::from(
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Hedge close order failed: {}", e)),
+					.with_reason(format!("Failed to parse clamped close size: {}", e)),
+			)
+		})?;
+		let clamped_close_price_f64 = clamped_close_price.parse::<f64>().map_err(|e| {
+			error!("Failed to parse clamped close price: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to parse clamped close price: {}", e)),
 			)
 		})?;
 
-	if !order_filled {
-		error!("Hedge close order was rejected or canceled");
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason("Hedge close order was rejected or canceled"),
-		));
+		let close_size_units = to_price_units(clamped_close_size_f64);
+		let close_price_units = to_price_units(clamped_close_price_f64);
+
+		let close_action = build_perp_close_order(
+			perp_asset_id,
+			close_size_units,
+			close_price_units,
+			hedge_close_cloid,
+		);
+		let close_corewriter_calldata = encode_send_raw_action(close_action);
+		let close_calldata =
+			encode_omni_account_execute(get_core_writer_address(), close_corewriter_calldata);
+
+		let mut close_skeleton = skeleton_user_op.clone();
+		close_skeleton.nonce = current_nonce;
+		if current_nonce > skeleton_user_op.nonce {
+			close_skeleton.init_code = "0x".to_string();
+		}
+
+		hedge_close_tx_hash = submit_corewriter_userop(
+			ctx.clone(),
+			&omni_account,
+			&close_skeleton,
+			chain_id,
+			wallet_index,
+			close_calldata,
+			"",
+		)
+		.await?;
+
+		info!("Action 1b: Hedge close order submitted with tx_hash: {:?}", hedge_close_tx_hash);
+		current_nonce += 1;
+
+		let order_filled = hypercore_client
+			.wait_for_order(
+				smart_wallet_address_str,
+				&hedge_close_cloid.to_string(),
+				30,
+				OrderWaitCondition::Filled,
+			)
+			.await
+			.map_err(|e| {
+				error!("Hedge close order did not complete: {}", e);
+				PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason(format!("Hedge close order failed: {}", e)),
+				)
+			})?;
+
+		if !order_filled {
+			error!("Hedge close order was rejected or canceled");
+			return Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Hedge close order was rejected or canceled"),
+			));
+		}
+
+		info!("Action 1b: Hedge position closed successfully");
+
+		hypercore_client
+			.print_account_state(smart_wallet_address_str, "After Action 1b - Hedge Closed")
+			.await;
 	}
 
-	info!("Action 1: Hedge position closed successfully");
-
-	hypercore_client
-		.print_account_state(smart_wallet_address_str, "After Action 1 - Hedge Closed")
-		.await;
-
 	// Action 2: Transfer USDC from perp to spot
+	// Always needed - either closing proceeds or unused margin from unfilled order
 	info!("Action 2: Transferring USDC from perp to spot...");
 
-	// Get current perp balance to determine how much USDC to transfer
-	let perp_state_after_close = hypercore_client
+	let perp_state_after_actions = hypercore_client
 		.get_perp_clearinghouse_state(smart_wallet_address_str)
 		.await
 		.map_err(|e| {
-			error!("Failed to get perp state after close: {}", e);
+			error!("Failed to get perp state: {}", e);
 			PumpxRpcError::from(
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 					.with_reason(format!("Failed to query perp state: {}", e)),
 			)
 		})?;
 
-	let withdrawable_usdc = perp_state_after_close.withdrawable.parse::<f64>().map_err(|e| {
+	let withdrawable_usdc = perp_state_after_actions.withdrawable.parse::<f64>().map_err(|e| {
 		error!("Failed to parse withdrawable USDC: {}", e);
 		PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
@@ -496,23 +607,20 @@ async fn handle_payback_loan_impl<
 
 	info!("Withdrawable USDC from perp: {}", withdrawable_usdc);
 
-	// Transfer all withdrawable USDC from perp to spot
 	let transfer_amount_units = to_usdc_units(withdrawable_usdc);
 	let transfer_action = build_usd_class_transfer_to_spot(transfer_amount_units);
 	let transfer_corewriter_calldata = encode_send_raw_action(transfer_action);
 	let transfer_calldata =
 		encode_omni_account_execute(get_core_writer_address(), transfer_corewriter_calldata);
 
-	info!("Action 2: Transferring {} USDC from perp to spot...", withdrawable_usdc);
-
-	let mut skeleton_action2 = skeleton_user_op.clone();
-	skeleton_action2.nonce = skeleton_user_op.nonce + 1;
-	skeleton_action2.init_code = "0x".to_string();
+	let mut transfer_skeleton = skeleton_user_op.clone();
+	transfer_skeleton.nonce = current_nonce;
+	transfer_skeleton.init_code = "0x".to_string();
 
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&skeleton_action2,
+		&transfer_skeleton,
 		chain_id,
 		wallet_index,
 		transfer_calldata,
@@ -520,9 +628,9 @@ async fn handle_payback_loan_impl<
 	)
 	.await?;
 
-	info!("Action 2: USD transfer to spot submitted with tx_hash: {:?}", usd_transfer_tx_hash);
+	info!("Action 2: USD transfer submitted with tx_hash: {:?}", usd_transfer_tx_hash);
+	current_nonce += 1;
 
-	// Wait for transfer to complete by checking spot balance increase
 	let initial_spot_usdc = hypercore_client
 		.get_spot_balance(smart_wallet_address_str, "USDC")
 		.await
@@ -559,7 +667,8 @@ async fn handle_payback_loan_impl<
 	// Action 3: Spot buy collateral
 	info!("Action 3: Buying back collateral in spot market...");
 
-	// Calculate how much collateral to buy (target: collateral_size)
+	let spot_buy_cloid = generate_cloid();
+	let spot_buy_cloid_str = spot_buy_cloid.to_string();
 	let target_buy_price = spot_market_price * SPOT_BUY_PRICE_RATIO;
 	let clamped_buy_price = clamp_price(target_buy_price, collateral_token.sz_decimals, true);
 	let clamped_buy_size = clamp_size(collateral_size, collateral_token.sz_decimals);
@@ -593,16 +702,14 @@ async fn handle_payback_loan_impl<
 	let spot_buy_calldata =
 		encode_omni_account_execute(get_core_writer_address(), spot_buy_corewriter_calldata);
 
-	info!("Submitting spot buy order...");
-
-	let mut skeleton_action3 = skeleton_user_op.clone();
-	skeleton_action3.nonce = skeleton_user_op.nonce + 2;
-	skeleton_action3.init_code = "0x".to_string();
+	let mut buy_skeleton = skeleton_user_op.clone();
+	buy_skeleton.nonce = current_nonce;
+	buy_skeleton.init_code = "0x".to_string();
 
 	let spot_buy_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
-		&skeleton_action3,
+		&buy_skeleton,
 		chain_id,
 		wallet_index,
 		spot_buy_calldata,
@@ -612,8 +719,6 @@ async fn handle_payback_loan_impl<
 
 	info!("Action 3: Spot buy order submitted with tx_hash: {:?}", spot_buy_tx_hash);
 
-	// Wait for spot buy to fill
-	info!("Waiting for spot buy order to fill...");
 	let buy_order_filled = hypercore_client
 		.wait_for_order(
 			smart_wallet_address_str,
@@ -640,33 +745,18 @@ async fn handle_payback_loan_impl<
 
 	info!("Action 3: Spot buy order filled successfully");
 
-	// Get the actual fill to determine how much was bought
-	let spot_buy_fill = hypercore_client
-		.get_fill_by_cloid(smart_wallet_address_str, spot_buy_cloid)
-		.await
-		.map_err(|e| {
-			error!("Failed to get fill for spot buy order: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to get fill: {}", e)),
-			)
-		})?;
-
-	let collateral_size = spot_buy_fill.sz.clone();
-
-	info!("Action 3: Bought {} {} in spot market", collateral_size, collateral_ticker);
-
 	hypercore_client
 		.print_account_state(smart_wallet_address_str, "After Action 3 - Spot Buy Complete")
 		.await;
 
 	Ok(PaybackLoanTestResponse {
 		collateral_ticker,
-		collateral_size,
-		hedge_close_cloid: hedge_close_cloid.to_string(),
-		spot_buy_cloid: spot_buy_cloid.to_string(),
+		collateral_size: collateral_size.to_string(),
+		hedge_cancel_tx_hash,
+		hedge_close_cloid: hedge_close_cloid_opt,
 		hedge_close_tx_hash,
 		usd_transfer_tx_hash,
+		spot_buy_cloid: Some(spot_buy_cloid_str),
 		spot_buy_tx_hash,
 	})
 }

@@ -137,6 +137,17 @@ pub fn build_spot_buy_order(asset_id: u32, size: u64, price: u64, cloid: u128) -
 	encode_limit_order_action(asset_id, is_buy, price, size, cloid)
 }
 
+pub fn build_cancel_order_by_cloid(asset_id: u32, cloid: u128) -> Vec<u8> {
+	let encoded =
+		ethabi::encode(&[ethabi::Token::Uint(asset_id.into()), ethabi::Token::Uint(cloid.into())]);
+
+	let mut data = Vec::new();
+	data.push(0x01); // version
+	data.extend_from_slice(&[0x00, 0x00, 0x02]); // action_id = 2 (cancel)
+	data.extend_from_slice(&encoded);
+	data
+}
+
 fn encode_limit_order_action_with_reduce_only(
 	asset: u32,
 	is_buy: bool,
