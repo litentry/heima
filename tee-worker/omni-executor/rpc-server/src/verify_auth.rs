@@ -163,6 +163,10 @@ async fn verify_oauth2_provider<
 		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
 	};
 
+	if let Err(e) = state_verifier_storage.remove(&key) {
+		tracing::warn!("Failed to remove OAuth2 verification data: {:?}", e);
+	}
+
 	if verification_data.state != payload.state {
 		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
 	}
