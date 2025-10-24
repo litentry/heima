@@ -1,11 +1,10 @@
 use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
 };
-use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
+use executor_storage::{Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,
@@ -15,7 +14,6 @@ use heima_identity_verification::web2::{apple, google, oauth2_common};
 use oauth_providers::{
 	AppleProviderConfig, GoogleProviderConfig, OAuth2Client, OAuth2ProviderConfig,
 };
-use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
 
 #[derive(Debug, PartialEq)]
