@@ -582,26 +582,23 @@ async fn handle_payback_loan_impl<
 		current_nonce += 1;
 
 		// Wait for cancel to process
-		let cancel_result = hypercore_client
+		hypercore_client
 			.wait_for_order(
 				smart_wallet_address_str,
 				&hedge_open_cloid.to_string(),
 				30,
 				OrderWaitCondition::Filled,
 			)
-			.await;
+			.await
+			.map_err(|e| {
+				error!("Cancel order operation failed: {}", e);
+				PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason(format!("Cancel order failed or timed out: {}", e)),
+				)
+			})?;
 
-		match cancel_result {
-			Ok(false) => info!("Order canceled successfully"),
-			Ok(true) => info!("Order filled before cancel could process"),
-			Err(e) => {
-				if e.contains("Timeout") {
-					info!("Cancel timeout (order may already be in terminal state)");
-				} else {
-					error!("Cancel failed: {}", e);
-				}
-			},
-		}
+		info!("Action 1a: Order cancel processed successfully");
 
 		hypercore_client
 			.print_account_state(smart_wallet_address_str, "After Action 1a - Order Canceled")

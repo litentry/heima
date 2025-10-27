@@ -143,7 +143,7 @@ pub fn build_cancel_order_by_cloid(asset_id: u32, cloid: u128) -> Vec<u8> {
 
 	let mut data = Vec::new();
 	data.push(0x01); // version
-	data.extend_from_slice(&[0x00, 0x00, 0x02]); // action_id = 2 (cancel)
+	data.extend_from_slice(&[0x00, 0x00, 0x0b]); // action_id = 11 (cancel order by cloid)
 	data.extend_from_slice(&encoded);
 	data
 }
