@@ -81,13 +81,13 @@ pub fn register_payback_loan_test<
 }
 
 /// Helper to verify hedge position exists and is not liquidated
-/// Returns: (position_size, account_value)
+/// Returns: (position_size, account_value, unrealized_pnl, cum_funding_all_time, margin_used, position_value, withdrawable)
 /// where account_value = crossMarginSummary.accountValue
 async fn verify_hedge_position(
 	hypercore_client: &HyperCoreClient,
 	smart_wallet_address: &str,
 	collateral_ticker: &str,
-) -> Result<(f64, f64), PumpxRpcError> {
+) -> Result<(f64, f64, f64, f64, f64, f64, f64), PumpxRpcError> {
 	let perp_state = hypercore_client
 		.get_perp_clearinghouse_state(smart_wallet_address)
 		.await
@@ -139,12 +139,62 @@ async fn verify_hedge_position(
 			)
 		})?;
 
+	// Parse additional position data
+	let unrealized_pnl = hedge_position.position.unrealized_pnl.parse::<f64>().map_err(|e| {
+		error!("Failed to parse unrealized PnL: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid unrealized PnL: {}", e)),
+		)
+	})?;
+
+	let cum_funding_all_time =
+		hedge_position.position.cum_funding.all_time.parse::<f64>().map_err(|e| {
+			error!("Failed to parse cumulative funding: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Invalid cumulative funding: {}", e)),
+			)
+		})?;
+
+	let margin_used = hedge_position.position.margin_used.parse::<f64>().map_err(|e| {
+		error!("Failed to parse margin used: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid margin used: {}", e)),
+		)
+	})?;
+
+	let position_value = hedge_position.position.position_value.parse::<f64>().map_err(|e| {
+		error!("Failed to parse position value: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid position value: {}", e)),
+		)
+	})?;
+
+	let withdrawable = perp_state.withdrawable.parse::<f64>().map_err(|e| {
+		error!("Failed to parse withdrawable: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid withdrawable: {}", e)),
+		)
+	})?;
+
 	info!(
-		"Position account value for {}: crossMarginSummary.accountValue = {}",
-		collateral_ticker, account_value
+		"Position data for {}: size={}, account_value={}, unrealized_pnl={}, cum_funding_all_time={}, margin_used={}, position_value={}, withdrawable={}",
+		collateral_ticker, position_size, account_value, unrealized_pnl, cum_funding_all_time, margin_used, position_value, withdrawable
 	);
 
-	Ok((position_size, account_value))
+	Ok((
+		position_size,
+		account_value,
+		unrealized_pnl,
+		cum_funding_all_time,
+		margin_used,
+		position_value,
+		withdrawable,
+	))
 }
 
 // Main handler implementation
@@ -205,6 +255,14 @@ async fn handle_payback_loan_impl<
 		PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 				.with_reason(format!("Invalid collateral_size in loan record: {}", e)),
+		)
+	})?;
+
+	let usdc_sold = loan_record.usdc_sold.parse::<f64>().map_err(|e| {
+		error!("Failed to parse usdc_sold: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid usdc_sold in loan record: {}", e)),
 		)
 	})?;
 
@@ -288,6 +346,9 @@ async fn handle_payback_loan_impl<
 			)
 		})?;
 
+	// Store position data for transfer amount calculation
+	let mut position_data: Option<(f64, f64, f64, f64, f64)> = None; // (unrealized_pnl, cum_funding_all_time, margin_used, position_value, withdrawable)
+
 	let (should_cancel, should_close, position_size_to_close) = if let Some(order_info) =
 		order_status.order
 	{
@@ -298,7 +359,15 @@ async fn handle_payback_loan_impl<
 			"filled" => {
 				// Case 1: Fully filled - close position
 				info!("Case 1: Order fully filled, will close position");
-				let (position_size, account_value) = verify_hedge_position(
+				let (
+					position_size,
+					account_value,
+					unrealized_pnl,
+					cum_funding_all_time,
+					margin_used,
+					position_value,
+					withdrawable,
+				) = verify_hedge_position(
 					&hypercore_client,
 					smart_wallet_address_str,
 					&collateral_ticker,
@@ -324,6 +393,15 @@ async fn handle_payback_loan_impl<
 					"✓ Account value check passed: {} USDC >= {} USDC",
 					account_value, min_expected_account_value_f64
 				);
+
+				// Store position data for later transfer calculation
+				position_data = Some((
+					unrealized_pnl,
+					cum_funding_all_time,
+					margin_used,
+					position_value,
+					withdrawable,
+				));
 
 				(false, true, position_size)
 			},
@@ -337,7 +415,15 @@ async fn handle_payback_loan_impl<
 				info!(
 					"Case 3: Order partially filled, will cancel order and close filled position"
 				);
-				let (position_size, account_value) = verify_hedge_position(
+				let (
+					position_size,
+					account_value,
+					unrealized_pnl,
+					cum_funding_all_time,
+					margin_used,
+					position_value,
+					withdrawable,
+				) = verify_hedge_position(
 					&hypercore_client,
 					smart_wallet_address_str,
 					&collateral_ticker,
@@ -363,6 +449,15 @@ async fn handle_payback_loan_impl<
 					"✓ Account value check passed: {} USDC >= {} USDC",
 					account_value, min_expected_account_value_f64
 				);
+
+				// Store position data for later transfer calculation
+				position_data = Some((
+					unrealized_pnl,
+					cum_funding_all_time,
+					margin_used,
+					position_value,
+					withdrawable,
+				));
 
 				(true, true, position_size)
 			},
@@ -627,9 +722,68 @@ async fn handle_payback_loan_impl<
 		)
 	})?;
 
-	info!("Withdrawable USDC from perp: {}", withdrawable_usdc);
+	info!("Current withdrawable USDC from perp: {}", withdrawable_usdc);
 
-	let transfer_amount_units = to_usdc_units(withdrawable_usdc);
+	// Calculate precise transfer amount if we closed a position
+	let transfer_amount = if let Some((
+		unrealized_pnl,
+		cum_funding_all_time,
+		margin_used,
+		position_value,
+		stored_withdrawable,
+	)) = position_data
+	{
+		// Calculate initial margin: what we deposited to perp initially
+		let initial_margin = usdc_sold - usdc_loaned;
+
+		// Calculate close position fee: 0.045% of notional value
+		let close_position_fee = position_value * 0.00045;
+
+		// Calculate precise transfer amount with small buffer (0.01 USDC) for rounding errors - TODO
+		let buffer = 0.01;
+		let calculated_amount =
+			initial_margin + unrealized_pnl - cum_funding_all_time - close_position_fee - buffer;
+
+		info!(
+			"Transfer amount calculation: initial_margin={}, unrealized_pnl={}, cum_funding_all_time={}, close_fee={}, buffer={}, calculated={}",
+			initial_margin, unrealized_pnl, cum_funding_all_time, close_position_fee, buffer, calculated_amount
+		);
+
+		// Validate: transfer amount must be <= withdrawable + margin_used
+		// Note: margin_used from before closing, but after closing it becomes part of withdrawable
+		let max_transferable = stored_withdrawable + margin_used;
+		if calculated_amount > max_transferable {
+			error!(
+				"Calculated transfer amount ({}) exceeds max transferable ({} = {} withdrawable + {} margin_used)",
+				calculated_amount, max_transferable, stored_withdrawable, margin_used
+			);
+			return Err(PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Invalid transfer amount").with_reason(
+					format!(
+						"Calculated transfer amount ({}) exceeds available funds ({})",
+						calculated_amount, max_transferable
+					),
+				),
+			));
+		}
+
+		// Also ensure we don't try to transfer more than what's actually withdrawable now
+		let final_amount = calculated_amount.min(withdrawable_usdc);
+		info!(
+			"✓ Transfer amount validation passed: {} <= {} (max transferable), using {}",
+			calculated_amount, max_transferable, final_amount
+		);
+
+		final_amount
+	} else {
+		// No position was closed, just transfer all withdrawable (unused margin from unfilled order)
+		info!("No position closed, transferring all withdrawable USDC: {}", withdrawable_usdc);
+		withdrawable_usdc
+	};
+
+	info!("Transferring {} USDC from perp to spot", transfer_amount);
+
+	let transfer_amount_units = to_usdc_units(transfer_amount);
 	let transfer_action = build_usd_class_transfer_to_spot(transfer_amount_units);
 	let transfer_calldata = encode_omni_account_execute(
 		get_core_writer_address(),
@@ -666,7 +820,7 @@ async fn handle_payback_loan_impl<
 			smart_wallet_address_str,
 			"USDC",
 			initial_spot_usdc,
-			withdrawable_usdc,
+			transfer_amount,
 			30,
 		)
 		.await
