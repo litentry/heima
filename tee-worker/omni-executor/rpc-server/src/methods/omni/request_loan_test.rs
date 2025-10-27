@@ -588,9 +588,10 @@ async fn handle_request_loan_impl<
 	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
 	// For opening: use lowest selling price = midPx * 2 - markPx
 	let target_hedge_price = perp_mid_price * 2.0 - perp_mark_price;
-	let clamped_hedge_price = clamp_price(target_hedge_price, perp_asset.sz_decimals, false);
-	let hedge_size = (usdc_for_perp * effective_leverage) / clamped_hedge_price;
+	let hedge_size = (usdc_for_perp * effective_leverage) / target_hedge_price;
+
 	let clamped_hedge_size = clamp_size(hedge_size, perp_asset.sz_decimals);
+	let clamped_hedge_price = clamp_price(target_hedge_price, perp_asset.sz_decimals, false);
 
 	let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
 		error!("Failed to parse clamped hedge size: {}", e);
