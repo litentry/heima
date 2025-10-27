@@ -16,7 +16,7 @@ enum OwnerType {
     Email, // 0x01
     Twitter, // 0x02
     Discord, // 0x03
-    Github, // 0x04
+    Apple, // 0x04
     Substrate, // 0x05
     Evm, // 0x06
     Bitcoin, // 0x07

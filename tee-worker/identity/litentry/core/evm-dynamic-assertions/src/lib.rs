@@ -198,7 +198,7 @@ pub fn identity_with_networks_to_token(identity: &IdentityNetworkTuple) -> Token
 	let (type_index, value) = match &identity.0 {
 		Identity::Twitter(str) => (0, str.inner_ref().to_vec()),
 		Identity::Discord(str) => (1, str.inner_ref().to_vec()),
-		Identity::Github(str) => (2, str.inner_ref().to_vec()),
+		Identity::Apple(str) => (2, str.inner_ref().to_vec()),
 		Identity::Substrate(addr) => (3, addr.as_ref().to_vec()),
 		Identity::Evm(addr) => (4, addr.as_ref().to_vec()),
 		Identity::Bitcoin(addr) => (5, addr.as_ref().to_vec()),
@@ -207,7 +207,6 @@ pub fn identity_with_networks_to_token(identity: &IdentityNetworkTuple) -> Token
 		Identity::Google(str) => (8, str.inner_ref().to_vec()),
 		Identity::Pumpx(str) => (9, str.inner_ref().to_vec()),
 		Identity::Passkey(str) => (10, str.inner_ref().to_vec()),
-		Identity::Apple(str) => (11, str.inner_ref().to_vec()),
 	};
 	let networks: Vec<Token> = identity.1.iter().map(network_to_token).collect();
 	Token::Tuple(vec![Token::Uint(type_index.into()), Token::Bytes(value), Token::Array(networks)])

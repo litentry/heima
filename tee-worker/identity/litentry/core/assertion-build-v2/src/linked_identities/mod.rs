@@ -68,7 +68,7 @@ mod tests {
 			(Identity::Solana([0; 32].into()), vec![]),
 			(Identity::Discord(IdentityString::new("discord_handle".as_bytes().to_vec())), vec![]),
 			(Identity::Twitter(IdentityString::new("twitter_handle".as_bytes().to_vec())), vec![]),
-			(Identity::Github(IdentityString::new("github_handle".as_bytes().to_vec())), vec![]),
+			(Identity::Apple(IdentityString::new("apple_handle".as_bytes().to_vec())), vec![]),
 		];
 
 		let req = AssertionBuildRequest {
@@ -96,7 +96,7 @@ mod tests {
 						items: vec![Box::new(AssertionLogic::Item {
 							src: "$identities".into(),
 							op: Op::Equal,
-							dst: "[\"did:litentry:substrate:0x0000000000000000000000000000000000000000000000000000000000000000\",\"did:litentry:evm:0x0000000000000000000000000000000000000000\",\"did:litentry:bitcoin:0x000000000000000000000000000000000000000000000000000000000000000000\",\"did:litentry:solana:11111111111111111111111111111111\",\"did:litentry:discord:discord_handle\",\"did:litentry:twitter:twitter_handle\",\"did:litentry:github:github_handle\"]".into()
+							dst: "[\"did:litentry:substrate:0x0000000000000000000000000000000000000000000000000000000000000000\",\"did:litentry:evm:0x0000000000000000000000000000000000000000\",\"did:litentry:bitcoin:0x000000000000000000000000000000000000000000000000000000000000000000\",\"did:litentry:solana:11111111111111111111111111111111\",\"did:litentry:discord:discord_handle\",\"did:litentry:twitter:twitter_handle\",\"did:litentry:apple:apple_handle\"]".into()
 						})]
 					}
 				);
