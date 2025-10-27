@@ -144,6 +144,7 @@ pub fn convert_to_packed_user_op(
 }
 
 /// Prepare a skeleton user op with incremented nonce and cleared init_code if needed
+#[allow(dead_code)]
 pub(crate) fn prepare_skeleton_with_nonce(
 	base: &SerializablePackedUserOperation,
 	nonce: u128,

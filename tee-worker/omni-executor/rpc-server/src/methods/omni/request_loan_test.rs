@@ -132,8 +132,10 @@ async fn validate_loan_request_parameters(
 	collateral_token: &SpotToken,
 	perp_asset: &PerpAsset,
 	lending_ratio: u32,
-	spot_market_price: f64,
-	perp_market_price: f64,
+	spot_mark_price: f64,
+	spot_mid_price: f64,
+	perp_mark_price: f64,
+	perp_mid_price: f64,
 ) -> Result<(f64, f64), PumpxRpcError> {
 	// 1. Validate collateral size for spot trading
 	validate_trade_size(collateral_size, collateral_token.sz_decimals, None).map_err(|e| {
@@ -149,9 +151,13 @@ async fn validate_loan_request_parameters(
 		collateral_size, collateral_token.sz_decimals
 	);
 
-	// 2. Calculate estimated values for perp position
+	// 2. Calculate estimated values for perp position using worst-case prices
 	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
-	let estimated_usdc_from_spot = collateral_size * spot_market_price;
+
+	// Worst case for spot sell: highest buy price with buffer
+	let highest_buy_price = spot_mid_price * 2.0 - spot_mark_price;
+	let worst_case_spot_sell_price = highest_buy_price * SPOT_SELL_PRICE_RATIO;
+	let estimated_usdc_from_spot = collateral_size * worst_case_spot_sell_price;
 	let estimated_usdc_for_perp = estimated_usdc_from_spot * (1.0 - lending_ratio_f64);
 	let estimated_leverage = (1.0 / (1.0 - lending_ratio_f64)).min(perp_asset.max_leverage as f64);
 	let estimated_perp_notional = estimated_usdc_for_perp * estimated_leverage;
@@ -162,7 +168,7 @@ async fn validate_loan_request_parameters(
 	if estimated_perp_notional < MIN_PERP_NOTIONAL {
 		error!(
 			"Perp order notional value too small: estimated ${:.2} (collateral_size={}, spot_price={:.2}, lending_ratio={}%, leverage={:.2}x) - minimum required: ${}",
-			estimated_perp_notional, collateral_size, spot_market_price, lending_ratio, estimated_leverage, MIN_PERP_NOTIONAL
+			estimated_perp_notional, collateral_size, worst_case_spot_sell_price, lending_ratio, estimated_leverage, MIN_PERP_NOTIONAL
 		);
 		return Err(PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
@@ -178,14 +184,16 @@ async fn validate_loan_request_parameters(
 	);
 
 	// 4. Validate estimated hedge size can be properly rounded to perp sz_decimals
-	let estimated_hedge_size = estimated_perp_notional / perp_market_price;
+	// Worst case for opening long position: lowest selling price
+	let worst_case_perp_open_price = perp_mid_price * 2.0 - perp_mark_price;
+	let estimated_hedge_size = estimated_perp_notional / worst_case_perp_open_price;
 
 	validate_trade_size(estimated_hedge_size, perp_asset.sz_decimals, None).map_err(|e| {
 		error!("Invalid estimated hedge size for perp trading: {}", e);
 		PumpxRpcError::from(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
 			format!(
 				"Invalid estimated hedge size (margin={:.2}, leverage={:.2}x, perp_price={:.2}, size={}): {}",
-				estimated_usdc_for_perp, estimated_leverage, perp_market_price, estimated_hedge_size, e
+				estimated_usdc_for_perp, estimated_leverage, worst_case_perp_open_price, estimated_hedge_size, e
 			),
 		))
 	})?;
@@ -261,20 +269,30 @@ async fn handle_request_loan_impl<
 		)
 	})?;
 
-	// Fetch metadata from HyperCore
-	let spot_meta = hypercore_client.get_spot_meta().await.map_err(|e| {
-		error!("Failed to get spot meta: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
-	})?;
+	// Fetch metadata and market prices from HyperCore in one call each
+	// Get spot market prices (markPx and midPx) along with spot metadata
+	let (spot_meta, spot_mark_price, spot_mid_price) =
+		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
+			error!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+					"Failed to get spot market prices for {}: {}",
+					collateral_ticker, e
+				)),
+			)
+		})?;
 
-	let meta = hypercore_client.get_meta().await.map_err(|e| {
-		error!("Failed to get perp meta: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
-	})?;
+	// Get perp market prices (markPx and midPx) along with perp metadata
+	let (meta, perp_mark_price, perp_mid_price) =
+		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
+			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+					"Failed to get perp market prices for {}: {}",
+					collateral_ticker, e
+				)),
+			)
+		})?;
 
 	// Get asset IDs
 	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
@@ -317,34 +335,9 @@ async fn handle_request_loan_impl<
 		)
 	})?;
 
-	// Fetch market prices
-	let spot_market_price = hypercore_client
-		.get_spot_mid_price(collateral_ticker, &spot_meta)
-		.await
-		.map_err(|e| {
-			error!("Failed to get spot market price for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-					"Failed to get spot market price for {}: {}",
-					collateral_ticker, e
-				)),
-			)
-		})?;
-
-	let perp_market_price =
-		hypercore_client.get_perp_mid_price(collateral_ticker).await.map_err(|e| {
-			error!("Failed to get perp market price for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-					"Failed to get perp market price for {}: {}",
-					collateral_ticker, e
-				)),
-			)
-		})?;
-
 	info!(
-		"Market prices for {} - spot: {} USDC, perp: {} USDC",
-		collateral_ticker, spot_market_price, perp_market_price
+		"Market prices for {} - spot markPx: {} USDC, spot midPx: {} USDC, perp markPx: {} USDC, perp midPx: {} USDC",
+		collateral_ticker, spot_mark_price, spot_mid_price, perp_mark_price, perp_mid_price
 	);
 
 	// Run all early validations
@@ -356,8 +349,10 @@ async fn handle_request_loan_impl<
 		collateral_token,
 		perp_asset,
 		lending_ratio,
-		spot_market_price,
-		perp_market_price,
+		spot_mark_price,
+		spot_mid_price,
+		perp_mark_price,
+		perp_mid_price,
 	)
 	.await?;
 
@@ -368,12 +363,14 @@ async fn handle_request_loan_impl<
 
 	// Action 1: Sell collateral_size as spot to get X USDC
 	let clamped_size = clamp_size(collateral_size, collateral_token.sz_decimals);
-	let target_price = spot_market_price * SPOT_SELL_PRICE_RATIO;
+	// Calculate highest buy price: midPx * 2 - markPx, then apply SPOT_SELL_PRICE_RATIO
+	let highest_buy_price = spot_mid_price * 2.0 - spot_mark_price;
+	let target_price = highest_buy_price * SPOT_SELL_PRICE_RATIO;
 	let clamped_price = clamp_price(target_price, collateral_token.sz_decimals, true);
 
 	info!(
-		"Clamped values for spot sell - size: {} -> {}, price: {} -> {}",
-		collateral_size, clamped_size, target_price, clamped_price
+		"Spot sell pricing - markPx: {}, midPx: {}, highest buy: {}, target (with {}x buffer): {}, clamped: {}",
+		spot_mark_price, spot_mid_price, highest_buy_price, SPOT_SELL_PRICE_RATIO, target_price, clamped_price
 	);
 
 	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
@@ -589,11 +586,11 @@ async fn handle_request_loan_impl<
 
 	let desired_leverage: f64 = 1.0 / (1.0 - lending_ratio_f64);
 	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
-	let hedge_size = (usdc_for_perp * effective_leverage) / perp_market_price;
-
-	let clamped_hedge_size = clamp_size(hedge_size, perp_asset.sz_decimals);
-	let target_hedge_price = perp_market_price * PERP_ENTRY_PRICE_RATIO;
+	// For opening: use lowest selling price = midPx * 2 - markPx
+	let target_hedge_price = perp_mid_price * 2.0 - perp_mark_price;
 	let clamped_hedge_price = clamp_price(target_hedge_price, perp_asset.sz_decimals, false);
+	let hedge_size = (usdc_for_perp * effective_leverage) / clamped_hedge_price;
+	let clamped_hedge_size = clamp_size(hedge_size, perp_asset.sz_decimals);
 
 	let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
 		error!("Failed to parse clamped hedge size: {}", e);

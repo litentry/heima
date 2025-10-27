@@ -21,11 +21,11 @@ pub struct PaybackLoanTestParams {
 	pub wallet_index: u32,
 	pub omni_account: String,
 	pub loan_nonce: u64,
-	// expected minimal equity (USDC) on user's perp account = (margin + unrealized PnL)
-	// if the actual equity is smaller, it will error out and not close the position.
+	// Expected minimal account value (USDC) on user's perp account (crossMarginSummary.accountValue)
+	// If the actual account value is smaller, it will error out and not close the position.
 	//
 	// This is just a safety guard to avoid unwanted position close (when e.g user is at big loss)
-	pub min_expected_equity: String,
+	pub min_expected_account_value: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -73,7 +73,7 @@ pub fn register_payback_loan_test<
 				params.chain_id,
 				params.wallet_index,
 				params.loan_nonce,
-				params.min_expected_equity,
+				params.min_expected_account_value,
 			)
 			.await
 		})
@@ -81,8 +81,8 @@ pub fn register_payback_loan_test<
 }
 
 /// Helper to verify hedge position exists and is not liquidated
-/// Returns: (position_size, equity)
-/// where equity = margin_used + unrealized_pnl
+/// Returns: (position_size, account_value)
+/// where account_value = crossMarginSummary.accountValue
 async fn verify_hedge_position(
 	hypercore_client: &HyperCoreClient,
 	smart_wallet_address: &str,
@@ -129,30 +129,22 @@ async fn verify_hedge_position(
 		));
 	}
 
-	// Calculate equity = margin_used + unrealized_pnl
-	let margin_used = hedge_position.position.margin_used.parse::<f64>().map_err(|e| {
-		error!("Failed to parse margin_used: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid margin_used: {}", e)),
-		)
-	})?;
+	// Get account value from crossMarginSummary
+	let account_value =
+		perp_state.cross_margin_summary.account_value.parse::<f64>().map_err(|e| {
+			error!("Failed to parse account value: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Invalid account value: {}", e)),
+			)
+		})?;
 
-	let unrealized_pnl = hedge_position.position.unrealized_pnl.parse::<f64>().map_err(|e| {
-		error!("Failed to parse unrealized_pnl: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid unrealized_pnl: {}", e)),
-		)
-	})?;
-
-	let equity = margin_used + unrealized_pnl;
 	info!(
-		"Position equity for {}: margin_used = {}, unrealized_pnl = {}, total equity = {}",
-		collateral_ticker, margin_used, unrealized_pnl, equity
+		"Position account value for {}: crossMarginSummary.accountValue = {}",
+		collateral_ticker, account_value
 	);
 
-	Ok((position_size, equity))
+	Ok((position_size, account_value))
 }
 
 // Main handler implementation
@@ -165,20 +157,21 @@ async fn handle_payback_loan_impl<
 	chain_id: u64,
 	wallet_index: u32,
 	loan_nonce: u64,
-	min_expected_equity: String,
+	min_expected_account_value: String,
 ) -> Result<PaybackLoanTestResponse, PumpxRpcError> {
 	let smart_wallet_address_str = &skeleton_user_op.sender;
 
-	// Parse min_expected_equity
-	let min_expected_equity_f64 = min_expected_equity.parse::<f64>().map_err(|e| {
-		error!("Failed to parse min_expected_equity: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(PARSE_ERROR_CODE, "Invalid parameter")
-				.with_reason(format!("Invalid min_expected_equity value: {}", e)),
-		)
-	})?;
+	// Parse min_expected_account_value
+	let min_expected_account_value_f64 =
+		min_expected_account_value.parse::<f64>().map_err(|e| {
+			error!("Failed to parse min_expected_account_value: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(PARSE_ERROR_CODE, "Invalid parameter")
+					.with_reason(format!("Invalid min_expected_account_value value: {}", e)),
+			)
+		})?;
 
-	info!("Minimum expected equity threshold: {} USDC", min_expected_equity_f64);
+	info!("Minimum expected account value threshold: {} USDC", min_expected_account_value_f64);
 
 	// Step 1: Retrieve loan record from storage
 	info!("Retrieving loan record for omni_account {:?}, nonce {}", omni_account, loan_nonce);
@@ -305,29 +298,32 @@ async fn handle_payback_loan_impl<
 			"filled" => {
 				// Case 1: Fully filled - close position
 				info!("Case 1: Order fully filled, will close position");
-				let (position_size, equity) = verify_hedge_position(
+				let (position_size, account_value) = verify_hedge_position(
 					&hypercore_client,
 					smart_wallet_address_str,
 					&collateral_ticker,
 				)
 				.await?;
 
-				// Validate equity against minimum threshold
-				if equity < min_expected_equity_f64 {
+				// Validate account value against minimum threshold
+				if account_value < min_expected_account_value_f64 {
 					error!(
-						"Position equity ({} USDC) is below minimum expected equity ({} USDC)",
-						equity, min_expected_equity_f64
+						"Account value ({} USDC) is below minimum expected account value ({} USDC)",
+						account_value, min_expected_account_value_f64
 					);
 					return Err(PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Equity too low").with_reason(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Account value too low").with_reason(
 								format!(
-									"Position equity ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
-									equity, min_expected_equity_f64
+									"Account value ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
+									account_value, min_expected_account_value_f64
 								),
 							),
 						));
 				}
-				info!("✓ Equity check passed: {} USDC >= {} USDC", equity, min_expected_equity_f64);
+				info!(
+					"✓ Account value check passed: {} USDC >= {} USDC",
+					account_value, min_expected_account_value_f64
+				);
 
 				(false, true, position_size)
 			},
@@ -341,29 +337,32 @@ async fn handle_payback_loan_impl<
 				info!(
 					"Case 3: Order partially filled, will cancel order and close filled position"
 				);
-				let (position_size, equity) = verify_hedge_position(
+				let (position_size, account_value) = verify_hedge_position(
 					&hypercore_client,
 					smart_wallet_address_str,
 					&collateral_ticker,
 				)
 				.await?;
 
-				// Validate equity against minimum threshold
-				if equity < min_expected_equity_f64 {
+				// Validate account value against minimum threshold
+				if account_value < min_expected_account_value_f64 {
 					error!(
-						"Position equity ({} USDC) is below minimum expected equity ({} USDC)",
-						equity, min_expected_equity_f64
+						"Account value ({} USDC) is below minimum expected account value ({} USDC)",
+						account_value, min_expected_account_value_f64
 					);
 					return Err(PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Equity too low").with_reason(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Account value too low").with_reason(
 								format!(
-									"Position equity ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
-									equity, min_expected_equity_f64
+									"Account value ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
+									account_value, min_expected_account_value_f64
 								),
 							),
 						));
 				}
-				info!("✓ Equity check passed: {} USDC >= {} USDC", equity, min_expected_equity_f64);
+				info!(
+					"✓ Account value check passed: {} USDC >= {} USDC",
+					account_value, min_expected_account_value_f64
+				);
 
 				(true, true, position_size)
 			},
@@ -390,20 +389,30 @@ async fn handle_payback_loan_impl<
 		));
 	};
 
-	// Fetch metadata
-	let spot_meta = hypercore_client.get_spot_meta().await.map_err(|e| {
-		error!("Failed to get spot meta: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
-	})?;
+	// Fetch metadata and market prices from HyperCore in one call each
+	// Get spot market prices (markPx and midPx) along with spot metadata
+	let (spot_meta, spot_mark_price, spot_mid_price) =
+		hypercore_client.get_spot_market_prices(&collateral_ticker).await.map_err(|e| {
+			error!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+					"Failed to get spot market prices for {}: {}",
+					collateral_ticker, e
+				)),
+			)
+		})?;
 
-	let meta = hypercore_client.get_meta().await.map_err(|e| {
-		error!("Failed to get perp meta: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
-	})?;
+	// Get perp market prices (markPx and midPx) along with perp metadata
+	let (meta, perp_mark_price, perp_mid_price) =
+		hypercore_client.get_perp_market_prices(&collateral_ticker).await.map_err(|e| {
+			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+					"Failed to get perp market prices for {}: {}",
+					collateral_ticker, e
+				)),
+			)
+		})?;
 
 	// Get asset IDs
 	let spot_asset_id = get_spot_asset_id(&collateral_ticker, &spot_meta).map_err(|e| {
@@ -441,34 +450,9 @@ async fn handle_payback_loan_impl<
 		)
 	})?;
 
-	// Fetch market prices
-	let spot_market_price = hypercore_client
-		.get_spot_mid_price(&collateral_ticker, &spot_meta)
-		.await
-		.map_err(|e| {
-			error!("Failed to get spot market price for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-					"Failed to get spot market price for {}: {}",
-					collateral_ticker, e
-				)),
-			)
-		})?;
-
-	let perp_market_price =
-		hypercore_client.get_perp_mid_price(&collateral_ticker).await.map_err(|e| {
-			error!("Failed to get perp market price for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-					"Failed to get perp market price for {}: {}",
-					collateral_ticker, e
-				)),
-			)
-		})?;
-
 	info!(
-		"Market prices for {} - spot: {} USDC, perp: {} USDC",
-		collateral_ticker, spot_market_price, perp_market_price
+		"Market prices for {} - spot markPx: {} USDC, spot midPx: {} USDC, perp markPx: {} USDC, perp midPx: {} USDC",
+		collateral_ticker, spot_mark_price, spot_mid_price, perp_mark_price, perp_mid_price
 	);
 
 	// Track cloids and tx hashes
@@ -537,7 +521,8 @@ async fn handle_payback_loan_impl<
 		hedge_close_cloid_opt = Some(hedge_close_cloid.to_string());
 		let close_size_abs = position_size_to_close.abs();
 		let clamped_close_size = clamp_size(close_size_abs, perp_asset.sz_decimals);
-		let target_close_price = perp_market_price * PERP_CLOSE_PRICE_RATIO;
+		// For closing: use highest buying price = markPx * 0.98
+		let target_close_price = perp_mark_price * PERP_CLOSE_PRICE_RATIO;
 		let clamped_close_price = clamp_price(target_close_price, perp_asset.sz_decimals, false);
 
 		info!(
@@ -703,13 +688,14 @@ async fn handle_payback_loan_impl<
 
 	let spot_buy_cloid = generate_cloid();
 	let spot_buy_cloid_str = spot_buy_cloid.to_string();
-	let target_buy_price = spot_market_price * SPOT_BUY_PRICE_RATIO;
+	// Use markPx (lowest selling price) and apply buffer to ensure fill
+	let target_buy_price = spot_mark_price * SPOT_BUY_PRICE_RATIO;
 	let clamped_buy_price = clamp_price(target_buy_price, collateral_token.sz_decimals, true);
 	let clamped_buy_size = clamp_size(collateral_size, collateral_token.sz_decimals);
 
 	info!(
-		"Spot buy parameters - size: {} (clamped: {}), price: {} (clamped: {})",
-		collateral_size, clamped_buy_size, target_buy_price, clamped_buy_price
+		"Spot buy pricing - markPx (lowest sell): {}, target (with {}x buffer): {}, clamped: {}",
+		spot_mark_price, SPOT_BUY_PRICE_RATIO, target_buy_price, clamped_buy_price
 	);
 
 	let clamped_buy_size_f64 = clamped_buy_size.parse::<f64>().map_err(|e| {
