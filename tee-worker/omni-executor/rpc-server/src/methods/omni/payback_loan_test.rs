@@ -724,7 +724,11 @@ async fn handle_payback_loan_impl<
 
 	info!("Current withdrawable USDC from perp: {}", withdrawable_usdc);
 
-	// Calculate precise transfer amount if we closed a position
+	// Calculate precise transfer amount
+	// For position closed: initial_margin + unrealized_pnl - cum_funding - close_fee - buffer
+	// For unfilled order: just initial_margin (what was deposited to perp)
+	let initial_margin = usdc_sold - usdc_loaned;
+
 	let transfer_amount = if let Some((
 		unrealized_pnl,
 		cum_funding_all_time,
@@ -733,13 +737,12 @@ async fn handle_payback_loan_impl<
 		stored_withdrawable,
 	)) = position_data
 	{
-		// Calculate initial margin: what we deposited to perp initially
-		let initial_margin = usdc_sold - usdc_loaned;
+		// Position was closed - calculate precise amount
 
 		// Calculate close position fee: 0.045% of notional value
 		let close_position_fee = position_value * 0.00045;
 
-		// Calculate precise transfer amount with small buffer (0.01 USDC) for rounding errors - TODO
+		// Calculate precise transfer amount with small buffer (0.01 USDC) for rounding errors
 		let buffer = 0.01;
 		let calculated_amount =
 			initial_margin + unrealized_pnl - cum_funding_all_time - close_position_fee - buffer;
@@ -776,12 +779,24 @@ async fn handle_payback_loan_impl<
 
 		final_amount
 	} else {
-		// No position was closed, just transfer all withdrawable (unused margin from unfilled order)
-		info!("No position closed, transferring all withdrawable USDC: {}", withdrawable_usdc);
-		withdrawable_usdc
+		// No position was closed (order was unfilled) - transfer just initial margin
+		info!("No position closed, transferring initial margin: {}", initial_margin);
+		initial_margin.min(withdrawable_usdc)
 	};
 
 	info!("Transferring {} USDC from perp to spot", transfer_amount);
+
+	// Get initial spot balance BEFORE submitting the transfer
+	let initial_spot_usdc = hypercore_client
+		.get_spot_balance(smart_wallet_address_str, "USDC")
+		.await
+		.map_err(|e| {
+			error!("Failed to get initial spot USDC balance: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to query spot USDC balance: {}", e)),
+			)
+		})?;
 
 	let transfer_amount_units = to_usdc_units(transfer_amount);
 	let transfer_action = build_usd_class_transfer_to_spot(transfer_amount_units);
@@ -803,17 +818,6 @@ async fn handle_payback_loan_impl<
 
 	info!("Action 2: USD transfer submitted with tx_hash: {:?}", usd_transfer_tx_hash);
 	current_nonce += 1;
-
-	let initial_spot_usdc = hypercore_client
-		.get_spot_balance(smart_wallet_address_str, "USDC")
-		.await
-		.map_err(|e| {
-			error!("Failed to get initial spot USDC balance: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query spot USDC balance: {}", e)),
-			)
-		})?;
 
 	hypercore_client
 		.wait_for_spot_balance_increase(

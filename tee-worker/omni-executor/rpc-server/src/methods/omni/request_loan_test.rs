@@ -516,27 +516,8 @@ async fn handle_request_loan_impl<
 
 	// Action 2: Move USDC into perps
 	let mut current_nonce = skeleton_user_op.nonce + 1;
-	let usdc_for_perp_units = to_usdc_units(usdc_for_perp);
-	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
-	let usd_transfer_calldata = encode_omni_account_execute(
-		get_core_writer_address(),
-		encode_send_raw_action(usd_transfer_action),
-	);
 
-	let _usd_transfer_tx_hash = submit_corewriter_userop(
-		ctx.clone(),
-		&omni_account,
-		&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
-		chain_id,
-		wallet_index,
-		usd_transfer_calldata,
-		client_id,
-	)
-	.await?;
-
-	info!("Action 2: USD class transfer submitted");
-
-	// Get initial perp balance
+	// Get initial perp balance BEFORE submitting the transfer
 	let initial_perp_balance = hypercore_client
 		.get_perp_clearinghouse_state(smart_wallet_address_str)
 		.await
@@ -557,6 +538,26 @@ async fn handle_request_loan_impl<
 					.with_reason(format!("Failed to parse perp balance: {}", e)),
 			)
 		})?;
+
+	let usdc_for_perp_units = to_usdc_units(usdc_for_perp);
+	let usd_transfer_action = build_usd_class_transfer_to_perp(usdc_for_perp_units);
+	let usd_transfer_calldata = encode_omni_account_execute(
+		get_core_writer_address(),
+		encode_send_raw_action(usd_transfer_action),
+	);
+
+	let _usd_transfer_tx_hash = submit_corewriter_userop(
+		ctx.clone(),
+		&omni_account,
+		&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
+		chain_id,
+		wallet_index,
+		usd_transfer_calldata,
+		client_id,
+	)
+	.await?;
+
+	info!("Action 2: USD class transfer submitted");
 
 	// Wait for USD transfer to complete
 	let _actual_perp_balance = hypercore_client
