@@ -4,7 +4,7 @@ use crate::{
 
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
-use executor_primitives::{to_omni_auth, utils::hex::ToHexPrefixed, UserAuth, UserId};
+use executor_primitives::{to_omni_auth, utils::hex::hex_encode, UserAuth, UserId};
 use executor_storage::{
 	PasskeyChallengeError, PasskeyChallengeStorage, PasskeyError, PasskeyStorage,
 };
@@ -28,12 +28,10 @@ pub struct AttachPasskeyResponse {
 }
 
 pub fn register_attach_passkey<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+		RpcContext<CrossChainIntentExecutor>,
 	>,
 ) {
 	module
@@ -140,7 +138,7 @@ pub fn register_attach_passkey<
 				message: format!(
 					"Passkey ({}) successfully attached to account {}",
 					credential_id,
-					omni_account.to_hex()
+					hex_encode(omni_account.as_ref())
 				),
 			})
 		})

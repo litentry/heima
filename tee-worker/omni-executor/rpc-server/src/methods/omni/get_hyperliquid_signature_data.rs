@@ -11,7 +11,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
 use executor_primitives::{
 	to_omni_auth,
-	utils::hex::{hex_encode, ToHexPrefixed},
+	utils::hex::hex_encode,
 	ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
 use executor_storage::{
@@ -280,7 +280,7 @@ pub fn register_get_hyperliquid_signature_data<
 						&public_key_sec1_bytes,
 					)
 					.map_err(|e| {
-						error!("Failed to attach passkey to omni_account {}: {:?}", omni_account.to_hex(), e);
+						error!("Failed to attach passkey to omni_account {}: {:?}", hex_encode(omni_account.as_ref()), e);
 						let detailed_error = match e {
 							PasskeyError::DuplicatePasskey => {
 								DetailedError::new(-32001, "Passkey already exists for this account")

@@ -5,6 +5,7 @@ use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
 };
+use executor_storage::{OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB, VerificationCodeStorage};
 use heima_authentication::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,
@@ -336,11 +337,9 @@ fn verify_id_token_claims(
 }
 
 pub fn verify_passkey_authentication<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	passkey_data: &PasskeyData,
 ) -> Result<(), AuthenticationError> {
 	use crate::methods::omni::common::{get_origin_for_client, get_rp_id_for_client};

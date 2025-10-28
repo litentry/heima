@@ -25,12 +25,10 @@ pub struct RemovePasskeyResponse {
 }
 
 pub fn register_remove_passkey<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+		RpcContext<CrossChainIntentExecutor>,
 	>,
 ) {
 	module

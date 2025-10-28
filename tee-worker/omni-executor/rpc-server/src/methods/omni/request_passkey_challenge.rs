@@ -25,12 +25,10 @@ pub struct RequestPasskeyChallengeResponse {
 }
 
 pub fn register_request_passkey_challenge<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
+		RpcContext<CrossChainIntentExecutor>,
 	>,
 ) {
 	module
