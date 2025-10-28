@@ -230,7 +230,6 @@ async fn handle_request_loan_impl<
 		spot_sell_cloid, spot_sell_cloid, hedge_open_cloid, hedge_open_cloid
 	);
 
-	/*
 	// Build and submit spot sell action
 	let spot_sell_action = build_spot_sell_order(
 		validation_result.spot_asset_id,
@@ -417,12 +416,8 @@ async fn handle_request_loan_impl<
 		.print_account_state(smart_wallet_address_str, "After Action 2 - USD Transfer to Perp")
 		.await;
 
-	*/
-
 	// Action 3: Open hedge position
-	// current_nonce += 1;
-	let current_nonce = skeleton_user_op.nonce;
-	let usdc_for_perp: f64 = 7.0;
+	current_nonce += 1;
 
 	// Refresh perp market prices to get latest prices for order construction
 	info!("Refreshing perp market prices before Action 3...");
@@ -528,14 +523,13 @@ async fn handle_request_loan_impl<
 		.print_account_state(smart_wallet_address_str, "After Action 3 - Hedge Open")
 		.await;
 
-	// let usdc_received_str = format!("{:.2}", usdc_to_lend);
-	let usdc_received_str = "1.0".to_string();
+	let usdc_received_str = format!("{:.2}", usdc_to_lend);
 
 	Ok(RequestLoanTestResponse {
 		spot_sell_cloid: spot_sell_cloid.to_string(),
 		hedge_open_cloid: hedge_open_cloid.to_string(),
 		usdc_received: usdc_received_str,
-		spot_sell_tx_hash: None,
+		spot_sell_tx_hash,
 		hedge_open_tx_hash,
 	})
 }
