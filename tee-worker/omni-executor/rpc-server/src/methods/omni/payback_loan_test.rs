@@ -524,6 +524,20 @@ async fn handle_payback_loan_impl<
 	// Action 3: Spot buy collateral
 	info!("Action 3: Buying back collateral in spot market...");
 
+	// Get current USDC balance to determine how much collateral we can afford
+	let current_spot_usdc = hypercore_client
+		.get_spot_balance(smart_wallet_address_str, "USDC")
+		.await
+		.map_err(|e| {
+			error!("Failed to get current spot USDC balance: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to query spot USDC balance: {}", e)),
+			)
+		})?;
+
+	info!("Current spot USDC balance: {} USDC", current_spot_usdc);
+
 	// Refresh spot prices before buying, as time could have elapsed since validation
 	info!("Refreshing spot market prices before Action 3...");
 	let (_spot_meta_refreshed, spot_mark_price_refreshed, spot_mid_price_refreshed) =
@@ -544,7 +558,26 @@ async fn handle_payback_loan_impl<
 		get_bid_ask_prices(spot_mark_price_refreshed, spot_mid_price_refreshed);
 	let target_buy_price = spot_ask_price * SPOT_BUY_PRICE_RATIO;
 	let clamped_buy_price = clamp_price(target_buy_price, collateral_token.sz_decimals, true);
-	let clamped_buy_size = clamp_size(collateral_size, collateral_token.sz_decimals);
+
+	// Calculate affordable collateral: how much can we buy with available USDC?
+	let clamped_buy_price_f64 = clamped_buy_price.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped buy price: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse clamped buy price: {}", e)),
+		)
+	})?;
+
+	let affordable_collateral = current_spot_usdc / clamped_buy_price_f64;
+
+	// Use the minimum of what we want vs what we can afford
+	let actual_buy_size = collateral_size.min(affordable_collateral);
+	let clamped_buy_size = clamp_size(actual_buy_size, collateral_token.sz_decimals);
+
+	info!(
+		"Spot buy calculation - desired: {}, affordable: {}, using: {} (clamped: {})",
+		collateral_size, affordable_collateral, actual_buy_size, clamped_buy_size
+	);
 
 	info!(
 		"Spot buy pricing - markPx: {}, midPx: {}, ask (lowest sell): {}, target (with {}x buffer): {}, clamped: {}",
