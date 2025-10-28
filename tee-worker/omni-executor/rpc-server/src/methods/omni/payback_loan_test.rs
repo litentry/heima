@@ -158,7 +158,7 @@ async fn handle_payback_loan_impl<
 	// Fetch metadata and market prices from HyperCore in one call each
 	// Get spot market prices (markPx and midPx) along with spot metadata
 	let (spot_meta, spot_mark_price, spot_mid_price) =
-		hypercore_client.get_spot_market_prices(&collateral_ticker).await.map_err(|e| {
+		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
 			error!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
 			PumpxRpcError::from(
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
@@ -170,7 +170,7 @@ async fn handle_payback_loan_impl<
 
 	// Get perp market prices (markPx and midPx) along with perp metadata
 	let (meta, perp_mark_price, perp_mid_price) =
-		hypercore_client.get_perp_market_prices(&collateral_ticker).await.map_err(|e| {
+		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
 			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
 			PumpxRpcError::from(
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
@@ -181,14 +181,14 @@ async fn handle_payback_loan_impl<
 		})?;
 
 	// Get asset IDs
-	let spot_asset_id = get_spot_asset_id(&collateral_ticker, &spot_meta).map_err(|e| {
+	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
 		error!("Failed to get spot asset ID: {}", e);
 		PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
 		)
 	})?;
 
-	let perp_asset_id = get_perp_asset_id(&collateral_ticker, &meta).map_err(|e| {
+	let perp_asset_id = get_perp_asset_id(collateral_ticker, &meta).map_err(|e| {
 		error!("Failed to get perp asset ID: {}", e);
 		PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
@@ -199,7 +199,7 @@ async fn handle_payback_loan_impl<
 	let collateral_token = spot_meta
 		.tokens
 		.iter()
-		.find(|t| t.name.eq_ignore_ascii_case(&collateral_ticker))
+		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
 		.ok_or_else(|| {
 			error!("Token {} not found in spot meta", collateral_ticker);
 			PumpxRpcError::from(
@@ -541,7 +541,7 @@ async fn handle_payback_loan_impl<
 	// Refresh spot prices before buying, as time could have elapsed since validation
 	info!("Refreshing spot market prices before Action 3...");
 	let (_spot_meta_refreshed, spot_mark_price_refreshed, spot_mid_price_refreshed) =
-		hypercore_client.get_spot_market_prices(&collateral_ticker).await.map_err(|e| {
+		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
 			error!("Failed to refresh spot market prices for {}: {}", collateral_ticker, e);
 			PumpxRpcError::from(
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
