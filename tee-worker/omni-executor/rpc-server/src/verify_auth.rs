@@ -184,7 +184,7 @@ async fn verify_oauth2_provider<
 			))
 		})?;
 
-	let email = match payload.provider {
+	let id_token_sub = match payload.provider {
 		OAuth2Provider::Google => {
 			let id_token: google::IdToken = oauth2_common::decode_id_token(&payload.id_token)
 				.map_err(|_| {
@@ -198,7 +198,7 @@ async fn verify_oauth2_provider<
 				&verification_data.nonce,
 			)?;
 
-			id_token.email
+			id_token.sub
 		},
 		OAuth2Provider::Apple => {
 			let id_token: apple::IdToken = oauth2_common::decode_id_token(&payload.id_token)
@@ -213,7 +213,7 @@ async fn verify_oauth2_provider<
 				&verification_data.nonce,
 			)?;
 
-			id_token.email
+			id_token.sub
 		},
 	};
 
@@ -239,7 +239,7 @@ async fn verify_oauth2_provider<
 		OAuth2Provider::Apple => Web2IdentityType::Apple,
 	};
 
-	let identity = Identity::from_web2_account(&email, identity_type);
+	let identity = Identity::from_web2_account(&id_token_sub, identity_type);
 
 	Ok(identity)
 }
