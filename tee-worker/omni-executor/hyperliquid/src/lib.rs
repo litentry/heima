@@ -41,6 +41,37 @@ pub fn to_usdc_units(value: f64) -> u64 {
 	(value * USDC_UNIT_MULTIPLIER) as u64
 }
 
+/// Extract bid (highest buy) and ask (lowest sell) prices from mark price and mid price.
+///
+/// # Arguments
+/// * `mark_price` - The mark price from HyperLiquid API
+/// * `mid_price` - The mid price from HyperLiquid API (if midPx was null, this will equal mark_price)
+///
+/// # Returns
+/// * `(bid_price, ask_price)` - Tuple of (highest buy price, lowest sell price)
+///
+/// # Logic
+/// - If mark_price > mid_price: mark is the ask (lowest sell), bid = mid * 2 - mark
+/// - If mark_price < mid_price: mark is the bid (highest buy), ask = mid * 2 - mark
+/// - If mark_price == mid_price: spread is zero or midPx was null, use mark for both
+pub fn get_bid_ask_prices(mark_price: f64, mid_price: f64) -> (f64, f64) {
+	const EPSILON: f64 = 0.00001;
+
+	if (mark_price - mid_price).abs() < EPSILON {
+		// mark_price == mid_price (with floating point tolerance)
+		// This happens when spread is zero or when midPx was null (API returned markPx for both)
+		(mark_price, mark_price)
+	} else if mark_price > mid_price {
+		// markPx is ask (lowest sell)
+		let bid = mid_price * 2.0 - mark_price;
+		(bid, mark_price)
+	} else {
+		// markPx is bid (highest buy)
+		let ask = mid_price * 2.0 - mark_price;
+		(mark_price, ask)
+	}
+}
+
 pub fn get_core_writer_address() -> Address {
 	CORE_WRITER_ADDRESS.parse().unwrap()
 }

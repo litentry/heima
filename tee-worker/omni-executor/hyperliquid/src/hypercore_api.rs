@@ -457,11 +457,18 @@ impl HyperCoreClient {
 			.as_str()
 			.ok_or_else(|| format!("markPx is not a string for {}", ticker))?;
 
-		let mid_px_str = asset_ctx
+		let mid_px_value = asset_ctx
 			.get("midPx")
-			.ok_or_else(|| format!("midPx not found for {}", ticker))?
-			.as_str()
-			.ok_or_else(|| format!("midPx is not a string for {}", ticker))?;
+			.ok_or_else(|| format!("midPx not found for {}", ticker))?;
+
+		// midPx can be null, in which case we'll use markPx
+		let mid_px_str = if mid_px_value.is_null() {
+			mark_px_str
+		} else {
+			mid_px_value
+				.as_str()
+				.ok_or_else(|| format!("midPx is not a string or null for {}", ticker))?
+		};
 
 		let mark_px = mark_px_str
 			.parse::<f64>()

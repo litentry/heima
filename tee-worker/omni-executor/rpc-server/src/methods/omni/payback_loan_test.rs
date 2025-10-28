@@ -292,13 +292,14 @@ async fn handle_payback_loan_impl<
 		hedge_close_cloid_opt = Some(hedge_close_cloid.to_string());
 		let close_size_abs = position_size_to_close.abs();
 		let clamped_close_size = clamp_size(close_size_abs, perp_asset.sz_decimals);
-		// For closing: use highest buying price = markPx * 0.98
-		let target_close_price = perp_mark_price * PERP_CLOSE_PRICE_RATIO;
+		// For closing long position (selling), we want to sell at the highest buy price (bid)
+		let (perp_bid_price, _perp_ask_price) = get_bid_ask_prices(perp_mark_price, perp_mid_price);
+		let target_close_price = perp_bid_price * PERP_CLOSE_PRICE_RATIO;
 		let clamped_close_price = clamp_price(target_close_price, perp_asset.sz_decimals, false);
 
 		info!(
-			"Closing position - size: {} (clamped: {}), price: {} (clamped: {})",
-			close_size_abs, clamped_close_size, target_close_price, clamped_close_price
+			"Perp close pricing - markPx: {}, midPx: {}, bid (highest buy): {}, target (with {}x buffer): {}, clamped: {}",
+			perp_mark_price, perp_mid_price, perp_bid_price, PERP_CLOSE_PRICE_RATIO, target_close_price, clamped_close_price
 		);
 
 		let clamped_close_size_f64 = clamped_close_size.parse::<f64>().map_err(|e| {
@@ -525,7 +526,7 @@ async fn handle_payback_loan_impl<
 
 	// Refresh spot prices before buying, as time could have elapsed since validation
 	info!("Refreshing spot market prices before Action 3...");
-	let (_spot_meta_refreshed, spot_mark_price, _spot_mid_price) =
+	let (_spot_meta_refreshed, spot_mark_price_refreshed, spot_mid_price_refreshed) =
 		hypercore_client.get_spot_market_prices(&collateral_ticker).await.map_err(|e| {
 			error!("Failed to refresh spot market prices for {}: {}", collateral_ticker, e);
 			PumpxRpcError::from(
@@ -538,14 +539,16 @@ async fn handle_payback_loan_impl<
 
 	let spot_buy_cloid = generate_cloid();
 	let spot_buy_cloid_str = spot_buy_cloid.to_string();
-	// Use markPx (lowest selling price) and apply buffer to ensure fill
-	let target_buy_price = spot_mark_price * SPOT_BUY_PRICE_RATIO;
+	// For buying, we want to buy at the lowest sell price (ask)
+	let (_spot_bid_price, spot_ask_price) =
+		get_bid_ask_prices(spot_mark_price_refreshed, spot_mid_price_refreshed);
+	let target_buy_price = spot_ask_price * SPOT_BUY_PRICE_RATIO;
 	let clamped_buy_price = clamp_price(target_buy_price, collateral_token.sz_decimals, true);
 	let clamped_buy_size = clamp_size(collateral_size, collateral_token.sz_decimals);
 
 	info!(
-		"Spot buy pricing - markPx (lowest sell): {}, target (with {}x buffer): {}, clamped: {}",
-		spot_mark_price, SPOT_BUY_PRICE_RATIO, target_buy_price, clamped_buy_price
+		"Spot buy pricing - markPx: {}, midPx: {}, ask (lowest sell): {}, target (with {}x buffer): {}, clamped: {}",
+		spot_mark_price_refreshed, spot_mid_price_refreshed, spot_ask_price, SPOT_BUY_PRICE_RATIO, target_buy_price, clamped_buy_price
 	);
 
 	let clamped_buy_size_f64 = clamped_buy_size.parse::<f64>().map_err(|e| {
