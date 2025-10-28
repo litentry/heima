@@ -219,6 +219,8 @@ pub enum OrderWaitCondition {
 	Filled,
 	/// Wait until the order is opened (retrievable via API)
 	Opened,
+	/// Wait until the order is canceled
+	Canceled,
 }
 
 pub struct HyperCoreClient {
@@ -671,11 +673,11 @@ impl HyperCoreClient {
 	/// * `user_address` - The user's wallet address
 	/// * `cloid` - The client order ID
 	/// * `max_wait_seconds` - Maximum time to wait before timing out
-	/// * `condition` - The condition to wait for (Filled or Opened)
+	/// * `condition` - The condition to wait for (Filled, Opened, or Canceled)
 	///
 	/// # Returns
 	/// * `Ok(true)` - Order reached the desired condition
-	/// * `Ok(false)` - Order was rejected, canceled, or expired
+	/// * `Ok(false)` - Order failed (for Filled/Opened: rejected, canceled, or expired; for Canceled: rejected or expired)
 	/// * `Err(String)` - Timeout or API error
 	pub async fn wait_for_order(
 		&self,
@@ -689,6 +691,7 @@ impl HyperCoreClient {
 		let condition_name = match condition {
 			OrderWaitCondition::Filled => "completion",
 			OrderWaitCondition::Opened => "to be opened",
+			OrderWaitCondition::Canceled => "cancellation",
 		};
 
 		loop {
@@ -710,6 +713,7 @@ impl HyperCoreClient {
 					OrderWaitCondition::Opened => {
 						matches!(order_status, "open" | "partial_fill" | "filled")
 					},
+					OrderWaitCondition::Canceled => order_status == "canceled",
 				};
 
 				if is_satisfied {
@@ -720,8 +724,19 @@ impl HyperCoreClient {
 					return Ok(true);
 				}
 
-				// Check for failure states
-				if matches!(order_status, "rejected" | "canceled" | "expired") {
+				// Check for failure states (depends on what we're waiting for)
+				let has_failed = match condition {
+					// When waiting for Filled or Opened, canceled/rejected/expired are failures
+					OrderWaitCondition::Filled | OrderWaitCondition::Opened => {
+						matches!(order_status, "rejected" | "canceled" | "expired")
+					},
+					// When waiting for Canceled, only rejected/expired are failures
+					OrderWaitCondition::Canceled => {
+						matches!(order_status, "rejected" | "expired")
+					},
+				};
+
+				if has_failed {
 					error!("Order {} failed with status: {}", cloid, order_status);
 					return Ok(false);
 				}

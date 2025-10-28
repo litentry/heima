@@ -15,6 +15,16 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
+/// Result of loan request validation, containing metadata needed for order construction
+struct LoanRequestValidationResult {
+	spot_asset_id: u32,
+	perp_asset_id: u32,
+	spot_sz_decimals: u8,
+	perp_sz_decimals: u8,
+	max_leverage: u32,
+	lending_ratio_f64: f64,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct RequestLoanTestParams {
 	pub user_operation: SerializablePackedUserOperation,
@@ -122,120 +132,6 @@ pub fn register_request_loan_test<
 		.expect("Failed to register omni_requestLoanTest method");
 }
 
-// Helper function to validate loan request parameters
-#[allow(clippy::too_many_arguments)]
-async fn validate_loan_request_parameters(
-	hypercore_client: &HyperCoreClient,
-	smart_wallet_address: &str,
-	collateral_ticker: &str,
-	collateral_size: f64,
-	collateral_token: &SpotToken,
-	perp_asset: &PerpAsset,
-	lending_ratio: u32,
-	spot_mark_price: f64,
-	spot_mid_price: f64,
-	perp_mark_price: f64,
-	perp_mid_price: f64,
-) -> Result<(f64, f64), PumpxRpcError> {
-	// 1. Validate collateral size for spot trading
-	validate_trade_size(collateral_size, collateral_token.sz_decimals, None).map_err(|e| {
-		error!("Invalid collateral size for spot trading: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid collateral size: {}", e)),
-		)
-	})?;
-
-	info!(
-		"✓ Collateral size {} validated for spot trading (sz_decimals={})",
-		collateral_size, collateral_token.sz_decimals
-	);
-
-	// 2. Calculate estimated values for perp position using worst-case prices
-	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
-
-	// Worst case for spot sell: highest buy price with buffer
-	let highest_buy_price = spot_mid_price * 2.0 - spot_mark_price;
-	let worst_case_spot_sell_price = highest_buy_price * SPOT_SELL_PRICE_RATIO;
-	let estimated_usdc_from_spot = collateral_size * worst_case_spot_sell_price;
-	let estimated_usdc_for_perp = estimated_usdc_from_spot * (1.0 - lending_ratio_f64);
-	let estimated_leverage = (1.0 / (1.0 - lending_ratio_f64)).min(perp_asset.max_leverage as f64);
-	let estimated_perp_notional = estimated_usdc_for_perp * estimated_leverage;
-
-	// 3. Validate minimum perp order notional value ($10 minimum)
-	const MIN_PERP_NOTIONAL: f64 = 10.0;
-
-	if estimated_perp_notional < MIN_PERP_NOTIONAL {
-		error!(
-			"Perp order notional value too small: estimated ${:.2} (collateral_size={}, spot_price={:.2}, lending_ratio={}%, leverage={:.2}x) - minimum required: ${}",
-			estimated_perp_notional, collateral_size, worst_case_spot_sell_price, lending_ratio, estimated_leverage, MIN_PERP_NOTIONAL
-		);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-				"Perp order notional value too small: ${:.2} < ${} minimum. Increase collateral_size or decrease lending_ratio.",
-				estimated_perp_notional, MIN_PERP_NOTIONAL
-			)),
-		));
-	}
-
-	info!(
-		"✓ Perp notional value: ${:.2} (margin={:.2}, leverage={:.2}x) >= ${} minimum",
-		estimated_perp_notional, estimated_usdc_for_perp, estimated_leverage, MIN_PERP_NOTIONAL
-	);
-
-	// 4. Validate estimated hedge size can be properly rounded to perp sz_decimals
-	// Worst case for opening long position: lowest selling price
-	let worst_case_perp_open_price = perp_mid_price * 2.0 - perp_mark_price;
-	let estimated_hedge_size = estimated_perp_notional / worst_case_perp_open_price;
-
-	validate_trade_size(estimated_hedge_size, perp_asset.sz_decimals, None).map_err(|e| {
-		error!("Invalid estimated hedge size for perp trading: {}", e);
-		PumpxRpcError::from(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
-			format!(
-				"Invalid estimated hedge size (margin={:.2}, leverage={:.2}x, perp_price={:.2}, size={}): {}",
-				estimated_usdc_for_perp, estimated_leverage, worst_case_perp_open_price, estimated_hedge_size, e
-			),
-		))
-	})?;
-
-	info!(
-		"✓ Estimated hedge size {} validated for perp trading (sz_decimals={})",
-		estimated_hedge_size, perp_asset.sz_decimals
-	);
-
-	// 5. Validate user balance
-	let user_balance = hypercore_client
-		.get_spot_balance(smart_wallet_address, collateral_ticker)
-		.await
-		.map_err(|e| {
-			error!("Failed to get user balance: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query balance: {}", e)),
-			)
-		})?;
-
-	if user_balance < collateral_size {
-		error!(
-			"Insufficient balance: user has {} but needs {} {}",
-			user_balance, collateral_size, collateral_ticker
-		);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-				"Insufficient balance: user has {} but needs {} {}",
-				user_balance, collateral_size, collateral_ticker
-			)),
-		));
-	}
-
-	info!(
-		"✓ Balance check passed: user has {} {} (required: {})",
-		user_balance, collateral_ticker, collateral_size
-	);
-
-	Ok((user_balance, lending_ratio_f64))
-}
-
 // Main handler implementation
 #[allow(clippy::too_many_arguments)]
 async fn handle_request_loan_impl<
@@ -269,92 +165,17 @@ async fn handle_request_loan_impl<
 		)
 	})?;
 
-	// Fetch metadata and market prices from HyperCore in one call each
-	// Get spot market prices (markPx and midPx) along with spot metadata
-	let (spot_meta, spot_mark_price, spot_mid_price) =
-		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
-			error!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-					"Failed to get spot market prices for {}: {}",
-					collateral_ticker, e
-				)),
-			)
-		})?;
-
-	// Get perp market prices (markPx and midPx) along with perp metadata
-	let (meta, perp_mark_price, perp_mid_price) =
-		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
-			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-					"Failed to get perp market prices for {}: {}",
-					collateral_ticker, e
-				)),
-			)
-		})?;
-
-	// Get asset IDs
-	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
-		error!("Failed to get spot asset ID: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
-	})?;
-
-	let perp_asset_id = get_perp_asset_id(collateral_ticker, &meta).map_err(|e| {
-		error!("Failed to get perp asset ID: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
-	})?;
-
-	info!(
-		"Resolved asset IDs - spot: {}, perp: {} for ticker: {}",
-		spot_asset_id, perp_asset_id, collateral_ticker
-	);
-
-	// Get token metadata
-	let collateral_token = spot_meta
-		.tokens
-		.iter()
-		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
-		.ok_or_else(|| {
-			error!("Token {} not found in spot meta", collateral_ticker);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Token {} not found in spot meta", collateral_ticker)),
-			)
-		})?;
-
-	let perp_asset = meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
-		error!("Perp asset {} not found in meta", perp_asset_id);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Perp asset {} not found", perp_asset_id)),
-		)
-	})?;
-
-	info!(
-		"Market prices for {} - spot markPx: {} USDC, spot midPx: {} USDC, perp markPx: {} USDC, perp midPx: {} USDC",
-		collateral_ticker, spot_mark_price, spot_mid_price, perp_mark_price, perp_mid_price
-	);
-
-	// Run all early validations
-	let (_user_balance, lending_ratio_f64) = validate_loan_request_parameters(
+	// Validate loan request parameters (including balance, size, etc.)
+	let validation_result = precheck(
 		&hypercore_client,
 		smart_wallet_address_str,
 		collateral_ticker,
 		collateral_size,
-		collateral_token,
-		perp_asset,
 		lending_ratio,
-		spot_mark_price,
-		spot_mid_price,
-		perp_mark_price,
-		perp_mid_price,
 	)
 	.await?;
+
+	let lending_ratio_f64 = validation_result.lending_ratio_f64;
 
 	// Print initial account state
 	hypercore_client
@@ -362,15 +183,25 @@ async fn handle_request_loan_impl<
 		.await;
 
 	// Action 1: Sell collateral_size as spot to get X USDC
-	let clamped_size = clamp_size(collateral_size, collateral_token.sz_decimals);
+	// Use prices from validation - precheck is fast enough that we don't need to refresh
+	let (_spot_meta, spot_mark_price, spot_mid_price) =
+		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
+			error!("Failed to get spot market prices: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to get spot prices: {}", e)),
+			)
+		})?;
+
+	let clamped_size = clamp_size(collateral_size, validation_result.spot_sz_decimals);
 	// Calculate highest buy price: midPx * 2 - markPx, then apply SPOT_SELL_PRICE_RATIO
 	let highest_buy_price = spot_mid_price * 2.0 - spot_mark_price;
 	let target_price = highest_buy_price * SPOT_SELL_PRICE_RATIO;
-	let clamped_price = clamp_price(target_price, collateral_token.sz_decimals, true);
+	let clamped_price = clamp_price(target_price, validation_result.spot_sz_decimals, true);
 
 	info!(
-		"Spot sell pricing - markPx: {}, midPx: {}, highest buy: {}, target (with {}x buffer): {}, clamped: {}",
-		spot_mark_price, spot_mid_price, highest_buy_price, SPOT_SELL_PRICE_RATIO, target_price, clamped_price
+		"Spot sell pricing - markPx: {}, midPx: {}, highest buy: {}, target (with {}x buffer): {}",
+		spot_mark_price, spot_mid_price, highest_buy_price, SPOT_SELL_PRICE_RATIO, target_price
 	);
 
 	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
@@ -401,7 +232,7 @@ async fn handle_request_loan_impl<
 
 	// Build and submit spot sell action
 	let spot_sell_action = build_spot_sell_order(
-		spot_asset_id,
+		validation_result.spot_asset_id,
 		spot_sell_size_units,
 		spot_sell_price_units,
 		spot_sell_cloid,
@@ -421,7 +252,10 @@ async fn handle_request_loan_impl<
 	)
 	.await?;
 
-	info!("Action 1: Spot sell submitted with tx_hash: {:?}", spot_sell_tx_hash);
+	info!(
+		"Action 1: Spot sell submitted, price: {}, size: {}, tx_hash: {:?}",
+		clamped_price_f64, clamped_size_f64, spot_sell_tx_hash
+	);
 
 	// Wait for order to be filled
 	info!("Polling HyperCore API for spot sell order completion (cloid: {})...", spot_sell_cloid);
@@ -585,14 +419,26 @@ async fn handle_request_loan_impl<
 	// Action 3: Open hedge position
 	current_nonce += 1;
 
+	// Refresh perp market prices to get latest prices for order construction
+	info!("Refreshing perp market prices before Action 3...");
+	let (_perp_meta, perp_mark_price, perp_mid_price) =
+		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
+			error!("Failed to refresh perp market prices: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to refresh perp prices: {}", e)),
+			)
+		})?;
+
 	let desired_leverage: f64 = 1.0 / (1.0 - lending_ratio_f64);
-	let effective_leverage = desired_leverage.min(perp_asset.max_leverage as f64);
+	let effective_leverage = desired_leverage.min(validation_result.max_leverage as f64);
 	// For opening: use lowest selling price = midPx * 2 - markPx
 	let target_hedge_price = perp_mid_price * 2.0 - perp_mark_price;
 	let hedge_size = (usdc_for_perp * effective_leverage) / target_hedge_price;
 
-	let clamped_hedge_size = clamp_size(hedge_size, perp_asset.sz_decimals);
-	let clamped_hedge_price = clamp_price(target_hedge_price, perp_asset.sz_decimals, false);
+	let clamped_hedge_size = clamp_size(hedge_size, validation_result.perp_sz_decimals);
+	let clamped_hedge_price =
+		clamp_price(target_hedge_price, validation_result.perp_sz_decimals, false);
 
 	let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
 		error!("Failed to parse clamped hedge size: {}", e);
@@ -612,8 +458,12 @@ async fn handle_request_loan_impl<
 	let hedge_size_units = to_price_units(clamped_hedge_size_f64);
 	let hedge_price_units = to_price_units(clamped_hedge_price_f64);
 
-	let hedge_action =
-		build_perp_long_order(perp_asset_id, hedge_size_units, hedge_price_units, hedge_open_cloid);
+	let hedge_action = build_perp_long_order(
+		validation_result.perp_asset_id,
+		hedge_size_units,
+		hedge_price_units,
+		hedge_open_cloid,
+	);
 	let hedge_calldata = encode_omni_account_execute(
 		get_core_writer_address(),
 		encode_send_raw_action(hedge_action),
@@ -630,7 +480,10 @@ async fn handle_request_loan_impl<
 	)
 	.await?;
 
-	info!("Action 3: Hedge position submitted");
+	info!(
+		"Action 3: Hedge position submitted, price: {}, size: {}, tx_hash: {:?}",
+		clamped_hedge_price_f64, clamped_hedge_size_f64, hedge_open_tx_hash
+	);
 
 	// Wait for hedge order to be opened
 	info!("Polling HyperCore API to verify hedge order is opened (cloid: {})...", hedge_open_cloid);
@@ -672,5 +525,190 @@ async fn handle_request_loan_impl<
 		usdc_received: usdc_received_str,
 		spot_sell_tx_hash,
 		hedge_open_tx_hash,
+	})
+}
+
+/// Precheck: Performs all validation checks for loan request
+async fn precheck(
+	hypercore_client: &HyperCoreClient,
+	smart_wallet_address: &str,
+	collateral_ticker: &str,
+	collateral_size: f64,
+	lending_ratio: u32,
+) -> Result<LoanRequestValidationResult, PumpxRpcError> {
+	// Fetch metadata and market prices from HyperCore in one call each
+	// Get spot market prices (markPx and midPx) along with spot metadata
+	let (spot_meta, spot_mark_price, spot_mid_price) =
+		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
+			error!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+					"Failed to get spot market prices for {}: {}",
+					collateral_ticker, e
+				)),
+			)
+		})?;
+
+	// Get perp market prices (markPx and midPx) along with perp metadata
+	let (meta, perp_mark_price, perp_mid_price) =
+		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
+			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+					"Failed to get perp market prices for {}: {}",
+					collateral_ticker, e
+				)),
+			)
+		})?;
+
+	// Get asset IDs
+	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
+		error!("Failed to get spot asset ID: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
+		)
+	})?;
+
+	let perp_asset_id = get_perp_asset_id(collateral_ticker, &meta).map_err(|e| {
+		error!("Failed to get perp asset ID: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
+		)
+	})?;
+
+	info!(
+		"Resolved asset IDs - spot: {}, perp: {} for ticker: {}",
+		spot_asset_id, perp_asset_id, collateral_ticker
+	);
+
+	// Get token metadata
+	let collateral_token = spot_meta
+		.tokens
+		.iter()
+		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
+		.ok_or_else(|| {
+			error!("Token {} not found in spot meta", collateral_ticker);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Token {} not found in spot meta", collateral_ticker)),
+			)
+		})?;
+
+	let perp_asset = meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
+		error!("Perp asset {} not found in meta", perp_asset_id);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Perp asset {} not found", perp_asset_id)),
+		)
+	})?;
+
+	info!(
+		"Market prices for {} - spot markPx: {} USDC, spot midPx: {} USDC, perp markPx: {} USDC, perp midPx: {} USDC",
+		collateral_ticker, spot_mark_price, spot_mid_price, perp_mark_price, perp_mid_price
+	);
+
+	// 1. Validate collateral size for spot trading
+	validate_trade_size(collateral_size, collateral_token.sz_decimals, None).map_err(|e| {
+		error!("Invalid collateral size for spot trading: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid collateral size: {}", e)),
+		)
+	})?;
+
+	info!(
+		"✓ Collateral size {} validated for spot trading (sz_decimals={})",
+		collateral_size, collateral_token.sz_decimals
+	);
+
+	// 2. Calculate estimated values for perp position using worst-case prices
+	let lending_ratio_f64 = (lending_ratio as f64) / 100.0;
+
+	// Worst case for spot sell: highest buy price with buffer
+	let highest_buy_price = spot_mid_price * 2.0 - spot_mark_price;
+	let worst_case_spot_sell_price = highest_buy_price * SPOT_SELL_PRICE_RATIO;
+	let estimated_usdc_from_spot = collateral_size * worst_case_spot_sell_price;
+	let estimated_usdc_for_perp = estimated_usdc_from_spot * (1.0 - lending_ratio_f64);
+	let estimated_leverage = (1.0 / (1.0 - lending_ratio_f64)).min(perp_asset.max_leverage as f64);
+	let estimated_perp_notional = estimated_usdc_for_perp * estimated_leverage;
+
+	// 3. Validate minimum perp order notional value ($10 minimum)
+	const MIN_PERP_NOTIONAL: f64 = 10.0;
+
+	if estimated_perp_notional < MIN_PERP_NOTIONAL {
+		error!(
+			"Perp order notional value too small: estimated ${:.2} (collateral_size={}, spot_price={:.2}, lending_ratio={}%, leverage={:.2}x) - minimum required: ${}",
+			estimated_perp_notional, collateral_size, worst_case_spot_sell_price, lending_ratio, estimated_leverage, MIN_PERP_NOTIONAL
+		);
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+				"Perp order notional value too small: ${:.2} < ${} minimum. Increase collateral_size or decrease lending_ratio.",
+				estimated_perp_notional, MIN_PERP_NOTIONAL
+			)),
+		));
+	}
+
+	info!(
+		"✓ Perp notional value: ${:.2} (margin={:.2}, leverage={:.2}x) >= ${} minimum",
+		estimated_perp_notional, estimated_usdc_for_perp, estimated_leverage, MIN_PERP_NOTIONAL
+	);
+
+	// 4. Validate estimated hedge size can be properly rounded to perp sz_decimals
+	// Worst case for opening long position: lowest selling price
+	let worst_case_perp_open_price = perp_mid_price * 2.0 - perp_mark_price;
+	let estimated_hedge_size = estimated_perp_notional / worst_case_perp_open_price;
+
+	validate_trade_size(estimated_hedge_size, perp_asset.sz_decimals, None).map_err(|e| {
+		error!("Invalid estimated hedge size for perp trading: {}", e);
+		PumpxRpcError::from(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
+			format!(
+				"Invalid estimated hedge size (margin={:.2}, leverage={:.2}x, perp_price={:.2}, size={}): {}",
+				estimated_usdc_for_perp, estimated_leverage, worst_case_perp_open_price, estimated_hedge_size, e
+			),
+		))
+	})?;
+
+	info!(
+		"✓ Estimated hedge size {} validated for perp trading (sz_decimals={})",
+		estimated_hedge_size, perp_asset.sz_decimals
+	);
+
+	// 5. Validate user balance
+	let user_balance = hypercore_client
+		.get_spot_balance(smart_wallet_address, collateral_ticker)
+		.await
+		.map_err(|e| {
+			error!("Failed to get user balance: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to query balance: {}", e)),
+			)
+		})?;
+
+	if user_balance < collateral_size {
+		error!(
+			"Insufficient balance: user has {} but needs {} {}",
+			user_balance, collateral_size, collateral_ticker
+		);
+		return Err(PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+				"Insufficient balance: user has {} but needs {} {}",
+				user_balance, collateral_size, collateral_ticker
+			)),
+		));
+	}
+
+	info!(
+		"✓ Balance check passed: user has {} {} (required: {})",
+		user_balance, collateral_ticker, collateral_size
+	);
+
+	Ok(LoanRequestValidationResult {
+		spot_asset_id,
+		perp_asset_id,
+		spot_sz_decimals: collateral_token.sz_decimals,
+		perp_sz_decimals: perp_asset.sz_decimals,
+		max_leverage: perp_asset.max_leverage,
+		lending_ratio_f64,
 	})
 }
