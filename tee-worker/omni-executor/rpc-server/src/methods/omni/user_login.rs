@@ -7,7 +7,7 @@ use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::jwt;
 use executor_primitives::{
-	to_omni_auth, utils::hex::ToHexPrefixed, ClientAuth, OmniAuth, UserAuth, UserId,
+	to_omni_auth, utils::hex::hex_encode, ClientAuth, OmniAuth, UserAuth, UserId,
 };
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::{
@@ -44,14 +44,8 @@ impl TryFrom<UserLoginParams> for OmniAuth {
 	}
 }
 
-pub fn register_user_login<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+pub fn register_user_login<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_userLogin", |params, ctx, _| async move {
@@ -145,7 +139,7 @@ fn create_jwt_for_user(
 	let auth_options = AuthOptions { expires_at };
 	let omni_account = identity.to_omni_account(client_id);
 	let token_claims = AuthTokenClaims::new(
-		omni_account.to_hex(),
+		hex_encode(omni_account.as_ref()),
 		token_type.to_string(),
 		client_id.to_string(),
 		auth_options.clone(),

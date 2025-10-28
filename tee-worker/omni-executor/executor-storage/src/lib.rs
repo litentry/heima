@@ -22,6 +22,8 @@ mod pumpx_account_profile;
 pub use pumpx_account_profile::PumpxProfileStorage;
 mod wildmeta_timestamp;
 pub use wildmeta_timestamp::WildmetaTimestampStorage;
+pub mod loan_record;
+pub use loan_record::{LoanRecord, LoanRecordStorage};
 
 pub use asset_lock::AssetLockStorage;
 pub use asset_lock::Key as AssetLockStorageKey;

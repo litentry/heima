@@ -442,11 +442,11 @@ fn parse_owner_type(oa_type_str: &str) -> Result<OwnerType> {
 		"solana" => Ok(OwnerType::Solana),
 		"twitter" => Ok(OwnerType::Twitter),
 		"discord" => Ok(OwnerType::Discord),
-		"github" => Ok(OwnerType::Github),
+		"apple" => Ok(OwnerType::Apple),
 		"google" => Ok(OwnerType::Google),
 		"pumpx" => Ok(OwnerType::Pumpx),
 		"passkey" => Ok(OwnerType::Passkey),
-		_ => anyhow::bail!("Invalid owner type '{}'. Valid types are: Email, Evm, Substrate, Bitcoin, Solana, Twitter, Discord, Github, Google, Pumpx, Passkey", oa_type_str),
+		_ => anyhow::bail!("Invalid owner type '{}'. Valid types are: Email, Evm, Substrate, Bitcoin, Solana, Twitter, Discord, Apple, Google, Pumpx, Passkey", oa_type_str),
 	}
 }
 

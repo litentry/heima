@@ -19,9 +19,6 @@ use get_shielding_key::*;
 mod request_email_verification_code;
 use request_email_verification_code::*;
 
-mod submit_native_task;
-use submit_native_task::*;
-
 mod get_web3_sign_in_message;
 use get_web3_sign_in_message::*;
 
@@ -101,19 +98,17 @@ mod request_loan_test;
 #[cfg(feature = "test-endpoints")]
 use request_loan_test::*;
 
-pub fn register_omni<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+#[cfg(feature = "test-endpoints")]
+mod query_loan_test;
+#[cfg(feature = "test-endpoints")]
+use query_loan_test::*;
+
+pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	register_get_health(module);
 	register_get_next_intent_id(module);
 	register_get_shielding_key(module);
-	register_submit_native_task(module);
 	register_request_email_verification_code(module);
 	register_get_oauth2_authorization_data(module);
 	register_get_web3_sign_in_message(module);
@@ -149,4 +144,7 @@ pub fn register_omni<
 
 	#[cfg(feature = "test-endpoints")]
 	register_request_loan_test(module);
+
+	#[cfg(feature = "test-endpoints")]
+	register_query_loan_test(module);
 }

@@ -2,12 +2,8 @@ use crate::{detailed_error::DetailedError, server::RpcContext};
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hash, Hashable, Identity,
-	OAuth2Data, OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
-};
-use executor_storage::{
-	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
-	VerificationCodeStorage,
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
+	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
 };
 use heima_authentication::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
@@ -124,12 +120,8 @@ impl AuthenticationError {
 	}
 }
 
-pub async fn verify_auth<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+pub async fn verify_auth<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	auth: &OmniAuth,
 ) -> Result<(), AuthenticationError> {
 	match auth {
@@ -172,7 +164,7 @@ pub fn verify_web3_authentication(
 		.map_err(|_| AuthenticationError::VerificationCodeNotFound)?;
 	let message = HeimaMessagePayload {
 		client_id: client_id.to_string(),
-		omni_account: omni_account.to_hex(),
+		omni_account: hex_encode(omni_account.as_ref()),
 		message_code,
 	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
@@ -185,11 +177,9 @@ pub fn verify_web3_authentication(
 }
 
 pub fn verify_email_authentication<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	client_id: &str,
 	email: &str,
 	verification_code: &VerificationCode,
@@ -222,11 +212,9 @@ pub fn verify_auth_token_authentication(
 }
 
 pub async fn verify_oauth2_authentication<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	client_id: &str,
 	payload: &OAuth2Data,
 ) -> Result<Identity, AuthenticationError> {
@@ -234,11 +222,9 @@ pub async fn verify_oauth2_authentication<
 }
 
 async fn verify_oauth2_provider<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	ctx: Arc<RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>>,
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	client_id: &str,
 	payload: &OAuth2Data,
 ) -> Result<Identity, AuthenticationError> {
@@ -247,6 +233,10 @@ async fn verify_oauth2_provider<
 	let Ok(Some(verification_data)) = state_verifier_storage.get(&key) else {
 		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
 	};
+
+	if let Err(e) = state_verifier_storage.remove(&key) {
+		tracing::warn!("Failed to remove OAuth2 verification data: {:?}", e);
+	}
 
 	if verification_data.state != payload.state {
 		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
@@ -265,7 +255,7 @@ async fn verify_oauth2_provider<
 			))
 		})?;
 
-	let email = match payload.provider {
+	let id_token_sub = match payload.provider {
 		OAuth2Provider::Google => {
 			let id_token: google::IdToken = oauth2_common::decode_id_token(&payload.id_token)
 				.map_err(|_| {
@@ -279,7 +269,7 @@ async fn verify_oauth2_provider<
 				&verification_data.nonce,
 			)?;
 
-			id_token.email
+			id_token.sub
 		},
 		OAuth2Provider::Apple => {
 			let id_token: apple::IdToken = oauth2_common::decode_id_token(&payload.id_token)
@@ -294,7 +284,7 @@ async fn verify_oauth2_provider<
 				&verification_data.nonce,
 			)?;
 
-			id_token.email
+			id_token.sub
 		},
 	};
 
@@ -320,7 +310,7 @@ async fn verify_oauth2_provider<
 		OAuth2Provider::Apple => Web2IdentityType::Apple,
 	};
 
-	let identity = Identity::from_web2_account(&email, identity_type);
+	let identity = Identity::from_web2_account(&id_token_sub, identity_type);
 
 	Ok(identity)
 }
@@ -477,7 +467,7 @@ mod tests {
 	use alloy_signer_local::PrivateKeySigner;
 	use executor_crypto::{ed25519, sr25519, PairTrait};
 	use executor_primitives::{
-		signature::EthereumSignature, utils::hex::ToHexPrefixed, Hashable, Identity,
+		signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity,
 	};
 	use heima_identity_verification::helpers::generate_otp;
 	use tempfile::tempdir;
@@ -501,7 +491,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -535,7 +525,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: solana_omni_account.to_hex(),
+			omni_account: hex_encode(solana_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -568,7 +558,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: evm_omni_account.to_hex(),
+			omni_account: hex_encode(evm_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -604,7 +594,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -634,7 +624,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -668,7 +658,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code: "invalid_code".to_string(), // Use an invalid code
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
