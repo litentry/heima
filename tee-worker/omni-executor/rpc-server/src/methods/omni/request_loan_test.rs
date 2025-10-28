@@ -320,7 +320,7 @@ async fn handle_request_loan_impl<
 		usdc_received, usdc_for_perp, usdc_to_lend
 	);
 
-	// Store loan record in storage
+	// Store loan record in storage (position_size will be updated after Action 3)
 	let loan_record = LoanRecord {
 		collateral_ticker: collateral_ticker.to_string(),
 		collateral_size: collateral_size_str.to_string(),
@@ -328,6 +328,7 @@ async fn handle_request_loan_impl<
 		usdc_loaned: format!("{:.2}", usdc_to_lend),
 		spot_sell_cloid: spot_sell_cloid.to_string(),
 		hedge_open_cloid: hedge_open_cloid.to_string(),
+		position_size: "0".to_string(), // Will be updated after hedge order completes
 	};
 
 	let storage_key = executor_storage::loan_record::Key {
@@ -522,6 +523,67 @@ async fn handle_request_loan_impl<
 	hypercore_client
 		.print_account_state(smart_wallet_address_str, "After Action 3 - Hedge Open")
 		.await;
+
+	// Get the actual position size and update the loan record
+	let perp_state = hypercore_client
+		.get_perp_clearinghouse_state(smart_wallet_address_str)
+		.await
+		.map_err(|e| {
+			error!("Failed to get perp state after hedge open: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to query perp state: {}", e)),
+			)
+		})?;
+
+	let hedge_position = perp_state
+		.asset_positions
+		.iter()
+		.find(|pos| pos.position.coin.eq_ignore_ascii_case(collateral_ticker))
+		.ok_or_else(|| {
+			error!("Hedge position for {} not found after opening", collateral_ticker);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Position not found").with_reason(format!(
+					"Position for {} not found after hedge order opened",
+					collateral_ticker
+				)),
+			)
+		})?;
+
+	let actual_position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
+		error!("Failed to parse position size: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid position size: {}", e)),
+		)
+	})?;
+
+	info!(
+		"Actual hedge position size opened: {} (expected: ~{})",
+		actual_position_size, clamped_hedge_size_f64
+	);
+
+	// Update loan record with actual position size
+	let updated_loan_record =
+		LoanRecord { position_size: format!("{}", actual_position_size), ..loan_record };
+
+	let storage_key = executor_storage::loan_record::Key {
+		account_id: omni_account.clone(),
+		nonce: skeleton_user_op.nonce as u64,
+	};
+
+	if ctx.loan_record_storage.insert(&storage_key, updated_loan_record).is_err() {
+		error!(
+			"Failed to update loan record with position size for omni_account {:?}, nonce {}",
+			omni_account, skeleton_user_op.nonce
+		);
+		// Don't fail the entire operation, just log the error
+	} else {
+		info!(
+			"Updated loan record with position_size {} for omni_account {:?}, nonce {}",
+			actual_position_size, omni_account, skeleton_user_op.nonce
+		);
+	}
 
 	let usdc_received_str = format!("{:.2}", usdc_to_lend);
 

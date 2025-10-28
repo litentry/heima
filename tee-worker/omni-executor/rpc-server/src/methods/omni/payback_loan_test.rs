@@ -852,6 +852,17 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 		)
 	})?;
 
+	// Parse position_size from loan record (the actual position opened for this loan)
+	let loan_position_size = loan_record.position_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse position_size: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid position_size in loan record: {}", e)),
+		)
+	})?;
+
+	info!("Loan record position size (to be closed): {}", loan_position_size);
+
 	// Step 2: Check USDC balance in spot account
 	info!("Checking USDC balance in spot account...");
 	let usdc_balance = hypercore_client
@@ -916,7 +927,7 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 				// Case 1: Fully filled - close position
 				info!("Case 1: Order fully filled, will close position");
 				let (
-					position_size,
+					actual_position_size,
 					account_value,
 					unrealized_pnl,
 					cum_funding_all_time,
@@ -925,6 +936,25 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 					withdrawable,
 				) = verify_hedge_position(hypercore_client, smart_wallet_address, &collateral_ticker)
 					.await?;
+
+				// Validate that actual position size >= loan position size
+				if actual_position_size < loan_position_size {
+					error!(
+						"Actual position size ({}) is less than loan position size ({})",
+						actual_position_size, loan_position_size
+					);
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Position size mismatch")
+							.with_reason(format!(
+								"Actual position size ({}) is less than expected from loan record ({})",
+								actual_position_size, loan_position_size
+							)),
+					));
+				}
+				info!(
+					"✓ Position size check passed: actual {} >= loan record {}",
+					actual_position_size, loan_position_size
+				);
 
 				// Validate account value against minimum threshold
 				if account_value < min_expected_account_value_f64 {
@@ -955,7 +985,8 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 					withdrawable,
 				));
 
-				(false, true, position_size)
+				// Use loan position size (not total position size)
+				(false, true, loan_position_size)
 			},
 			"open" => {
 				// Case 2: Not filled at all - cancel order
@@ -968,7 +999,7 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 					"Case 3: Order partially filled, will cancel order and close filled position"
 				);
 				let (
-					position_size,
+					actual_position_size,
 					account_value,
 					unrealized_pnl,
 					cum_funding_all_time,
@@ -977,6 +1008,21 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 					withdrawable,
 				) = verify_hedge_position(hypercore_client, smart_wallet_address, &collateral_ticker)
 					.await?;
+
+				// Validate that actual position size >= loan position size
+				// For partial fill, the actual position might be less than expected,
+				// but we should close whatever was actually filled
+				if actual_position_size < loan_position_size {
+					info!(
+						"Partial fill: actual position size ({}) is less than expected ({}), will close actual size",
+						actual_position_size, loan_position_size
+					);
+				} else {
+					info!(
+						"✓ Position size check: actual {} >= loan record {}",
+						actual_position_size, loan_position_size
+					);
+				}
 
 				// Validate account value against minimum threshold
 				if account_value < min_expected_account_value_f64 {
@@ -1007,7 +1053,10 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 					withdrawable,
 				));
 
-				(true, true, position_size)
+				// For partial fill, close the minimum of loan position size and actual position size
+				// This handles the case where the position was partially filled
+				let position_to_close = loan_position_size.min(actual_position_size);
+				(true, true, position_to_close)
 			},
 			"canceled" | "rejected" | "expired" => {
 				error!("Order already in terminal state: {}", status);
