@@ -171,16 +171,36 @@ async fn verify_oauth2_provider<
 		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
 	}
 
-	let provider_str = match payload.provider {
-		OAuth2Provider::Google => "google",
-		OAuth2Provider::Apple => "apple",
+	let (token_endpoint, identity_type, provider_str) = match payload.provider {
+		OAuth2Provider::Google => {
+			(GoogleProviderConfig.token_endpoint(), Web2IdentityType::Google, "Google")
+		},
+		OAuth2Provider::Apple => {
+			(AppleProviderConfig.token_endpoint(), Web2IdentityType::Apple, "Apple")
+		},
 	};
+
+	let oauth2_client = OAuth2Client::new(
+		oauth2_config.client_id,
+		oauth2_config.client_secret,
+		token_endpoint.to_string(),
+	);
 
 	let oauth2_config =
 		ctx.oauth2_factory.get_config(client_id, payload.provider).map_err(|e| {
 			AuthenticationError::OAuth2Error(format!(
 				"Failed to get {} OAuth2 config for client '{}': {}",
 				provider_str, client_id, e
+			))
+		})?;
+
+	let code = payload.code.clone();
+	let redirect_uri = payload.redirect_uri.clone();
+	let ex_id_token =
+		oauth2_client.exchange_code_for_token(code, redirect_uri).await.map_err(|e| {
+			AuthenticationError::OAuth2Error(format!(
+				"Could not exchange code for {} id token: {}",
+				provider_str, e
 			))
 		})?;
 
@@ -198,6 +218,19 @@ async fn verify_oauth2_provider<
 				&verification_data.nonce,
 			)?;
 
+			let ex_id_token: google::IdToken = oauth2_common::decode_id_token(&ex_id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error(
+						"Could not decode Google exchanged id token".to_string(),
+					)
+				})?;
+
+			if id_token.sub != ex_id_token.sub {
+				return Err(AuthenticationError::OAuth2Error(
+					"Google exchanged id token doesn't match".to_string(),
+				));
+			}
+
 			id_token.sub
 		},
 		OAuth2Provider::Apple => {
@@ -213,30 +246,21 @@ async fn verify_oauth2_provider<
 				&verification_data.nonce,
 			)?;
 
+			let ex_id_token: apple::IdToken = oauth2_common::decode_id_token(&ex_id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error(
+						"Could not decode Apple exchanged id token".to_string(),
+					)
+				})?;
+
+			if id_token.sub != ex_id_token.sub {
+				return Err(AuthenticationError::OAuth2Error(
+					"Apple exchanged id token doesn't match".to_string(),
+				));
+			}
+
 			id_token.sub
 		},
-	};
-
-	let token_endpoint = match payload.provider {
-		OAuth2Provider::Google => GoogleProviderConfig.token_endpoint(),
-		OAuth2Provider::Apple => AppleProviderConfig.token_endpoint(),
-	};
-
-	let oauth2_client = OAuth2Client::new(
-		oauth2_config.client_id,
-		oauth2_config.client_secret,
-		token_endpoint.to_string(),
-	);
-
-	let code = payload.code.clone();
-	let redirect_uri = payload.redirect_uri.clone();
-	let _token = oauth2_client.exchange_code_for_token(code, redirect_uri).await.map_err(|e| {
-		AuthenticationError::OAuth2Error(format!("Could not exchange code for token: {}", e))
-	})?;
-
-	let identity_type = match payload.provider {
-		OAuth2Provider::Google => Web2IdentityType::Google,
-		OAuth2Provider::Apple => Web2IdentityType::Apple,
 	};
 
 	let identity = Identity::from_web2_account(&id_token_sub, identity_type);
