@@ -360,3 +360,107 @@ export async function requestLoanTest(
         throw error;
     }
 }
+
+// Interfaces for loan query
+export interface LoanRecord {
+    collateral_ticker: string;
+    collateral_size: string;
+    usdc_sold: string;
+    usdc_loaned: string;
+    spot_sell_cloid: string;
+    hedge_open_cloid: string;
+    position_size: string;
+}
+
+interface QueryLoanTestParams {
+    omni_account: string;
+    nonce: number | null;
+}
+
+export interface QueryLoanTestResponse {
+    records: Record<string, LoanRecord>;
+}
+
+// Query loan records for a user
+export async function queryLoanTest(
+    omniAccount: string,
+    nonce?: number
+): Promise<QueryLoanTestResponse> {
+    const params: QueryLoanTestParams = {
+        omni_account: omniAccount,
+        nonce: nonce ?? null,
+    };
+
+    console.log("[TEE Worker] Querying loan records", params);
+
+    try {
+        const response = await makeRpcRequest<QueryLoanTestResponse>(
+            "omni_queryLoanTest",
+            params
+        );
+
+        console.log("[TEE Worker] Loan query response:", response);
+        return response;
+    } catch (error) {
+        console.error("[TEE Worker] Loan query failed:", error);
+        throw error;
+    }
+}
+
+// Interfaces for loan payback test
+interface PaybackLoanTestParams {
+    user_operation: SerializablePackedUserOperation;
+    chain_id: number;
+    wallet_index: number;
+    omni_account: string;
+    client_id: string;
+    loan_nonce: number;
+    min_expected_account_value: string;
+}
+
+interface PaybackLoanTestResponse {
+    collateral_ticker: string;
+    collateral_size: string;
+    hedge_cancel_tx_hash: string | null;
+    hedge_close_cloid: string;
+    hedge_close_tx_hash: string | null;
+    usd_transfer_tx_hash: string | null;
+    spot_buy_cloid: string;
+    spot_buy_tx_hash: string | null;
+}
+
+// Payback a loan through the TEE worker (test version with UserOperation)
+export async function paybackLoanTest(
+    userOperation: SerializablePackedUserOperation,
+    chainId: number,
+    walletIndex: number,
+    omniAccount: string,
+    clientId: string,
+    loanNonce: number,
+    minExpectedAccountValue: string
+): Promise<PaybackLoanTestResponse> {
+    const params: PaybackLoanTestParams = {
+        user_operation: userOperation,
+        chain_id: chainId,
+        wallet_index: walletIndex,
+        omni_account: omniAccount,
+        client_id: clientId,
+        loan_nonce: loanNonce,
+        min_expected_account_value: minExpectedAccountValue,
+    };
+
+    console.log("[TEE Worker] Paying back loan test", params);
+
+    try {
+        const response = await makeRpcRequest<PaybackLoanTestResponse>(
+            "omni_paybackLoanTest",
+            params
+        );
+
+        console.log("[TEE Worker] Loan payback test response:", response);
+        return response;
+    } catch (error) {
+        console.error("[TEE Worker] Loan payback test failed:", error);
+        throw error;
+    }
+}

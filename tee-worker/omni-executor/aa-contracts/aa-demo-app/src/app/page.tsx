@@ -6,6 +6,8 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { AccountsDashboard } from "@/components/AccountsDashboard";
 import { HyperliquidBalances } from "@/components/HyperliquidBalances";
 import { RequestLoan } from "@/components/RequestLoan";
+import { UserLoans } from "@/components/UserLoans";
+import { BuyToken } from "@/components/BuyToken";
 import { ClientOnly } from "@/components/ClientOnly";
 import { Mail } from "lucide-react";
 import { getTEEWorkerAddress } from "@/lib/tee-worker-client";
@@ -165,6 +167,13 @@ function HomeContent() {
                 {/* Dashboard - shown after wallet connection */}
                 {isAuthenticated && omniAccountAddress && (
                     <div className="space-y-8">
+                        {/* Buy Token Panel */}
+                        <BuyToken
+                            omniAccountAddress={omniAccountAddress}
+                            omniAccountHash={omniAccountHash}
+                            accountExists={hasContract}
+                        />
+
                         {/* Request Loan Panel */}
                         <RequestLoan
                             omniAccountAddress={omniAccountAddress}
@@ -174,6 +183,12 @@ function HomeContent() {
                                 setHasContract(true);
                                 setIsTeeWorkerAuthorized(true);
                             }}
+                        />
+
+                        {/* User Loans Table */}
+                        <UserLoans
+                            omniAccountHash={omniAccountHash}
+                            omniAccountAddress={omniAccountAddress}
                         />
 
                         {/* Hyperliquid Balances, Positions, and Orders */}
