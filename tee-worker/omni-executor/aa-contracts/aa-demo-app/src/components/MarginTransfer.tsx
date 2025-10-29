@@ -82,10 +82,11 @@ export function MarginTransfer({
                 const clientIdBytes = stringToBytes(DEFAULT_CLIENT_ID);
 
                 initCode = generateInitCode(
+                    CONTRACTS.OmniAccountFactory.address,
                     calculatedOmniAccount,
+                    ownerType,
                     clientIdBytes,
-                    rootSigner,
-                    ownerType
+                    rootSigner
                 );
 
                 console.log("Generated initCode:", initCode);
@@ -111,7 +112,6 @@ export function MarginTransfer({
                 nonce: BigInt(nonce.toString()),
                 initCode,
                 callData: callData,
-                publicClient,
                 gasParams: {
                     callGasLimit: BigInt(100000),
                     verificationGasLimit: BigInt(1000000),
@@ -120,7 +120,7 @@ export function MarginTransfer({
                     maxPriorityFeePerGas: BigInt(0),
                 },
                 // Use paymaster to pay for gas fees
-                paymaster: "0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912000000000000000000000000000f4240000000000000000000000000000186a0",
+                paymaster: "0x6255B9F4A4E80BC20eE389fD35DE9D2c029D5912000000000000000000000000000f4240000000000000000000000000000186a0",
             });
 
             console.log("Created UserOperation:", userOp);
