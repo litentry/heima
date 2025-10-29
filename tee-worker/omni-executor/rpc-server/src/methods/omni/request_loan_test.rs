@@ -817,42 +817,9 @@ async fn do_open_position<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		));
 	}
 
-	let perp_state = exec_ctx
-		.hypercore_client
-		.get_perp_clearinghouse_state(exec_ctx.smart_wallet)
-		.await
-		.map_err(|e| {
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query perp state: {}", e)),
-			)
-		})?;
-
-	let hedge_position = perp_state
-		.asset_positions
-		.iter()
-		.find(|pos| pos.position.coin.eq_ignore_ascii_case(collateral_ticker))
-		.ok_or_else(|| {
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Position not found").with_reason(format!(
-					"Position for {} not found after hedge order opened",
-					collateral_ticker
-				)),
-			)
-		})?;
-
-	let actual_position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid position size: {}", e)),
-		)
-	})?;
-
-	info!("Hedge position opened: actual size={}", actual_position_size);
-
 	// Update loan record with position size and state: PositionOpened
 	let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
-		r.position_size = format!("{}", actual_position_size);
+		r.position_size = format!("{}", clamped_hedge_size_f64);
 		r.state = LoanState::PositionOpened;
 	});
 

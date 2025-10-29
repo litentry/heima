@@ -155,35 +155,6 @@ pub fn register_open_position_test<
 				));
 			}
 
-			let perp_state =
-				hypercore_client.get_perp_clearinghouse_state(smart_wallet).await.map_err(|e| {
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to query perp state: {}", e)),
-					)
-				})?;
-
-			let hedge_position = perp_state
-				.asset_positions
-				.iter()
-				.find(|pos| pos.position.coin.eq_ignore_ascii_case(ticker))
-				.ok_or_else(|| {
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Position not found").with_reason(
-							format!("Position for {} not found after hedge order opened", ticker),
-						),
-					)
-				})?;
-
-			let actual_position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Invalid position size: {}", e)),
-				)
-			})?;
-
-			info!("Hedge position opened: actual size={}", actual_position_size);
-
 			hypercore_client.print_account_state(smart_wallet, "After Open Position").await;
 
 			Ok(OpenPositionTestResponse { cloid: cloid.to_string(), tx_hash: hedge_open_tx_hash })
