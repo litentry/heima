@@ -14,9 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::detailed_error::DetailedError;
+use crate::error_code::{
+	INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, INVALID_USER_OPERATION_CODE,
+	SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+};
+use crate::methods::PumpxRpcError;
+use crate::server::RpcContext;
+use crate::utils::paymaster::{
+	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
+	process_erc20_paymaster_data,
+};
 use alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use binance_api::BinancePaymasterApi;
+use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::utils::hex::decode_hex;
+use executor_primitives::AccountId;
+use hyperliquid::*;
+use signer_client::ChainType;
+use std::sync::Arc;
+use tracing::{debug, error, info};
 
 /// Pack verification and call gas limits into a single 32-byte value
 /// Format: verification_gas (16 bytes) | call_gas (16 bytes)
@@ -123,4 +141,300 @@ pub fn convert_to_packed_user_op(
 			None => Bytes::new(), // Empty signature for unsigned operations
 		},
 	})
+}
+
+/// Prepare a skeleton user op with incremented nonce and cleared init_code if needed
+#[allow(dead_code)]
+pub(crate) fn prepare_skeleton_with_nonce(
+	base: &SerializablePackedUserOperation,
+	nonce: u128,
+) -> SerializablePackedUserOperation {
+	let mut skeleton = base.clone();
+	skeleton.nonce = nonce;
+	if nonce > base.nonce {
+		skeleton.init_code = "0x".to_string();
+	}
+	skeleton
+}
+
+/// Helper function to submit a CoreWriter userOp
+#[allow(clippy::too_many_arguments)]
+#[allow(dead_code)]
+pub(crate) async fn submit_corewriter_userop<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
+	omni_account: &AccountId,
+	skeleton_user_op: &SerializablePackedUserOperation,
+	chain_id: u64,
+	wallet_index: u32,
+	call_data: String,
+	_client_id: &str,
+) -> Result<Option<String>, PumpxRpcError> {
+	let smart_wallet_address = &skeleton_user_op.sender;
+
+	let entry_point_client = ctx.entry_point_clients.get(&chain_id).ok_or_else(|| {
+		error!("No EntryPoint client configured for chain_id: {}", chain_id);
+		PumpxRpcError::from(
+			DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
+				.with_reason(format!("Chain ID {} is not supported", chain_id)),
+		)
+	})?;
+
+	let nonce = skeleton_user_op.nonce;
+	info!("Using nonce {} for smart wallet {}", nonce, smart_wallet_address);
+
+	// Use gas settings from skeleton UserOp if provided, otherwise calculate
+	let (gas_fees, account_gas_limits, pre_verification_gas) = if !skeleton_user_op
+		.gas_fees
+		.is_empty()
+		&& skeleton_user_op.gas_fees != "0x"
+		&& !skeleton_user_op.account_gas_limits.is_empty()
+		&& skeleton_user_op.account_gas_limits != "0x"
+	{
+		info!("Using gas settings from skeleton UserOp");
+		(
+			skeleton_user_op.gas_fees.clone(),
+			skeleton_user_op.account_gas_limits.clone(),
+			skeleton_user_op.pre_verification_gas,
+		)
+	} else {
+		info!("Calculating gas fees");
+		let (max_fee_per_gas, max_priority_fee_per_gas) =
+			entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
+				error!("Failed to calculate gas fees: {:?}", e);
+				PumpxRpcError::from(
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to calculate gas fees"),
+				)
+			})?;
+		(
+			pack_gas_fees(max_fee_per_gas.to::<u128>(), max_priority_fee_per_gas.to::<u128>()),
+			format!("0x{}", hex::encode(pack_account_gas_limits(1_000_000, 2_000_000).as_slice())),
+			100_000,
+		)
+	};
+
+	let init_code = skeleton_user_op.init_code.clone();
+
+	// Build UserOp
+	let user_op = SerializablePackedUserOperation {
+		sender: smart_wallet_address.to_string(),
+		nonce,
+		init_code,
+		call_data,
+		account_gas_limits,
+		pre_verification_gas,
+		gas_fees,
+		paymaster_and_data: if !skeleton_user_op.paymaster_and_data.is_empty()
+			&& skeleton_user_op.paymaster_and_data != "0x"
+		{
+			skeleton_user_op.paymaster_and_data.clone()
+		} else {
+			encode_simple_paymaster()
+		},
+		signature: None, // Will be signed below
+	};
+
+	// Now inline the submit user op logic
+	info!("Processing SubmitUserOp for 1 UserOperation on chain_id: {}", chain_id);
+
+	let whitelisted_paymaster = parse_whitelisted_paymasters();
+
+	// Convert SerializablePackedUserOperation to PackedUserOperation
+	let mut packed_user_op = convert_to_packed_user_op(user_op.clone()).map_err(|e| {
+		error!("Failed to convert UserOperation: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+				.with_reason(format!("Invalid user operation: {}", e)),
+		)
+	})?;
+
+	// Check userOp signature status and validate paymaster usage
+	if packed_user_op.signature.is_empty() {
+		// UNSIGNED userOp: If paymaster specified, must be whitelisted
+		if !packed_user_op.paymasterAndData.is_empty() {
+			if let Some(paymaster_address) =
+				extract_paymaster_address(&packed_user_op.paymasterAndData)
+			{
+				if !is_whitelisted_paymaster(&paymaster_address, &whitelisted_paymaster) {
+					error!(
+						"UserOperation uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
+						paymaster_address
+					);
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+							.with_reason(format!(
+								"UserOperation uses non-whitelisted paymaster {}",
+								paymaster_address
+							)),
+					));
+				}
+			}
+
+			match process_erc20_paymaster_data(
+				ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
+				&packed_user_op.paymasterAndData,
+				chain_id,
+			)
+			.await
+			{
+				Ok(Some(updated_paymaster_data)) => {
+					packed_user_op.paymasterAndData = updated_paymaster_data;
+					info!("Updated ERC20 paymaster data for UserOperation");
+				},
+				Ok(None) => {
+					debug!("UserOperation does not use ERC20 paymaster");
+				},
+				Err(e) => {
+					error!("Failed to process ERC20 paymaster data for UserOperation: {}", e);
+					return Err(PumpxRpcError::from(
+						DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+							.with_reason(format!("ERC20 paymaster processing failed: {}", e)),
+					));
+				},
+			}
+		}
+
+		info!("Requesting signature from pumpx signer for UserOperation");
+
+		info!(
+			"UserOp details - Sender: {}, Nonce: {}, InitCode length: {}, CallData length: {}",
+			packed_user_op.sender,
+			packed_user_op.nonce,
+			packed_user_op.initCode.len(),
+			packed_user_op.callData.len()
+		);
+
+		let entry_point_address = entry_point_client.entry_point_address();
+
+		let user_op_hash_bytes = aa_contracts_client::calculate_user_operation_hash(
+			&packed_user_op,
+			entry_point_address,
+			chain_id,
+		);
+		let message_to_sign = user_op_hash_bytes.to_vec();
+
+		info!(
+			"Signing UserOp hash: 0x{}, EntryPoint: {}, ChainID: {}",
+			hex::encode(user_op_hash_bytes),
+			entry_point_address,
+			chain_id
+		);
+
+		// Request signature from pumpx signer for EVM chain
+		let signature_result = ctx
+			.signer_client
+			.request_signature(
+				ChainType::Evm,
+				wallet_index,
+				omni_account.clone().into(),
+				message_to_sign,
+			)
+			.await;
+
+		let signature = match signature_result {
+			Ok(sig) => substrate_to_ethereum_signature(&sig)
+				.map_err(|e| {
+					error!("Failed to convert signature: {}", e);
+					PumpxRpcError::from(
+						DetailedError::new(
+							SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+							"Signature service unavailable",
+						)
+						.with_suggestion("Please try again later"),
+					)
+				})?
+				.to_vec(),
+			Err(_) => {
+				error!("Failed to sign user operation");
+				return Err(PumpxRpcError::from(
+					DetailedError::new(
+						SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+						"Signature service unavailable",
+					)
+					.with_suggestion("Please try again later"),
+				));
+			},
+		};
+
+		// Prepend 0x01 byte to indicate Root signature type
+		let mut signature_with_prefix: Vec<u8> = vec![0x01];
+		signature_with_prefix.extend_from_slice(&signature);
+		packed_user_op.signature = Bytes::from(signature_with_prefix);
+		info!("UserOperation signed successfully");
+	} else {
+		// SIGNED userOp: Only allowed if no paymaster specified
+		if !packed_user_op.paymasterAndData.is_empty() {
+			error!(
+				"UserOperation is signed but has paymaster data. Signed userOps are only allowed without paymaster."
+			);
+			return Err(PumpxRpcError::from(
+				DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+					.with_reason("UserOperation is signed but specifies a paymaster"),
+			));
+		}
+		info!("UserOperation is signed with no paymaster, processing");
+	}
+
+	// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
+	let aa_user_op = aa_contracts_client::PackedUserOperation {
+		sender: packed_user_op.sender,
+		nonce: packed_user_op.nonce,
+		initCode: packed_user_op.initCode.clone(),
+		callData: packed_user_op.callData.clone(),
+		accountGasLimits: packed_user_op.accountGasLimits,
+		preVerificationGas: packed_user_op.preVerificationGas,
+		gasFees: packed_user_op.gasFees,
+		paymasterAndData: packed_user_op.paymasterAndData.clone(),
+		signature: packed_user_op.signature.clone(),
+	};
+
+	// Get beneficiary address from the EntryPoint client's wallet
+	let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
+		let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
+		error!("{}", err_msg);
+		PumpxRpcError::from_code_and_message(INTERNAL_ERROR_CODE, err_msg)
+	})?;
+
+	// Run simulation for UserOperation before submission
+	info!("Running simulation for UserOperation");
+	match entry_point_client.simulate_handle_ops(&[aa_user_op.clone()], beneficiary).await {
+		Ok(simulation_results) => {
+			for (index, result) in simulation_results.iter().enumerate() {
+				info!(
+					"UserOperation {} simulation successful. PreOpGas: {}, Paid: {}, AccountValidation: {}, PaymasterValidation: {}",
+					index,
+					result.preOpGas,
+					result.paid,
+					result.accountValidationData,
+					result.paymasterValidationData
+				);
+			}
+			info!("UserOperation passed simulation checks");
+		},
+		Err(e) => {
+			let err_msg = format!("UserOperation simulation failed: {}", e);
+			error!("{}", err_msg);
+			return Err(PumpxRpcError::from(
+				DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+					.with_reason(err_msg),
+			));
+		},
+	}
+
+	// Submit UserOperation via EntryPoint.handleOps() with retry logic
+	let transaction_hash =
+		match entry_point_client.handle_ops_with_retry(&[aa_user_op], beneficiary).await {
+			Ok(tx_hash) => Some(tx_hash),
+			Err(_) => {
+				let err_msg =
+					"Failed to submit UserOperation to EntryPoint via handleOps after retries"
+						.to_string();
+				error!("{}", err_msg);
+				return Err(PumpxRpcError::from_code_and_message(INTERNAL_ERROR_CODE, err_msg));
+			},
+		};
+
+	Ok(transaction_hash)
 }
