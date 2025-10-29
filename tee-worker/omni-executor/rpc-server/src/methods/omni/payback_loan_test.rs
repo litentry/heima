@@ -3,7 +3,7 @@ use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::{prepare_skeleton_with_nonce, submit_corewriter_userop};
+use crate::utils::user_op::submit_corewriter_userop;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::AccountId;
@@ -168,6 +168,7 @@ pub fn register_payback_loan_test<
 				smart_wallet,
 				storage_key: &storage_key,
 			};
+			let mut current_nonce = exec_ctx.skeleton_user_op.nonce;
 
 			match loan_record.state {
 				LoanState::PositionOpened => {
@@ -184,9 +185,6 @@ pub fn register_payback_loan_test<
 					)
 					.await?;
 
-					let (hedge_cancel_tx_hash, hedge_close_cloid_opt, hedge_close_tx_hash) =
-						do_close_position(&exec_ctx, hedge_open_cloid, &close_ctx).await?;
-
 					let move_ctx = precheck_move_to_spot(
 						&hypercore_client,
 						smart_wallet,
@@ -196,12 +194,22 @@ pub fn register_payback_loan_test<
 					)
 					.await?;
 
-					let usd_transfer_tx_hash = do_move_to_spot(&exec_ctx, &move_ctx).await?;
-
 					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
 
+					let (hedge_cancel_tx_hash, hedge_close_cloid_opt, hedge_close_tx_hash) =
+						do_close_position(
+							&exec_ctx,
+							hedge_open_cloid,
+							&close_ctx,
+							&mut current_nonce,
+						)
+						.await?;
+
+					let usd_transfer_tx_hash =
+						do_move_to_spot(&exec_ctx, &move_ctx, &mut current_nonce).await?;
+
 					let (spot_buy_cloid, spot_buy_tx_hash) =
-						do_buy_spot(&exec_ctx, collateral_size, &buy_ctx).await?;
+						do_buy_spot(&exec_ctx, collateral_size, &buy_ctx, current_nonce).await?;
 
 					Ok(PaybackLoanTestResponse {
 						collateral_ticker,
@@ -226,12 +234,13 @@ pub fn register_payback_loan_test<
 					)
 					.await?;
 
-					let usd_transfer_tx_hash = do_move_to_spot(&exec_ctx, &move_ctx).await?;
-
 					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
 
+					let usd_transfer_tx_hash =
+						do_move_to_spot(&exec_ctx, &move_ctx, &mut current_nonce).await?;
+
 					let (spot_buy_cloid, spot_buy_tx_hash) =
-						do_buy_spot(&exec_ctx, collateral_size, &buy_ctx).await?;
+						do_buy_spot(&exec_ctx, collateral_size, &buy_ctx, current_nonce).await?;
 
 					Ok(PaybackLoanTestResponse {
 						collateral_ticker,
@@ -250,7 +259,7 @@ pub fn register_payback_loan_test<
 					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
 
 					let (spot_buy_cloid, spot_buy_tx_hash) =
-						do_buy_spot(&exec_ctx, collateral_size, &buy_ctx).await?;
+						do_buy_spot(&exec_ctx, collateral_size, &buy_ctx, current_nonce).await?;
 
 					Ok(PaybackLoanTestResponse {
 						collateral_ticker,
@@ -303,6 +312,18 @@ fn precheck_params(params: &PaybackLoanTestParams) -> Result<(AccountId, u64, f6
 	info!("Minimum expected account value threshold: {} USDC", min_expected_account_value_f64);
 
 	Ok((omni_account, params.loan_nonce, min_expected_account_value_f64))
+}
+
+/// Helper to prepare UserOp with custom nonce, always clearing init_code
+/// (payback_loan never needs init_code as account is already created)
+fn prepare_userop_no_init(
+	base: &SerializablePackedUserOperation,
+	nonce: u128,
+) -> SerializablePackedUserOperation {
+	let mut op = base.clone();
+	op.nonce = nonce;
+	op.init_code = "0x".to_string(); // Always clear init_code for payback
+	op
 }
 
 /// Helper to verify hedge position exists and is not liquidated
@@ -836,8 +857,8 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	hedge_open_cloid: u128,
 	close_ctx: &ClosePositionContext,
+	current_nonce: &mut u128,
 ) -> Result<(Option<String>, Option<String>, Option<String>), PumpxRpcError> {
-	let mut current_nonce = exec_ctx.skeleton_user_op.nonce;
 	let mut hedge_cancel_tx_hash = None;
 	let mut hedge_close_cloid_opt = None;
 	let mut hedge_close_tx_hash = None;
@@ -855,7 +876,7 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 		let cancel_tx_hash = submit_corewriter_userop(
 			exec_ctx.ctx.clone(),
 			exec_ctx.omni_account,
-			&prepare_skeleton_with_nonce(exec_ctx.skeleton_user_op, current_nonce),
+			&prepare_userop_no_init(exec_ctx.skeleton_user_op, *current_nonce),
 			exec_ctx.chain_id,
 			exec_ctx.wallet_index,
 			cancel_calldata,
@@ -864,7 +885,7 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 
 		info!("Cancel order submitted with tx_hash: {:?}", cancel_tx_hash);
 		hedge_cancel_tx_hash = cancel_tx_hash.clone();
-		current_nonce += 1;
+		*current_nonce += 1;
 
 		let order_canceled = exec_ctx
 			.hypercore_client
@@ -950,12 +971,13 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 		hedge_close_tx_hash = submit_corewriter_userop(
 			exec_ctx.ctx.clone(),
 			exec_ctx.omni_account,
-			&prepare_skeleton_with_nonce(exec_ctx.skeleton_user_op, current_nonce),
+			&prepare_userop_no_init(exec_ctx.skeleton_user_op, *current_nonce),
 			exec_ctx.chain_id,
 			exec_ctx.wallet_index,
 			close_calldata,
 		)
 		.await?;
+		*current_nonce += 1;
 
 		info!(
 			"Hedge close order submitted, price: {}, size: {}, tx_hash: {:?}",
@@ -1008,6 +1030,7 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	move_ctx: &MoveToSpotContext,
+	current_nonce: &mut u128,
 ) -> Result<Option<String>, PumpxRpcError> {
 	info!("Action: Transferring USDC from perp to spot...");
 
@@ -1031,33 +1054,16 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		encode_send_raw_action(transfer_action),
 	);
 
-	// Calculate nonce offset based on state
-	let current_loan_state = exec_ctx
-		.ctx
-		.loan_record_storage
-		.get(exec_ctx.storage_key)
-		.ok()
-		.flatten()
-		.map(|r| r.state);
-
-	let nonce_offset = match current_loan_state {
-		Some(LoanState::PositionOpened) => 2, // After cancel (0 or 1) + close (1 or 2)
-		Some(LoanState::PositionClosed) => 0, // Start fresh
-		_ => 0,
-	};
-
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
-		&prepare_skeleton_with_nonce(
-			exec_ctx.skeleton_user_op,
-			exec_ctx.skeleton_user_op.nonce + nonce_offset,
-		),
+		&prepare_userop_no_init(exec_ctx.skeleton_user_op, *current_nonce),
 		exec_ctx.chain_id,
 		exec_ctx.wallet_index,
 		transfer_calldata,
 	)
 	.await?;
+	*current_nonce += 1;
 
 	info!(
 		"USD transfer submitted, size: {}, tx_hash: {:?}",
@@ -1101,6 +1107,7 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	collateral_size: f64,
 	buy_ctx: &BuySpotContext,
+	current_nonce: u128,
 ) -> Result<(u128, Option<String>), PumpxRpcError> {
 	info!("Action: Buying back collateral in spot market...");
 
@@ -1170,29 +1177,10 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 		encode_send_raw_action(spot_buy_action),
 	);
 
-	// Calculate nonce offset based on state
-	let current_loan_state = exec_ctx
-		.ctx
-		.loan_record_storage
-		.get(exec_ctx.storage_key)
-		.ok()
-		.flatten()
-		.map(|r| r.state);
-
-	let nonce_offset = match current_loan_state {
-		Some(LoanState::PositionOpened) => 3, // After cancel + close + transfer
-		Some(LoanState::PositionClosed) => 1, // After transfer
-		Some(LoanState::ToSpotMoved) => 0,    // Start fresh
-		_ => 0,
-	};
-
 	let spot_buy_tx_hash = submit_corewriter_userop(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
-		&prepare_skeleton_with_nonce(
-			exec_ctx.skeleton_user_op,
-			exec_ctx.skeleton_user_op.nonce + nonce_offset,
-		),
+		&prepare_userop_no_init(exec_ctx.skeleton_user_op, current_nonce),
 		exec_ctx.chain_id,
 		exec_ctx.wallet_index,
 		spot_buy_calldata,

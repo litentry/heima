@@ -3,7 +3,7 @@ use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_
 use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::{prepare_skeleton_with_nonce, submit_corewriter_userop};
+use crate::utils::user_op::submit_corewriter_userop;
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -108,6 +108,7 @@ pub fn register_request_loan_test<
 				smart_wallet,
 				storage_key: &storage_key,
 			};
+			let mut current_nonce = params.user_operation.nonce;
 
 			match ctx.loan_record_storage.get(&storage_key).ok().flatten() {
 				None => {
@@ -140,13 +141,14 @@ pub fn register_request_loan_test<
 						collateral_size,
 						lending_ratio_f64,
 						&sell_ctx,
+						&mut current_nonce,
 					)
 					.await?;
 
 					let usdc_loaned = usdc_sold * lending_ratio_f64;
 					let usdc_for_perp = usdc_sold * (1.0 - lending_ratio_f64);
 
-					do_move_to_perp(&exec_ctx, usdc_for_perp).await?;
+					do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce).await?;
 
 					do_open_position(
 						&exec_ctx,
@@ -155,6 +157,7 @@ pub fn register_request_loan_test<
 						lending_ratio_f64,
 						hedge_cloid,
 						&open_ctx,
+						current_nonce,
 					)
 					.await?;
 
@@ -226,7 +229,7 @@ pub fn register_request_loan_test<
 									)
 								})?;
 
-							do_move_to_perp(&exec_ctx, usdc_for_perp).await?;
+							do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce).await?;
 
 							do_open_position(
 								&exec_ctx,
@@ -235,6 +238,7 @@ pub fn register_request_loan_test<
 								lending_ratio_f64,
 								hedge_cloid,
 								&open_ctx,
+								current_nonce,
 							)
 							.await?;
 
@@ -286,6 +290,7 @@ pub fn register_request_loan_test<
 								lending_ratio_f64,
 								hedge_cloid,
 								&open_ctx,
+								current_nonce,
 							)
 							.await?;
 
@@ -511,6 +516,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	collateral_size: f64,
 	lending_ratio_f64: f64,
 	sell_ctx: &SellSpotContext,
+	current_nonce: &mut u128,
 ) -> Result<(f64, u128, u128), PumpxRpcError> {
 	info!("Action: Selling {} {} in spot market", collateral_size, collateral_ticker);
 
@@ -542,10 +548,14 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		spot_sell_cloid,
 	);
 
+	let mut user_op = exec_ctx.skeleton_user_op.clone();
+	user_op.nonce = *current_nonce;
+	// init_code is kept as-is from skeleton
+
 	let spot_sell_tx_hash = submit_corewriter_userop(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
-		exec_ctx.skeleton_user_op,
+		&user_op,
 		exec_ctx.chain_id,
 		exec_ctx.wallet_index,
 		encode_omni_account_execute(
@@ -554,6 +564,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		),
 	)
 	.await?;
+	*current_nonce += 1;
 
 	info!(
 		"Spot sell submitted: price={}, size={}, tx={:?}",
@@ -645,6 +656,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	usdc_for_perp: f64,
+	current_nonce: &mut u128,
 ) -> Result<(), PumpxRpcError> {
 	info!("Action: Moving {:.2} USDC to perp", usdc_for_perp);
 
@@ -668,13 +680,15 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 			)
 		})?;
 
+	// Clear init_code (account already created by sell_spot)
+	let mut user_op = exec_ctx.skeleton_user_op.clone();
+	user_op.nonce = *current_nonce;
+	user_op.init_code = "0x".to_string();
+
 	let usd_transfer_tx_hash = submit_corewriter_userop(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
-		&prepare_skeleton_with_nonce(
-			exec_ctx.skeleton_user_op,
-			exec_ctx.skeleton_user_op.nonce + 1,
-		),
+		&user_op,
 		exec_ctx.chain_id,
 		exec_ctx.wallet_index,
 		encode_omni_account_execute(
@@ -683,6 +697,7 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		),
 	)
 	.await?;
+	*current_nonce += 1;
 
 	info!("USD transfer submitted: size={:.2}, tx={:?}", usdc_for_perp, usd_transfer_tx_hash);
 
@@ -725,6 +740,7 @@ async fn do_open_position<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	lending_ratio_f64: f64,
 	hedge_open_cloid: u128,
 	open_ctx: &OpenPositionContext,
+	current_nonce: u128,
 ) -> Result<(), PumpxRpcError> {
 	let desired_leverage = 1.0 / (1.0 - lending_ratio_f64);
 	let effective_leverage = desired_leverage.min(open_ctx.perp_max_leverage as f64);
@@ -770,13 +786,15 @@ async fn do_open_position<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		hedge_open_cloid,
 	);
 
+	// Clear init_code (account already created)
+	let mut user_op = exec_ctx.skeleton_user_op.clone();
+	user_op.nonce = current_nonce;
+	user_op.init_code = "0x".to_string();
+
 	let hedge_open_tx_hash = submit_corewriter_userop(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
-		&prepare_skeleton_with_nonce(
-			exec_ctx.skeleton_user_op,
-			exec_ctx.skeleton_user_op.nonce + 2,
-		),
+		&user_op,
 		exec_ctx.chain_id,
 		exec_ctx.wallet_index,
 		encode_omni_account_execute(
