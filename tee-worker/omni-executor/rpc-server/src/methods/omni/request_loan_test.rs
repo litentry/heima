@@ -381,7 +381,7 @@ async fn handle_request_loan_impl<
 		encode_send_raw_action(usd_transfer_action),
 	);
 
-	let _usd_transfer_tx_hash = submit_corewriter_userop(
+	let usd_transfer_tx_hash = submit_corewriter_userop(
 		ctx.clone(),
 		&omni_account,
 		&prepare_skeleton_with_nonce(&skeleton_user_op, current_nonce),
@@ -392,7 +392,10 @@ async fn handle_request_loan_impl<
 	)
 	.await?;
 
-	info!("Action 2: USD class transfer submitted");
+	info!(
+		"Action 2: USD class transfer submitted, size: {}, tx_hash: {:?}",
+		usdc_for_perp, usd_transfer_tx_hash
+	);
 
 	// Wait for USD transfer to complete
 	let _actual_perp_balance = hypercore_client
@@ -439,8 +442,8 @@ async fn handle_request_loan_impl<
 	let hedge_size = (usdc_for_perp * effective_leverage) / target_hedge_price;
 
 	info!(
-		"Perp hedge open pricing - markPx: {}, midPx: {}, ask (lowest sell): {}, target (with {}x buffer): {}",
-		perp_mark_price, perp_mid_price, perp_ask_price, PERP_ENTRY_PRICE_RATIO, target_hedge_price
+		"Perp hedge open pricing - markPx: {}, midPx: {}, ask (lowest sell): {}, target (with {}x buffer): {}, hedge_size: {}",
+		perp_mark_price, perp_mid_price, perp_ask_price, PERP_ENTRY_PRICE_RATIO, target_hedge_price, hedge_size
 	);
 
 	let clamped_hedge_size = clamp_size(hedge_size, validation_result.perp_sz_decimals);

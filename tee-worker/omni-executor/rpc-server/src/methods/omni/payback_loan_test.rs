@@ -464,8 +464,6 @@ async fn handle_payback_loan_impl<
 		initial_margin.min(withdrawable_usdc)
 	};
 
-	info!("Transferring {} USDC from perp to spot", transfer_amount);
-
 	// Get initial spot balance BEFORE submitting the transfer
 	let initial_spot_usdc = hypercore_client
 		.get_spot_balance(smart_wallet_address_str, "USDC")
@@ -496,7 +494,10 @@ async fn handle_payback_loan_impl<
 	)
 	.await?;
 
-	info!("Action 2: USD transfer submitted with tx_hash: {:?}", usd_transfer_tx_hash);
+	info!(
+		"Action 2: USD transfer submitted, size: {}, tx_hash: {:?}",
+		transfer_amount, usd_transfer_tx_hash
+	);
 	current_nonce += 1;
 
 	hypercore_client

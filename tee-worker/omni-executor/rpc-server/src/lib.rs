@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 mod auth_token_key_store;
 mod auth_utils;
 mod config;
