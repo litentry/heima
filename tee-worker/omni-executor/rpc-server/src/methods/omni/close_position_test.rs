@@ -19,7 +19,6 @@ pub struct ClosePositionTestParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub omni_account: String,
-	pub client_id: String,
 	pub ticker: Option<String>, // If None, close all positions
 }
 
@@ -198,7 +197,6 @@ pub fn register_close_position_test<
 					params.chain_id,
 					params.wallet_index,
 					close_calldata,
-					&params.client_id,
 				)
 				.await?;
 

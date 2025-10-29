@@ -19,7 +19,6 @@ pub struct OpenPositionTestParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub omni_account: String,
-	pub client_id: String,
 	pub ticker: String,
 	pub position_size: String,
 }
@@ -129,7 +128,6 @@ pub fn register_open_position_test<
 					get_core_writer_address(),
 					encode_send_raw_action(hedge_action),
 				),
-				&params.client_id,
 			)
 			.await?;
 

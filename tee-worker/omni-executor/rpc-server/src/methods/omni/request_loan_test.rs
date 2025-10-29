@@ -24,10 +24,10 @@ pub struct RequestLoanTestParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub omni_account: String,
-	pub client_id: String,
 	pub collateral_ticker: String,
 	pub collateral_size: String,
 	pub lending_ratio: u32,
+	pub loan_nonce: Option<u64>, // If Some, resume existing loan; if None, create new
 }
 
 #[derive(Serialize, Clone)]
@@ -45,7 +45,6 @@ struct ExecutionContext<'a, CrossChainIntentExecutor: IntentExecutor + Send + Sy
 	skeleton_user_op: &'a SerializablePackedUserOperation,
 	chain_id: u64,
 	wallet_index: u32,
-	client_id: &'a str,
 	hypercore_client: &'a HyperCoreClient,
 	smart_wallet: &'a str,
 	storage_key: &'a executor_storage::loan_record::Key,
@@ -86,9 +85,11 @@ pub fn register_request_loan_test<
 
 			let ctx = Arc::clone(&ctx);
 			let smart_wallet = &params.user_operation.sender;
+
+			// Calculate storage_key based on loan_nonce parameter
 			let storage_key = executor_storage::loan_record::Key {
 				account_id: omni_account.clone(),
-				nonce: params.user_operation.nonce as u64,
+				nonce: params.loan_nonce.unwrap_or(params.user_operation.nonce as u64),
 			};
 
 			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
@@ -103,7 +104,6 @@ pub fn register_request_loan_test<
 				skeleton_user_op: &params.user_operation,
 				chain_id: params.chain_id,
 				wallet_index: params.wallet_index,
-				client_id: &params.client_id,
 				hypercore_client: &hypercore_client,
 				smart_wallet,
 				storage_key: &storage_key,
@@ -552,7 +552,6 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 			get_core_writer_address(),
 			encode_send_raw_action(spot_sell_action),
 		),
-		exec_ctx.client_id,
 	)
 	.await?;
 
@@ -682,7 +681,6 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 			get_core_writer_address(),
 			encode_send_raw_action(build_usd_class_transfer_to_perp(to_usdc_units(usdc_for_perp))),
 		),
-		exec_ctx.client_id,
 	)
 	.await?;
 
@@ -785,7 +783,6 @@ async fn do_open_position<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 			get_core_writer_address(),
 			encode_send_raw_action(hedge_action),
 		),
-		exec_ctx.client_id,
 	)
 	.await?;
 

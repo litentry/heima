@@ -169,7 +169,6 @@ pub(crate) async fn submit_corewriter_userop<
 	chain_id: u64,
 	wallet_index: u32,
 	call_data: String,
-	_client_id: &str,
 ) -> Result<Option<String>, PumpxRpcError> {
 	let smart_wallet_address = &skeleton_user_op.sender;
 

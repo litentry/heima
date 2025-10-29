@@ -14,6 +14,32 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
+#[derive(Debug, Deserialize)]
+pub struct PaybackLoanTestParams {
+	pub user_operation: SerializablePackedUserOperation,
+	pub chain_id: u64,
+	pub wallet_index: u32,
+	pub omni_account: String,
+	pub loan_nonce: u64,
+	// Expected minimal account value (USDC) on user's perp account (crossMarginSummary.accountValue)
+	// If the actual account value is smaller, it will error out and not close the position.
+	//
+	// This is just a safety guard to avoid unwanted position close (when e.g user is at big loss)
+	pub min_expected_account_value: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct PaybackLoanTestResponse {
+	pub collateral_ticker: String,
+	pub collateral_size: String,
+	pub hedge_cancel_tx_hash: Option<String>,
+	pub hedge_close_cloid: Option<String>,
+	pub hedge_close_tx_hash: Option<String>,
+	pub usd_transfer_tx_hash: Option<String>,
+	pub spot_buy_cloid: Option<String>,
+	pub spot_buy_tx_hash: Option<String>,
+}
+
 struct ExecutionContext<'a, CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static> {
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	omni_account: &'a AccountId,
@@ -46,32 +72,6 @@ struct BuySpotContext {
 	spot_sz_decimals: u8,
 	spot_mark_price: f64,
 	spot_mid_price: f64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PaybackLoanTestParams {
-	pub user_operation: SerializablePackedUserOperation,
-	pub chain_id: u64,
-	pub wallet_index: u32,
-	pub omni_account: String,
-	pub loan_nonce: u64,
-	// Expected minimal account value (USDC) on user's perp account (crossMarginSummary.accountValue)
-	// If the actual account value is smaller, it will error out and not close the position.
-	//
-	// This is just a safety guard to avoid unwanted position close (when e.g user is at big loss)
-	pub min_expected_account_value: String,
-}
-
-#[derive(Serialize, Clone)]
-pub struct PaybackLoanTestResponse {
-	pub collateral_ticker: String,
-	pub collateral_size: String,
-	pub hedge_cancel_tx_hash: Option<String>,
-	pub hedge_close_cloid: Option<String>,
-	pub hedge_close_tx_hash: Option<String>,
-	pub usd_transfer_tx_hash: Option<String>,
-	pub spot_buy_cloid: Option<String>,
-	pub spot_buy_tx_hash: Option<String>,
 }
 
 pub fn register_payback_loan_test<
@@ -859,7 +859,6 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 			exec_ctx.chain_id,
 			exec_ctx.wallet_index,
 			cancel_calldata,
-			"",
 		)
 		.await?;
 
@@ -955,7 +954,6 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 			exec_ctx.chain_id,
 			exec_ctx.wallet_index,
 			close_calldata,
-			"",
 		)
 		.await?;
 
@@ -1058,7 +1056,6 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		exec_ctx.chain_id,
 		exec_ctx.wallet_index,
 		transfer_calldata,
-		"",
 	)
 	.await?;
 
@@ -1199,7 +1196,6 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 		exec_ctx.chain_id,
 		exec_ctx.wallet_index,
 		spot_buy_calldata,
-		"",
 	)
 	.await?;
 
