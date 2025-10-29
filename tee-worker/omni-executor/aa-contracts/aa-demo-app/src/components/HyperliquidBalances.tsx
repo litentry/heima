@@ -1,19 +1,22 @@
 import { useState, useEffect } from "react";
-import { AlertCircle, RefreshCw, Wallet, TrendingUp, ShoppingCart, DollarSign } from "lucide-react";
+import { AlertCircle, RefreshCw, Wallet, TrendingUp, ShoppingCart, DollarSign, ArrowRightLeft } from "lucide-react";
 import { HYPERLIQUID_CORE_CONFIG } from "@/lib/constants";
+import { buildSpotToPerpTransferCallData, buildPerpToSpotTransferCallData } from "@/lib/hypercore-utils";
 
 interface HyperliquidBalancesProps {
     omniAccountAddress: string;
+    onTransferAction?: (callData: `0x${string}`, actionDescription: string) => void;
 }
 
 interface AssetBalance {
     coin: string;
     hold: string;
     total: string;
+    token: number;
+    entryNtl: string;
 }
 
-interface SpotBalance {
-    type: "spot";
+interface SpotBalanceResponse {
     balances: AssetBalance[];
 }
 
@@ -61,13 +64,15 @@ interface ClearinghouseState {
     withdrawable: string;
 }
 
-export function HyperliquidBalances({ omniAccountAddress }: HyperliquidBalancesProps) {
+export function HyperliquidBalances({ omniAccountAddress, onTransferAction }: HyperliquidBalancesProps) {
     const [balances, setBalances] = useState<AssetBalance[]>([]);
     const [positions, setPositions] = useState<Position[]>([]);
     const [openOrders, setOpenOrders] = useState<OpenOrder[]>([]);
     const [accountSummary, setAccountSummary] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [spotTransferAmount, setSpotTransferAmount] = useState<string>("");
+    const [perpTransferAmount, setPerpTransferAmount] = useState<string>("");
 
     const fetchBalances = async () => {
         if (!omniAccountAddress) return;
@@ -92,11 +97,18 @@ export function HyperliquidBalances({ omniAccountAddress }: HyperliquidBalancesP
                 throw new Error(`HTTP error! status: ${spotResponse.status}`);
             }
 
-            const spotData: SpotBalance = await spotResponse.json();
+            const spotData: any = await spotResponse.json();
 
-            if (spotData.type === "spot" && spotData.balances) {
-                setBalances(spotData.balances);
+            console.log("[HyperliquidBalances] Spot data received:", spotData);
+
+            if (spotData.balances && Array.isArray(spotData.balances)) {
+                console.log("[HyperliquidBalances] Setting balances:", spotData.balances);
+                // Filter out balances with zero total
+                const nonZeroBalances = spotData.balances.filter((b: AssetBalance) => parseFloat(b.total) > 0);
+                console.log("[HyperliquidBalances] Non-zero balances:", nonZeroBalances);
+                setBalances(nonZeroBalances);
             } else {
+                console.log("[HyperliquidBalances] No balances found in spot data");
                 setBalances([]);
             }
 
@@ -181,6 +193,62 @@ export function HyperliquidBalances({ omniAccountAddress }: HyperliquidBalancesP
         };
     };
 
+    const handleSpotToPerp = (amount: string) => {
+        if (!amount || parseFloat(amount) <= 0) {
+            alert("Please enter a valid amount");
+            return;
+        }
+
+        // Check if there's sufficient spot USDC balance
+        const usdcBalance = balances.find(b => b.coin === "USDC");
+        const availableSpot = usdcBalance ? parseFloat(usdcBalance.total) : 0;
+
+        console.log("[handleSpotToPerp] Transfer request:", {
+            amount,
+            availableSpot,
+            omniAccountAddress,
+            usdcBalance
+        });
+
+        if (availableSpot <= 0) {
+            alert("No USDC available in spot balance");
+            return;
+        }
+
+        if (parseFloat(amount) > availableSpot) {
+            alert(`Insufficient spot balance. You have ${availableSpot.toFixed(2)} USDC in spot, but tried to transfer ${amount} USDC.`);
+            return;
+        }
+
+        const callData = buildSpotToPerpTransferCallData(amount);
+        console.log("[handleSpotToPerp] Generated callData:", callData);
+        onTransferAction?.(callData, `Transfer ${amount} USDC from Spot to Perp for address ${omniAccountAddress}`);
+        setSpotTransferAmount("");
+    };
+
+    const handlePerpToSpot = (amount: string) => {
+        if (!amount || parseFloat(amount) <= 0) {
+            alert("Please enter a valid amount");
+            return;
+        }
+
+        // Check if there's sufficient withdrawable balance
+        const withdrawable = accountSummary ? parseFloat(accountSummary.totalRawUsd) : 0;
+        if (withdrawable <= 0) {
+            alert(`Cannot transfer from Perp: No withdrawable balance (${withdrawable.toFixed(2)} USDC available)`);
+            return;
+        }
+
+        if (parseFloat(amount) > withdrawable) {
+            alert(`Insufficient withdrawable balance. You have ${withdrawable.toFixed(2)} USDC withdrawable, but tried to transfer ${amount} USDC.`);
+            return;
+        }
+
+        const callData = buildPerpToSpotTransferCallData(amount);
+        onTransferAction?.(callData, `Transfer ${amount} USDC from Perp to Spot`);
+        setPerpTransferAmount("");
+    };
+
     return (
         <div className="w-full p-6 bg-white rounded-lg shadow-lg">
             <div className="flex items-center justify-between mb-6">
@@ -226,7 +294,7 @@ export function HyperliquidBalances({ omniAccountAddress }: HyperliquidBalancesP
                         <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50 border border-gray-200">
                             <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
                                 <DollarSign className="h-4 w-4 mr-1" />
-                                Account Summary
+                                Perpetual Account Summary
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -254,6 +322,49 @@ export function HyperliquidBalances({ omniAccountAddress }: HyperliquidBalancesP
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Transfer to Spot button - always shown if onTransferAction exists */}
+                            {onTransferAction && (
+                                <div className="mt-4 pt-4 border-t border-gray-300">
+                                    <p className="text-xs text-gray-600 mb-2 font-medium">
+                                        Transfer to Spot (Remove Margin)
+                                        {parseFloat(accountSummary.totalRawUsd) > 0 ? (
+                                            <span className="ml-2 text-gray-500">Max: {formatBalance(accountSummary.totalRawUsd)}</span>
+                                        ) : (
+                                            <span className="text-red-500 ml-2">(No withdrawable balance)</span>
+                                        )}
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number"
+                                            placeholder="Amount"
+                                            value={perpTransferAmount}
+                                            onChange={(e) => setPerpTransferAmount(e.target.value)}
+                                            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            min="0"
+                                            max={parseFloat(accountSummary.totalRawUsd) > 0 ? accountSummary.totalRawUsd : undefined}
+                                            step="0.01"
+                                            disabled={parseFloat(accountSummary.totalRawUsd) <= 0}
+                                        />
+                                        {parseFloat(accountSummary.totalRawUsd) > 0 && (
+                                            <button
+                                                onClick={() => setPerpTransferAmount(formatBalance(accountSummary.totalRawUsd))}
+                                                className="px-3 py-2 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition-colors"
+                                            >
+                                                Max
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => handlePerpToSpot(perpTransferAmount)}
+                                            disabled={!perpTransferAmount || parseFloat(perpTransferAmount) <= 0 || parseFloat(accountSummary.totalRawUsd) <= 0}
+                                            className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                        >
+                                            <ArrowRightLeft className="h-4 w-4" />
+                                            To Spot
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -387,39 +498,108 @@ export function HyperliquidBalances({ omniAccountAddress }: HyperliquidBalancesP
                     )}
 
                     {/* Spot Balances */}
-                    {balances.length > 0 && (
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                                <Wallet className="h-4 w-4 mr-1" />
-                                Spot Balances
-                            </h3>
+                    <div>
+                        <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                            <Wallet className="h-4 w-4 mr-1" />
+                            Spot Balances
+                        </h3>
+                        {balances.length > 0 ? (
                             <div className="space-y-2">
-                                {balances.map((asset, index) => (
-                                    <div
-                                        key={`${asset.coin}-${index}`}
-                                        className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-gray-200"
-                                    >
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <h4 className="font-semibold text-lg text-gray-900">
-                                                    {asset.coin}
-                                                </h4>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    Hold: {formatBalance(asset.hold)}
-                                                </p>
+                                {balances.map((asset, index) => {
+                                    const isUSDC = asset.coin === "USDC";
+                                    return (
+                                        <div
+                                            key={`${asset.coin}-${index}`}
+                                            className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-gray-200"
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <h4 className="font-semibold text-lg text-gray-900">
+                                                        {asset.coin}
+                                                    </h4>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Hold: {formatBalance(asset.hold)}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-2xl font-bold text-gray-900">
+                                                        {formatBalance(asset.total)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">Total</p>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-2xl font-bold text-gray-900">
-                                                    {formatBalance(asset.total)}
-                                                </p>
-                                                <p className="text-xs text-gray-500 mt-1">Total</p>
-                                            </div>
+
+                                            {/* Transfer buttons for USDC */}
+                                            {isUSDC && onTransferAction && (
+                                                <div className="mt-4 pt-4 border-t border-gray-300">
+                                                    <p className="text-xs text-gray-600 mb-2 font-medium">
+                                                        Transfer to Perp (Add Margin)
+                                                        <span className="ml-2 text-gray-500">Max: {formatBalance(asset.total)}</span>
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="number"
+                                                            placeholder="Amount"
+                                                            value={spotTransferAmount}
+                                                            onChange={(e) => setSpotTransferAmount(e.target.value)}
+                                                            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            min="0"
+                                                            max={asset.total}
+                                                            step="0.01"
+                                                        />
+                                                        <button
+                                                            onClick={() => setSpotTransferAmount(formatBalance(asset.total))}
+                                                            className="px-3 py-2 bg-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-300 transition-colors"
+                                                        >
+                                                            Max
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleSpotToPerp(spotTransferAmount)}
+                                                            disabled={!spotTransferAmount || parseFloat(spotTransferAmount) <= 0}
+                                                            className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                                        >
+                                                            <ArrowRightLeft className="h-4 w-4" />
+                                                            Add Margin
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-gray-200">
+                                <p className="text-sm text-gray-600 mb-4">No spot balances found. Transfer from perpetual to spot to see balances here.</p>
+
+                                {/* Always show Add Margin option even if no spot USDC */}
+                                {onTransferAction && accountSummary && (
+                                    <div className="mt-4 pt-4 border-t border-gray-300">
+                                        <p className="text-xs text-gray-600 mb-2 font-medium">Transfer from Perp to Spot</p>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number"
+                                                placeholder="Amount"
+                                                value={spotTransferAmount}
+                                                onChange={(e) => setSpotTransferAmount(e.target.value)}
+                                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                            <button
+                                                onClick={() => handlePerpToSpot(spotTransferAmount)}
+                                                disabled={!spotTransferAmount || parseFloat(spotTransferAmount) <= 0}
+                                                className="px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                            >
+                                                <ArrowRightLeft className="h-4 w-4" />
+                                                To Spot
+                                            </button>
                                         </div>
                                     </div>
-                                ))}
+                                )}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
 
                     {/* No data message */}
                     {balances.length === 0 && positions.length === 0 && openOrders.length === 0 && !isLoading && (

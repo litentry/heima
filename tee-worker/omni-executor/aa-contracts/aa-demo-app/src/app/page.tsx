@@ -8,6 +8,7 @@ import { HyperliquidBalances } from "@/components/HyperliquidBalances";
 import { RequestLoan } from "@/components/RequestLoan";
 import { UserLoans } from "@/components/UserLoans";
 import { BuyToken } from "@/components/BuyToken";
+import { MarginTransfer } from "@/components/MarginTransfer";
 import { ClientOnly } from "@/components/ClientOnly";
 import { Mail } from "lucide-react";
 import { getTEEWorkerAddress } from "@/lib/tee-worker-client";
@@ -24,6 +25,8 @@ function HomeContent() {
     const [omniAccountHash, setOmniAccountHash] = useState<string>("");
     const [hasContract, setHasContract] = useState(false);
     const [isTeeWorkerAuthorized, setIsTeeWorkerAuthorized] = useState(false);
+    const [transferCallData, setTransferCallData] = useState<`0x${string}` | null>(null);
+    const [transferDescription, setTransferDescription] = useState<string>("");
 
     // Check if authenticated
     const isAuthenticated = (authType === "wallet" && evmAddress) || (authType === "email" && identifier);
@@ -117,6 +120,11 @@ function HomeContent() {
         checkTeeWorkerAuthorization();
     }, [omniAccountHash, hasContract, omniAccountAddress, publicClient]);
 
+    const handleTransferAction = (callData: `0x${string}`, description: string) => {
+        setTransferCallData(callData);
+        setTransferDescription(description);
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
             {/* Header */}
@@ -194,7 +202,28 @@ function HomeContent() {
                         {/* Hyperliquid Balances, Positions, and Orders */}
                         <HyperliquidBalances
                             omniAccountAddress={omniAccountAddress}
+                            onTransferAction={handleTransferAction}
                         />
+
+                        {/* Margin Transfer Modal */}
+                        {transferCallData && (
+                            <MarginTransfer
+                                omniAccountAddress={omniAccountAddress}
+                                omniAccountHash={omniAccountHash}
+                                accountExists={hasContract}
+                                callData={transferCallData}
+                                actionDescription={transferDescription}
+                                onComplete={() => {
+                                    setTransferCallData(null);
+                                    setTransferDescription("");
+                                    // Optionally refresh balances here
+                                }}
+                                onCancel={() => {
+                                    setTransferCallData(null);
+                                    setTransferDescription("");
+                                }}
+                            />
+                        )}
                     </div>
                 )}
             </div>

@@ -198,3 +198,78 @@ export async function getSpotAssetId(tokenName: string): Promise<number | null> 
         return null;
     }
 }
+
+/**
+ * Encode a usdClassTransfer action for CoreWriter
+ * This transfers USDC between spot and perpetual accounts
+ * @param amount - Amount in human-readable format (e.g., 100 for 100 USDC)
+ * @param toPerp - true to transfer from spot to perp, false for perp to spot
+ * @returns Encoded action bytes
+ */
+export function encodeUsdClassTransferAction(
+    amount: string,
+    toPerp: boolean
+): `0x${string}` {
+    // Convert amount to USDC units (6 decimals, NOT 8!)
+    // USDC uses 6 decimals, so 1 USDC = 1_000_000 units
+    const amountInUnits = BigInt(Math.round(parseFloat(amount) * 1_000_000));
+
+    console.log("[encodeUsdClassTransferAction] Encoding transfer:", {
+        amount,
+        amountInUnits: amountInUnits.toString(),
+        toPerp,
+        note: "Using 6 decimals for USDC"
+    });
+
+    // Encode the parameters according to the CoreWriter usdClassTransfer format
+    // Parameters: (uint64 ntl, bool toPerp)
+    const encoded = encodeAbiParameters(
+        parseAbiParameters("uint64, bool"),
+        [amountInUnits, toPerp]
+    );
+
+    // Prepend version byte (0x01) and action_id (0x000007 for usdClassTransfer)
+    const version = "0x01";
+    const actionId = "0x000007";
+
+    const result = (version + actionId.slice(2) + encoded.slice(2)) as `0x${string}`;
+    console.log("[encodeUsdClassTransferAction] Encoded action:", result);
+
+    return result;
+}
+
+/**
+ * Build complete callData for transferring USDC from spot to perp (adding margin)
+ * @param amount - Amount in human-readable format (e.g., "100" for 100 USDC)
+ * @returns Complete callData for OmniAccount execute
+ */
+export function buildSpotToPerpTransferCallData(amount: string): `0x${string}` {
+    // Build the usdClassTransfer action (toPerp = true)
+    const transferAction = encodeUsdClassTransferAction(amount, true);
+
+    // Encode sendRawAction call
+    const coreWriterCallData = encodeSendRawAction(transferAction);
+
+    // Encode OmniAccount execute call
+    const callData = encodeOmniAccountExecute(CORE_WRITER_ADDRESS, coreWriterCallData);
+
+    return callData;
+}
+
+/**
+ * Build complete callData for transferring USDC from perp to spot (removing margin)
+ * @param amount - Amount in human-readable format (e.g., "100" for 100 USDC)
+ * @returns Complete callData for OmniAccount execute
+ */
+export function buildPerpToSpotTransferCallData(amount: string): `0x${string}` {
+    // Build the usdClassTransfer action (toPerp = false)
+    const transferAction = encodeUsdClassTransferAction(amount, false);
+
+    // Encode sendRawAction call
+    const coreWriterCallData = encodeSendRawAction(transferAction);
+
+    // Encode OmniAccount execute call
+    const callData = encodeOmniAccountExecute(CORE_WRITER_ADDRESS, coreWriterCallData);
+
+    return callData;
+}
