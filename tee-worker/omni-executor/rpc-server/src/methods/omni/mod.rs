@@ -104,6 +104,11 @@ mod open_position_test;
 #[cfg(feature = "test-endpoints")]
 use open_position_test::*;
 
+#[cfg(feature = "test-endpoints")]
+mod close_position_test;
+#[cfg(feature = "test-endpoints")]
+use close_position_test::*;
+
 pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
@@ -151,4 +156,7 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	#[cfg(feature = "test-endpoints")]
 	register_open_position_test(module);
+
+	#[cfg(feature = "test-endpoints")]
+	register_close_position_test(module);
 }
