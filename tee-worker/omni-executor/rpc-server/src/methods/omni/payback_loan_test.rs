@@ -916,6 +916,26 @@ async fn precheck<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'stat
 	// Store position data for transfer amount calculation
 	let mut position_data: Option<(f64, f64, f64, f64, f64)> = None; // (unrealized_pnl, cum_funding_all_time, margin_used, position_value, withdrawable)
 
+	// If the order is not found (unknownOid), we'll skip action 1 and proceed directly to action 2
+	if order_status.status == "unknownOid" {
+		info!(
+			"Order with cloid {} not found (unknownOid), skipping action 1 and proceeding to action 2",
+			hedge_open_cloid
+		);
+		// No cancellation or closing needed, proceed directly to action 2
+		return Ok(PaybackLoanValidationResult {
+			collateral_ticker,
+			collateral_size,
+			usdc_sold,
+			usdc_loaned,
+			hedge_open_cloid,
+			should_cancel: false,
+			should_close: false,
+			position_size_to_close: 0.0,
+			position_data: None,
+		});
+	}
+
 	let (should_cancel, should_close, position_size_to_close) = if let Some(order_info) =
 		order_status.order
 	{
