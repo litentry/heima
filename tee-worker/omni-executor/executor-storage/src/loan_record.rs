@@ -21,6 +21,9 @@ pub struct LoanRecord {
 	pub usdc_loaned: String,
 	pub spot_sell_cloid: String,
 	pub hedge_open_cloid: String,
+	/// Actual position size that was opened for this loan (filled or partially filled)
+	/// This should be set after the hedge order completes in request_loan
+	pub position_size: String,
 }
 
 pub struct LoanRecordStorage {

@@ -112,7 +112,6 @@ mod tests {
 	use super::*;
 	use chrono::{Days, Utc};
 	use executor_primitives::{utils::hex::hex_encode, Identity, Web2IdentityType};
-	use parity_scale_codec::Encode;
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 
 	#[derive(PartialEq, Debug, Serialize, Deserialize)]

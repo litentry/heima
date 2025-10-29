@@ -120,3 +120,57 @@ pub fn encode_usd_class_transfer_action(ntl: u64, to_perp: bool) -> Vec<u8> {
 pub fn build_usd_class_transfer_to_perp(ntl: u64) -> Vec<u8> {
 	encode_usd_class_transfer_action(ntl, true)
 }
+
+pub fn build_usd_class_transfer_to_spot(ntl: u64) -> Vec<u8> {
+	encode_usd_class_transfer_action(ntl, false)
+}
+
+pub fn build_perp_close_order(asset_id: u32, size: u64, price: u64, cloid: u128) -> Vec<u8> {
+	// Close position by selling (is_buy = false) with reduce_only = true
+	// Note: For long positions, we need to sell to close
+	// The size should match the position size we want to close
+	encode_limit_order_action_with_reduce_only(asset_id, false, price, size, cloid, true)
+}
+
+pub fn build_spot_buy_order(asset_id: u32, size: u64, price: u64, cloid: u128) -> Vec<u8> {
+	let is_buy = true;
+	encode_limit_order_action(asset_id, is_buy, price, size, cloid)
+}
+
+pub fn build_cancel_order_by_cloid(asset_id: u32, cloid: u128) -> Vec<u8> {
+	let encoded =
+		ethabi::encode(&[ethabi::Token::Uint(asset_id.into()), ethabi::Token::Uint(cloid.into())]);
+
+	let mut data = Vec::new();
+	data.push(0x01); // version
+	data.extend_from_slice(&[0x00, 0x00, 0x0b]); // action_id = 11 (cancel order by cloid)
+	data.extend_from_slice(&encoded);
+	data
+}
+
+fn encode_limit_order_action_with_reduce_only(
+	asset: u32,
+	is_buy: bool,
+	limit_px: u64,
+	sz: u64,
+	cloid: u128,
+	reduce_only: bool,
+) -> Vec<u8> {
+	let encoded_tif: u8 = 2; // Gtc
+
+	let encoded = ethabi::encode(&[
+		ethabi::Token::Uint(asset.into()),
+		ethabi::Token::Bool(is_buy),
+		ethabi::Token::Uint(limit_px.into()),
+		ethabi::Token::Uint(sz.into()),
+		ethabi::Token::Bool(reduce_only),
+		ethabi::Token::Uint(encoded_tif.into()),
+		ethabi::Token::Uint(cloid.into()),
+	]);
+
+	let mut data = Vec::new();
+	data.push(0x01); // version
+	data.extend_from_slice(&[0x00, 0x00, 0x01]); // action_id = 1
+	data.extend_from_slice(&encoded);
+	data
+}
