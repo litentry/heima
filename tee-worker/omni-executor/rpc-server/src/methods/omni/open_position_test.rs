@@ -20,7 +20,7 @@ pub struct OpenPositionTestParams {
 	pub wallet_index: u32,
 	pub omni_account: String,
 	pub client_id: String,
-	pub collateral_ticker: String,
+	pub ticker: String,
 	pub position_size: String,
 }
 
@@ -56,7 +56,7 @@ pub fn register_open_position_test<
 			})?;
 
 			let smart_wallet = &params.sender;
-			let collateral_ticker = &params.collateral_ticker;
+			let ticker = &params.ticker;
 
 			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
 				PumpxRpcError::from(
@@ -65,15 +65,15 @@ pub fn register_open_position_test<
 			})?;
 
 			let (perp_meta, perp_mark_price, perp_mid_price) =
-				hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
-					error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
+				hypercore_client.get_perp_market_prices(ticker).await.map_err(|e| {
+					error!("Failed to get perp market prices for {}: {}", ticker, e);
 					PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 							.with_reason(format!("Failed to get perp market prices: {}", e)),
 					)
 				})?;
 
-			let perp_asset_id = get_perp_asset_id(collateral_ticker, &perp_meta).map_err(|e| {
+			let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
 				error!("Failed to get perp asset ID: {}", e);
 				PumpxRpcError::from(
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
@@ -166,14 +166,11 @@ pub fn register_open_position_test<
 			let hedge_position = perp_state
 				.asset_positions
 				.iter()
-				.find(|pos| pos.position.coin.eq_ignore_ascii_case(collateral_ticker))
+				.find(|pos| pos.position.coin.eq_ignore_ascii_case(ticker))
 				.ok_or_else(|| {
 					PumpxRpcError::from(
 						DetailedError::new(INTERNAL_ERROR_CODE, "Position not found").with_reason(
-							format!(
-								"Position for {} not found after hedge order opened",
-								collateral_ticker
-							),
+							format!("Position for {} not found after hedge order opened", ticker),
 						),
 					)
 				})?;
