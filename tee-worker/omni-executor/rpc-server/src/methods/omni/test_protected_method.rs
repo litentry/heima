@@ -5,18 +5,14 @@ use jsonrpsee::{types::ErrorObject, RpcModule};
 
 #[cfg(test)]
 pub fn register_test_protected_method<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_method("omni_testProtectedMethod", |_, _, ext| {
-			if let Ok(user) = check_auth(ext) {
-				return Ok::<String, ErrorObject>(user.omni_account);
+			if let Ok(omni_account) = check_auth(ext) {
+				return Ok::<String, ErrorObject>(omni_account);
 			}
 			panic!("RpcExtensions not found in request extensions");
 		})
@@ -31,7 +27,7 @@ mod test {
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_crypto::jwt;
-	use executor_primitives::utils::hex::ToHexPrefixed;
+	use executor_primitives::utils::hex::hex_encode;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use heima_authentication::{
 		auth_token::{AuthOptions, AuthTokenClaims},
@@ -68,9 +64,8 @@ mod test {
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
+		let loan_record_storage = Arc::new(executor_storage::LoanRecordStorage::new(db.clone()));
 
-		let (solana_intent_executor, _solana_mock_recv) = MockedIntentExecutor::new();
-		let (ethereum_intent_executor, _ethereum_mock_recv) = MockedIntentExecutor::new();
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 		let aes_key = [0u8; 32];
 		let entry_point_clients = HashMap::new();
@@ -86,11 +81,10 @@ mod test {
 			binance_api_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
+			loan_record_storage,
 			[0u8; 33], // Test ECDSA public key
 			[0u8; 32], // Test bundler private key
 			[0u8; 33], // Test bundler export authorized pubkey
-			Arc::new(ethereum_intent_executor),
-			Arc::new(solana_intent_executor),
 			Arc::new(cross_chain_intent_executor),
 			aes_key,
 			Arc::new(entry_point_clients),
@@ -110,7 +104,7 @@ mod test {
 			.to_omni_account(CLIENT_ID_HEIMA);
 
 		let access_token_claims = AuthTokenClaims::new(
-			omni_account.to_hex(),
+			hex_encode(omni_account.as_ref()),
 			AUTH_TOKEN_ID_TYPE.to_string(),
 			CLIENT_ID_HEIMA.to_string(),
 			auth_options.clone(),
@@ -124,6 +118,6 @@ mod test {
 		let response: String =
 			client.request("omni_testProtectedMethod", rpc_params![]).await.unwrap();
 
-		assert_eq!(response, omni_account.to_hex());
+		assert_eq!(response, hex_encode(omni_account.as_ref()));
 	}
 }

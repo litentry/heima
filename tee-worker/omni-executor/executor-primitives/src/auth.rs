@@ -3,7 +3,7 @@ use crate::{
 		BitcoinSignature, EthereumSignature, HeimaMultiSignature, SolanaSignature,
 		SubstrateSignature,
 	},
-	utils::hex::{decode_hex, ToHexPrefixed},
+	utils::hex::{decode_hex, hex_encode},
 	OmniAccountAuthType,
 };
 use base58::{FromBase58, ToBase58};
@@ -30,7 +30,7 @@ pub enum UserId {
 	Email(String),
 	Twitter(String),
 	Discord(String),
-	Github(String),
+	Apple(String),
 	Substrate(String), // hex-encoded
 	Evm(String),       // hex-encoded
 	Bitcoin(String),   // hex-encoded
@@ -53,8 +53,8 @@ impl TryFrom<UserId> for Identity {
 			UserId::Discord(handle) => {
 				Ok(Identity::Discord(IdentityString::new(handle.as_bytes().to_vec())))
 			},
-			UserId::Github(handle) => {
-				Ok(Identity::Github(IdentityString::new(handle.as_bytes().to_vec())))
+			UserId::Apple(handle) => {
+				Ok(Identity::Apple(IdentityString::new(handle.as_bytes().to_vec())))
 			},
 			UserId::Substrate(hex_address) => {
 				let bytes = decode_hex(&hex_address).map_err(|_| "Invalid hex encoding")?;
@@ -101,7 +101,7 @@ pub enum OmniAuth {
 	Web3(String, Identity, HeimaMultiSignature), // (client_id, Signer, Signature)
 	Email(String, Email, VerificationCode),      // (client_id, Email, VerificationCode)
 	AuthToken(JwtToken),
-	OAuth2(Identity, OAuth2Data), // (Sender, OAuth2Data)
+	OAuth2(String, OAuth2Data), // (client_id, OAuth2Data)
 	Passkey(PasskeyData),
 }
 
@@ -116,12 +116,12 @@ impl TryFrom<Identity> for UserId {
 			Identity::Discord(handle) => {
 				Ok(UserId::Discord(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
-			Identity::Github(handle) => {
-				Ok(UserId::Github(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
+			Identity::Apple(handle) => {
+				Ok(UserId::Apple(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
-			Identity::Substrate(address) => Ok(UserId::Substrate(address.to_hex())),
-			Identity::Evm(address) => Ok(UserId::Evm(address.to_hex())),
-			Identity::Bitcoin(address) => Ok(UserId::Bitcoin(address.to_hex())),
+			Identity::Substrate(address) => Ok(UserId::Substrate(hex_encode(&address.encode()))),
+			Identity::Evm(address) => Ok(UserId::Evm(hex_encode(&address.encode()))),
+			Identity::Bitcoin(address) => Ok(UserId::Bitcoin(hex_encode(&address.encode()))),
 			Identity::Solana(address) => Ok(UserId::Solana(address.as_ref().to_base58())),
 			Identity::Email(handle) => {
 				Ok(UserId::Email(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
@@ -165,9 +165,16 @@ impl From<OmniAuth> for OmniAccountAuthType {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Encode, Decode, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OAuth2Provider {
 	Google,
+	Apple,
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OAuth2VerificationData {
+	pub state: String,
+	pub nonce: String,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -175,7 +182,9 @@ pub struct OAuth2Data {
 	pub provider: OAuth2Provider,
 	pub code: String,
 	pub state: String,
-	pub redirect_uri: String,
+	pub redirect_uri: Option<String>,
+	pub uid: String, // A unique identifier for the user/session requesting the OAuth2
+	pub id_token: String,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -254,11 +263,7 @@ pub fn to_omni_auth(
 			OmniAuth::Web3(client_id.to_string(), identity, signature.clone().into())
 		},
 		UserAuth::AuthToken(token) => OmniAuth::AuthToken(token.clone()),
-		UserAuth::OAuth2(data) => {
-			let identity =
-				Identity::try_from(user_id.clone()).map_err(|_| "Invalid user ID format")?;
-			OmniAuth::OAuth2(identity, data.clone())
-		},
+		UserAuth::OAuth2(data) => OmniAuth::OAuth2(client_id.to_string(), data.clone()),
 		UserAuth::Passkey(data) => OmniAuth::Passkey(data.clone()),
 	};
 

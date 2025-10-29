@@ -65,11 +65,6 @@ on:
         description: rebuild-identity
         required: true
         default: false
-      run-multi-worker-test:
-        type: boolean
-        description: run-multi-worker-test
-        required: true
-        default: false
       push-docker:
         type: boolean
         description: push-docker
@@ -205,7 +200,7 @@ jobs:
           cargo fmt -- --check
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20.x'
 
@@ -387,7 +382,7 @@ jobs:
           docker save litentry/heima:latest | gzip > heima.tar.gz
 
       - name: Upload parachain docker image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: heima
           path: heima.tar.gz
@@ -529,7 +524,7 @@ jobs:
         run: docker save litentry/identity-worker:latest litentry/identity-cli:latest | gzip > litentry-identity.tar.gz
 
       - name: Upload docker images
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: litentry-identity
           path: litentry-identity.tar.gz
@@ -589,7 +584,7 @@ jobs:
           docker save litentry/omni-executor:latest | gzip > litentry-omni.tar.gz
 
       - name: Upload docker image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: litentry-omni
           path: litentry-omni.tar.gz
@@ -671,7 +666,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: heima
 
@@ -680,7 +675,7 @@ jobs:
           docker load < heima.tar.gz
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20.x'
 
@@ -707,7 +702,7 @@ jobs:
           dest: docker-logs
 
       - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: ${{ matrix.chain }}-ts-tests-docker-logs
@@ -716,7 +711,7 @@ jobs:
           retention-days: 3
 
       - name: Archive logs if test fails
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: ${{ matrix.chain }}-ts-tests-artifact
@@ -780,7 +775,7 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  identity-single-worker-test:
+  identity-worker-test:
     runs-on: ubuntu-22.04
     needs:
       - set-condition
@@ -801,11 +796,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: heima
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: litentry-identity
 
@@ -816,7 +811,7 @@ jobs:
           docker images
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '20.x'
 
@@ -847,7 +842,7 @@ jobs:
 
       - name: Upload zombienet logs if test fails
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: ${{ matrix.test_name }}-zombienet-logs
@@ -868,105 +863,7 @@ jobs:
           dest: docker-logs
 
       - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
-
-  identity-multi-worker-test:
-    runs-on: ubuntu-22.04
-    continue-on-error: true
-    if: ${{ github.event.inputs.run-multi-worker-test == 'true' }} # only if triggered manually
-    needs:
-      - set-condition
-      - parachain-build
-      - identity-worker-build
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test_name: lit-dr-vc-multiworker-test
-          # disabled, as identity-worker isn't actively maintained
-          #
-          # - test_name: lit-di-identity-multiworker-test
-          # - test_name: lit-omni-account-multiworker-test
-          # - test_name: lit-native-request-vc-multiworker-test
-          # - test_name: lit-resume-worker
-    name: ${{ matrix.test_name }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/download-artifact@v5
-        with:
-          name: heima
-
-      - uses: actions/download-artifact@v5
-        with:
-          name: litentry-identity
-
-      - name: Load docker image
-        run: |
-          docker load < heima.tar.gz
-          docker load < litentry-identity.tar.gz
-          docker images
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '20.x'
-
-      - name: Use Latest Corepack
-        run: |
-          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
-          npm install -g corepack@latest
-          echo "After : corepack version => $(corepack --version)"
-          corepack enable && corepack enable pnpm
-          pnpm --version
-
-      - name: Launch parachain network
-        run: |
-          make launch-network-heima
-
-      - name: Integration multi worker test ${{ matrix.test_name }}
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        timeout-minutes: 40
-        run: |
-          docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
-
-      - name: Stop integration multi worker docker containers
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        run: |
-          docker compose -f multiworker-docker-compose.yml -f ${{ matrix.test_name }}.yml stop
-
-      - name: Upload zombienet logs if test fails
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-zombienet-logs
-          path: |
-            /tmp/parachain_dev
-            !/tmp/parachain_dev/polkadot*
-            !/tmp/parachain_dev/zombienet*
-            !/tmp/parachain_dev/heima-node
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: ${{ matrix.test_name }}-docker-logs
@@ -992,7 +889,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: litentry-omni
 
@@ -1021,7 +918,7 @@ jobs:
           dest: docker-logs
 
       - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: ${{ matrix.test_name }}-docker-logs
@@ -1034,7 +931,7 @@ jobs:
   #
   # Only try to push docker image when
   #   - parachain-ts-test passes
-  #   - identity-single-worker-test passes
+  #   - identity-worker-test passes
   #   - set-condition.outputs.push_docker is `true`
   # Whether the parachain or tee-worker image will actually be pushed still depends on if a new image was built/rebuilt.
   # This is important not to overwrite any other jobs where a rebuild **was** triggered.
@@ -1048,19 +945,19 @@ jobs:
     needs:
       - set-condition
       - parachain-ts-test
-      - identity-single-worker-test
+      - identity-worker-test
       - omni-executor-test
     if: ${{ !failure() && needs.set-condition.outputs.push_docker == 'true' }}
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: heima
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: litentry-identity
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: litentry-omni
 

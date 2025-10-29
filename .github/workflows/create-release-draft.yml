@@ -106,7 +106,7 @@ jobs:
           cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ matrix.chain }}-runtime.compact.compressed.wasm
 
       - name: Upload wasm artefacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.chain }}-runtime
           path: |
@@ -148,7 +148,7 @@ jobs:
           docker save litentry/heima:${{ env.RELEASE_TAG }} | gzip > heima.tar.gz
 
       - name: Upload the client binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: heima-node
           if-no-files-found: ignore
@@ -294,7 +294,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: heima-node
 
@@ -320,7 +320,7 @@ jobs:
           make test-ts-${{ matrix.chain }}
 
       - name: Archive logs if test fails
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: ${{ failure() }}
         with:
           name: ${{ matrix.chain }}-ts-tests-artifacts
@@ -364,7 +364,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download all artefacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
 
       - name: Dockerhub login
         uses: docker/login-action@v3

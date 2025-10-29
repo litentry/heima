@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+pub mod aes256_key_store;
 pub mod ecdsa_key_store;
 pub mod ed25519_key_store;
 pub mod event_handler;
@@ -26,3 +27,5 @@ pub mod shielding_key_store;
 pub mod sync_checkpoint_repository;
 pub mod types;
 pub mod wallet_metrics;
+
+pub use aes256_key_store::Aes256KeyStore;

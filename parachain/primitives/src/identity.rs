@@ -306,7 +306,7 @@ pub enum Identity {
 	Discord(IdentityString),
 
 	#[codec(index = 2)]
-	Github(IdentityString),
+	Apple(IdentityString),
 
 	#[codec(index = 3)]
 	Substrate(Address32),
@@ -343,7 +343,7 @@ impl Identity {
 			self,
 			Self::Twitter(..)
 				| Self::Discord(..)
-				| Self::Github(..)
+				| Self::Apple(..)
 				| Self::Email(..)
 				| Self::Google(..)
 				| Self::Pumpx(..)
@@ -379,7 +379,7 @@ impl Identity {
 			Identity::Solana(_) => all_solana_web3networks(),
 			Identity::Twitter(_)
 			| Identity::Discord(_)
-			| Identity::Github(_)
+			| Identity::Apple(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
@@ -398,7 +398,7 @@ impl Identity {
 			Identity::Solana(_) => !networks.is_empty() && networks.iter().all(|n| n.is_solana()),
 			Identity::Twitter(_)
 			| Identity::Discord(_)
-			| Identity::Github(_)
+			| Identity::Apple(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
@@ -422,7 +422,7 @@ impl Identity {
 			Identity::Bitcoin(_) | Identity::Solana(_) => Some(self.hash().to_fixed_bytes().into()),
 			Identity::Twitter(_)
 			| Identity::Discord(_)
-			| Identity::Github(_)
+			| Identity::Apple(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
@@ -465,11 +465,9 @@ impl Identity {
 					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
 				);
 			},
-			Identity::Github(handle) => {
-				hasher.update(b"github");
-				hasher.update(
-					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
-				);
+			Identity::Apple(handle) => {
+				hasher.update(b"apple");
+				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
 			},
 			Identity::Email(handle) => {
 				hasher.update(b"email");
@@ -534,8 +532,8 @@ impl Identity {
 						.try_into()
 						.map_err(|_| "Address32 conversion error")?;
 					return Ok(Identity::Solana(handle));
-				} else if v[0] == "github" {
-					return Ok(Identity::Github(IdentityString::new(v[1].as_bytes().to_vec())));
+				} else if v[0] == "apple" {
+					return Ok(Identity::Apple(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "discord" {
 					return Ok(Identity::Discord(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "twitter" {
@@ -576,10 +574,10 @@ impl Identity {
 					str::from_utf8(handle.inner_ref())
 						.map_err(|_| "discord handle conversion error")?
 				),
-				Identity::Github(handle) => format!(
-					"github:{}",
+				Identity::Apple(handle) => format!(
+					"apple:{}",
 					str::from_utf8(handle.inner_ref())
-						.map_err(|_| "github handle conversion error")?
+						.map_err(|_| "apple handle conversion error")?
 				),
 				Identity::Email(handle) => format!(
 					"email:{}",
@@ -618,8 +616,8 @@ impl Identity {
 			Web2IdentityType::Discord => {
 				Identity::Discord(IdentityString::new(handle.as_bytes().to_vec()))
 			},
-			Web2IdentityType::Github => {
-				Identity::Github(IdentityString::new(handle.as_bytes().to_vec()))
+			Web2IdentityType::Apple => {
+				Identity::Apple(IdentityString::new(handle.as_bytes().to_vec()))
 			},
 			Web2IdentityType::Email => {
 				Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
@@ -638,7 +636,7 @@ impl Identity {
 pub enum Web2IdentityType {
 	Twitter,
 	Discord,
-	Github,
+	Apple,
 	Email,
 	Google,
 	Pumpx,
@@ -713,7 +711,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => true,
 					Identity::Discord(..) => true,
-					Identity::Github(..) => true,
+					Identity::Apple(..) => true,
 					Identity::Email(..) => true,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => false,
@@ -735,7 +733,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => true,
 					Identity::Evm(..) => true,
@@ -757,7 +755,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => true,
 					Identity::Evm(..) => false,
@@ -779,7 +777,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => true,
@@ -801,7 +799,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => false,
@@ -823,7 +821,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => false,
@@ -928,14 +926,6 @@ mod tests {
 	fn test_twitter_did() {
 		let identity = Identity::Twitter(IdentityString::new("twitter_handle".as_bytes().to_vec()));
 		let did_str = "did:litentry:twitter:twitter_handle";
-		assert_eq!(identity.to_did().unwrap(), did_str);
-		assert_eq!(Identity::from_did(did_str).unwrap(), identity);
-	}
-
-	#[test]
-	fn test_github_did() {
-		let identity = Identity::Github(IdentityString::new("github_handle".as_bytes().to_vec()));
-		let did_str = "did:litentry:github:github_handle";
 		assert_eq!(identity.to_did().unwrap(), did_str);
 		assert_eq!(Identity::from_did(did_str).unwrap(), identity);
 	}

@@ -26,7 +26,6 @@ use clap::Parser;
 use cli::{Cli, Commands, ExportBundlerKeyArgs};
 use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
-use ethereum_intent_executor::EthereumIntentExecutor;
 use ethereum_rpc::client::EthereumRpcClient;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
 use executor_core::ed25519_key_store::Ed25519KeyStore;
@@ -36,18 +35,17 @@ use executor_core::wallet_metrics::Wallet;
 use executor_core::wallet_metrics::{
 	start_wallet_metrics, WalletBalanceFetcher, WalletId, WalletMetrics, WalletNetworkType,
 };
+use executor_core::Aes256KeyStore;
 use executor_crypto::{ecdsa, ed25519, PairTrait};
 use executor_storage::init_storage;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use native_task_handler::Aes256KeyStore;
 use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use pumpx::{PumpxApi, PumpxApiClient};
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use rust_decimal::Decimal;
 use solana::SolanaRpcClient;
-use solana_intent_executor::SolanaIntentExecutor;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::Path;
@@ -177,12 +175,6 @@ async fn main() -> Result<(), ()> {
 					config_loader.pumpx_signer_url.clone(),
 					pumpx_signer_pair,
 				)));
-
-			let ethereum_intent_executor = EthereumIntentExecutor::new(
-				&config_loader.ethereum_url,
-				&args.delegation_contract_address,
-			)?;
-			let solana_intent_executor = SolanaIntentExecutor::new(&config_loader.solana_url)?;
 
 			let mut rpc_endpoint_registry = RpcEndpointRegistry::new();
 			rpc_endpoint_registry.insert(Chain::Solana, config_loader.solana_url.to_string());
@@ -478,6 +470,10 @@ async fn main() -> Result<(), ()> {
 			let wildmeta_timestamp_storage =
 				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
 
+			// Create loan record storage
+			let loan_record_storage =
+				Arc::new(executor_storage::LoanRecordStorage::new(storage_db.clone()));
+
 			// Parse wildmeta backend ECDSA public key from hex
 			let wildmeta_backend_ecdsa_pubkey = {
 				use executor_primitives::utils::hex::decode_hex;
@@ -528,11 +524,10 @@ async fn main() -> Result<(), ()> {
 				binance_api,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
+				loan_record_storage,
 				wildmeta_backend_ecdsa_pubkey,
 				evm_accounting_ecdsa_signer_key,
 				bundler_key_export_authorized_pubkey,
-				Arc::new(ethereum_intent_executor),
-				Arc::new(solana_intent_executor),
 				Arc::new(cross_chain_intent_executor),
 				aes256_key,
 				entry_point_clients,

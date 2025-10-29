@@ -1,12 +1,11 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
+	error_code::{PARSE_ERROR_CODE, *},
 	methods::omni::PumpxRpcError,
 	server::RpcContext,
+	utils::omni::to_omni_account,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::utils::hex::FromHexPrefixed;
-use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
 use pumpx::pubkey_to_address;
 use serde::Deserialize;
@@ -40,13 +39,9 @@ pub struct GetSmartWalletRootSignerParams {
 }
 
 pub fn register_get_smart_wallet_root_signer<
-	EthereumIntentExecutor: IntentExecutor + Send + Sync + 'static,
-	SolanaIntentExecutor: IntentExecutor + Send + Sync + 'static,
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<EthereumIntentExecutor, SolanaIntentExecutor, CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {
@@ -60,21 +55,16 @@ pub fn register_get_smart_wallet_root_signer<
 
 			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 
-			let Ok(address) = Address32::from_hex(&params.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
-				));
-			};
+			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
+				PumpxRpcError::from(DetailedError::new(
+					PARSE_ERROR_CODE,
+					"Failed to parse omni account",
+				))
+			})?;
 
 			let pubkey = ctx
 				.signer_client
-				.request_wallet(
-					params.chain_type.into(),
-					params.wallet_index,
-					address.as_ref().to_owned(),
-				)
+				.request_wallet(params.chain_type.into(), params.wallet_index, omni_account.into())
 				.await
 				.map_err(|_| {
 					error!("Failed to request wallet from signer client");
@@ -100,7 +90,7 @@ pub fn register_get_smart_wallet_root_signer<
 				)
 			})?;
 
-			Ok::<String, _>(address)
+			Ok::<String, PumpxRpcError>(address)
 		})
 		.expect("Failed to register omni_addWallet method");
 }
