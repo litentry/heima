@@ -21,6 +21,16 @@ pub struct PumpxRpcError {
 pub struct PumpxRpcErrorData {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub backend_response: Option<PumpxRpcErrorBackendResponse>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub field: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub expected: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub received: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub reason: Option<String>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub suggestion: Option<String>,
 }
 
 #[derive(Serialize, Debug)]
@@ -50,6 +60,11 @@ impl PumpxRpcError {
 					code: api_response.code as i32,
 					message: api_response.message,
 				}),
+				field: None,
+				expected: None,
+				received: None,
+				reason: None,
+				suggestion: None,
 			}),
 		}
 	}
@@ -66,7 +81,14 @@ impl From<DetailedError> for PumpxRpcError {
 		Self {
 			code: error.code,
 			message: error.message,
-			data: Some(PumpxRpcErrorData { backend_response: None }),
+			data: Some(PumpxRpcErrorData {
+				backend_response: None,
+				field: error.details.field,
+				expected: error.details.expected,
+				received: error.details.received,
+				reason: error.details.reason,
+				suggestion: error.details.suggestion,
+			}),
 		}
 	}
 }
