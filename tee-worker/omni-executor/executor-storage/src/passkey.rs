@@ -128,7 +128,7 @@ impl PasskeyStorage {
 
 		let storage_prefix = twox_128(STORAGE_NAME.as_bytes());
 		let db = self.db();
-		let iter = db.prefix_iterator(&storage_prefix);
+		let iter = db.prefix_iterator(storage_prefix);
 
 		for item in iter {
 			match item {
