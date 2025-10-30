@@ -24,7 +24,6 @@ const STORAGE_NAME: &str = "passkey_challenge_storage";
 /// Passkey challenge record with expiration
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct PasskeyChallengeRecord {
-	pub challenge: String,
 	pub omni_account: AccountId,
 	pub created_at: u64,
 	pub expires_at: u64,
@@ -61,15 +60,12 @@ impl PasskeyChallengeStorage {
 			.as_secs();
 
 		let record = PasskeyChallengeRecord {
-			challenge: challenge.to_string(),
 			omni_account: omni_account.clone(),
 			created_at: current_time,
 			expires_at: current_time + timeout_seconds,
 		};
 
-		let challenge_key = challenge.as_bytes();
-		self.insert(&challenge_key, record)
-			.map_err(|_| PasskeyChallengeError::StorageError)
+		self.insert(&challenge, record).map_err(|_| PasskeyChallengeError::StorageError)
 	}
 
 	pub fn verify_and_consume_challenge(
@@ -77,10 +73,8 @@ impl PasskeyChallengeStorage {
 		challenge: &str,
 		omni_account: &AccountId,
 	) -> Result<(), PasskeyChallengeError> {
-		let challenge_key = challenge.as_bytes();
-
 		let record = self
-			.get(&challenge_key)
+			.get(&challenge)
 			.map_err(|_| PasskeyChallengeError::StorageError)?
 			.ok_or(PasskeyChallengeError::ChallengeNotFound)?;
 
@@ -94,11 +88,11 @@ impl PasskeyChallengeStorage {
 			.as_secs();
 
 		if current_time > record.expires_at {
-			self.remove(&challenge_key).map_err(|_| PasskeyChallengeError::StorageError)?;
+			self.remove(&challenge).map_err(|_| PasskeyChallengeError::StorageError)?;
 			return Err(PasskeyChallengeError::ChallengeExpired);
 		}
 
-		self.remove(&challenge_key).map_err(|_| PasskeyChallengeError::StorageError)?;
+		self.remove(&challenge).map_err(|_| PasskeyChallengeError::StorageError)?;
 		self.cleanup_expired24h_challenges()?;
 
 		Ok(())
@@ -192,9 +186,7 @@ impl PasskeyChallengeStorage {
 		challenge: &str,
 		omni_account: &AccountId,
 	) -> Result<bool, PasskeyChallengeError> {
-		let challenge_key = challenge.as_bytes();
-
-		let record = self.get(&challenge_key).map_err(|_| PasskeyChallengeError::StorageError)?;
+		let record = self.get(&challenge).map_err(|_| PasskeyChallengeError::StorageError)?;
 
 		match record {
 			Some(record) => {
@@ -216,7 +208,7 @@ impl PasskeyChallengeStorage {
 	}
 }
 
-impl Storage<&[u8], PasskeyChallengeRecord> for PasskeyChallengeStorage {
+impl Storage<&str, PasskeyChallengeRecord> for PasskeyChallengeStorage {
 	fn db(&self) -> Arc<StorageDB> {
 		self.db.clone()
 	}
