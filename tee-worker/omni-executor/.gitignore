@@ -14,3 +14,8 @@ omni-executor
 storage_db
 test_get_health_storage_db
 test_get_shielding_key_storage_db
+
+executor-storage/test_passkey_*/
+executor-storage/test_passkey_integration_*/
+executor-storage/test_passkey_challenge_storage_*/
+executor-storage/test_passkey_storage_*/
