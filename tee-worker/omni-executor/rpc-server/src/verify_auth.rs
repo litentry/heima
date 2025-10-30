@@ -5,7 +5,10 @@ use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
 	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
 };
-use executor_storage::{OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB, VerificationCodeStorage};
+use executor_storage::{
+	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
+	VerificationCodeStorage,
+};
 use heima_authentication::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,

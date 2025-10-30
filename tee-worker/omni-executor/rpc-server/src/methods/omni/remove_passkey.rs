@@ -24,12 +24,8 @@ pub struct RemovePasskeyResponse {
 	pub message: String,
 }
 
-pub fn register_remove_passkey<
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<CrossChainIntentExecutor>,
-	>,
+pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_removePasskey", |params, ctx, _| async move {

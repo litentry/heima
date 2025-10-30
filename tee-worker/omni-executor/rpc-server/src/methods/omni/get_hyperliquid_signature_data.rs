@@ -10,9 +10,7 @@ use chrono::Utc;
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
 use executor_primitives::{
-	to_omni_auth,
-	utils::hex::hex_encode,
-	ChainId, ClientAuth, Identity, UserAuth, UserId,
+	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
 use executor_storage::{
 	PasskeyChallengeError, PasskeyChallengeStorage, PasskeyError, PasskeyStorage,

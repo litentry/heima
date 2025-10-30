@@ -27,12 +27,8 @@ pub struct AttachPasskeyResponse {
 	pub message: String,
 }
 
-pub fn register_attach_passkey<
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	module: &mut RpcModule<
-		RpcContext<CrossChainIntentExecutor>,
-	>,
+pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_attachPasskey", |params, ctx, _| async move {

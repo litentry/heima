@@ -27,9 +27,7 @@ pub struct RequestPasskeyChallengeResponse {
 pub fn register_request_passkey_challenge<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
-	module: &mut RpcModule<
-		RpcContext<CrossChainIntentExecutor>,
-	>,
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
 ) {
 	module
 		.register_async_method("omni_requestPasskeyChallenge", |params, ctx, _| async move {
