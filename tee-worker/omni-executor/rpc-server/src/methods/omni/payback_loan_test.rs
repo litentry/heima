@@ -51,7 +51,7 @@ struct ExecutionContext<'a, CrossChainIntentExecutor: IntentExecutor + Send + Sy
 	storage_key: &'a executor_storage::loan_record::Key,
 }
 
-struct ClosePositionContext {
+struct CloseHedgeContext {
 	should_cancel: bool,
 	should_close: bool,
 	position_size_to_close: f64,
@@ -171,10 +171,10 @@ pub fn register_payback_loan_test<
 			let mut current_nonce = exec_ctx.skeleton_user_op.nonce;
 
 			match loan_record.state {
-				LoanState::PositionOpened => {
-					info!("Starting payback from PositionOpened state");
+				LoanState::HedgeOpened => {
+					info!("Starting payback from HedgeOpened state");
 
-					let close_ctx = precheck_close_position(
+					let close_ctx = precheck_close_hedge(
 						&ctx,
 						&hypercore_client,
 						smart_wallet,
@@ -197,13 +197,8 @@ pub fn register_payback_loan_test<
 					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
 
 					let (hedge_cancel_tx_hash, hedge_close_cloid_opt, hedge_close_tx_hash) =
-						do_close_position(
-							&exec_ctx,
-							hedge_open_cloid,
-							&close_ctx,
-							&mut current_nonce,
-						)
-						.await?;
+						do_close_hedge(&exec_ctx, hedge_open_cloid, &close_ctx, &mut current_nonce)
+							.await?;
 
 					let usd_transfer_tx_hash =
 						do_move_to_spot(&exec_ctx, &move_ctx, &mut current_nonce).await?;
@@ -222,8 +217,8 @@ pub fn register_payback_loan_test<
 						spot_buy_tx_hash,
 					})
 				},
-				LoanState::PositionClosed => {
-					info!("Resuming payback from PositionClosed state");
+				LoanState::HedgeClosed => {
+					info!("Resuming from HedgeClosed state");
 
 					let move_ctx = precheck_move_to_spot(
 						&hypercore_client,
@@ -254,7 +249,7 @@ pub fn register_payback_loan_test<
 					})
 				},
 				LoanState::ToSpotMoved => {
-					info!("Resuming payback from ToSpotMoved state");
+					info!("Resuming from ToSpotMoved state");
 
 					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
 
@@ -443,9 +438,7 @@ async fn verify_hedge_position(
 	))
 }
 
-async fn precheck_close_position<
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
+async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	_ctx: &RpcContext<CrossChainIntentExecutor>,
 	hypercore_client: &HyperCoreClient,
 	smart_wallet: &str,
@@ -453,16 +446,13 @@ async fn precheck_close_position<
 	hedge_open_cloid: u128,
 	min_expected_account_value_f64: f64,
 	loan_record: &executor_storage::loan_record::LoanRecord,
-) -> Result<ClosePositionContext, PumpxRpcError> {
-	// Validate loan state is PositionOpened
-	if loan_record.state != LoanState::PositionOpened {
-		error!(
-			"Invalid loan state for payback: expected PositionOpened, got {:?}",
-			loan_record.state
-		);
+) -> Result<CloseHedgeContext, PumpxRpcError> {
+	// Validate loan state is HedgeOpened
+	if loan_record.state != LoanState::HedgeOpened {
+		error!("Invalid loan state for payback: expected HedgeOpened, got {:?}", loan_record.state);
 		return Err(PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Invalid loan state").with_reason(format!(
-				"Loan must be in PositionOpened state for payback, current state: {:?}",
+				"Loan must be in HedgeOpened state for payback, current state: {:?}",
 				loan_record.state
 			)),
 		));
@@ -561,7 +551,7 @@ async fn precheck_close_position<
 	// If the order is not found (unknownOid), skip closing
 	if order_status.status == "unknownOid" {
 		info!("Order with cloid {} not found (unknownOid), skipping close", hedge_open_cloid);
-		return Ok(ClosePositionContext {
+		return Ok(CloseHedgeContext {
 			should_cancel: false,
 			should_close: false,
 			position_size_to_close: 0.0,
@@ -724,7 +714,7 @@ async fn precheck_close_position<
 
 	info!("✓ Close position precheck passed");
 
-	Ok(ClosePositionContext {
+	Ok(CloseHedgeContext {
 		should_cancel,
 		should_close,
 		position_size_to_close,
@@ -853,10 +843,10 @@ async fn precheck_buy_spot(
 	Ok(BuySpotContext { spot_asset_id, spot_sz_decimals, spot_mark_price, spot_mid_price })
 }
 
-async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	hedge_open_cloid: u128,
-	close_ctx: &ClosePositionContext,
+	close_ctx: &CloseHedgeContext,
 	current_nonce: &mut u128,
 ) -> Result<(Option<String>, Option<String>, Option<String>), PumpxRpcError> {
 	let mut hedge_cancel_tx_hash = None;
@@ -1016,12 +1006,12 @@ async fn do_close_position<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 			.await;
 	}
 
-	// Update state: PositionClosed (if cancel or close happened)
+	// Update state: HedgeClosed (if cancel or close happened)
 	if close_ctx.should_cancel || close_ctx.should_close {
 		let _ = exec_ctx
 			.ctx
 			.loan_record_storage
-			.update(exec_ctx.storage_key, |r| r.state = LoanState::PositionClosed);
+			.update(exec_ctx.storage_key, |r| r.state = LoanState::HedgeClosed);
 	}
 
 	Ok((hedge_cancel_tx_hash, hedge_close_cloid_opt, hedge_close_tx_hash))

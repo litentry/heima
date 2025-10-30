@@ -57,7 +57,7 @@ struct SellSpotContext {
 	spot_mid_price: f64,
 }
 
-struct OpenPositionContext {
+struct OpenHedgeContext {
 	perp_asset_id: u32,
 	perp_sz_decimals: u8,
 	perp_max_leverage: u32,
@@ -127,7 +127,7 @@ pub fn register_request_loan_test<
 					let usdc_for_perp =
 						sell_ctx.spot_mid_price * collateral_size * (1.0 - lending_ratio_f64);
 
-					let open_ctx = precheck_open_position(
+					let open_ctx = precheck_open_hedge(
 						&hypercore_client,
 						&collateral_ticker,
 						usdc_for_perp,
@@ -135,7 +135,7 @@ pub fn register_request_loan_test<
 					)
 					.await?;
 
-					let (usdc_sold, spot_cloid, hedge_cloid) = do_sell_spot(
+					let (usdc_sold, spot_sell_cloid, spot_sell_tx_hash) = do_sell_spot(
 						&exec_ctx,
 						&collateral_ticker,
 						collateral_size,
@@ -150,23 +150,22 @@ pub fn register_request_loan_test<
 
 					do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce).await?;
 
-					do_open_position(
+					let (hedge_open_cloid, hedge_open_tx_hash) = do_open_hedge(
 						&exec_ctx,
 						&collateral_ticker,
 						usdc_for_perp,
 						lending_ratio_f64,
-						hedge_cloid,
 						&open_ctx,
 						current_nonce,
 					)
 					.await?;
 
 					Ok(RequestLoanTestResponse {
-						spot_sell_cloid: spot_cloid.to_string(),
-						hedge_open_cloid: hedge_cloid.to_string(),
+						spot_sell_cloid: spot_sell_cloid.to_string(),
+						hedge_open_cloid: hedge_open_cloid.to_string(),
 						usdc_received: format!("{:.2}", usdc_loaned),
-						spot_sell_tx_hash: None,
-						hedge_open_tx_hash: None,
+						spot_sell_tx_hash,
+						hedge_open_tx_hash,
 					})
 				},
 				Some(existing) => {
@@ -186,7 +185,7 @@ pub fn register_request_loan_test<
 					}
 
 					match existing.state {
-						LoanState::PositionOpened => {
+						LoanState::HedgeOpened => {
 							info!("Loan already completed");
 							Ok(RequestLoanTestResponse {
 								spot_sell_cloid: existing.spot_sell_cloid,
@@ -210,7 +209,7 @@ pub fn register_request_loan_test<
 									)
 								})?;
 
-							let open_ctx = precheck_open_position(
+							let open_ctx = precheck_open_hedge(
 								&hypercore_client,
 								&collateral_ticker,
 								usdc_for_perp,
@@ -218,25 +217,13 @@ pub fn register_request_loan_test<
 							)
 							.await?;
 
-							let hedge_cloid =
-								existing.hedge_open_cloid.parse::<u128>().map_err(|e| {
-									PumpxRpcError::from(
-										DetailedError::new(
-											INTERNAL_ERROR_CODE,
-											"Invalid stored data",
-										)
-										.with_reason(format!("Invalid hedge_open_cloid: {}", e)),
-									)
-								})?;
-
 							do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce).await?;
 
-							do_open_position(
+							let (hedge_open_cloid, hedge_open_tx_hash) = do_open_hedge(
 								&exec_ctx,
 								&collateral_ticker,
 								usdc_for_perp,
 								lending_ratio_f64,
-								hedge_cloid,
 								&open_ctx,
 								current_nonce,
 							)
@@ -244,10 +231,10 @@ pub fn register_request_loan_test<
 
 							Ok(RequestLoanTestResponse {
 								spot_sell_cloid: existing.spot_sell_cloid,
-								hedge_open_cloid: existing.hedge_open_cloid,
+								hedge_open_cloid: hedge_open_cloid.to_string(),
 								usdc_received: existing.usdc_loaned,
 								spot_sell_tx_hash: None,
-								hedge_open_tx_hash: None,
+								hedge_open_tx_hash,
 							})
 						},
 						LoanState::ToPerpMoved => {
@@ -264,7 +251,7 @@ pub fn register_request_loan_test<
 									)
 								})?;
 
-							let open_ctx = precheck_open_position(
+							let open_ctx = precheck_open_hedge(
 								&hypercore_client,
 								&collateral_ticker,
 								usdc_for_perp,
@@ -272,23 +259,11 @@ pub fn register_request_loan_test<
 							)
 							.await?;
 
-							let hedge_cloid =
-								existing.hedge_open_cloid.parse::<u128>().map_err(|e| {
-									PumpxRpcError::from(
-										DetailedError::new(
-											INTERNAL_ERROR_CODE,
-											"Invalid stored data",
-										)
-										.with_reason(format!("Invalid hedge_open_cloid: {}", e)),
-									)
-								})?;
-
-							do_open_position(
+							let (hedge_open_cloid, hedge_open_tx_hash) = do_open_hedge(
 								&exec_ctx,
 								&collateral_ticker,
 								usdc_for_perp,
 								lending_ratio_f64,
-								hedge_cloid,
 								&open_ctx,
 								current_nonce,
 							)
@@ -296,10 +271,10 @@ pub fn register_request_loan_test<
 
 							Ok(RequestLoanTestResponse {
 								spot_sell_cloid: existing.spot_sell_cloid,
-								hedge_open_cloid: existing.hedge_open_cloid,
+								hedge_open_cloid: hedge_open_cloid.to_string(),
 								usdc_received: existing.usdc_loaned,
 								spot_sell_tx_hash: None,
-								hedge_open_tx_hash: None,
+								hedge_open_tx_hash,
 							})
 						},
 						_ => Err(PumpxRpcError::from(
@@ -439,12 +414,12 @@ async fn precheck_sell_spot(
 	Ok(SellSpotContext { spot_asset_id, spot_sz_decimals, spot_mark_price, spot_mid_price })
 }
 
-async fn precheck_open_position(
+async fn precheck_open_hedge(
 	hypercore_client: &HyperCoreClient,
 	collateral_ticker: &str,
 	usdc_for_perp: f64,
 	lending_ratio_f64: f64,
-) -> Result<OpenPositionContext, PumpxRpcError> {
+) -> Result<OpenHedgeContext, PumpxRpcError> {
 	let (perp_meta, perp_mark_price, perp_mid_price) =
 		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
 			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
@@ -505,9 +480,9 @@ async fn precheck_open_position(
 		))
 	})?;
 
-	info!("✓ Open position precheck passed");
+	info!("✓ Open hedge precheck passed");
 
-	Ok(OpenPositionContext { perp_asset_id, perp_sz_decimals, perp_max_leverage })
+	Ok(OpenHedgeContext { perp_asset_id, perp_sz_decimals, perp_max_leverage })
 }
 
 async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
@@ -517,7 +492,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	lending_ratio_f64: f64,
 	sell_ctx: &SellSpotContext,
 	current_nonce: &mut u128,
-) -> Result<(f64, u128, u128), PumpxRpcError> {
+) -> Result<(f64, u128, Option<String>), PumpxRpcError> {
 	info!("Action: Selling {} {} in spot market", collateral_size, collateral_ticker);
 
 	let clamped_size = clamp_size(collateral_size, sell_ctx.spot_sz_decimals);
@@ -539,7 +514,6 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	})?;
 
 	let spot_sell_cloid = generate_cloid();
-	let hedge_open_cloid = spot_sell_cloid + 1;
 
 	let spot_sell_action = build_spot_sell_order(
 		sell_ctx.spot_asset_id,
@@ -634,7 +608,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 				usdc_loaned: format!("{:.2}", usdc_loaned),
 				usdc_for_perp: format!("{:.2}", usdc_for_perp),
 				spot_sell_cloid: spot_sell_cloid.to_string(),
-				hedge_open_cloid: hedge_open_cloid.to_string(),
+				hedge_open_cloid: "0".to_string(),
 			},
 		)
 		.map_err(|e| {
@@ -650,7 +624,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		.print_account_state(exec_ctx.smart_wallet, "After Spot Sell")
 		.await;
 
-	Ok((usdc_sold, spot_sell_cloid, hedge_open_cloid))
+	Ok((usdc_sold, spot_sell_cloid, spot_sell_tx_hash))
 }
 
 async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
@@ -733,19 +707,19 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	Ok(())
 }
 
-async fn do_open_position<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+async fn do_open_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	collateral_ticker: &str,
 	usdc_for_perp: f64,
 	lending_ratio_f64: f64,
-	hedge_open_cloid: u128,
-	open_ctx: &OpenPositionContext,
+	open_ctx: &OpenHedgeContext,
 	current_nonce: u128,
-) -> Result<(), PumpxRpcError> {
+) -> Result<(u128, Option<String>), PumpxRpcError> {
 	let desired_leverage = 1.0 / (1.0 - lending_ratio_f64);
 	let effective_leverage = desired_leverage.min(open_ctx.perp_max_leverage as f64);
 
 	info!("Action: Opening hedge position for {}", collateral_ticker);
+	let hedge_open_cloid = generate_cloid();
 
 	// Refresh prices
 	let (_, perp_mark_price, perp_mid_price) = exec_ctx
@@ -832,16 +806,17 @@ async fn do_open_position<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		));
 	}
 
-	// Update loan record with position size and state: PositionOpened
+	// Update loan record with position size and state: HedgeOpened
 	let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
 		r.position_size = format!("{}", clamped_hedge_size_f64);
-		r.state = LoanState::PositionOpened;
+		r.state = LoanState::HedgeOpened;
+		r.hedge_open_cloid = hedge_open_cloid.to_string();
 	});
 
 	exec_ctx
 		.hypercore_client
-		.print_account_state(exec_ctx.smart_wallet, "After Open Position")
+		.print_account_state(exec_ctx.smart_wallet, "After Open Hedge")
 		.await;
 
-	Ok(())
+	Ok((hedge_open_cloid, hedge_open_tx_hash))
 }

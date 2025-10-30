@@ -17,8 +17,8 @@ pub struct Key {
 pub enum LoanState {
 	SpotSold,
 	ToPerpMoved,
-	PositionOpened,
-	PositionClosed,
+	HedgeOpened,
+	HedgeClosed,
 	ToSpotMoved,
 	SpotBought,
 }

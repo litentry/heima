@@ -24,11 +24,11 @@ pub struct ClosePositionTestParams {
 
 #[derive(Serialize, Clone)]
 pub struct ClosePositionTestResponse {
-	pub positions_closed: Vec<PositionClosed>,
+	pub positions_closed: Vec<HedgeClosed>,
 }
 
 #[derive(Serialize, Clone)]
-pub struct PositionClosed {
+pub struct HedgeClosed {
 	pub ticker: String,
 	pub cloid: String,
 	pub size: String,
@@ -233,7 +233,7 @@ pub fn register_close_position_test<
 
 				info!("Position closed successfully for {}", ticker);
 
-				positions_closed.push(PositionClosed {
+				positions_closed.push(HedgeClosed {
 					ticker: ticker.to_string(),
 					cloid: close_cloid.to_string(),
 					size: clamped_close_size.to_string(),
