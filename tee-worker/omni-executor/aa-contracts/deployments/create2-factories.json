@@ -1,0 +1,133 @@
+{
+  "$schema": "./create2-factories.schema.json",
+  "description": "Registry of Create2Factory contract addresses across different networks",
+  "version": "1.0.0",
+  "factories": {
+    "ethereum": {
+      "chainId": 1,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "ethereum-sepolia": {
+      "chainId": 11155111,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "arbitrum": {
+      "chainId": 42161,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "arbitrum-sepolia": {
+      "chainId": 421614,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "optimism": {
+      "chainId": 10,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "optimism-sepolia": {
+      "chainId": 11155420,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "base": {
+      "chainId": 8453,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "base-sepolia": {
+      "chainId": 84532,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "polygon": {
+      "chainId": 137,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "polygon-amoy": {
+      "chainId": 80002,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "bsc": {
+      "chainId": 56,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "bsc-testnet": {
+      "chainId": 97,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "avalanche": {
+      "chainId": 43114,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "avalanche-fuji": {
+      "chainId": 43113,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "hyperevm-mainnet": {
+      "chainId": 999,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "hyperevm-testnet": {
+      "chainId": 998,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false
+    },
+    "localhost": {
+      "chainId": 31337,
+      "address": null,
+      "deployer": null,
+      "blockNumber": null,
+      "deployed": false,
+      "note": "Local Anvil testnet - addresses will change between restarts"
+    }
+  },
+  "notes": [
+    "This file tracks Create2Factory deployments across all networks",
+    "Update this file after deploying the factory to a new network",
+    "Factory addresses are used by DeployWithCreate2.s.sol script",
+    "For deterministic deployments, use the same deployer EOA on all chains"
+  ]
+}
