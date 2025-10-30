@@ -221,26 +221,25 @@ pub fn register_get_hyperliquid_signature_data<
 					error!("Client data verification failed during passkey attachment: {:?}", e);
 					match e {
 						executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed => {
-							DetailedError::new(-32011, "Challenge verification failed")
-								.with_field("attach_passkey.client_data_json")
-								.with_reason("Challenge mismatch or not found")
-								.with_suggestion("Request a new challenge via omni_requestPasskeyChallenge and try again")
+							DetailedError::passkey_invalid_challenge(
+								"Challenge mismatch, expired, or not found",
+							)
+							.with_field("attach_passkey.client_data_json")
 						},
 						executor_crypto::passkey::PasskeyError::OriginVerificationFailed => {
-							DetailedError::new(-32012, "Origin verification failed")
+							DetailedError::passkey_origin_verification_failed(expected_origin)
 								.with_field("attach_passkey.client_data_json")
-								.with_reason("Origin does not match expected value")
-								.with_suggestion("Ensure the WebAuthn ceremony is initiated from the correct origin")
 						},
-						executor_crypto::passkey::PasskeyError::AttestationParseError(_) => {
-							DetailedError::new(-32013, "Client data parse error")
+						executor_crypto::passkey::PasskeyError::AttestationParseError(err) => {
+							DetailedError::passkey_client_data_parse_error(&err)
 								.with_field("attach_passkey.client_data_json")
-								.with_reason("Failed to parse client data JSON")
-								.with_suggestion("Ensure the client data is base64url encoded JSON")
 						},
-						_ => DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Client data verification failed")
-							.with_field("attach_passkey.client_data_json")
-							.with_reason(format!("Verification error: {:?}", e))
+						_ => DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Client data verification failed",
+						)
+						.with_field("attach_passkey.client_data_json")
+						.with_reason(format!("Verification error: {:?}", e)),
 					}
 					.to_error_object()
 				})?;
@@ -252,15 +251,16 @@ pub fn register_get_hyperliquid_signature_data<
 				.map_err(|e| {
 					error!("WebAuthn attestation verification failed during passkey attachment: {:?}", e);
 					match e {
-						executor_crypto::passkey::PasskeyError::AttestationParseError(_) => {
-							DetailedError::new(-32013, "Attestation parse error")
+						executor_crypto::passkey::PasskeyError::AttestationParseError(err) => {
+							DetailedError::passkey_attestation_parse_error(&err)
 								.with_field("attach_passkey.attestation_object")
-								.with_reason("Failed to parse attestation object")
-								.with_suggestion("Ensure the attestation object is base64url encoded CBOR")
 						},
-						_ => DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Attestation verification failed")
-							.with_field("attach_passkey.attestation_object")
-							.with_reason(format!("Verification error: {:?}", e))
+						_ => DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Attestation verification failed",
+						)
+						.with_field("attach_passkey.attestation_object")
+						.with_reason(format!("Verification error: {:?}", e)),
 					}
 					.to_error_object()
 				})?;
@@ -281,18 +281,16 @@ pub fn register_get_hyperliquid_signature_data<
 						error!("Failed to attach passkey to omni_account {}: {:?}", hex_encode(omni_account.as_ref()), e);
 						let detailed_error = match e {
 							PasskeyError::DuplicatePasskey => {
-								DetailedError::new(-32001, "Passkey already exists for this account")
+								DetailedError::passkey_already_exists(&credential_id)
 									.with_field("attach_passkey")
-									.with_reason(format!("A passkey with credential_id '{}' is already registered to this account", credential_id))
-									.with_suggestion("This credential is already attached. Use a different credential or remove the existing one first with omni_removePasskey")
 							},
 							PasskeyError::StorageError => {
-								DetailedError::new(INTERNAL_ERROR_CODE, "Failed to store passkey")
-									.with_reason("Database storage operation failed")
-									.with_suggestion("Please try again later or contact support if the issue persists")
+								DetailedError::storage_error("passkey attachment")
+									.with_field("attach_passkey")
 							},
 							_ => {
 								DetailedError::new(INTERNAL_ERROR_CODE, "Failed to attach passkey")
+									.with_field("attach_passkey")
 									.with_reason(format!("Storage error: {:?}", e))
 									.with_suggestion("Please try again later")
 							}

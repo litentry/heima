@@ -4,11 +4,12 @@ use crate::error_code::{
 	INVALID_HEX_FORMAT_CODE, INVALID_USER_OPERATION_CODE, INVALID_WALLET_INDEX_CODE,
 	PASSKEY_ALREADY_EXISTS_CODE, PASSKEY_ATTESTATION_PARSE_ERROR_CODE,
 	PASSKEY_CHALLENGE_EXPIRED_CODE, PASSKEY_CHALLENGE_NOT_FOUND_CODE,
-	PASSKEY_COUNTER_VALIDATION_FAILED_CODE, PASSKEY_INVALID_CHALLENGE_CODE, PASSKEY_NOT_FOUND_CODE,
-	PASSKEY_PARSE_ERROR_CODE, PASSKEY_REPLAY_ATTACK_CODE, PASSKEY_RP_ID_MISMATCH_CODE,
-	PASSKEY_SIGNATURE_INVALID_CODE, PASSKEY_USER_VERIFICATION_FAILED_CODE,
-	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
-	UNEXPECTED_RESPONSE_TYPE_CODE,
+	PASSKEY_CLIENT_DATA_PARSE_ERROR_CODE, PASSKEY_COUNTER_VALIDATION_FAILED_CODE,
+	PASSKEY_INVALID_CHALLENGE_CODE, PASSKEY_NOT_FOUND_CODE,
+	PASSKEY_ORIGIN_VERIFICATION_FAILED_CODE, PASSKEY_PARSE_ERROR_CODE, PASSKEY_REPLAY_ATTACK_CODE,
+	PASSKEY_RP_ID_MISMATCH_CODE, PASSKEY_SIGNATURE_INVALID_CODE,
+	PASSKEY_USER_VERIFICATION_FAILED_CODE, SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+	SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE, UNEXPECTED_RESPONSE_TYPE_CODE,
 };
 use jsonrpsee::types::ErrorObject;
 use serde::{Deserialize, Serialize};
@@ -283,5 +284,20 @@ impl DetailedError {
 			.with_received(credential_id)
 			.with_reason("A passkey with this credential ID already exists for this account")
 			.with_suggestion("Use the existing passkey or remove it before registering a new one")
+	}
+
+	pub fn passkey_origin_verification_failed(expected_origin: &str) -> Self {
+		Self::new(PASSKEY_ORIGIN_VERIFICATION_FAILED_CODE, "Origin verification failed")
+			.with_field("client_data_json")
+			.with_expected(format!("Origin: {}", expected_origin))
+			.with_reason("Origin in client data does not match expected value")
+			.with_suggestion("Ensure the WebAuthn ceremony is initiated from the correct origin")
+	}
+
+	pub fn passkey_client_data_parse_error(error: &str) -> Self {
+		Self::new(PASSKEY_CLIENT_DATA_PARSE_ERROR_CODE, "Failed to parse client data JSON")
+			.with_field("client_data_json")
+			.with_reason(error)
+			.with_suggestion("Ensure the client data is properly base64url-encoded JSON")
 	}
 }

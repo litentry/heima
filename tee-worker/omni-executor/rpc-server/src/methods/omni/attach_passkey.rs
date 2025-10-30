@@ -1,5 +1,6 @@
 use crate::{
-	error_code::*, server::RpcContext, verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
+	detailed_error::DetailedError, error_code::*, server::RpcContext, verify_auth::verify_auth,
+	Deserialize, ErrorCode, Serialize,
 };
 
 use executor_core::intent_executor::IntentExecutor;
@@ -71,16 +72,19 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 						.map_err(|e| {
 							match e {
 								PasskeyChallengeError::ChallengeNotFound => {
-									error!("Challenge not found");
+									error!("Challenge not found for passkey attachment");
 								},
 								PasskeyChallengeError::ChallengeExpired => {
-									error!("Challenge expired");
+									error!("Challenge expired for passkey attachment");
 								},
 								PasskeyChallengeError::InvalidChallenge => {
-									error!("Invalid challenge");
+									error!("Invalid challenge for passkey attachment");
 								},
 								_ => {
-									error!("Challenge verification failed: {:?}", e);
+									error!(
+										"Challenge verification failed during passkey attachment: {:?}",
+										e
+									);
 								},
 							}
 							executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed
@@ -88,45 +92,71 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 				},
 			)
 			.map_err(|e| {
-				error!("Client data verification failed: {:?}", e);
+				error!("Client data verification failed during passkey attachment: {:?}", e);
 				match e {
 					executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed => {
-						ErrorCode::ServerError(-32011) // Challenge mismatch
+						DetailedError::passkey_invalid_challenge(
+							"Challenge mismatch, expired, or not found",
+						)
 					},
 					executor_crypto::passkey::PasskeyError::OriginVerificationFailed => {
-						ErrorCode::ServerError(-32012) // Origin mismatch
+						DetailedError::passkey_origin_verification_failed(expected_origin)
 					},
-					executor_crypto::passkey::PasskeyError::AttestationParseError(_) => {
-						ErrorCode::ServerError(-32013) // Attestation parse error
+					executor_crypto::passkey::PasskeyError::AttestationParseError(err) => {
+						DetailedError::passkey_client_data_parse_error(&err)
 					},
-					_ => ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE),
+					_ => DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Client data verification failed",
+					)
+					.with_field("client_data_json")
+					.with_reason(format!("Verification error: {:?}", e)),
 				}
+				.to_error_object()
 			})?;
 
 			let AttestationResult { credential_id, public_key } =
 				PasskeyVerifier::verify_attestation(&params.attestation_object).map_err(|e| {
-					error!("WebAuthn attestation verification failed: {:?}", e);
+					error!(
+						"WebAuthn attestation verification failed during passkey attachment: {:?}",
+						e
+					);
 					match e {
-						executor_crypto::passkey::PasskeyError::AttestationParseError(_) => {
-							ErrorCode::ServerError(-32013) // Attestation parse error
+						executor_crypto::passkey::PasskeyError::AttestationParseError(err) => {
+							DetailedError::passkey_attestation_parse_error(&err)
 						},
-						_ => ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE),
+						_ => DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Attestation verification failed",
+						)
+						.with_field("attestation_object")
+						.with_reason(format!("Verification error: {:?}", e)),
 					}
+					.to_error_object()
 				})?;
 
 			let public_key_sec1_bytes = public_key.verifying_key.to_sec1_bytes();
 			let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 			passkey_storage
 				.add_passkey(&omni_account, &credential_id, &public_key_sec1_bytes)
-				.map_err(|e| match e {
-					PasskeyError::DuplicatePasskey => {
-						error!("Duplicate passkey (same omni_account + credential_id)");
-						ErrorCode::ServerError(-32001)
-					},
-					_ => {
-						error!("Failed to store passkey: {:?}", e);
-						ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-					},
+				.map_err(|e| {
+					error!(
+						"Failed to attach passkey to omni_account {}: {:?}",
+						hex_encode(omni_account.as_ref()),
+						e
+					);
+					match e {
+						PasskeyError::DuplicatePasskey => {
+							DetailedError::passkey_already_exists(&credential_id)
+						},
+						PasskeyError::StorageError => {
+							DetailedError::storage_error("passkey attachment")
+						},
+						_ => DetailedError::new(INTERNAL_ERROR_CODE, "Failed to attach passkey")
+							.with_reason(format!("Storage error: {:?}", e))
+							.with_suggestion("Please try again later"),
+					}
+					.to_error_object()
 				})?;
 
 			Ok::<AttachPasskeyResponse, ErrorObject>(AttachPasskeyResponse {
