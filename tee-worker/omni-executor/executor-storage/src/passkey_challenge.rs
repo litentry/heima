@@ -39,6 +39,7 @@ pub enum PasskeyChallengeError {
 }
 
 /// PassKey challenge storage with expiration management
+#[derive(Clone)]
 pub struct PasskeyChallengeStorage {
 	db: Arc<StorageDB>,
 }
@@ -93,7 +94,17 @@ impl PasskeyChallengeStorage {
 		}
 
 		self.remove(&challenge).map_err(|_| PasskeyChallengeError::StorageError)?;
-		self.cleanup_expired24h_challenges()?;
+
+		let cleanup_storage = self.clone();
+
+		let _ = std::thread::spawn(move || {
+			if let Err(e) = cleanup_storage.cleanup_expired24h_challenges() {
+				tracing::error!(
+					"Failed to cleanup expired passkey challenges after verification: {:?}",
+					e
+				);
+			}
+		});
 
 		Ok(())
 	}
