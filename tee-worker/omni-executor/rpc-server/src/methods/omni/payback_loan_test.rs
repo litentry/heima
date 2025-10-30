@@ -268,17 +268,11 @@ pub fn register_payback_loan_test<
 					})
 				},
 				LoanState::SpotBought => {
-					info!("Payback already completed");
-					Ok(PaybackLoanTestResponse {
-						collateral_ticker,
-						collateral_size: collateral_size.to_string(),
-						hedge_cancel_tx_hash: None,
-						hedge_close_cloid: None,
-						hedge_close_tx_hash: None,
-						usd_transfer_tx_hash: None,
-						spot_buy_cloid: None,
-						spot_buy_tx_hash: None,
-					})
+					error!("Payback already completed");
+					Err(PumpxRpcError::from(DetailedError::new(
+						INTERNAL_ERROR_CODE,
+						"Payback already completed",
+					)))
 				},
 				_ => Err(PumpxRpcError::from(
 					DetailedError::new(INTERNAL_ERROR_CODE, "Invalid loan state").with_reason(
