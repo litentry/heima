@@ -13,7 +13,7 @@ mod intent_id;
 pub use intent_id::IntentIdStorage;
 mod asset_lock;
 mod passkey;
-pub use passkey::{PasskeyError, PasskeyRecord, PasskeyStorage};
+pub use passkey::{PasskeyError, PasskeyRecord, PasskeyStorage, PasskeyStorageKey};
 mod passkey_challenge;
 pub use passkey_challenge::{
 	PasskeyChallengeError, PasskeyChallengeRecord, PasskeyChallengeStorage,
