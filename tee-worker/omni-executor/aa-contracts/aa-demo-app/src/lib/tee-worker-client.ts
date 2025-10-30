@@ -361,15 +361,29 @@ export async function requestLoanTest(
     }
 }
 
+// Loan state enum matching Rust implementation
+export enum LoanState {
+    SpotSold = "SpotSold",
+    ToPerpMoved = "ToPerpMoved",
+    HedgeOpened = "HedgeOpened",
+    HedgeClosed = "HedgeClosed",
+    ToSpotMoved = "ToSpotMoved",
+    SpotBought = "SpotBought"
+}
+
 // Interfaces for loan query
 export interface LoanRecord {
     collateral_ticker: string;
     collateral_size: string;
     usdc_sold: string;
     usdc_loaned: string;
-    spot_sell_cloid: string;
-    hedge_open_cloid: string;
+    usdc_for_perp: string;
+    // Transaction hashes as tuples: [name, hash]
+    txs: [string, string][];
+    // Client order IDs as tuples: [name, cloid]
+    cloids: [string, string][];
     position_size: string;
+    state: LoanState;
 }
 
 interface QueryLoanTestParams {

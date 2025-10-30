@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { AlertCircle, RefreshCw, FileText, ArrowLeftRight, CheckCircle, Loader2, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { AlertCircle, RefreshCw, FileText, ArrowLeftRight, CheckCircle, Loader2, X, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { useChainId, usePublicClient, useAccount } from "wagmi";
-import { queryLoanTest, paybackLoanTest, getTEEWorkerAddress, type LoanRecord } from "@/lib/tee-worker-client";
-import { CONTRACTS, DEFAULT_CLIENT_ID, OwnerType } from "@/lib/constants";
+import { queryLoanTest, paybackLoanTest, getTEEWorkerAddress, type LoanRecord, LoanState } from "@/lib/tee-worker-client";
+import { CONTRACTS, DEFAULT_CLIENT_ID, OwnerType, HYPERLIQUID_CORE_CONFIG } from "@/lib/constants";
 import { createUserOperation, packUserOperation, toSerializablePackedUserOperation, generateInitCode, stringToBytes, calculateOmniAccount } from "@/lib/aa-utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -25,6 +25,7 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [accountExists, setAccountExists] = useState<boolean>(false);
+    const [expandedLoans, setExpandedLoans] = useState<Set<string>>(new Set());
 
     // Payback modal state
     const [showPaybackModal, setShowPaybackModal] = useState(false);
@@ -224,6 +225,94 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
         }
     };
 
+    // Helper to toggle loan expansion
+    const toggleLoanExpansion = (nonce: string) => {
+        setExpandedLoans(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(nonce)) {
+                newSet.delete(nonce);
+            } else {
+                newSet.add(nonce);
+            }
+            return newSet;
+        });
+    };
+
+    // Helper to get cloid by name from the cloids array
+    const getCloid = (loan: LoanRecordWithNonce, name: string): string => {
+        const cloid = loan.cloids.find(([n, _]) => n === name);
+        return cloid ? cloid[1] : "N/A";
+    };
+
+    // Helper to get transaction by name from the txs array
+    const getTx = (loan: LoanRecordWithNonce, name: string): string | null => {
+        const tx = loan.txs.find(([n, _]) => n === name);
+        return tx ? tx[1] : null;
+    };
+
+    // Helper to format transaction hash for display (shortened)
+    const formatTxHash = (hash: string): string => {
+        if (hash.length <= 16) return hash;
+        return `${hash.slice(0, 8)}...${hash.slice(-8)}`;
+    };
+
+    // Helper to get explorer URL for transaction
+    const getExplorerUrl = (txHash: string): string => {
+        return `${HYPERLIQUID_CORE_CONFIG.explorerUrl}/tx/${txHash}`;
+    };
+
+    // Helper to map transaction codes to human-readable names
+    const getTransactionDisplayName = (txName: string): string => {
+        const nameMap: Record<string, string> = {
+            'spot_sell': 'Spot Sell',
+            'spot_buy': 'Spot Buy',
+            'hedge_open': 'Hedge Open',
+            'hedge_close': 'Hedge Close',
+            'hedge_cancel': 'Hedge Cancel',
+            'usd_transfer': 'USD Transfer to Perp',
+            'to_perp_move': 'Move to Perp',
+            'to_spot_move': 'Move to Spot',
+        };
+        return nameMap[txName] || txName.split('_').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+    };
+
+    // Helper to check if loan can be paid back (not in final states)
+    const canPayback = (state: LoanState): boolean => {
+        const finalStates = [
+            LoanState.HedgeClosed,
+            LoanState.ToSpotMoved,
+            LoanState.SpotBought,
+        ];
+        return !finalStates.includes(state);
+    };
+
+    // Helper to format loan state
+    const formatState = (state: LoanState): string => {
+        return state.replace(/([A-Z])/g, ' $1').trim();
+    };
+
+    // Helper to get state badge color
+    const getStateBadgeColor = (state: LoanState): string => {
+        switch (state) {
+            case LoanState.SpotSold:
+                return "bg-yellow-100 text-yellow-800";
+            case LoanState.ToPerpMoved:
+                return "bg-blue-100 text-blue-800";
+            case LoanState.HedgeOpened:
+                return "bg-green-100 text-green-800";
+            case LoanState.HedgeClosed:
+                return "bg-orange-100 text-orange-800";
+            case LoanState.ToSpotMoved:
+                return "bg-purple-100 text-purple-800";
+            case LoanState.SpotBought:
+                return "bg-gray-100 text-gray-800";
+            default:
+                return "bg-gray-100 text-gray-800";
+        }
+    };
+
     return (
         <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center justify-between mb-6">
@@ -273,6 +362,9 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                                     Nonce
                                 </th>
                                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                                    State
+                                </th>
+                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
                                     Collateral
                                 </th>
                                 <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
@@ -299,49 +391,118 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                             </tr>
                         </thead>
                         <tbody>
-                            {loans.map((loan) => (
-                                <tr
-                                    key={loan.nonce}
-                                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                                >
-                                    <td className="py-4 px-4 text-sm text-gray-900 font-mono">
-                                        {loan.nonce}
-                                    </td>
-                                    <td className="py-4 px-4">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            {loan.collateral_ticker}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-4 text-sm text-right text-gray-900 font-mono">
-                                        {formatNumber(loan.collateral_size)}
-                                    </td>
-                                    <td className="py-4 px-4 text-sm text-right text-purple-600 font-medium font-mono">
-                                        {formatNumber(loan.position_size)}
-                                    </td>
-                                    <td className="py-4 px-4 text-sm text-right text-gray-900 font-mono">
-                                        ${formatNumber(loan.usdc_sold)}
-                                    </td>
-                                    <td className="py-4 px-4 text-sm text-right font-medium text-green-600 font-mono">
-                                        ${formatNumber(loan.usdc_loaned)}
-                                    </td>
-                                    <td className="py-4 px-4 text-sm text-gray-600 font-mono truncate max-w-[150px]">
-                                        {loan.spot_sell_cloid}
-                                    </td>
-                                    <td className="py-4 px-4 text-sm text-gray-600 font-mono truncate max-w-[150px]">
-                                        {loan.hedge_open_cloid}
-                                    </td>
-                                    <td className="py-4 px-4 text-center">
-                                        <button
-                                            onClick={() => handlePaybackClick(loan)}
-                                            disabled={!omniAccountAddress}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <ArrowLeftRight className="w-4 h-4" />
-                                            Payback
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {loans.map((loan) => {
+                                const isExpanded = expandedLoans.has(loan.nonce);
+                                return (
+                                    <React.Fragment key={loan.nonce}>
+                                        <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                            <td className="py-4 px-4 text-sm text-gray-900 font-mono">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => toggleLoanExpansion(loan.nonce)}
+                                                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                                        title={isExpanded ? "Hide transactions" : "Show transactions"}
+                                                    >
+                                                        {isExpanded ? (
+                                                            <ChevronUp className="w-4 h-4 text-gray-600" />
+                                                        ) : (
+                                                            <ChevronDown className="w-4 h-4 text-gray-600" />
+                                                        )}
+                                                    </button>
+                                                    {loan.nonce}
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStateBadgeColor(loan.state)}`}>
+                                                    {formatState(loan.state)}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    {loan.collateral_ticker}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-4 text-sm text-right text-gray-900 font-mono">
+                                                {formatNumber(loan.collateral_size)}
+                                            </td>
+                                            <td className="py-4 px-4 text-sm text-right text-purple-600 font-medium font-mono">
+                                                {formatNumber(loan.position_size)}
+                                            </td>
+                                            <td className="py-4 px-4 text-sm text-right text-gray-900 font-mono">
+                                                ${formatNumber(loan.usdc_sold)}
+                                            </td>
+                                            <td className="py-4 px-4 text-sm text-right font-medium text-green-600 font-mono">
+                                                ${formatNumber(loan.usdc_loaned)}
+                                            </td>
+                                            <td className="py-4 px-4 text-sm text-gray-600 font-mono truncate max-w-[150px]">
+                                                {getCloid(loan, "spot_sell")}
+                                            </td>
+                                            <td className="py-4 px-4 text-sm text-gray-600 font-mono truncate max-w-[150px]">
+                                                {getCloid(loan, "hedge_open")}
+                                            </td>
+                                            <td className="py-4 px-4 text-center">
+                                                {canPayback(loan.state) ? (
+                                                    <button
+                                                        onClick={() => handlePaybackClick(loan)}
+                                                        disabled={!omniAccountAddress}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <ArrowLeftRight className="w-4 h-4" />
+                                                        Payback
+                                                    </button>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-500">
+                                                        <CheckCircle className="w-4 h-4 text-green-500" />
+                                                        Completed
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                        {isExpanded && (
+                                            <tr className="bg-gray-50">
+                                                <td colSpan={10} className="py-4 px-8">
+                                                    <div className="space-y-3">
+                                                        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                                            <FileText className="w-4 h-4" />
+                                                            Transaction History
+                                                        </h4>
+                                                        {loan.txs.length === 0 ? (
+                                                            <p className="text-sm text-gray-500 italic">No transactions recorded yet</p>
+                                                        ) : (
+                                                            <div className="grid grid-cols-1 gap-2">
+                                                                {loan.txs.map(([name, hash], idx) => (
+                                                                    <div
+                                                                        key={`${loan.nonce}-${idx}`}
+                                                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200"
+                                                                    >
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-indigo-100 text-indigo-800 min-w-[140px]">
+                                                                                {getTransactionDisplayName(name)}
+                                                                            </span>
+                                                                            <span className="text-sm font-mono text-gray-700">
+                                                                                {formatTxHash(hash)}
+                                                                            </span>
+                                                                        </div>
+                                                                        <a
+                                                                            href={getExplorerUrl(hash)}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                                                                        >
+                                                                            View in Explorer
+                                                                            <ExternalLink className="w-3 h-3" />
+                                                                        </a>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

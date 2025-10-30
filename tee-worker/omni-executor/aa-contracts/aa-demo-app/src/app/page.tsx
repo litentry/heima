@@ -175,13 +175,6 @@ function HomeContent() {
                 {/* Dashboard - shown after wallet connection */}
                 {isAuthenticated && omniAccountAddress && (
                     <div className="space-y-8">
-                        {/* Buy Token Panel */}
-                        <BuyToken
-                            omniAccountAddress={omniAccountAddress}
-                            omniAccountHash={omniAccountHash}
-                            accountExists={hasContract}
-                        />
-
                         {/* Request Loan Panel */}
                         <RequestLoan
                             omniAccountAddress={omniAccountAddress}
@@ -197,6 +190,13 @@ function HomeContent() {
                         <UserLoans
                             omniAccountHash={omniAccountHash}
                             omniAccountAddress={omniAccountAddress}
+                        />
+
+                        {/* Buy Token Panel */}
+                        <BuyToken
+                            omniAccountAddress={omniAccountAddress}
+                            omniAccountHash={omniAccountHash}
+                            accountExists={hasContract}
                         />
 
                         {/* Hyperliquid Balances, Positions, and Orders */}

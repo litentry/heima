@@ -123,6 +123,7 @@ export const SOLANA_CONFIG = {
 // Hyperliquid Core configuration
 export const HYPERLIQUID_CORE_CONFIG = {
     apiUrl: "https://api.hyperliquid-testnet.xyz",
+    explorerUrl: "https://app.hyperliquid-testnet.xyz/explorer",
 };
 
 // ERC20 Token configurations
