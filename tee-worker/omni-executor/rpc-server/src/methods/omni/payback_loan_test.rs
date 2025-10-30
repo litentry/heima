@@ -35,7 +35,7 @@ pub struct PaybackLoanTestResponse {
 	pub hedge_cancel_tx_hash: Option<String>,
 	pub hedge_close_cloid: Option<String>,
 	pub hedge_close_tx_hash: Option<String>,
-	pub usd_transfer_tx_hash: Option<String>,
+	pub to_spot_move_tx_hash: Option<String>,
 	pub spot_buy_cloid: Option<String>,
 	pub spot_buy_tx_hash: Option<String>,
 }
@@ -151,7 +151,19 @@ pub fn register_payback_loan_test<
 						.with_reason(format!("Invalid usdc_loaned: {}", e)),
 				)
 			})?;
-			let hedge_open_cloid = loan_record.hedge_open_cloid.parse::<u128>().map_err(|e| {
+			let hedge_open_cloid_str = loan_record
+				.cloids
+				.iter()
+				.find(|(name, _)| name == "hedge_open")
+				.map(|(_, cloid)| cloid.clone())
+				.ok_or_else(|| {
+					error!("hedge_open cloid not found in loan record");
+					PumpxRpcError::from(
+						DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+							.with_reason("hedge_open cloid not found in loan_record"),
+					)
+				})?;
+			let hedge_open_cloid = hedge_open_cloid_str.parse::<u128>().map_err(|e| {
 				PumpxRpcError::from(
 					DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
 						.with_reason(format!("Invalid hedge_open_cloid: {}", e)),
@@ -200,7 +212,7 @@ pub fn register_payback_loan_test<
 						do_close_hedge(&exec_ctx, hedge_open_cloid, &close_ctx, &mut current_nonce)
 							.await?;
 
-					let usd_transfer_tx_hash =
+					let to_spot_move_tx_hash =
 						do_move_to_spot(&exec_ctx, &move_ctx, &mut current_nonce).await?;
 
 					let (spot_buy_cloid, spot_buy_tx_hash) =
@@ -212,7 +224,7 @@ pub fn register_payback_loan_test<
 						hedge_cancel_tx_hash,
 						hedge_close_cloid: hedge_close_cloid_opt,
 						hedge_close_tx_hash,
-						usd_transfer_tx_hash,
+						to_spot_move_tx_hash,
 						spot_buy_cloid: Some(spot_buy_cloid.to_string()),
 						spot_buy_tx_hash,
 					})
@@ -231,7 +243,7 @@ pub fn register_payback_loan_test<
 
 					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
 
-					let usd_transfer_tx_hash =
+					let to_spot_move_tx_hash =
 						do_move_to_spot(&exec_ctx, &move_ctx, &mut current_nonce).await?;
 
 					let (spot_buy_cloid, spot_buy_tx_hash) =
@@ -243,7 +255,7 @@ pub fn register_payback_loan_test<
 						hedge_cancel_tx_hash: None,
 						hedge_close_cloid: None,
 						hedge_close_tx_hash: None,
-						usd_transfer_tx_hash,
+						to_spot_move_tx_hash,
 						spot_buy_cloid: Some(spot_buy_cloid.to_string()),
 						spot_buy_tx_hash,
 					})
@@ -262,7 +274,7 @@ pub fn register_payback_loan_test<
 						hedge_cancel_tx_hash: None,
 						hedge_close_cloid: None,
 						hedge_close_tx_hash: None,
-						usd_transfer_tx_hash: None,
+						to_spot_move_tx_hash: None,
 						spot_buy_cloid: Some(spot_buy_cloid.to_string()),
 						spot_buy_tx_hash,
 					})
@@ -843,9 +855,9 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 	close_ctx: &CloseHedgeContext,
 	current_nonce: &mut u128,
 ) -> Result<(Option<String>, Option<String>, Option<String>), PumpxRpcError> {
-	let mut hedge_cancel_tx_hash = None;
-	let mut hedge_close_cloid_opt = None;
-	let mut hedge_close_tx_hash = None;
+	let mut hedge_cancel_tx_hash: Option<String> = None;
+	let mut hedge_close_cloid_opt: Option<String> = None;
+	let mut hedge_close_tx_hash: Option<String> = None;
 
 	// Action 1a: Cancel order if needed
 	if close_ctx.should_cancel {
@@ -857,7 +869,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 			encode_send_raw_action(cancel_action),
 		);
 
-		let cancel_tx_hash = submit_corewriter_userop(
+		hedge_cancel_tx_hash = submit_corewriter_userop(
 			exec_ctx.ctx.clone(),
 			exec_ctx.omni_account,
 			&prepare_userop_no_init(exec_ctx.skeleton_user_op, *current_nonce),
@@ -867,8 +879,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 		)
 		.await?;
 
-		info!("Cancel order submitted with tx_hash: {:?}", cancel_tx_hash);
-		hedge_cancel_tx_hash = cancel_tx_hash.clone();
+		info!("hedge_cancel submitted with tx_hash: {:?}", hedge_cancel_tx_hash);
 		*current_nonce += 1;
 
 		let order_canceled = exec_ctx
@@ -964,7 +975,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 		*current_nonce += 1;
 
 		info!(
-			"Hedge close order submitted, price: {}, size: {}, tx_hash: {:?}",
+			"hedge_close submitted, price: {}, size: {}, tx_hash: {:?}",
 			clamped_close_price_f64, clamped_close_size_f64, hedge_close_tx_hash
 		);
 
@@ -1000,12 +1011,20 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 			.await;
 	}
 
-	// Update state: HedgeClosed (if cancel or close happened)
+	// Update state: HedgeClosed (if cancel or close happened) and populate txs/cloids
 	if close_ctx.should_cancel || close_ctx.should_close {
-		let _ = exec_ctx
-			.ctx
-			.loan_record_storage
-			.update(exec_ctx.storage_key, |r| r.state = LoanState::HedgeClosed);
+		let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
+			r.state = LoanState::HedgeClosed;
+			if let Some(ref tx_hash) = hedge_cancel_tx_hash {
+				r.txs.push(("hedge_cancel".to_string(), tx_hash.clone()));
+			}
+			if let Some(ref cloid) = hedge_close_cloid_opt {
+				r.cloids.push(("hedge_close".to_string(), cloid.clone()));
+			}
+			if let Some(ref tx_hash) = hedge_close_tx_hash {
+				r.txs.push(("hedge_close".to_string(), tx_hash.clone()));
+			}
+		});
 	}
 
 	Ok((hedge_cancel_tx_hash, hedge_close_cloid_opt, hedge_close_tx_hash))
@@ -1038,7 +1057,7 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		encode_send_raw_action(transfer_action),
 	);
 
-	let usd_transfer_tx_hash = submit_corewriter_userop(
+	let to_spot_move_tx_hash = submit_corewriter_userop(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
 		&prepare_userop_no_init(exec_ctx.skeleton_user_op, *current_nonce),
@@ -1050,8 +1069,8 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	*current_nonce += 1;
 
 	info!(
-		"USD transfer submitted, size: {}, tx_hash: {:?}",
-		move_ctx.transfer_amount, usd_transfer_tx_hash
+		"to_spot_move submitted, size: {}, tx_hash: {:?}",
+		move_ctx.transfer_amount, to_spot_move_tx_hash
 	);
 
 	exec_ctx
@@ -1071,20 +1090,22 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 			)
 		})?;
 
-	info!("USDC transfer completed");
+	info!("to_spot_move completed");
 
-	// Update state: ToSpotMoved
-	let _ = exec_ctx
-		.ctx
-		.loan_record_storage
-		.update(exec_ctx.storage_key, |r| r.state = LoanState::ToSpotMoved);
+	// Update state: ToSpotMoved and populate to_spot_move tx
+	let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
+		r.state = LoanState::ToSpotMoved;
+		if let Some(ref tx_hash) = to_spot_move_tx_hash {
+			r.txs.push(("to_spot_move".to_string(), tx_hash.clone()));
+		}
+	});
 
 	exec_ctx
 		.hypercore_client
 		.print_account_state(exec_ctx.smart_wallet, "After USD Transfer to Spot")
 		.await;
 
-	Ok(usd_transfer_tx_hash)
+	Ok(to_spot_move_tx_hash)
 }
 
 async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
@@ -1172,7 +1193,7 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	.await?;
 
 	info!(
-		"Spot buy order submitted, price: {}, size: {}, tx_hash: {:?}",
+		"spot_buy submitted, price: {}, size: {}, tx_hash: {:?}",
 		clamped_buy_price_f64, clamped_buy_size_f64, spot_buy_tx_hash
 	);
 
@@ -1203,11 +1224,14 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	info!("Spot buy order filled successfully");
 
-	// Update state: SpotBought (final state)
-	let _ = exec_ctx
-		.ctx
-		.loan_record_storage
-		.update(exec_ctx.storage_key, |r| r.state = LoanState::SpotBought);
+	// Update state: SpotBought (final state) and populate spot_buy tx and cloid
+	let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
+		r.state = LoanState::SpotBought;
+		r.cloids.push(("spot_buy".to_string(), spot_buy_cloid.to_string()));
+		if let Some(ref tx_hash) = spot_buy_tx_hash {
+			r.txs.push(("spot_buy".to_string(), tx_hash.clone()));
+		}
+	});
 
 	exec_ctx
 		.hypercore_client

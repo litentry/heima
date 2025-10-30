@@ -36,6 +36,7 @@ pub struct RequestLoanTestResponse {
 	pub hedge_open_cloid: String,
 	pub usdc_received: String,
 	pub spot_sell_tx_hash: Option<String>,
+	pub to_perp_move_tx_hash: Option<String>,
 	pub hedge_open_tx_hash: Option<String>,
 }
 
@@ -148,7 +149,8 @@ pub fn register_request_loan_test<
 					let usdc_loaned = usdc_sold * lending_ratio_f64;
 					let usdc_for_perp = usdc_sold * (1.0 - lending_ratio_f64);
 
-					do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce).await?;
+					let to_perp_move_tx_hash =
+						do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce).await?;
 
 					let (hedge_open_cloid, hedge_open_tx_hash) = do_open_hedge(
 						&exec_ctx,
@@ -165,6 +167,7 @@ pub fn register_request_loan_test<
 						hedge_open_cloid: hedge_open_cloid.to_string(),
 						usdc_received: format!("{:.2}", usdc_loaned),
 						spot_sell_tx_hash,
+						to_perp_move_tx_hash,
 						hedge_open_tx_hash,
 					})
 				},
@@ -188,10 +191,21 @@ pub fn register_request_loan_test<
 						LoanState::HedgeOpened => {
 							info!("Loan already completed");
 							Ok(RequestLoanTestResponse {
-								spot_sell_cloid: existing.spot_sell_cloid,
-								hedge_open_cloid: existing.hedge_open_cloid,
+								spot_sell_cloid: existing
+									.cloids
+									.iter()
+									.find(|(name, _)| name == "spot_sell")
+									.map(|(_, cloid)| cloid.clone())
+									.unwrap_or_else(|| "0".to_string()),
+								hedge_open_cloid: existing
+									.cloids
+									.iter()
+									.find(|(name, _)| name == "hedge_open")
+									.map(|(_, cloid)| cloid.clone())
+									.unwrap_or_else(|| "0".to_string()),
 								usdc_received: existing.usdc_loaned,
 								spot_sell_tx_hash: None,
+								to_perp_move_tx_hash: None,
 								hedge_open_tx_hash: None,
 							})
 						},
@@ -217,7 +231,9 @@ pub fn register_request_loan_test<
 							)
 							.await?;
 
-							do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce).await?;
+							let to_perp_move_tx_hash =
+								do_move_to_perp(&exec_ctx, usdc_for_perp, &mut current_nonce)
+									.await?;
 
 							let (hedge_open_cloid, hedge_open_tx_hash) = do_open_hedge(
 								&exec_ctx,
@@ -230,10 +246,16 @@ pub fn register_request_loan_test<
 							.await?;
 
 							Ok(RequestLoanTestResponse {
-								spot_sell_cloid: existing.spot_sell_cloid,
+								spot_sell_cloid: existing
+									.cloids
+									.iter()
+									.find(|(name, _)| name == "spot_sell")
+									.map(|(_, cloid)| cloid.clone())
+									.unwrap_or_else(|| "0".to_string()),
 								hedge_open_cloid: hedge_open_cloid.to_string(),
 								usdc_received: existing.usdc_loaned,
 								spot_sell_tx_hash: None,
+								to_perp_move_tx_hash,
 								hedge_open_tx_hash,
 							})
 						},
@@ -270,10 +292,16 @@ pub fn register_request_loan_test<
 							.await?;
 
 							Ok(RequestLoanTestResponse {
-								spot_sell_cloid: existing.spot_sell_cloid,
+								spot_sell_cloid: existing
+									.cloids
+									.iter()
+									.find(|(name, _)| name == "spot_sell")
+									.map(|(_, cloid)| cloid.clone())
+									.unwrap_or_else(|| "0".to_string()),
 								hedge_open_cloid: hedge_open_cloid.to_string(),
 								usdc_received: existing.usdc_loaned,
 								spot_sell_tx_hash: None,
+								to_perp_move_tx_hash: None,
 								hedge_open_tx_hash,
 							})
 						},
@@ -541,7 +569,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	*current_nonce += 1;
 
 	info!(
-		"Spot sell submitted: price={}, size={}, tx={:?}",
+		"spot_sell submitted: price={}, size={}, tx={:?}",
 		clamped_price_f64, clamped_size_f64, spot_sell_tx_hash
 	);
 
@@ -607,8 +635,6 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 				usdc_sold: format!("{:.2}", usdc_sold),
 				usdc_loaned: format!("{:.2}", usdc_loaned),
 				usdc_for_perp: format!("{:.2}", usdc_for_perp),
-				spot_sell_cloid: spot_sell_cloid.to_string(),
-				hedge_open_cloid: "0".to_string(),
 			},
 		)
 		.map_err(|e| {
@@ -618,6 +644,14 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 					.with_reason(format!("Failed to create loan record: {}", e)),
 			)
 		})?;
+
+	// Populate spot_sell tx and cloid
+	let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
+		r.cloids.push(("spot_sell".to_string(), spot_sell_cloid.to_string()));
+		if let Some(ref tx_hash) = spot_sell_tx_hash {
+			r.txs.push(("spot_sell".to_string(), tx_hash.clone()));
+		}
+	});
 
 	exec_ctx
 		.hypercore_client
@@ -631,7 +665,7 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	usdc_for_perp: f64,
 	current_nonce: &mut u128,
-) -> Result<(), PumpxRpcError> {
+) -> Result<Option<String>, PumpxRpcError> {
 	info!("Action: Moving {:.2} USDC to perp", usdc_for_perp);
 
 	let initial_perp_balance = exec_ctx
@@ -659,7 +693,7 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	user_op.nonce = *current_nonce;
 	user_op.init_code = "0x".to_string();
 
-	let usd_transfer_tx_hash = submit_corewriter_userop(
+	let to_perp_move_tx_hash = submit_corewriter_userop(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
 		&user_op,
@@ -673,7 +707,7 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	.await?;
 	*current_nonce += 1;
 
-	info!("USD transfer submitted: size={:.2}, tx={:?}", usdc_for_perp, usd_transfer_tx_hash);
+	info!("to_perp_move submitted: size={:.2}, tx={:?}", usdc_for_perp, to_perp_move_tx_hash);
 
 	exec_ctx
 		.hypercore_client
@@ -687,24 +721,26 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		.map_err(|e| {
 			PumpxRpcError::from(
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("USD transfer failed: {}", e)),
+					.with_reason(format!("to_perp_move failed: {}", e)),
 			)
 		})?;
 
-	info!("USD transfer completed");
+	info!("to_perp_move completed");
 
-	// Update state: ToPerpMoved
-	let _ = exec_ctx
-		.ctx
-		.loan_record_storage
-		.update(exec_ctx.storage_key, |r| r.state = LoanState::ToPerpMoved);
+	// Update state: ToPerpMoved and populate to_perp_move tx
+	let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
+		r.state = LoanState::ToPerpMoved;
+		if let Some(ref tx_hash) = to_perp_move_tx_hash {
+			r.txs.push(("to_perp_move".to_string(), tx_hash.clone()));
+		}
+	});
 
 	exec_ctx
 		.hypercore_client
 		.print_account_state(exec_ctx.smart_wallet, "After Move To Perp")
 		.await;
 
-	Ok(())
+	Ok(to_perp_move_tx_hash)
 }
 
 async fn do_open_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
@@ -779,7 +815,7 @@ async fn do_open_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 
 	.await?;
 
 	info!(
-		"Hedge position submitted: price={}, size={}, tx={:?}",
+		"hedge_open submitted: price={}, size={}, tx={:?}",
 		clamped_hedge_price_f64, clamped_hedge_size_f64, hedge_open_tx_hash
 	);
 
@@ -806,11 +842,14 @@ async fn do_open_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 
 		));
 	}
 
-	// Update loan record with position size and state: HedgeOpened
+	// Update loan record with position size, state: HedgeOpened, and populate hedge_open tx and cloid
 	let _ = exec_ctx.ctx.loan_record_storage.update(exec_ctx.storage_key, |r| {
 		r.position_size = format!("{}", clamped_hedge_size_f64);
 		r.state = LoanState::HedgeOpened;
-		r.hedge_open_cloid = hedge_open_cloid.to_string();
+		r.cloids.push(("hedge_open".to_string(), hedge_open_cloid.to_string()));
+		if let Some(ref tx_hash) = hedge_open_tx_hash {
+			r.txs.push(("hedge_open".to_string(), tx_hash.clone()));
+		}
 	});
 
 	exec_ctx

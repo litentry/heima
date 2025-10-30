@@ -30,8 +30,17 @@ pub struct LoanRecord {
 	pub usdc_sold: String,
 	pub usdc_loaned: String,
 	pub usdc_for_perp: String,
-	pub spot_sell_cloid: String,
-	pub hedge_open_cloid: String,
+	// contains all tx hashes that the worker submits to interact with corewriter
+	// each tuple is a name -> hash mapping, e.g.:
+	// ("spot_sell", "0x1234...")
+	// we expect 6 hashes for a full loan request and payback cycle in normal cases,
+	// and up to 7 hashes if the hedge were partially filled and need to canceled and closed
+	pub txs: Vec<(String, String)>,
+	// contains all cloids that the worker generate to track the hypercore orders
+	// each tuple is a name -> cloid mapping, e.g.:
+	// ("spot_sell", "173494584")
+	// we expect 4 cloids for a full loan request and payback cycle
+	pub cloids: Vec<(String, String)>,
 	/// Actual position size that was opened for this loan (filled or partially filled)
 	/// This should be set after the hedge order completes in request_loan
 	pub position_size: String,
@@ -45,8 +54,6 @@ pub struct NewLoanRecord {
 	pub usdc_sold: String,
 	pub usdc_loaned: String,
 	pub usdc_for_perp: String,
-	pub spot_sell_cloid: String,
-	pub hedge_open_cloid: String,
 }
 
 pub struct LoanRecordStorage {
@@ -133,8 +140,8 @@ impl LoanRecordStorage {
 			usdc_sold: params.usdc_sold,
 			usdc_loaned: params.usdc_loaned,
 			usdc_for_perp: params.usdc_for_perp,
-			spot_sell_cloid: params.spot_sell_cloid,
-			hedge_open_cloid: params.hedge_open_cloid,
+			txs: Vec::new(),
+			cloids: Vec::new(),
 			position_size: "0".to_string(),
 			state: LoanState::SpotSold,
 		};
