@@ -118,6 +118,198 @@ forge script script/Deploy.s.sol:Deploy \
     -vvv
 ```
 
+## 🎯 CREATE2 Deterministic Deployments
+
+### Why CREATE2?
+
+When deploying contracts across multiple EVM chains, standard CREATE deployments (using EOA nonce) require careful nonce management to maintain consistent addresses. If you deploy contracts in different orders on different chains, they'll have different addresses, making multi-chain integrations complex.
+
+**CREATE2** solves this by making contract addresses deterministic based on:
+- Factory address (not deployer EOA)
+- Salt value
+- Contract bytecode
+
+This allows **identical addresses across all chains** when using the same salt and factory address.
+
+### Benefits
+
+✅ **Deterministic Addresses**: Same contract address on all chains
+✅ **Order Independent**: Deploy contracts in any order
+✅ **Predictable**: Know contract addresses before deployment
+✅ **Frontrun Protected**: Using sender-specific salts prevents address squatting
+✅ **Multi-Chain Ready**: Deploy to new networks without nonce coordination
+
+### CREATE2 Deployment Strategy
+
+#### Step 1: Deploy the CREATE2 Factory
+
+The `Create2Factory` contract must be deployed **once per network** using a **fresh EOA** (recommended for consistency, though not strictly required).
+
+```bash
+# Set up environment
+source .env
+
+# Deploy the factory
+forge script script/DeployCreate2Factory.s.sol:DeployCreate2Factory \
+    --rpc-url $RPC_URL \
+    --private-key $PRIVATE_KEY \
+    --broadcast \
+    -vvv
+```
+
+**Important**:
+- The script will warn if your EOA has a non-zero nonce
+- For maximum consistency, use a fresh EOA (nonce 0) to deploy the factory on all chains
+- Save the factory address - you'll need it for all future deployments
+
+After deployment, add the factory address to `deployments/create2-factories.json`:
+
+```json
+{
+  "ethereum": "0x...",
+  "arbitrum": "0x...",
+  "bsc": "0x...",
+  "hyperevm": "0x..."
+}
+```
+
+#### Step 2: Deploy AA Contracts via CREATE2
+
+Once the factory is deployed, use it to deploy AA contracts:
+
+```bash
+# Set factory address and version
+export CREATE2_FACTORY_ADDRESS=0x...  # From step 1
+export CONTRACT_VERSION=v1.0.0         # Version for salt generation
+
+# Deploy AA contracts via CREATE2
+forge script script/DeployWithCreate2.s.sol:DeployWithCreate2 \
+    --rpc-url $RPC_URL \
+    --private-key $PRIVATE_KEY \
+    --broadcast \
+    -vvv
+```
+
+#### Step 3: Deploy to Additional Networks
+
+To deploy to a new network with the **same addresses**:
+
+1. Deploy the CREATE2 factory on the new network (step 1)
+2. Use the **same deployer EOA** and **same version** from step 2
+3. Contracts will deploy to **identical addresses**!
+
+```bash
+# Example: Deploy to new network
+export RPC_URL=https://new-network-rpc.example.com
+export CREATE2_FACTORY_ADDRESS=0x...  # Factory on new network
+
+# Same version = same addresses!
+export CONTRACT_VERSION=v1.0.0
+
+forge script script/DeployWithCreate2.s.sol:DeployWithCreate2 \
+    --rpc-url $RPC_URL \
+    --private-key $PRIVATE_KEY \
+    --broadcast \
+    -vvv
+```
+
+### CREATE2 Configuration
+
+All standard environment variables from `Deploy.s.sol` are supported, plus:
+
+```bash
+# CREATE2-specific variables
+CREATE2_FACTORY_ADDRESS=0x...  # Address of deployed Create2Factory (required)
+CONTRACT_VERSION=v1.0.0         # Version string for salt generation (default: v1.0.0)
+
+# All standard variables still work
+DEPLOY_ENTRYPOINT=true
+DEPLOY_FACTORY=true
+DEPLOY_SIMPLE_PAYMASTER=true
+DEPLOY_ERC20_PAYMASTER=false
+PAYMASTER_INITIAL_DEPOSIT=1000000000000000000
+INITIAL_BUNDLER=0x...
+SAVE_DEPLOYMENT_FILE=true
+DEPLOYMENT_ENV=production
+```
+
+### Salt Generation Strategy
+
+The `DeployWithCreate2` script uses **sender-protected salts** to prevent frontrunning:
+
+```solidity
+salt = keccak256(abi.encode(contractName, version, msg.sender))
+```
+
+This means:
+- **Same deployer EOA** + **same version** = **same addresses** across all chains
+- Different deployers will get different addresses (security feature)
+- Update `CONTRACT_VERSION` when you want new addresses for updated contracts
+
+### Address Prediction
+
+Before deployment, the script shows predicted addresses:
+
+```
+=== Predicted Addresses ===
+EntryPointV1 (predicted):      0x1234...
+OmniAccountFactoryV1 (predicted): 0x5678...
+SimplePaymaster (predicted):   0xabcd...
+```
+
+You can also compute addresses manually:
+
+```solidity
+// In Solidity
+Create2Factory factory = Create2Factory(factoryAddress);
+bytes32 salt = factory.generateSalt("EntryPointV1", "v1.0.0", msg.sender);
+address predicted = factory.computeAddress(salt, type(EntryPointV1).creationCode);
+```
+
+```bash
+# Using cast
+cast call $FACTORY_ADDRESS "computeAddress(bytes32,bytes)(address)" \
+    $SALT \
+    $(cast --from-utf8 "$(cat out/EntryPointV1.sol/EntryPointV1.json | jq -r .bytecode.object)")
+```
+
+### Migration from Standard Deployments
+
+**Current deployments are preserved** - no migration needed!
+
+- Existing contracts on 15+ networks continue to work
+- CREATE2 factory is used **only for future deployments**
+- When deploying to new networks, use CREATE2 for consistency
+
+### Deterministic Bytecode Configuration
+
+The `foundry.toml` has been configured for deterministic builds:
+
+```toml
+solc_version = "0.8.28"
+evm_version = "cancun"
+bytecode_hash = "none"        # Critical for determinism
+cbor_metadata = false         # Critical for determinism
+optimizer = true
+optimizer_runs = 1000000
+```
+
+**Important**: These settings ensure identical bytecode across builds, which is essential for CREATE2 determinism. Do not modify these settings between deployments.
+
+### Troubleshooting
+
+**Problem**: Addresses don't match across chains
+**Solution**: Ensure you're using the same deployer EOA and CONTRACT_VERSION
+
+**Problem**: Factory deployment fails
+**Solution**: Make sure you have enough ETH for deployment gas
+
+**Problem**: "AddressAlreadyDeployed" error
+**Solution**: Contract was already deployed. Either use it or change the CONTRACT_VERSION
+
+**Problem**: Verification fails with "Bytecode does not match"
+**Solution**: Ensure your local build uses the same compiler settings as deployment
+
 ## 📁 Deployment Artifacts
 
 After successful deployment, you'll find:
