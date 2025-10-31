@@ -31,7 +31,6 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
     // Payback modal state
     const [showPaybackModal, setShowPaybackModal] = useState(false);
     const [selectedLoan, setSelectedLoan] = useState<LoanRecordWithNonce | null>(null);
-    const [minAccountValue, setMinAccountValue] = useState<string>("1000");
     const [isPayingBack, setIsPayingBack] = useState(false);
     const [paybackError, setPaybackError] = useState<string | null>(null);
     const [paybackSuccess, setPaybackSuccess] = useState<{
@@ -40,6 +39,8 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
         hedgeCloseTxHash: string | null;
         spotBuyTxHash: string | null;
     } | null>(null);
+    const [estimatedCollateralReturn, setEstimatedCollateralReturn] = useState<string | null>(null);
+    const [isCalculatingReturn, setIsCalculatingReturn] = useState(false);
 
     const fetchLoans = async () => {
         if (!omniAccountHash) return;
@@ -104,11 +105,191 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
         checkAccountExists();
     }, [omniAccountAddress, publicClient]);
 
+    // Calculate estimated collateral return based on current market conditions
+    const calculateCollateralReturn = async (loan: LoanRecordWithNonce) => {
+        if (!omniAccountAddress) return;
+
+        setIsCalculatingReturn(true);
+        try {
+            // 1. Fetch current spot price for the collateral asset
+            const priceResponse = await fetch(`${HYPERLIQUID_CORE_CONFIG.apiUrl}/info`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: "spotMeta",
+                }),
+            });
+
+            let spotPrice = 0;
+            let tokenIndex = -1;
+
+            // First, get token metadata to find the index
+            if (priceResponse.ok) {
+                const priceData = await priceResponse.json();
+
+                const ticker = loan.collateral_ticker.toUpperCase();
+
+                // Find token in the tokens array
+                if (priceData.tokens && Array.isArray(priceData.tokens)) {
+                    const tokenInfo = priceData.tokens.find((t: any) =>
+                        t.name?.toUpperCase() === ticker
+                    );
+
+                    if (tokenInfo) {
+                        console.log("Found token info:", tokenInfo);
+                        tokenIndex = tokenInfo.index;
+                    }
+                }
+            }
+
+            // Now fetch actual market prices using allMids
+            console.log("Token index:", tokenIndex);
+            if (tokenIndex >= 0) {
+                const midsResponse = await fetch(`${HYPERLIQUID_CORE_CONFIG.apiUrl}/info`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        type: "allMids",
+                    }),
+                });
+
+                console.log("Mids response status:", midsResponse.status);
+
+                if (midsResponse.ok) {
+                    const midsData = await midsResponse.json();
+                    console.log("All mids data sample:", Object.keys(midsData).slice(0, 10));
+                    console.log("Total pairs:", Object.keys(midsData).length);
+
+                    // midsData is an object like { "HYPE": "25.67", "BTC": "98000", ... }
+                    // Keys are token symbols, values are prices in USDC
+                    const ticker = loan.collateral_ticker;
+
+                    console.log("Looking for ticker:", ticker);
+                    console.log("Exact match exists?", ticker in midsData);
+                    console.log("Value:", midsData[ticker]);
+
+                    if (midsData[ticker]) {
+                        spotPrice = parseFloat(midsData[ticker]);
+                        console.log(`Found price for ${ticker}:`, spotPrice);
+                    } else {
+                        // Try case variations
+                        console.log("Trying case variations...");
+                        const tickerUpper = ticker.toUpperCase();
+                        const tickerLower = ticker.toLowerCase();
+
+                        if (midsData[tickerUpper]) {
+                            spotPrice = parseFloat(midsData[tickerUpper]);
+                            console.log(`Found price for ${tickerUpper}:`, spotPrice);
+                        } else if (midsData[tickerLower]) {
+                            spotPrice = parseFloat(midsData[tickerLower]);
+                            console.log(`Found price for ${tickerLower}:`, spotPrice);
+                        } else {
+                            const allKeys = Object.keys(midsData);
+                            const matchingKeys = allKeys.filter(k => k.toUpperCase() === tickerUpper);
+                            console.log("Matching keys:", matchingKeys);
+
+                            if (matchingKeys.length > 0) {
+                                spotPrice = parseFloat(midsData[matchingKeys[0]]);
+                                console.log(`Found price for ${matchingKeys[0]}:`, spotPrice);
+                            } else {
+                                console.warn(`Could not find price for ${ticker}`);
+                            }
+                        }
+                    }
+                }
+            } else {
+                console.warn("Token index not found, cannot fetch price");
+            }
+
+            // 2. Use loan record data - it already contains all the info we need
+            const usdcForPerp = parseFloat(loan.usdc_for_perp);
+            const positionSize = parseFloat(loan.position_size);
+            const hedgeCloid = loan.cloids.find(([name]) => name === "hedge_open")?.[1];
+
+            // 3. Fetch current position P&L using cloid if hedge is still open
+            let unrealizedPnl = 0;
+            if (positionSize !== 0 && hedgeCloid) {
+                // Position is still open, fetch unrealized P&L
+                const positionResponse = await fetch(`${HYPERLIQUID_CORE_CONFIG.apiUrl}/info`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        type: "clearinghouseState",
+                        user: omniAccountAddress,
+                    }),
+                });
+
+                if (positionResponse.ok) {
+                    const positionData = await positionResponse.json();
+                    console.log("Looking for hedge position with cloid:", hedgeCloid);
+
+                    // Find position by ticker (since API doesn't filter by cloid)
+                    // We verify it's the right position by checking the size matches
+                    const position = positionData.assetPositions?.find((p: any) => {
+                        const coin = p.position?.coin;
+                        const size = Math.abs(parseFloat(p.position?.szi || "0"));
+                        const expectedSize = Math.abs(positionSize);
+
+                        // Match by ticker and position size
+                        return coin === loan.collateral_ticker &&
+                               Math.abs(size - expectedSize) < 0.0001; // Small tolerance for floating point
+                    });
+
+                    if (position?.position?.unrealizedPnl) {
+                        unrealizedPnl = parseFloat(position.position.unrealizedPnl);
+                        console.log("Found matching position, unrealized P&L:", unrealizedPnl);
+                    } else {
+                        console.warn("Could not find matching position for hedge cloid:", hedgeCloid);
+                    }
+                }
+            }
+
+            // 4. Calculate available USDC for this loan
+            // If hedge is closed (positionSize = 0): usdcForPerp already includes realized P&L
+            // If hedge is open: usdcForPerp + unrealizedPnl
+            const availableUsdc = usdcForPerp + unrealizedPnl;
+
+            // 5. Calculate collateral that can be bought back
+            let estimatedCollateral = 0;
+            if (spotPrice > 0 && availableUsdc > 0) {
+                estimatedCollateral = availableUsdc / spotPrice;
+            }
+
+            console.log("Collateral return calculation:", {
+                collateralTicker: loan.collateral_ticker,
+                spotPrice,
+                usdcForPerp,
+                positionSize,
+                unrealizedPnl,
+                availableUsdc,
+                estimatedCollateral,
+                loanData: {
+                    usdc_for_perp: loan.usdc_for_perp,
+                    position_size: loan.position_size,
+                    usdc_loaned: loan.usdc_loaned,
+                    usdc_sold: loan.usdc_sold,
+                    collateral_size: loan.collateral_size,
+                },
+            });
+
+            setEstimatedCollateralReturn(estimatedCollateral > 0 ? estimatedCollateral.toFixed(6) : "0");
+        } catch (error) {
+            console.error("Error calculating collateral return:", error);
+            setEstimatedCollateralReturn(null);
+        } finally {
+            setIsCalculatingReturn(false);
+        }
+    };
+
     const handlePaybackClick = (loan: LoanRecordWithNonce) => {
         setSelectedLoan(loan);
         setPaybackError(null);
         setPaybackSuccess(null);
+        setEstimatedCollateralReturn(null);
         setShowPaybackModal(true);
+
+        // Calculate estimated return
+        calculateCollateralReturn(loan);
     };
 
     const handlePaybackSubmit = async () => {
@@ -201,7 +382,7 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                 omniAccountHash,
                 DEFAULT_CLIENT_ID,
                 parseInt(selectedLoan.nonce),
-                minAccountValue
+                "1" // Fixed minimum account value
             );
 
             setPaybackSuccess({
@@ -608,9 +789,24 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                                 <span className="font-mono text-gray-900">{selectedLoan.nonce}</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Collateral:</span>
-                                <span className="font-medium text-gray-900">
+                                <span className="text-gray-600">Original Collateral:</span>
+                                <span className="font-medium text-gray-500">
                                     {formatNumber(selectedLoan.collateral_size)} {selectedLoan.collateral_ticker}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-sm items-center">
+                                <span className="text-gray-600">Estimated Collateral Return:</span>
+                                <span className="font-bold text-blue-600">
+                                    {isCalculatingReturn ? (
+                                        <span className="flex items-center gap-2">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Calculating...
+                                        </span>
+                                    ) : estimatedCollateralReturn ? (
+                                        `${formatNumber(estimatedCollateralReturn)} ${selectedLoan.collateral_ticker}`
+                                    ) : (
+                                        "Unable to calculate"
+                                    )}
                                 </span>
                             </div>
                             <div className="flex justify-between text-sm">
@@ -625,24 +821,6 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                                     ${formatNumber(selectedLoan.usdc_loaned)}
                                 </span>
                             </div>
-                        </div>
-
-                        {/* Min Account Value Input */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Minimum Expected Account Value (USDC)
-                            </label>
-                            <input
-                                type="number"
-                                value={minAccountValue}
-                                onChange={(e) => setMinAccountValue(e.target.value)}
-                                disabled={isPayingBack}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100"
-                                placeholder="1000"
-                            />
-                            <p className="mt-1 text-xs text-gray-500">
-                                Safety threshold to prevent unintended position closure during losses
-                            </p>
                         </div>
 
                         {/* Error Message */}
