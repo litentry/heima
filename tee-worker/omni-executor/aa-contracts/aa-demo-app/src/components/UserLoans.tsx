@@ -386,10 +386,10 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                                     USDC Loaned
                                 </th>
                                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                                    Spot Order ID
+                                    Spot Sell CLOID
                                 </th>
                                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                                    Hedge Order ID
+                                    Hedge Open CLOID
                                 </th>
                                 <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
                                     Action
