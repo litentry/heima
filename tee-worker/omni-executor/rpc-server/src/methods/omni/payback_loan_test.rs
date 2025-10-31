@@ -795,11 +795,6 @@ async fn precheck_move_to_spot(
 		let calculated_amount =
 			initial_margin + unrealized_pnl - cum_funding_all_time - close_position_fee - buffer;
 
-		info!(
-			"Transfer amount calculation: initial_margin={}, unrealized_pnl={}, cum_funding_all_time={}, close_fee={}, buffer={}, calculated={}",
-			initial_margin, unrealized_pnl, cum_funding_all_time, close_position_fee, buffer, calculated_amount
-		);
-
 		let max_transferable = stored_withdrawable + margin_used;
 		if calculated_amount > max_transferable {
 			error!(
@@ -816,16 +811,15 @@ async fn precheck_move_to_spot(
 			));
 		}
 
-		let final_amount = calculated_amount.min(withdrawable_usdc + margin_used);
 		info!(
-			"final_amount={}, withdrawable_usdc={}, margin_used={}, stored_withdrawable={}",
-			final_amount, withdrawable_usdc, margin_used, stored_withdrawable
+			"Transfer amount calculation: initial_margin={}, unrealized_pnl={}, cum_funding_all_time={}, close_fee={}, buffer={}, withdrawable={}, margin_used={}, calculated={}",
+			initial_margin, unrealized_pnl, cum_funding_all_time, close_position_fee, buffer, stored_withdrawable, margin_used, calculated_amount
 		);
 
-		final_amount
+		calculated_amount
 	} else {
 		info!("No position closed, transferring initial margin: {}", initial_margin);
-		initial_margin.min(withdrawable_usdc)
+		initial_margin
 	};
 
 	info!("✓ Move to spot precheck passed");
