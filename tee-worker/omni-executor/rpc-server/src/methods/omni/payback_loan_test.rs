@@ -151,24 +151,6 @@ pub fn register_payback_loan_test<
 						.with_reason(format!("Invalid usdc_loaned: {}", e)),
 				)
 			})?;
-			let hedge_open_cloid_str = loan_record
-				.cloids
-				.iter()
-				.find(|(name, _)| name == "hedge_open")
-				.map(|(_, cloid)| cloid.clone())
-				.ok_or_else(|| {
-					error!("hedge_open cloid not found in loan record");
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-							.with_reason("hedge_open cloid not found in loan_record"),
-					)
-				})?;
-			let hedge_open_cloid = hedge_open_cloid_str.parse::<u128>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-						.with_reason(format!("Invalid hedge_open_cloid: {}", e)),
-				)
-			})?;
 
 			let exec_ctx = ExecutionContext {
 				ctx: ctx.clone(),
@@ -185,6 +167,25 @@ pub fn register_payback_loan_test<
 			match loan_record.state {
 				LoanState::HedgeOpened => {
 					info!("Starting payback from HedgeOpened state");
+
+					let hedge_open_cloid_str = loan_record
+						.cloids
+						.iter()
+						.find(|(name, _)| name == "hedge_open")
+						.map(|(_, cloid)| cloid.clone())
+						.ok_or_else(|| {
+							error!("hedge_open cloid not found in loan record");
+							PumpxRpcError::from(
+								DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+									.with_reason("hedge_open cloid not found in loan_record"),
+							)
+						})?;
+					let hedge_open_cloid = hedge_open_cloid_str.parse::<u128>().map_err(|e| {
+						PumpxRpcError::from(
+							DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+								.with_reason(format!("Invalid hedge_open_cloid: {}", e)),
+						)
+					})?;
 
 					let close_ctx = precheck_close_hedge(
 						&ctx,
@@ -229,8 +230,8 @@ pub fn register_payback_loan_test<
 						spot_buy_tx_hash,
 					})
 				},
-				LoanState::HedgeClosed => {
-					info!("Resuming from HedgeClosed state");
+				LoanState::HedgeClosed | LoanState::ToPerpMoved => {
+					info!("Resuming from HedgeClosed or ToPerpMoved state");
 
 					let move_ctx = precheck_move_to_spot(
 						&hypercore_client,
@@ -260,8 +261,8 @@ pub fn register_payback_loan_test<
 						spot_buy_tx_hash,
 					})
 				},
-				LoanState::ToSpotMoved => {
-					info!("Resuming from ToSpotMoved state");
+				LoanState::ToSpotMoved | LoanState::SpotSold => {
+					info!("Resuming from ToSpotMoved or SpotSold state");
 
 					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
 
@@ -286,11 +287,6 @@ pub fn register_payback_loan_test<
 						"Payback already completed",
 					)))
 				},
-				_ => Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Invalid loan state").with_reason(
-						format!("Cannot payback loan from state: {:?}", loan_record.state),
-					),
-				)),
 			}
 		})
 		.expect("Failed to register omni_paybackLoanTest method");
