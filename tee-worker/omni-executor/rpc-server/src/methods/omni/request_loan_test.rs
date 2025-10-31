@@ -15,6 +15,18 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
+/// Truncates a float to at most 3 decimal places without rounding.
+/// Removes trailing zeros for cleaner storage.
+///
+/// Examples: 9.1866 -> "9.186" (truncated, not rounded to 9.187)
+fn truncate_usdc(value: f64) -> String {
+	let truncated = (value * 1000.0).floor() / 1000.0;
+	format!("{:.3}", truncated)
+		.trim_end_matches('0')
+		.trim_end_matches('.')
+		.to_string()
+}
+
 #[derive(Debug, Deserialize)]
 pub struct RequestLoanTestParams {
 	pub user_operation: SerializablePackedUserOperation,
@@ -162,7 +174,7 @@ pub fn register_request_loan_test<
 					Ok(RequestLoanTestResponse {
 						spot_sell_cloid: spot_sell_cloid.to_string(),
 						hedge_open_cloid: hedge_open_cloid.to_string(),
-						usdc_received: format!("{:.2}", usdc_loaned),
+						usdc_received: truncate_usdc(usdc_loaned),
 						spot_sell_tx_hash,
 						to_perp_move_tx_hash,
 						hedge_open_tx_hash,
@@ -627,7 +639,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 			)
 		})?;
 
-	let usdc_sold = usdc_from_spot_fill(&spot_sell_fill).map_err(|e| {
+	let usdc_sold_f64 = usdc_from_spot_fill(&spot_sell_fill).map_err(|e| {
 		error!("Failed to calculate USDC received: {}", e);
 		PumpxRpcError::from(
 			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
@@ -635,10 +647,17 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		)
 	})?;
 
-	info!("Spot sell completed: received {:.2} USDC", usdc_sold);
+	let usdc_loaned_f64 = usdc_sold_f64 * lending_ratio_f64;
+	let usdc_for_perp_f64 = usdc_sold_f64 * (1.0 - lending_ratio_f64);
 
-	let usdc_loaned = usdc_sold * lending_ratio_f64;
-	let usdc_for_perp = usdc_sold * (1.0 - lending_ratio_f64);
+	let usdc_sold = truncate_usdc(usdc_sold_f64);
+	let usdc_loaned = truncate_usdc(usdc_loaned_f64);
+	let usdc_for_perp = truncate_usdc(usdc_for_perp_f64);
+
+	info!(
+		"Spot sell completed: usdc_sold={}, usdc_loaned={}, usdc_for_perp={}",
+		usdc_sold, usdc_loaned, usdc_for_perp
+	);
 
 	// Store loan record with SpotSold state
 	exec_ctx
@@ -649,9 +668,9 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 			executor_storage::loan_record::NewLoanRecord {
 				collateral_ticker: collateral_ticker.to_string(),
 				collateral_size: collateral_size.to_string(),
-				usdc_sold: format!("{:.2}", usdc_sold),
-				usdc_loaned: format!("{:.2}", usdc_loaned),
-				usdc_for_perp: format!("{:.2}", usdc_for_perp),
+				usdc_sold,
+				usdc_loaned,
+				usdc_for_perp,
 			},
 		)
 		.map_err(|e| {
@@ -675,7 +694,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		.print_account_state(exec_ctx.smart_wallet, "After Spot Sell")
 		.await;
 
-	Ok((usdc_sold, spot_sell_cloid, spot_sell_tx_hash))
+	Ok((usdc_sold_f64, spot_sell_cloid, spot_sell_tx_hash))
 }
 
 async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
