@@ -123,24 +123,20 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
             if (!accountExists) {
                 console.log("Account does not exist, generating initCode...");
 
-                let calculatedOmniAccount: `0x${string}`;
-                let rootSigner: `0x${string}`;
+                // IMPORTANT: Always use the omniAccountHash prop, not recalculated value
+                const calculatedOmniAccount: `0x${string}` = omniAccountHash as `0x${string}`;
                 let ownerType: number;
 
+                // CRITICAL FIX: The rootSigner must be the TEE worker address for BOTH
+                // email and wallet auth because the TEE worker signs the UserOperation.
+                const rootSigner = await getTEEWorkerAddress(omniAccountHash) as `0x${string}`;
+
                 if (authType === "email") {
-                    calculatedOmniAccount = omniAccountHash as `0x${string}`;
-                    rootSigner = await getTEEWorkerAddress(omniAccountHash) as `0x${string}`;
                     ownerType = OwnerType.Email;
                 } else {
                     if (!evmAddress) {
                         throw new Error("Wallet not connected");
                     }
-                    calculatedOmniAccount = calculateOmniAccount(
-                        evmAddress,
-                        DEFAULT_CLIENT_ID,
-                        "evm",
-                    );
-                    rootSigner = evmAddress as `0x${string}`;
                     ownerType = OwnerType.Evm;
                 }
 
@@ -153,6 +149,16 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                     clientIdBytes,
                     rootSigner,
                 ) as `0x${string}`;
+
+                console.log("Generated initCode for payback:", {
+                    omniAccountHash,
+                    calculatedOmniAccount,
+                    rootSigner,
+                    ownerType,
+                    authType,
+                    evmAddress,
+                    note: "rootSigner is TEE worker for both email and wallet auth",
+                });
             }
 
             // Get current nonce

@@ -183,16 +183,16 @@ export enum PaymasterType {
 
 // UserOperation gas limits
 export const USER_OP_GAS_LIMITS = {
-    // For account deployment operations
+    // For account deployment operations (when init_code is used)
     deployment: {
-        callGasLimit: BigInt(500000),      // Sufficient for contract deployment
-        verificationGasLimit: BigInt(700000), // Enough for verification + init
-        preVerificationGas: BigInt(70000),   // Standard for basic operations
+        callGasLimit: BigInt(2000000),      // Increased for contract deployment
+        verificationGasLimit: BigInt(3000000), // Increased for verification + init
+        preVerificationGas: BigInt(200000),   // Increased for deployment overhead
     },
     // For regular operations (transfers, calls, etc.)
     regular: {
-        callGasLimit: BigInt(500000),      // Sufficient for most operations
-        verificationGasLimit: BigInt(1000000), // Higher for complex operations
-        preVerificationGas: BigInt(100000),   // Standard overhead
+        callGasLimit: BigInt(1000000),      // Increased for complex operations
+        verificationGasLimit: BigInt(2000000), // Increased for complex verification
+        preVerificationGas: BigInt(150000),   // Increased overhead
     },
 } as const;

@@ -211,27 +211,23 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash, onAccountCrea
                 console.log("Account does not exist, generating initCode...");
 
                 // Calculate parameters for account creation
-                let calculatedOmniAccount: `0x${string}`;
-                let rootSigner: `0x${string}`;
+                // IMPORTANT: Always use the omniAccountHash prop, not recalculated value
+                // to ensure consistency with what's used elsewhere
+                const calculatedOmniAccount: `0x${string}` = omniAccountHash as `0x${string}`;
                 let ownerType: number;
 
+                // CRITICAL FIX: The rootSigner must be the TEE worker address for BOTH
+                // email and wallet auth because the TEE worker signs the UserOperation.
+                // The signature validation during deployment will check against rootSigner.
+                const rootSigner = await getTEEWorkerAddress(omniAccountHash) as `0x${string}`;
+
                 if (authType === "email") {
-                    // For email accounts, use the provided omniAccountHash
-                    calculatedOmniAccount = omniAccountHash as `0x${string}`;
-                    // Get TEE worker as root signer
-                    rootSigner = await getTEEWorkerAddress(omniAccountHash) as `0x${string}`;
                     ownerType = OwnerType.Email;
                 } else {
                     // For wallet accounts
                     if (!evmAddress) {
                         throw new Error("Wallet not connected");
                     }
-                    calculatedOmniAccount = calculateOmniAccount(
-                        evmAddress,
-                        DEFAULT_CLIENT_ID,
-                        "evm",
-                    );
-                    rootSigner = evmAddress as `0x${string}`;
                     ownerType = OwnerType.Evm;
                 }
 
@@ -247,10 +243,14 @@ export function RequestLoan({ omniAccountAddress, omniAccountHash, onAccountCrea
                 ) as `0x${string}`;
 
                 console.log("Generated initCode for new account:", {
+                    omniAccountHash,
                     calculatedOmniAccount,
                     rootSigner,
                     ownerType,
+                    authType,
+                    evmAddress,
                     initCodeLength: initCode.length,
+                    note: "rootSigner is TEE worker for both email and wallet auth",
                 });
             }
 

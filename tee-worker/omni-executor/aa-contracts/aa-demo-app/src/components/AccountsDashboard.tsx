@@ -49,8 +49,20 @@ export function AccountsDashboard({
                     setIsLoadingRootSigner(false);
                 }
             } else if (authType === "wallet" && evmAddress) {
-                setRootSigner(evmAddress);
-                setOwnerType(OwnerType.Evm);
+                // CRITICAL: For wallet auth, TEE worker is ALSO the root signer
+                // because it signs UserOperations on behalf of the wallet
+                setIsLoadingRootSigner(true);
+                try {
+                    const omniAccountHash = calculateOmniAccount(evmAddress, DEFAULT_CLIENT_ID, "evm");
+                    const workerAddress = await getTEEWorkerAddress(omniAccountHash);
+                    setRootSigner(workerAddress as Address);
+                    setOwnerType(OwnerType.Evm);
+                } catch (error) {
+                    console.error("Failed to get TEE worker address for wallet:", error);
+                    setRootSigner("0x0000000000000000000000000000000000000000" as Address);
+                } finally {
+                    setIsLoadingRootSigner(false);
+                }
             }
         };
 

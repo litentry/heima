@@ -276,11 +276,11 @@ export async function estimateUserOperationGas(
         };
     } catch (error) {
         console.warn("Failed to estimate gas, using fallback values:", error);
-        // Fallback values appropriate for Arbitrum Sepolia
+        // Fallback values with higher limits for reliability
         return {
-            callGasLimit: isDeployment ? BigInt(2000000) : BigInt(500000),
-            verificationGasLimit: isDeployment ? BigInt(3000000) : BigInt(1000000),
-            preVerificationGas: BigInt(100000),
+            callGasLimit: isDeployment ? BigInt(2000000) : BigInt(1000000),
+            verificationGasLimit: isDeployment ? BigInt(3000000) : BigInt(2000000),
+            preVerificationGas: isDeployment ? BigInt(200000) : BigInt(150000),
             maxFeePerGas: BigInt(30000000000), // 30 gwei fallback
             maxPriorityFeePerGas: BigInt(1500000000), // 1.5 gwei fallback
         };
@@ -325,11 +325,11 @@ export function createUserOperation(params: {
         );
     }
 
-    // Use provided gas parameters or defaults
+    // Use provided gas parameters or defaults (higher limits for reliability)
     const gasParams = params.gasParams || {
         callGasLimit: BigInt(2000000),
         verificationGasLimit: BigInt(3000000),
-        preVerificationGas: BigInt(100000),
+        preVerificationGas: BigInt(200000),
         maxFeePerGas: BigInt(30000000000), // 30 gwei default
         maxPriorityFeePerGas: BigInt(1500000000), // 1.5 gwei default
     };
@@ -1117,15 +1117,15 @@ export async function estimateUserOpGasFromWorker(
             maxPriorityFeePerGas = BigInt(1500000000);
         }
 
-        // Return reasonable default gas parameters
+        // Return reasonable default gas parameters with higher limits
         const fallbackGasParams = {
-            callGasLimit: BigInt(300000),              // Sufficient for most token transfers
-            verificationGasLimit: BigInt(500000),      // Covers signature validation
-            preVerificationGas: BigInt(100000),        // Covers base transaction costs
+            callGasLimit: BigInt(1000000),             // Increased for complex operations
+            verificationGasLimit: BigInt(2000000),     // Increased for signature validation
+            preVerificationGas: BigInt(150000),        // Increased for transaction overhead
             maxFeePerGas,
             maxPriorityFeePerGas,
-            paymasterVerificationGasLimit: BigInt(150000),  // For ERC20 paymaster validation
-            paymasterPostOpGasLimit: BigInt(100000),        // For ERC20 paymaster post-op
+            paymasterVerificationGasLimit: BigInt(200000),  // Increased for paymaster validation
+            paymasterPostOpGasLimit: BigInt(150000),        // Increased for paymaster post-op
         };
 
         console.log("[Gas Estimation] Using fallback gas estimates:", fallbackGasParams);
