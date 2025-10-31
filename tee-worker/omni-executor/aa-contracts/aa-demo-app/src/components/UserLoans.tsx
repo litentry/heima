@@ -245,9 +245,12 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
             }
 
             // 4. Calculate available USDC for this loan
+            // Total USDC = USDC in spot (usdc_loaned) + USDC in perp + P&L from hedge
+            const usdcLoaned = parseFloat(loan.usdc_loaned);
+
             // If hedge is closed (positionSize = 0): usdcForPerp already includes realized P&L
             // If hedge is open: usdcForPerp + unrealizedPnl
-            const availableUsdc = usdcForPerp + unrealizedPnl;
+            const availableUsdc = usdcLoaned + usdcForPerp + unrealizedPnl;
 
             // 5. Calculate collateral that can be bought back
             let estimatedCollateral = 0;
@@ -258,11 +261,18 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
             console.log("Collateral return calculation:", {
                 collateralTicker: loan.collateral_ticker,
                 spotPrice,
+                usdcLoaned,
                 usdcForPerp,
                 positionSize,
                 unrealizedPnl,
                 availableUsdc,
                 estimatedCollateral,
+                breakdown: {
+                    usdcInSpot: usdcLoaned,
+                    usdcInPerp: usdcForPerp,
+                    hedgePnL: unrealizedPnl,
+                    total: availableUsdc,
+                },
                 loanData: {
                     usdc_for_perp: loan.usdc_for_perp,
                     position_size: loan.position_size,
