@@ -816,10 +816,10 @@ async fn precheck_move_to_spot(
 			));
 		}
 
-		let final_amount = calculated_amount.min(withdrawable_usdc);
+		let final_amount = calculated_amount.min(withdrawable_usdc + margin_used);
 		info!(
-			"✓ Transfer amount validation passed: {} <= {} (max transferable), using {}",
-			calculated_amount, max_transferable, final_amount
+			"final_amount={}, withdrawable_usdc={}, margin_used={}, stored_withdrawable={}",
+			final_amount, withdrawable_usdc, margin_used, stored_withdrawable
 		);
 
 		final_amount
@@ -1093,7 +1093,33 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 			)
 		})?;
 
-	let transfer_amount_units = to_usdc_units(move_ctx.transfer_amount);
+	let perp_state = exec_ctx
+		.hypercore_client
+		.get_perp_clearinghouse_state(exec_ctx.smart_wallet)
+		.await
+		.map_err(|e| {
+			error!("Failed to get perp state: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to query perp state: {}", e)),
+			)
+		})?;
+
+	let withdrawable_usdc = perp_state.withdrawable.parse::<f64>().map_err(|e| {
+		error!("Failed to parse withdrawable USDC: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse withdrawable USDC: {}", e)),
+		)
+	})?;
+
+	let final_amount = move_ctx.transfer_amount.min(withdrawable_usdc);
+	info!(
+		"Calculated transfer_amount={}, withdrawable_usdc={}, final_amount={}",
+		move_ctx.transfer_amount, withdrawable_usdc, final_amount
+	);
+
+	let transfer_amount_units = to_usdc_units(final_amount);
 	let transfer_action = build_usd_class_transfer_to_spot(transfer_amount_units);
 	let transfer_calldata = encode_omni_account_execute(
 		get_core_writer_address(),
@@ -1111,10 +1137,7 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	.await?;
 	*current_nonce += 1;
 
-	info!(
-		"to_spot_move submitted, size: {}, tx_hash: {:?}",
-		move_ctx.transfer_amount, to_spot_move_tx_hash
-	);
+	info!("to_spot_move submitted, size: {}, tx_hash: {:?}", final_amount, to_spot_move_tx_hash);
 
 	exec_ctx
 		.hypercore_client
@@ -1122,7 +1145,7 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 			exec_ctx.smart_wallet,
 			"USDC",
 			initial_spot_usdc,
-			move_ctx.transfer_amount,
+			final_amount,
 			30,
 		)
 		.await
