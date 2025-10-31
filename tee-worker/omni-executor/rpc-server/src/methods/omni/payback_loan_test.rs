@@ -207,7 +207,9 @@ pub fn register_payback_loan_test<
 					)
 					.await?;
 
-					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
+					let buy_ctx =
+						precheck_buy_spot(&hypercore_client, &collateral_ticker, collateral_size)
+							.await?;
 
 					let (hedge_cancel_tx_hash, hedge_close_cloid_opt, hedge_close_tx_hash) =
 						do_close_hedge(&exec_ctx, hedge_open_cloid, &close_ctx, &mut current_nonce)
@@ -242,7 +244,9 @@ pub fn register_payback_loan_test<
 					)
 					.await?;
 
-					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
+					let buy_ctx =
+						precheck_buy_spot(&hypercore_client, &collateral_ticker, collateral_size)
+							.await?;
 
 					let to_spot_move_tx_hash =
 						do_move_to_spot(&exec_ctx, &move_ctx, &mut current_nonce).await?;
@@ -264,7 +268,9 @@ pub fn register_payback_loan_test<
 				LoanState::ToSpotMoved | LoanState::SpotSold => {
 					info!("Resuming from ToSpotMoved or SpotSold state");
 
-					let buy_ctx = precheck_buy_spot(&hypercore_client, &collateral_ticker).await?;
+					let buy_ctx =
+						precheck_buy_spot(&hypercore_client, &collateral_ticker, collateral_size)
+							.await?;
 
 					let (spot_buy_cloid, spot_buy_tx_hash) =
 						do_buy_spot(&exec_ctx, collateral_size, &buy_ctx, current_nonce).await?;
@@ -714,6 +720,27 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 		));
 	};
 
+	// Validate notional value if closing position
+	if should_close && position_size_to_close > 0.0 {
+		let clamped_size = clamp_size(position_size_to_close, perp_sz_decimals);
+		let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
+			error!("Failed to parse clamped close size: {}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to parse clamped close size: {}", e)),
+			)
+		})?;
+
+		// For closing long position (selling), we want to sell at the highest buy price (bid)
+		let (perp_bid_price, _) = get_bid_ask_prices(perp_mark_price, perp_mid_price);
+		validate_notional_value(perp_bid_price, clamped_size_f64, "Perp close").map_err(|e| {
+			error!("{}", e);
+			PumpxRpcError::from(
+				DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e),
+			)
+		})?;
+	}
+
 	info!("✓ Close position precheck passed");
 
 	Ok(CloseHedgeContext {
@@ -809,6 +836,7 @@ async fn precheck_move_to_spot(
 async fn precheck_buy_spot(
 	hypercore_client: &HyperCoreClient,
 	collateral_ticker: &str,
+	collateral_size: f64,
 ) -> Result<BuySpotContext, PumpxRpcError> {
 	let (spot_meta, spot_mark_price, spot_mid_price) =
 		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
@@ -839,6 +867,25 @@ async fn precheck_buy_spot(
 		})?;
 
 	let spot_sz_decimals = spot_token.sz_decimals;
+
+	// Validate notional value with clamped size
+	let clamped_size = clamp_size(collateral_size, spot_sz_decimals);
+	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped buy size: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse clamped buy size: {}", e)),
+		)
+	})?;
+
+	// For buying, we want to buy at the lowest sell price (ask)
+	let (_, spot_ask_price) = get_bid_ask_prices(spot_mark_price, spot_mid_price);
+	validate_notional_value(spot_ask_price, clamped_size_f64, "Spot buy").map_err(|e| {
+		error!("{}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e),
+		)
+	})?;
 
 	info!("✓ Buy spot precheck passed");
 

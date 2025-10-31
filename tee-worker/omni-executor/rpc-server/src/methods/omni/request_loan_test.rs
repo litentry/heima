@@ -15,9 +15,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
-// minimum perp order notional value ($10 minimum)
-const MIN_PERP_NOTIONAL: f64 = 10.0;
-
 #[derive(Debug, Deserialize)]
 pub struct RequestLoanTestParams {
 	pub user_operation: SerializablePackedUserOperation,
@@ -415,6 +412,24 @@ async fn precheck_sell_spot(
 		)
 	})?;
 
+	// Validate notional value with clamped size
+	let clamped_size = clamp_size(collateral_size, spot_sz_decimals);
+	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped size: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse clamped size: {}", e)),
+		)
+	})?;
+
+	let (spot_bid_price, _) = get_bid_ask_prices(spot_mark_price, spot_mid_price);
+	validate_notional_value(spot_bid_price, clamped_size_f64, "Spot sell").map_err(|e| {
+		error!("{}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e),
+		)
+	})?;
+
 	// Validate balance
 	let user_balance = hypercore_client
 		.get_spot_balance(smart_wallet, collateral_ticker)
@@ -478,34 +493,36 @@ async fn precheck_open_hedge(
 	let desired_leverage = 1.0 / (1.0 - lending_ratio_f64);
 	let effective_leverage = desired_leverage.min(perp_max_leverage as f64);
 
-	let estimated_notional = usdc_for_perp * effective_leverage;
-
-	if estimated_notional < MIN_PERP_NOTIONAL {
-		error!(
-			"Perp notional too small, estimated: {}, required: {}",
-			estimated_notional, MIN_PERP_NOTIONAL
-		);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
-				"Perp notional too small, estimated: {}, required: {}",
-				estimated_notional, MIN_PERP_NOTIONAL
-			)),
-		));
-	}
-
-	// Worst case for opening long position: lowest sell price (ask) with buffer
+	// Calculate estimated size for opening long position using lowest sell price (ask)
 	let (_perp_bid_price, perp_ask_price) = get_bid_ask_prices(perp_mark_price, perp_mid_price);
-	let worst_case_perp_open_price = perp_ask_price * PERP_ENTRY_PRICE_RATIO;
-	let estimated_hedge_size = estimated_notional / worst_case_perp_open_price;
+	let estimated_notional = usdc_for_perp * effective_leverage;
+	let estimated_hedge_size = estimated_notional / perp_ask_price;
 
 	validate_trade_size(estimated_hedge_size, perp_sz_decimals, None).map_err(|e| {
 		error!("Invalid estimated hedge size for perp trading: {}", e);
 		PumpxRpcError::from(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
 			format!(
 				"Invalid estimated hedge size (margin={:.2}, leverage={:.2}x, perp_price={:.2}, size={}): {}",
-				usdc_for_perp, effective_leverage, worst_case_perp_open_price, estimated_hedge_size, e
+				usdc_for_perp, effective_leverage, perp_ask_price, estimated_hedge_size, e
 			),
 		))
+	})?;
+
+	// Validate notional value with clamped size
+	let clamped_size = clamp_size(estimated_hedge_size, perp_sz_decimals);
+	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
+		error!("Failed to parse clamped hedge size: {}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse clamped hedge size: {}", e)),
+		)
+	})?;
+
+	validate_notional_value(perp_ask_price, clamped_size_f64, "Perp open").map_err(|e| {
+		error!("{}", e);
+		PumpxRpcError::from(
+			DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e),
+		)
 	})?;
 
 	info!("✓ Open hedge precheck passed");
