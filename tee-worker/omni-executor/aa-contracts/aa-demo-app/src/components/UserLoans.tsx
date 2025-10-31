@@ -24,6 +24,7 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
     const [loans, setLoans] = useState<LoanRecordWithNonce[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [liquidationPrices, setLiquidationPrices] = useState<Map<string, string>>(new Map());
     const [accountExists, setAccountExists] = useState<boolean>(false);
     const [expandedLoans, setExpandedLoans] = useState<Set<string>>(new Set());
 
@@ -62,6 +63,11 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
             loanArray.sort((a, b) => Number(b.nonce) - Number(a.nonce));
 
             setLoans(loanArray);
+
+            // Fetch liquidation prices from Hyperliquid
+            if (omniAccountAddress) {
+                fetchLiquidationPrices();
+            }
         } catch (err) {
             console.error("Failed to fetch loans:", err);
             setError(err instanceof Error ? err.message : "Failed to fetch loans");
@@ -319,6 +325,52 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
         }
     };
 
+    // Fetch liquidation prices from Hyperliquid API
+    const fetchLiquidationPrices = async () => {
+        if (!omniAccountAddress) return;
+
+        try {
+            const response = await fetch(`${HYPERLIQUID_CORE_CONFIG.apiUrl}/info`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    type: "clearinghouseState",
+                    user: omniAccountAddress,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Clearinghouse state:", data);
+
+                // Extract liquidation prices from positions
+                const liqPrices = new Map<string, string>();
+
+                if (data.assetPositions && Array.isArray(data.assetPositions)) {
+                    data.assetPositions.forEach((position: any) => {
+                        if (position.position && position.position.liquidationPx) {
+                            const coin = position.position.coin;
+                            const liqPx = position.position.liquidationPx;
+                            liqPrices.set(coin, liqPx);
+                        }
+                    });
+                }
+
+                setLiquidationPrices(liqPrices);
+            }
+        } catch (error) {
+            console.error("Error fetching liquidation prices:", error);
+        }
+    };
+
+    // Get liquidation price for a loan
+    const getLiquidationPrice = (loan: LoanRecordWithNonce): string => {
+        const ticker = loan.collateral_ticker;
+        return liquidationPrices.get(ticker) || "N/A";
+    };
+
     return (
         <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center justify-between mb-6">
@@ -391,6 +443,9 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
                                     Hedge Open CLOID
                                 </th>
+                                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
+                                    Liquidation Price
+                                </th>
                                 <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
                                     Action
                                 </th>
@@ -446,6 +501,12 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                                             <td className="py-4 px-4 text-sm text-gray-600 font-mono truncate max-w-[150px]">
                                                 {getCloid(loan, "hedge_open")}
                                             </td>
+                                            <td className="py-4 px-4 text-sm text-right font-medium text-red-600 font-mono">
+                                                {(() => {
+                                                    const liqPrice = getLiquidationPrice(loan);
+                                                    return liqPrice !== "N/A" ? `$${formatNumber(liqPrice)}` : liqPrice;
+                                                })()}
+                                            </td>
                                             <td className="py-4 px-4 text-center">
                                                 {canPayback(loan.state) ? (
                                                     <button
@@ -466,7 +527,7 @@ export function UserLoans({ omniAccountHash, omniAccountAddress }: UserLoansProp
                                         </tr>
                                         {isExpanded && (
                                             <tr className="bg-gray-50">
-                                                <td colSpan={10} className="py-4 px-8">
+                                                <td colSpan={11} className="py-4 px-8">
                                                     <div className="space-y-3">
                                                         <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                                                             <FileText className="w-4 h-4" />
