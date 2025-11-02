@@ -19,7 +19,6 @@ use crate::error_code::{
 	INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, INVALID_USER_OPERATION_CODE,
 	SIGNATURE_SERVICE_UNAVAILABLE_CODE,
 };
-use crate::methods::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
@@ -32,6 +31,7 @@ use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::utils::hex::decode_hex;
 use executor_primitives::AccountId;
 use hyperliquid::*;
+use jsonrpsee::types::ErrorObject;
 use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -155,15 +155,14 @@ pub(crate) async fn submit_corewriter_userop<
 	chain_id: u64,
 	wallet_index: u32,
 	call_data: String,
-) -> Result<Option<String>, PumpxRpcError> {
+) -> Result<Option<String>, ErrorObject> {
 	let smart_wallet_address = &skeleton_user_op.sender;
 
 	let entry_point_client = ctx.entry_point_clients.get(&chain_id).ok_or_else(|| {
 		error!("No EntryPoint client configured for chain_id: {}", chain_id);
-		PumpxRpcError::from(
-			DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-				.with_reason(format!("Chain ID {} is not supported", chain_id)),
-		)
+		DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
+			.with_reason(format!("Chain ID {} is not supported", chain_id))
+			.into()
 	})?;
 
 	let nonce = skeleton_user_op.nonce;
@@ -188,10 +187,9 @@ pub(crate) async fn submit_corewriter_userop<
 		let (max_fee_per_gas, max_priority_fee_per_gas) =
 			entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
 				error!("Failed to calculate gas fees: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to calculate gas fees"),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Failed to calculate gas fees")
+					.into()
 			})?;
 		(
 			pack_gas_fees(max_fee_per_gas.to::<u128>(), max_priority_fee_per_gas.to::<u128>()),
@@ -229,10 +227,9 @@ pub(crate) async fn submit_corewriter_userop<
 	// Convert SerializablePackedUserOperation to PackedUserOperation
 	let mut packed_user_op = convert_to_packed_user_op(user_op.clone()).map_err(|e| {
 		error!("Failed to convert UserOperation: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
-				.with_reason(format!("Invalid user operation: {}", e)),
-		)
+		DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+			.with_reason(format!("Invalid user operation: {}", e))
+			.into()
 	})?;
 
 	// Check userOp signature status and validate paymaster usage
@@ -247,13 +244,15 @@ pub(crate) async fn submit_corewriter_userop<
 						"UserOperation uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
 						paymaster_address
 					);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
-							.with_reason(format!(
-								"UserOperation uses non-whitelisted paymaster {}",
-								paymaster_address
-							)),
-					));
+					return Err(DetailedError::new(
+						INVALID_USER_OPERATION_CODE,
+						"Invalid user operation",
+					)
+					.with_reason(format!(
+						"UserOperation uses non-whitelisted paymaster {}",
+						paymaster_address
+					))
+					.into());
 				}
 			}
 
@@ -273,10 +272,12 @@ pub(crate) async fn submit_corewriter_userop<
 				},
 				Err(e) => {
 					error!("Failed to process ERC20 paymaster data for UserOperation: {}", e);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
-							.with_reason(format!("ERC20 paymaster processing failed: {}", e)),
-					));
+					return Err(DetailedError::new(
+						INVALID_USER_OPERATION_CODE,
+						"Invalid user operation",
+					)
+					.with_reason(format!("ERC20 paymaster processing failed: {}", e))
+					.into());
 				},
 			}
 		}
@@ -322,24 +323,22 @@ pub(crate) async fn submit_corewriter_userop<
 			Ok(sig) => substrate_to_ethereum_signature(&sig)
 				.map_err(|e| {
 					error!("Failed to convert signature: {}", e);
-					PumpxRpcError::from(
-						DetailedError::new(
-							SIGNATURE_SERVICE_UNAVAILABLE_CODE,
-							"Signature service unavailable",
-						)
-						.with_suggestion("Please try again later"),
-					)
-				})?
-				.to_vec(),
-			Err(_) => {
-				error!("Failed to sign user operation");
-				return Err(PumpxRpcError::from(
 					DetailedError::new(
 						SIGNATURE_SERVICE_UNAVAILABLE_CODE,
 						"Signature service unavailable",
 					)
-					.with_suggestion("Please try again later"),
-				));
+					.with_suggestion("Please try again later")
+					.into()
+				})?
+				.to_vec(),
+			Err(_) => {
+				error!("Failed to sign user operation");
+				return Err(DetailedError::new(
+					SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+					"Signature service unavailable",
+				)
+				.with_suggestion("Please try again later")
+				.into());
 			},
 		};
 
@@ -354,10 +353,9 @@ pub(crate) async fn submit_corewriter_userop<
 			error!(
 				"UserOperation is signed but has paymaster data. Signed userOps are only allowed without paymaster."
 			);
-			return Err(PumpxRpcError::from(
-				DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
-					.with_reason("UserOperation is signed but specifies a paymaster"),
-			));
+			return Err(DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+				.with_reason("UserOperation is signed but specifies a paymaster")
+				.into());
 		}
 		info!("UserOperation is signed with no paymaster, processing");
 	}
@@ -379,7 +377,7 @@ pub(crate) async fn submit_corewriter_userop<
 	let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
 		let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
 		error!("{}", err_msg);
-		PumpxRpcError::from_code_and_message(INTERNAL_ERROR_CODE, err_msg)
+		DetailedError::new(INTERNAL_ERROR_CODE, err_msg)
 	})?;
 
 	// Run simulation for UserOperation before submission
@@ -401,10 +399,9 @@ pub(crate) async fn submit_corewriter_userop<
 		Err(e) => {
 			let err_msg = format!("UserOperation simulation failed: {}", e);
 			error!("{}", err_msg);
-			return Err(PumpxRpcError::from(
-				DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
-					.with_reason(err_msg),
-			));
+			return Err(DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+				.with_reason(err_msg)
+				.into());
 		},
 	}
 
@@ -417,7 +414,7 @@ pub(crate) async fn submit_corewriter_userop<
 					"Failed to submit UserOperation to EntryPoint via handleOps after retries"
 						.to_string();
 				error!("{}", err_msg);
-				return Err(PumpxRpcError::from_code_and_message(INTERNAL_ERROR_CODE, err_msg));
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, err_msg));
 			},
 		};
 

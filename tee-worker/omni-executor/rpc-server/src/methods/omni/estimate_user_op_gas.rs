@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::PumpxRpcError;
 use crate::detailed_error::DetailedError;
 use crate::error_code::PARSE_ERROR_CODE;
 use crate::server::RpcContext;
@@ -96,26 +95,22 @@ pub fn register_estimate_user_op_gas<
 		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {
 			let params = params.parse::<EstimateUserOpGasParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
-						crate::error_code::MISSING_REQUIRED_FIELD_CODE,
-						"Failed to parse request parameters",
-					)
-					.with_reason(format!("Parse error: {}", e)),
+				DetailedError::new(
+					crate::error_code::MISSING_REQUIRED_FIELD_CODE,
+					"Failed to parse request parameters",
 				)
+				.with_reason(format!("Parse error: {}", e))
+				.into()
 			})?;
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
 			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				))
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
 			})?;
 
 			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
-				.map_err(PumpxRpcError::from)?;
+				.map_err(|e| e.into())?;
 
 			// Inlined handler logic from handle_estimate_user_op_gas
 			info!(
@@ -127,16 +122,15 @@ pub fn register_estimate_user_op_gas<
 			let entry_point_client =
 				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 					error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-					PumpxRpcError::from(DetailedError::chain_not_supported(params.chain_id))
+					DetailedError::chain_not_supported(params.chain_id).into()
 				})?;
 
 			// Convert SerializablePackedUserOperation to PackedUserOperation
 			let packed_user_op =
 				convert_to_packed_user_op(params.user_operation.clone()).map_err(|e| {
 					error!("Failed to convert UserOperation: {}", e);
-					PumpxRpcError::from(DetailedError::invalid_user_operation_error(
-						"Invalid user operation format",
-					))
+					DetailedError::invalid_user_operation_error("Invalid user operation format")
+						.into()
 				})?;
 
 			// Perform gas estimation
@@ -183,7 +177,7 @@ pub fn register_estimate_user_op_gas<
 				},
 				Err(e) => {
 					error!("Gas estimation failed: {}", e);
-					Err(PumpxRpcError::from(DetailedError::gas_estimation_failed()))
+					Err(DetailedError::gas_estimation_failed().into())
 				},
 			}
 		})

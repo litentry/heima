@@ -1,5 +1,5 @@
 use http::Extensions;
-use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
+use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
 use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;
 use serde::Serialize;
@@ -101,16 +101,13 @@ impl From<Box<DetailedError>> for PumpxRpcError {
 
 // Removed: handle_omni_native_task - all RPC methods now call handlers directly
 
-pub fn check_omni_api_response<T>(
-	response: ApiResponse<T>,
-	name: String,
-) -> Result<(), PumpxRpcError>
+pub fn check_omni_api_response<T>(response: ApiResponse<T>, name: String) -> Result<(), ErrorObject>
 where
 	T: Codec,
 {
 	if response.code != 10000 {
 		error!("{} failed: code={}, message={}", name, response.code, response.message);
-		return Err(PumpxRpcError::from_api_response(response));
+		return Err(DetailedError::from_api_response(response).into());
 	}
 	Ok(())
 }

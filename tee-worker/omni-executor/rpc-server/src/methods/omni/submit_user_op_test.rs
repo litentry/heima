@@ -16,7 +16,6 @@
 
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
@@ -59,10 +58,8 @@ pub fn register_submit_user_op_test<
 		.register_async_method("omni_submitUserOpTest", |params, ctx, _ext| async move {
 			let params = params.parse::<SubmitUserOpTestParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+						.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			debug!("Received omni_submitUserOpTest, params: {:?}", params);
@@ -71,10 +68,8 @@ pub fn register_submit_user_op_test<
 				hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
 					.map_err(|_| {
 						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Failed to decode omni account hex string"),
-						)
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+								.with_reason("Failed to decode omni account hex string")
 					})?;
 
 			if address_bytes.len() != 32 {
@@ -82,31 +77,26 @@ pub fn register_submit_user_op_test<
 					"Invalid omni account length: expected 32 bytes, got {}",
 					address_bytes.len()
 				);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
 						"Invalid omni account length: expected 32 bytes, got {}",
 						address_bytes.len()
-					)),
-				));
+					)).into()
+				);
 			}
 
 			for op in &params.user_operations {
 				op.sender.parse::<Address>().map_err(|e| {
 					error!("Invalid sender address '{}': {}", op.sender, e);
-					PumpxRpcError::from(
-						DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 							.with_field("sender")
-							.with_reason(format!("Invalid sender address '{}': {}", op.sender, e)),
-					)
+							.with_reason(format!("Invalid sender address '{}': {}", op.sender, e)).into()
 				})?;
 			}
 
 			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
 				error!("Failed to decode AccountId from bytes");
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to decode AccountId from bytes"),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to decode AccountId from bytes").into()
 			})?;
 
 			// Inlined handler logic from handle_submit_user_op
@@ -119,7 +109,7 @@ pub fn register_submit_user_op_test<
 			// Get EntryPoint client for this chain (needed for both signing and submission)
 			let entry_point_client = ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 				error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-				PumpxRpcError::from(DetailedError::chain_not_supported(params.chain_id))
+				DetailedError::chain_not_supported(params.chain_id).into()
 			})?;
 
 			// Parse whitelisted paymasters once
@@ -133,10 +123,10 @@ pub fn register_submit_user_op_test<
 				let mut packed_user_op = convert_to_packed_user_op(serializable_user_op.clone())
 					.map_err(|e| {
 						error!("Failed to convert UserOperation {}: {}", index, e);
-						PumpxRpcError::from(DetailedError::invalid_user_operation_error(&format!(
+						DetailedError::invalid_user_operation_error(&format!(
 							"Invalid user operation at index {}",
 							index
-						)))
+						)).into()
 					})?;
 
 				// Check userOp signature status and validate paymaster usage
@@ -152,12 +142,11 @@ pub fn register_submit_user_op_test<
 									"UserOperation {} uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
 									index, paymaster_address
 								);
-								return Err(PumpxRpcError::from(
-									DetailedError::invalid_user_operation_error(&format!(
+								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"UserOperation at index {} uses non-whitelisted paymaster {}",
 										index, paymaster_address
-									)),
-								));
+									)).into()
+								);
 							}
 						}
 
@@ -181,12 +170,11 @@ pub fn register_submit_user_op_test<
 									"Failed to process ERC20 paymaster data for UserOperation {}: {}",
 									index, e
 								);
-								return Err(PumpxRpcError::from(
-									DetailedError::invalid_user_operation_error(&format!(
+								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"ERC20 paymaster processing failed for operation at index {}: {}",
 										index, e
-									)),
-								));
+									)).into()
+								);
 							},
 						}
 					}
@@ -233,14 +221,13 @@ pub fn register_submit_user_op_test<
 						Ok(sig) => substrate_to_ethereum_signature(&sig)
 							.map_err(|e| {
 								error!("Failed to convert signature: {}", e);
-								PumpxRpcError::from(DetailedError::signature_service_unavailable())
+								DetailedError::signature_service_unavailable().into()
 							})?
 							.to_vec(),
 						Err(_) => {
 							error!("Failed to sign user operation {}", index);
-							return Err(PumpxRpcError::from(
-								DetailedError::signature_service_unavailable(),
-							));
+							return Err(DetailedError::signature_service_unavailable().into()
+							);
 						},
 					};
 
@@ -256,12 +243,11 @@ pub fn register_submit_user_op_test<
 							"UserOperation {} is signed but has paymaster data. Signed userOps are only allowed without paymaster.",
 							index
 						);
-						return Err(PumpxRpcError::from(
-							DetailedError::invalid_user_operation_error(&format!(
+						return Err(DetailedError::invalid_user_operation_error(&format!(
 								"UserOperation at index {} is signed but specifies a paymaster",
 								index
-							)),
-						));
+							)).into()
+						);
 					}
 					info!("UserOperation {} is signed with no paymaster, processing", index);
 				}
@@ -310,9 +296,8 @@ pub fn register_submit_user_op_test<
 				Err(e) => {
 					let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
 					error!("{}", err_msg.clone());
-					return Err(PumpxRpcError::from(
-						DetailedError::invalid_user_operation_error(&err_msg),
-					));
+					return Err(DetailedError::invalid_user_operation_error(&err_msg).into()
+					);
 				},
 			}
 

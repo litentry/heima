@@ -1,6 +1,5 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_userop;
@@ -83,10 +82,9 @@ pub fn register_payback_loan_test<
 		.register_async_method("omni_paybackLoanTest", |params, ctx, _ext| async move {
 			let params = params.parse::<PaybackLoanTestParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
+					.into()
 			})?;
 
 			debug!("Received omni_paybackLoanTest, params: {:?}", params);
@@ -103,10 +101,9 @@ pub fn register_payback_loan_test<
 
 			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
 				error!("Failed to create HyperCore client: {}", e);
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-						.with_reason(format!("Chain ID {} is not supported", params.chain_id)),
-				)
+				DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
+					.with_reason(format!("Chain ID {} is not supported", params.chain_id))
+					.into()
 			})?;
 
 			hypercore_client.print_account_state(smart_wallet, "Before Payback").await;
@@ -117,39 +114,34 @@ pub fn register_payback_loan_test<
 				.get(&storage_key)
 				.map_err(|_| {
 					error!("Failed to retrieve loan record from storage");
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Failed to retrieve loan record from storage"),
-					)
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to retrieve loan record from storage")
+						.into()
 				})?
 				.ok_or_else(|| {
 					error!("Loan record not found for nonce {}", loan_nonce);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Loan record not found")
-							.with_reason(format!("No loan record found for nonce {}", loan_nonce)),
-					)
+					DetailedError::new(INTERNAL_ERROR_CODE, "Loan record not found")
+						.with_reason(format!("No loan record found for nonce {}", loan_nonce))
+						.into()
 				})?;
 
 			info!("Retrieved loan record: {:?}", loan_record);
 
 			let collateral_ticker = loan_record.collateral_ticker.to_uppercase();
 			let collateral_size = loan_record.collateral_size.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-						.with_reason(format!("Invalid collateral_size: {}", e)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+					.with_reason(format!("Invalid collateral_size: {}", e))
+					.into()
 			})?;
 			let usdc_sold = loan_record.usdc_sold.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-						.with_reason(format!("Invalid usdc_sold: {}", e)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+					.with_reason(format!("Invalid usdc_sold: {}", e))
+					.into()
 			})?;
 			let usdc_loaned = loan_record.usdc_loaned.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-						.with_reason(format!("Invalid usdc_loaned: {}", e)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+					.with_reason(format!("Invalid usdc_loaned: {}", e))
+					.into()
 			})?;
 
 			let exec_ctx = ExecutionContext {
@@ -175,16 +167,13 @@ pub fn register_payback_loan_test<
 						.map(|(_, cloid)| cloid.clone())
 						.ok_or_else(|| {
 							error!("hedge_open cloid not found in loan record");
-							PumpxRpcError::from(
-								DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-									.with_reason("hedge_open cloid not found in loan_record"),
-							)
+							DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+								.with_reason("hedge_open cloid not found in loan_record")
 						})?;
 					let hedge_open_cloid = hedge_open_cloid_str.parse::<u128>().map_err(|e| {
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-								.with_reason(format!("Invalid hedge_open_cloid: {}", e)),
-						)
+						DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+							.with_reason(format!("Invalid hedge_open_cloid: {}", e))
+							.into()
 					})?;
 
 					let close_ctx = precheck_close_hedge(
@@ -288,28 +277,23 @@ pub fn register_payback_loan_test<
 				},
 				LoanState::SpotBought => {
 					error!("Payback already completed");
-					Err(PumpxRpcError::from(DetailedError::new(
-						INTERNAL_ERROR_CODE,
-						"Payback already completed",
-					)))
+					Err(DetailedError::new(INTERNAL_ERROR_CODE, "Payback already completed").into())
 				},
 			}
 		})
 		.expect("Failed to register omni_paybackLoanTest method");
 }
 
-fn precheck_params(params: &PaybackLoanTestParams) -> Result<(AccountId, u64, f64), PumpxRpcError> {
-	let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-		PumpxRpcError::from(DetailedError::new(PARSE_ERROR_CODE, "Invalid omni account"))
-	})?;
+fn precheck_params(params: &PaybackLoanTestParams) -> Result<(AccountId, u64, f64)> {
+	let omni_account = to_omni_account(&params.omni_account)
+		.map_err(|_| DetailedError::new(PARSE_ERROR_CODE, "Invalid omni account").into())?;
 
 	let min_expected_account_value_f64 =
 		params.min_expected_account_value.parse::<f64>().map_err(|e| {
 			error!("Failed to parse min_expected_account_value: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(PARSE_ERROR_CODE, "Invalid parameter")
-					.with_reason(format!("Invalid min_expected_account_value value: {}", e)),
-			)
+			DetailedError::new(PARSE_ERROR_CODE, "Invalid parameter")
+				.with_reason(format!("Invalid min_expected_account_value value: {}", e))
+				.into()
 		})?;
 
 	info!("Minimum expected account value threshold: {} USDC", min_expected_account_value_f64);
@@ -336,16 +320,15 @@ async fn verify_hedge_position(
 	hypercore_client: &HyperCoreClient,
 	smart_wallet_address: &str,
 	collateral_ticker: &str,
-) -> Result<(f64, f64, f64, f64, f64, f64, f64), PumpxRpcError> {
+) -> Result<(f64, f64, f64, f64, f64, f64, f64)> {
 	let perp_state = hypercore_client
 		.get_perp_clearinghouse_state(smart_wallet_address)
 		.await
 		.map_err(|e| {
 			error!("Failed to get perp state: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query perp state: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to query perp state: {}", e))
+				.into()
 		})?;
 
 	let hedge_position = perp_state
@@ -354,80 +337,69 @@ async fn verify_hedge_position(
 		.find(|pos| pos.position.coin.eq_ignore_ascii_case(collateral_ticker))
 		.ok_or_else(|| {
 			error!("Hedge position for {} not found", collateral_ticker);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Position not found").with_reason(format!(
-					"Position for {} not found or liquidated",
-					collateral_ticker
-				)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Position not found")
+				.with_reason(format!("Position for {} not found or liquidated", collateral_ticker))
+				.into()
 		})?;
 
 	let position_size = hedge_position.position.szi.parse::<f64>().map_err(|e| {
 		error!("Failed to parse position size: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid position size: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Invalid position size: {}", e))
+			.into()
 	})?;
 
 	if position_size <= 0.0 {
 		error!("Position liquidated (size: {})", position_size);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated")
-				.with_reason(format!("Position for {} has been liquidated", collateral_ticker)),
-		));
+		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Position liquidated")
+			.with_reason(format!("Position for {} has been liquidated", collateral_ticker))
+			.into());
 	}
 
 	// Get account value from crossMarginSummary
 	let account_value =
 		perp_state.cross_margin_summary.account_value.parse::<f64>().map_err(|e| {
 			error!("Failed to parse account value: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Invalid account value: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid account value: {}", e))
+				.into()
 		})?;
 
 	// Parse additional position data
 	let unrealized_pnl = hedge_position.position.unrealized_pnl.parse::<f64>().map_err(|e| {
 		error!("Failed to parse unrealized PnL: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid unrealized PnL: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Invalid unrealized PnL: {}", e))
+			.into()
 	})?;
 
 	let cum_funding_all_time =
 		hedge_position.position.cum_funding.all_time.parse::<f64>().map_err(|e| {
 			error!("Failed to parse cumulative funding: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Invalid cumulative funding: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Invalid cumulative funding: {}", e))
+				.into()
 		})?;
 
 	let margin_used = hedge_position.position.margin_used.parse::<f64>().map_err(|e| {
 		error!("Failed to parse margin used: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid margin used: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Invalid margin used: {}", e))
+			.into()
 	})?;
 
 	let position_value = hedge_position.position.position_value.parse::<f64>().map_err(|e| {
 		error!("Failed to parse position value: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid position value: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Invalid position value: {}", e))
+			.into()
 	})?;
 
 	let withdrawable = perp_state.withdrawable.parse::<f64>().map_err(|e| {
 		error!("Failed to parse withdrawable: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Invalid withdrawable: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Invalid withdrawable: {}", e))
+			.into()
 	})?;
 
 	info!(
@@ -454,30 +426,28 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 	hedge_open_cloid: u128,
 	min_expected_account_value_f64: f64,
 	loan_record: &executor_storage::loan_record::LoanRecord,
-) -> Result<CloseHedgeContext, PumpxRpcError> {
+) -> Result<CloseHedgeContext> {
 	// Validate loan state is HedgeOpened
 	if loan_record.state != LoanState::HedgeOpened {
 		error!("Invalid loan state for payback: expected HedgeOpened, got {:?}", loan_record.state);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Invalid loan state").with_reason(format!(
+		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Invalid loan state")
+			.with_reason(format!(
 				"Loan must be in HedgeOpened state for payback, current state: {:?}",
 				loan_record.state
-			)),
-		));
+			))
+			.into());
 	}
 
 	let usdc_loaned = loan_record.usdc_loaned.parse::<f64>().map_err(|e| {
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-				.with_reason(format!("Invalid usdc_loaned: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+			.with_reason(format!("Invalid usdc_loaned: {}", e))
+			.into()
 	})?;
 
 	let loan_position_size = loan_record.position_size.parse::<f64>().map_err(|e| {
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
-				.with_reason(format!("Invalid position_size: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Invalid stored data")
+			.with_reason(format!("Invalid position_size: {}", e))
+			.into()
 	})?;
 
 	info!("Loan record position size (to be closed): {}", loan_position_size);
@@ -487,10 +457,9 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 	let usdc_balance =
 		hypercore_client.get_spot_balance(smart_wallet, "USDC").await.map_err(|e| {
 			error!("Failed to get USDC balance: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query USDC balance: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to query USDC balance: {}", e))
+				.into()
 		})?;
 
 	info!("User USDC balance: {}, loan amount: {}", usdc_balance, usdc_loaned);
@@ -500,14 +469,12 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 			"Insufficient USDC balance: user has {} but needs {} to pay back loan",
 			usdc_balance, usdc_loaned
 		);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Insufficient USDC balance").with_reason(
-				format!(
-					"User has {} USDC but needs {} USDC to pay back the loan",
-					usdc_balance, usdc_loaned
-				),
-			),
-		));
+		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Insufficient USDC balance")
+			.with_reason(format!(
+				"User has {} USDC but needs {} USDC to pay back the loan",
+				usdc_balance, usdc_loaned
+			))
+			.into());
 	}
 
 	info!("✓ USDC balance check passed: user has sufficient USDC");
@@ -516,25 +483,21 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 	let (perp_meta, perp_mark_price, perp_mid_price) =
 		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
 			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to get perp market prices: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to get perp market prices: {}", e))
+				.into()
 		})?;
 
 	let perp_asset_id = get_perp_asset_id(collateral_ticker, &perp_meta).map_err(|e| {
 		error!("Failed to get perp asset ID: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e).into()
 	})?;
 
 	let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
 		error!("Perp asset {} not found in meta", perp_asset_id);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Perp asset {} not found", perp_asset_id)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Perp asset {} not found", perp_asset_id))
+			.into()
 	})?;
 
 	let perp_sz_decimals = perp_asset.sz_decimals;
@@ -547,11 +510,12 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 		.await
 		.map_err(|e| {
 			error!("Failed to get order status for cloid {}: {}", hedge_open_cloid, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get order status").with_reason(
-					format!("Cannot retrieve order status for cloid {}: {}", hedge_open_cloid, e),
-				),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get order status")
+				.with_reason(format!(
+					"Cannot retrieve order status for cloid {}: {}",
+					hedge_open_cloid, e
+				))
+				.into()
 		})?;
 
 	let mut position_data: Option<(f64, f64, f64, f64, f64)> = None;
@@ -595,13 +559,12 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 						"Actual position size ({}) is less than loan position size ({})",
 						actual_position_size, loan_position_size
 					);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Position size mismatch")
-							.with_reason(format!(
-								"Actual position size ({}) is less than expected from loan record ({})",
-								actual_position_size, loan_position_size
-							)),
-					));
+					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Position size mismatch")
+						.with_reason(format!(
+							"Actual position size ({}) is less than expected from loan record ({})",
+							actual_position_size, loan_position_size
+						))
+						.into());
 				}
 				info!(
 					"✓ Position size check passed: actual {} >= loan record {}",
@@ -613,14 +576,13 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 						"Account value ({} USDC) is below minimum expected account value ({} USDC)",
 						account_value, min_expected_account_value_f64
 					);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Account value too low").with_reason(
+					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Account value too low").with_reason(
 							format!(
 								"Account value ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
 								account_value, min_expected_account_value_f64
 							),
-						),
-					));
+						).into()
+					);
 				}
 				info!(
 					"✓ Account value check passed: {} USDC >= {} USDC",
@@ -672,14 +634,13 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 						"Account value ({} USDC) is below minimum expected account value ({} USDC)",
 						account_value, min_expected_account_value_f64
 					);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Account value too low").with_reason(
+					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Account value too low").with_reason(
 							format!(
 								"Account value ({} USDC) is below minimum expected ({} USDC). Refusing to close position with unexpected loss.",
 								account_value, min_expected_account_value_f64
 							),
-						),
-					));
+						).into()
+					);
 				}
 				info!(
 					"✓ Account value check passed: {} USDC >= {} USDC",
@@ -699,25 +660,22 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 			},
 			"canceled" | "rejected" | "expired" => {
 				error!("Order already in terminal state: {}", status);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Order not active")
-						.with_reason(format!("Order is already {}", status)),
-				));
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Order not active")
+					.with_reason(format!("Order is already {}", status))
+					.into());
 			},
 			_ => {
 				error!("Unexpected order status: {}", status);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Unexpected order status")
-						.with_reason(format!("Unknown status: {}", status)),
-				));
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Unexpected order status")
+					.with_reason(format!("Unknown status: {}", status))
+					.into());
 			},
 		}
 	} else {
 		error!("Order not found for cloid {}", hedge_open_cloid);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Order not found")
-				.with_reason(format!("No order found with cloid {}", hedge_open_cloid)),
-		));
+		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Order not found")
+			.with_reason(format!("No order found with cloid {}", hedge_open_cloid))
+			.into());
 	};
 
 	// Validate notional value if closing position
@@ -725,19 +683,18 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 		let clamped_size = clamp_size(position_size_to_close, perp_sz_decimals);
 		let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
 			error!("Failed to parse clamped close size: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to parse clamped close size: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse clamped close size: {}", e))
+				.into()
 		})?;
 
 		// For closing long position (selling), we want to sell at the highest buy price (bid)
 		let (perp_bid_price, _) = get_bid_ask_prices(perp_mark_price, perp_mid_price);
 		validate_notional_value(perp_bid_price, clamped_size_f64, "Perp close").map_err(|e| {
 			error!("{}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low")
+				.with_reason(e)
+				.into()
 		})?;
 	}
 
@@ -760,24 +717,22 @@ async fn precheck_move_to_spot(
 	usdc_sold: f64,
 	usdc_loaned: f64,
 	position_data: &Option<(f64, f64, f64, f64, f64)>,
-) -> Result<MoveToSpotContext, PumpxRpcError> {
+) -> Result<MoveToSpotContext> {
 	let initial_margin = usdc_sold - usdc_loaned;
 
 	let perp_state =
 		hypercore_client.get_perp_clearinghouse_state(smart_wallet).await.map_err(|e| {
 			error!("Failed to get perp state: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query perp state: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to query perp state: {}", e))
+				.into()
 		})?;
 
 	let withdrawable_usdc = perp_state.withdrawable.parse::<f64>().map_err(|e| {
 		error!("Failed to parse withdrawable USDC: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to parse withdrawable USDC: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Failed to parse withdrawable USDC: {}", e))
+			.into()
 	})?;
 
 	info!("Current withdrawable USDC from perp: {}", withdrawable_usdc);
@@ -801,14 +756,12 @@ async fn precheck_move_to_spot(
 				"Calculated transfer amount ({}) exceeds max transferable ({} = {} withdrawable + {} margin_used)",
 				calculated_amount, max_transferable, stored_withdrawable, margin_used
 			);
-			return Err(PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Invalid transfer amount").with_reason(
-					format!(
-						"Calculated transfer amount ({}) exceeds available funds ({})",
-						calculated_amount, max_transferable
-					),
-				),
-			));
+			return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Invalid transfer amount")
+				.with_reason(format!(
+					"Calculated transfer amount ({}) exceeds available funds ({})",
+					calculated_amount, max_transferable
+				))
+				.into());
 		}
 
 		info!(
@@ -831,21 +784,18 @@ async fn precheck_buy_spot(
 	hypercore_client: &HyperCoreClient,
 	collateral_ticker: &str,
 	collateral_size: f64,
-) -> Result<BuySpotContext, PumpxRpcError> {
+) -> Result<BuySpotContext> {
 	let (spot_meta, spot_mark_price, spot_mid_price) =
 		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
 			error!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to get spot market prices: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to get spot market prices: {}", e))
+				.into()
 		})?;
 
 	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
 		error!("Failed to get spot asset ID: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e)
 	})?;
 
 	let spot_token = spot_meta
@@ -854,10 +804,9 @@ async fn precheck_buy_spot(
 		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
 		.ok_or_else(|| {
 			error!("Token {} not found in spot meta", collateral_ticker);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Token {} not found in spot meta", collateral_ticker)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Token {} not found in spot meta", collateral_ticker))
+				.into()
 		})?;
 
 	let spot_sz_decimals = spot_token.sz_decimals;
@@ -866,19 +815,18 @@ async fn precheck_buy_spot(
 	let clamped_size = clamp_size(collateral_size, spot_sz_decimals);
 	let clamped_size_f64 = clamped_size.parse::<f64>().map_err(|e| {
 		error!("Failed to parse clamped buy size: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to parse clamped buy size: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Failed to parse clamped buy size: {}", e))
+			.into()
 	})?;
 
 	// For buying, we want to buy at the lowest sell price (ask)
 	let (_, spot_ask_price) = get_bid_ask_prices(spot_mark_price, spot_mid_price);
 	validate_notional_value(spot_ask_price, clamped_size_f64, "Spot buy").map_err(|e| {
 		error!("{}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low")
+			.with_reason(e)
+			.into()
 	})?;
 
 	info!("✓ Buy spot precheck passed");
@@ -891,7 +839,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 	hedge_open_cloid: u128,
 	close_ctx: &CloseHedgeContext,
 	current_nonce: &mut u128,
-) -> Result<(Option<String>, Option<String>, Option<String>), PumpxRpcError> {
+) -> Result<(Option<String>, Option<String>, Option<String>)> {
 	let mut hedge_cancel_tx_hash: Option<String> = None;
 	let mut hedge_close_cloid_opt: Option<String> = None;
 	let mut hedge_close_tx_hash: Option<String> = None;
@@ -930,18 +878,16 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 			.await
 			.map_err(|e| {
 				error!("Order cancel did not complete: {}", e);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Order cancel failed: {}", e)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Order cancel failed: {}", e))
+					.into()
 			})?;
 
 		if !order_canceled {
 			error!("Order cancel was rejected or expired");
-			return Err(PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason("Order cancel was rejected or expired"),
-			));
+			return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Order cancel was rejected or expired")
+				.into());
 		}
 
 		info!("Order canceled successfully");
@@ -973,17 +919,15 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 
 		let clamped_close_size_f64 = clamped_close_size.parse::<f64>().map_err(|e| {
 			error!("Failed to parse clamped close size: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to parse clamped close size: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse clamped close size: {}", e))
+				.into()
 		})?;
 		let clamped_close_price_f64 = clamped_close_price.parse::<f64>().map_err(|e| {
 			error!("Failed to parse clamped close price: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to parse clamped close price: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to parse clamped close price: {}", e))
+				.into()
 		})?;
 
 		let close_size_units = to_price_units(clamped_close_size_f64);
@@ -1027,18 +971,16 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 			.await
 			.map_err(|e| {
 				error!("Hedge close order did not complete: {}", e);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Hedge close order failed: {}", e)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Hedge close order failed: {}", e))
+					.into()
 			})?;
 
 		if !order_filled {
 			error!("Hedge close order was rejected or canceled");
-			return Err(PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason("Hedge close order was rejected or canceled"),
-			));
+			return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason("Hedge close order was rejected or canceled")
+				.into());
 		}
 
 		info!("Hedge position closed successfully");
@@ -1071,7 +1013,7 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	exec_ctx: &ExecutionContext<'_, CrossChainIntentExecutor>,
 	move_ctx: &MoveToSpotContext,
 	current_nonce: &mut u128,
-) -> Result<Option<String>, PumpxRpcError> {
+) -> Result<Option<String>> {
 	info!("Action: Transferring USDC from perp to spot...");
 
 	// Get initial spot balance BEFORE submitting the transfer
@@ -1081,10 +1023,9 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		.await
 		.map_err(|e| {
 			error!("Failed to get initial spot USDC balance: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query spot USDC balance: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to query spot USDC balance: {}", e))
+				.into()
 		})?;
 
 	let perp_state = exec_ctx
@@ -1093,18 +1034,16 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		.await
 		.map_err(|e| {
 			error!("Failed to get perp state: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query perp state: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to query perp state: {}", e))
+				.into()
 		})?;
 
 	let withdrawable_usdc = perp_state.withdrawable.parse::<f64>().map_err(|e| {
 		error!("Failed to parse withdrawable USDC: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to parse withdrawable USDC: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Failed to parse withdrawable USDC: {}", e))
+			.into()
 	})?;
 
 	let final_amount = move_ctx.transfer_amount.min(withdrawable_usdc);
@@ -1145,9 +1084,9 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		.await
 		.map_err(|e| {
 			error!("USD transfer to spot failed: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Transfer timeout").with_reason(e),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Transfer timeout")
+				.with_reason(e)
+				.into()
 		})?;
 
 	info!("to_spot_move completed");
@@ -1173,7 +1112,7 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	collateral_size: f64,
 	buy_ctx: &BuySpotContext,
 	current_nonce: u128,
-) -> Result<(u128, Option<String>), PumpxRpcError> {
+) -> Result<(u128, Option<String>)> {
 	info!("Action: Buying back collateral in spot market...");
 
 	// Get current USDC balance to determine how much collateral we can afford
@@ -1183,10 +1122,9 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 		.await
 		.map_err(|e| {
 			error!("Failed to get current spot USDC balance: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Failed to query spot USDC balance: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Failed to query spot USDC balance: {}", e))
+				.into()
 		})?;
 
 	info!("Current spot USDC balance: {} USDC", current_spot_usdc);
@@ -1200,10 +1138,9 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	let clamped_buy_price_f64 = clamped_buy_price.parse::<f64>().map_err(|e| {
 		error!("Failed to parse clamped buy price: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to parse clamped buy price: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Failed to parse clamped buy price: {}", e))
+			.into()
 	})?;
 
 	let affordable_collateral = current_spot_usdc / clamped_buy_price_f64;
@@ -1222,10 +1159,9 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	let clamped_buy_size_f64 = clamped_buy_size.parse::<f64>().map_err(|e| {
 		error!("Failed to parse clamped buy size: {}", e);
-		PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to parse clamped buy size: {}", e)),
-		)
+		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason(format!("Failed to parse clamped buy size: {}", e))
+			.into()
 	})?;
 
 	let buy_size_units = to_price_units(clamped_buy_size_f64);
@@ -1268,18 +1204,16 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 		.await
 		.map_err(|e| {
 			error!("Spot buy order did not complete: {}", e);
-			PumpxRpcError::from(
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason(format!("Spot buy order failed: {}", e)),
-			)
+			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+				.with_reason(format!("Spot buy order failed: {}", e))
+				.into()
 		})?;
 
 	if !buy_order_filled {
 		error!("Spot buy order was rejected or canceled");
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason("Spot buy order was rejected or canceled"),
-		));
+		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+			.with_reason("Spot buy order was rejected or canceled")
+			.into());
 	}
 
 	info!("Spot buy order filled successfully");

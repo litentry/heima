@@ -2,7 +2,6 @@ use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
-	methods::omni::PumpxRpcError,
 	server::RpcContext,
 	verify_auth::verify_auth,
 	Deserialize,
@@ -52,10 +51,8 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 		.register_async_method("omni_requestJwt", |params, ctx, _ext| async move {
 			let params = params.parse::<RequestJwtParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			debug!(
@@ -67,13 +64,11 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			let auth = params.get_omni_auth();
 			verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 				error!("Failed to verify auth: {:?}, reason: {:?}", auth, e);
-				PumpxRpcError::from(
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Authentication verification failed",
-					)
-					.with_suggestion("Please check your authentication credentials"),
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Authentication verification failed",
 				)
+				.with_suggestion("Please check your authentication credentials")
 			})?;
 
 			// Inlined handler logic from handle_pumpx_request_jwt
@@ -90,20 +85,20 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 						"Failed to get_account_user_id for email {}: {:?}",
 						params.user_email, e
 					);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get account user ID")
-							.with_suggestion("Please try again"),
-					)
+					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get account user ID")
+						.with_suggestion("Please try again")
 				},
 			)?;
 			debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			let Some(user_id) = res.data.user_id else {
 				error!("Response data.user_id of call get_account_user_id is none");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get account user ID")
-						.with_reason("User ID not found in response"),
-				));
+				return Err(DetailedError::new(
+					INTERNAL_ERROR_CODE,
+					"Failed to get account user ID",
+				)
+				.with_reason("User ID not found in response")
+				.into());
 			};
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", params.user_email, user_id);
@@ -119,10 +114,8 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			let access_token = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
 				.map_err(|e| {
 					error!("Failed to create access token: {:?}", e);
-					PumpxRpcError::from(DetailedError::new(
-						INTERNAL_ERROR_CODE,
-						"Failed to create authentication token",
-					))
+					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create authentication token")
+						.into()
 				})?;
 
 			debug!(
@@ -142,23 +135,21 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				.await
 				.map_err(|e| {
 					error!("Failed to connect user: {:?}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Failed to connect user")
-							.with_suggestion("Please try again"),
-					)
+					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to connect user")
+						.with_suggestion("Please try again")
+						.into()
 				})?;
 			debug!("Response pumpx user_connect: {:?}", backend_response);
 
 			// check google auth value
 			if !backend_response.data.google_auth_check.unwrap_or(false) {
 				error!("Google code verification failed from user_connect");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(
-						PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
-						"Google code verification failed",
-					)
-					.with_suggestion("Please check your Google verification code and try again"),
-				));
+				return Err(DetailedError::new(
+					PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
+					"Google code verification failed",
+				)
+				.with_suggestion("Please check your Google verification code and try again")
+				.into());
 			}
 
 			let id_token_claims = AuthTokenClaims::new(
@@ -170,10 +161,8 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			let id_token =
 				jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key).map_err(|e| {
 					error!("Failed to create id token: {:?}", e);
-					PumpxRpcError::from(DetailedError::new(
-						INTERNAL_ERROR_CODE,
-						"Failed to create authentication token",
-					))
+					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create authentication token")
+						.into()
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());

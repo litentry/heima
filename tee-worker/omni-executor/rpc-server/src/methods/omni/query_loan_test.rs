@@ -1,6 +1,5 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
@@ -31,10 +30,8 @@ pub fn register_query_loan_test<
 		.register_method("omni_queryLoanTest", |params, ctx, _ext| {
 			let params = params.parse::<QueryLoanTestParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			debug!("Received omni_queryLoanTest, params: {:?}", params);
@@ -43,10 +40,8 @@ pub fn register_query_loan_test<
 				hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
 					.map_err(|_| {
 						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Failed to decode omni account hex string"),
-						)
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Failed to decode omni account hex string")
 					})?;
 
 			if address_bytes.len() != 32 {
@@ -54,20 +49,18 @@ pub fn register_query_loan_test<
 					"Invalid omni account length: expected 32 bytes, got {}",
 					address_bytes.len()
 				);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!(
 						"Invalid omni account length: expected 32 bytes, got {}",
 						address_bytes.len()
-					)),
-				));
+					))
+					.into());
 			}
 
 			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
 				error!("Failed to decode AccountId from bytes");
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to decode AccountId from bytes"),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Failed to decode AccountId from bytes")
 			})?;
 
 			// Query records from storage

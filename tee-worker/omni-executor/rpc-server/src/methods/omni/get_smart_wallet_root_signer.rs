@@ -1,7 +1,6 @@
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{PARSE_ERROR_CODE, *},
-	methods::omni::PumpxRpcError,
 	server::RpcContext,
 	utils::omni::to_omni_account,
 };
@@ -47,19 +46,15 @@ pub fn register_get_smart_wallet_root_signer<
 		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {
 			let params = params.parse::<GetSmartWalletRootSignerParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
+					.into()
 			})?;
 
 			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 
 			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				))
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
 			})?;
 
 			let pubkey = ctx
@@ -68,29 +63,27 @@ pub fn register_get_smart_wallet_root_signer<
 				.await
 				.map_err(|_| {
 					error!("Failed to request wallet from signer client");
-					PumpxRpcError::from(
-						DetailedError::new(
-							PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
-							"Failed to request wallet from signer service",
-						)
-						.with_reason("Signer service is temporarily unavailable")
-						.with_suggestion("Please try again later"),
+					DetailedError::new(
+						PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
+						"Failed to request wallet from signer service",
 					)
+					.with_reason("Signer service is temporarily unavailable")
+					.with_suggestion("Please try again later")
+					.into()
 				})?;
 
 			let address = pubkey_to_address(params.chain_type.into(), &pubkey).map_err(|_| {
 				error!("Failed to convert pubkey to address");
-				PumpxRpcError::from(
-					DetailedError::new(
-						PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
-						"Failed to convert public key to address",
-					)
-					.with_reason("Public key conversion error")
-					.with_suggestion("Please check your chain type and try again"),
+				DetailedError::new(
+					PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
+					"Failed to convert public key to address",
 				)
+				.with_reason("Public key conversion error")
+				.with_suggestion("Please check your chain type and try again")
+				.into()
 			})?;
 
-			Ok::<String, PumpxRpcError>(address)
+			Ok::<String>(address)
 		})
 		.expect("Failed to register omni_addWallet method");
 }

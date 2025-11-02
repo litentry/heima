@@ -5,7 +5,6 @@ use crate::detailed_error::DetailedError;
 use crate::error_code::{
 	AUTH_VERIFICATION_FAILED_CODE, INVALID_USER_OPERATION_CODE, PARSE_ERROR_CODE,
 };
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
@@ -61,70 +60,63 @@ pub struct SubmitUserOpWithAuthResponse {
 }
 
 /// Validates USDC transfer call for Arbitrum chains
-fn validate_arbitrum_usdc_transfer(
-	call_data: &str,
-	chain_id: ChainId,
-) -> Result<(), PumpxRpcError> {
+fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> Result<()> {
 	// Validate chain is supported for Arbitrum USDC validation
 	match chain_id {
 		ARBITRUM_MAINNET | ARBITRUM_SEPOLIA => {},
 		_ => {
-			return Err(PumpxRpcError::from(
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Chain ID is not supported for Arbitrum USDC validation",
-				)
-				.with_field("chain_id")
-				.with_received(chain_id.to_string())
-				.with_expected("42161 or 421614"),
-			));
+			return Err(DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Chain ID is not supported for Arbitrum USDC validation",
+			)
+			.with_field("chain_id")
+			.with_received(chain_id.to_string())
+			.with_expected("42161 or 421614")
+			.into());
 		},
 	};
 
 	// Parse calldata - should be USDC.transfer method call
 	let call_bytes =
 		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
-			PumpxRpcError::from(
-				DetailedError::new(
-					// todo: proper error code
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Invalid hex encoding in call data",
-				)
-				.with_field("call_data")
-				.with_reason(format!("Hex decode error: {}", e)),
+			DetailedError::new(
+				// todo: proper error code
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Invalid hex encoding in call data",
 			)
+			.with_field("call_data")
+			.with_reason(format!("Hex decode error: {}", e))
+			.into()
 		})?;
 
 	// Check if it's an ERC20 transfer call (method signature 0xa9059cbb)
 	if call_bytes.len() < 4 || call_bytes[0..4] != ERC20_TRANSFER_SIGNATURE {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				// todo: proper error code
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data is not an ERC20 transfer function call",
-			)
-			.with_field("method_signature")
-			.with_received(if call_bytes.len() >= 4 {
-				format!("0x{}", hex::encode(&call_bytes[0..4]))
-			} else {
-				"<insufficient data>".to_string()
-			})
-			.with_expected("0xa9059cbb (ERC20.transfer)"),
-		));
+		return Err(DetailedError::new(
+			// todo: proper error code
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data is not an ERC20 transfer function call",
+		)
+		.with_field("method_signature")
+		.with_received(if call_bytes.len() >= 4 {
+			format!("0x{}", hex::encode(&call_bytes[0..4]))
+		} else {
+			"<insufficient data>".to_string()
+		})
+		.with_expected("0xa9059cbb (ERC20.transfer)")
+		.into());
 	}
 
 	// Decode the transfer call to get recipient
 	if call_bytes.len() < 68 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				// todo: proper error code
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data too short for ERC20 transfer",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected("68 bytes minimum"),
-		));
+		return Err(DetailedError::new(
+			// todo: proper error code
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data too short for ERC20 transfer",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected("68 bytes minimum")
+		.into());
 	}
 
 	// Extract recipient address (bytes 4-36, but we need the last 20 bytes)
@@ -133,62 +125,58 @@ fn validate_arbitrum_usdc_transfer(
 
 	// Validate recipient is the official arb -> hyper bridge
 	if recipient.to_lowercase() != ARB_TO_HYPER_BRIDGE_ADDRESS.to_lowercase() {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				AUTH_VERIFICATION_FAILED_CODE,
-				"USDC transfer recipient is not the official Arbitrum to Hyperliquid bridge",
-			)
-			.with_field("recipient")
-			.with_received(recipient)
-			.with_expected(ARB_TO_HYPER_BRIDGE_ADDRESS),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"USDC transfer recipient is not the official Arbitrum to Hyperliquid bridge",
+		)
+		.with_field("recipient")
+		.with_received(recipient)
+		.with_expected(ARB_TO_HYPER_BRIDGE_ADDRESS)
+		.into());
 	}
 
 	Ok(())
 }
 
 /// Validates core writer call for HyperEVM chains
-fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(), PumpxRpcError> {
+fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<()> {
 	// Validate chain is HyperEVM
 	if chain_id != HYPEREVM_MAINNET && chain_id != HYPEREVM_TESTNET {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				// todo: proper error code
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Chain ID is not supported for HyperEVM validation",
-			)
-			.with_field("chain_id")
-			.with_received(chain_id.to_string())
-			.with_expected("999 or 998"),
-		));
+		return Err(DetailedError::new(
+			// todo: proper error code
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Chain ID is not supported for HyperEVM validation",
+		)
+		.with_field("chain_id")
+		.with_received(chain_id.to_string())
+		.with_expected("999 or 998")
+		.into());
 	}
 
 	// Parse calldata
 	let call_bytes =
 		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
-			PumpxRpcError::from(
-				DetailedError::new(
-					// todo: proper error code
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Invalid hex encoding in call data",
-				)
-				.with_field("call_data")
-				.with_reason(format!("Hex decode error: {}", e)),
+			DetailedError::new(
+				// todo: proper error code
+				AUTH_VERIFICATION_FAILED_CODE,
+				"Invalid hex encoding in call data",
 			)
+			.with_field("call_data")
+			.with_reason(format!("Hex decode error: {}", e))
+			.into()
 		})?;
 
 	// Extract method signature if available
 	if call_bytes.len() < 4 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				// todo: proper error code
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data too short to contain method signature",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected("4 bytes minimum"),
-		));
+		return Err(DetailedError::new(
+			// todo: proper error code
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data too short to contain method signature",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected("4 bytes minimum")
+		.into());
 	}
 
 	// Proper action_id extraction based on payload format:
@@ -199,15 +187,14 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(
 	// The calldata should contain the raw payload as data parameter in method call
 	// First decode the actual payload from the method call parameters
 	if call_bytes.len() < 4 + 32 + 32 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				INVALID_USER_OPERATION_CODE,
-				"Call data too short for payload parameter",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected("68 bytes minimum (4 bytes method + 32 bytes offset + 32 bytes length)"),
-		));
+		return Err(DetailedError::new(
+			INVALID_USER_OPERATION_CODE,
+			"Call data too short for payload parameter",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected("68 bytes minimum (4 bytes method + 32 bytes offset + 32 bytes length)")
+		.into());
 	}
 
 	// Skip method signature (4 bytes) and offset parameter (32 bytes)
@@ -222,15 +209,14 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(
 
 	// Ensure we have enough data for the payload
 	if call_bytes.len() < 68 + payload_length {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				INVALID_USER_OPERATION_CODE,
-				"Call data too short for declared payload length",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected(format!("{} bytes", 68 + payload_length)),
-		));
+		return Err(DetailedError::new(
+			INVALID_USER_OPERATION_CODE,
+			"Call data too short for declared payload length",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected(format!("{} bytes", 68 + payload_length))
+		.into());
 	}
 
 	// Extract the actual payload
@@ -238,26 +224,24 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(
 
 	// Validate payload format: minimum 4 bytes (1 version + 3 action_id)
 	if payload.len() < 4 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				INVALID_USER_OPERATION_CODE,
-				"Payload too short for version and action_id",
-			)
-			.with_field("payload_length")
-			.with_received(payload.len().to_string())
-			.with_expected("4 bytes minimum (1 version + 3 action_id)"),
-		));
+		return Err(DetailedError::new(
+			INVALID_USER_OPERATION_CODE,
+			"Payload too short for version and action_id",
+		)
+		.with_field("payload_length")
+		.with_received(payload.len().to_string())
+		.with_expected("4 bytes minimum (1 version + 3 action_id)")
+		.into());
 	}
 
 	// Extract version (first byte)
 	let version = payload[0];
 	if version != 0x01 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid payload version")
-				.with_field("version")
-				.with_received(format!("0x{:02x}", version))
-				.with_expected("0x01"),
-		));
+		return Err(DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid payload version")
+			.with_field("version")
+			.with_received(format!("0x{:02x}", version))
+			.with_expected("0x01")
+			.into());
 	}
 
 	// Extract action_id (next 3 bytes) and convert to u32
@@ -274,44 +258,39 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(
 	];
 
 	if !valid_action_ids.contains(&action_id) {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				INVALID_USER_OPERATION_CODE,
-				"Invalid action_id for HyperEVM core writer call",
-			)
-			.with_field("action_id")
-			.with_received(format!("0x{:06x}", action_id))
-			.with_expected("One of: 0x000002, 0x000003, 0x000004, 0x000005, 0x000007"),
-		));
+		return Err(DetailedError::new(
+			INVALID_USER_OPERATION_CODE,
+			"Invalid action_id for HyperEVM core writer call",
+		)
+		.with_field("action_id")
+		.with_received(format!("0x{:06x}", action_id))
+		.with_expected("One of: 0x000002, 0x000003, 0x000004, 0x000005, 0x000007")
+		.into());
 	}
 
 	Ok(())
 }
 
 /// Extract target addresses and inner calldata from OmniAccount execute() or executeBatch() calldata
-fn extract_execute_params_from_calldata(
-	call_data: &str,
-) -> Result<Vec<(Address, String)>, PumpxRpcError> {
+fn extract_execute_params_from_calldata(call_data: &str) -> Result<Vec<(Address, String)>> {
 	// Parse calldata - should be OmniAccount.execute() or executeBatch()
 	let call_bytes =
 		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
-			PumpxRpcError::from(
-				DetailedError::new(PARSE_ERROR_CODE, "Invalid hex encoding in call data")
-					.with_field("call_data")
-					.with_reason(format!("Hex decode error: {}", e)),
-			)
+			DetailedError::new(PARSE_ERROR_CODE, "Invalid hex encoding in call data")
+				.with_field("call_data")
+				.with_reason(format!("Hex decode error: {}", e))
+				.into()
 		})?;
 
 	if call_bytes.len() < 4 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data too short to contain method signature",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected("4 bytes minimum"),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data too short to contain method signature",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected("4 bytes minimum")
+		.into());
 	}
 
 	// Check method signatures
@@ -328,33 +307,29 @@ fn extract_execute_params_from_calldata(
 		// Handle executeBatch call
 		parse_execute_batch(&call_bytes)
 	} else {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data is not an OmniAccount execute or executeBatch function call",
-			)
-			.with_field("method_signature")
-			.with_received(format!("0x{}", hex::encode(method_sig)))
-			.with_expected("0xb61d27f6 (execute) or 0x18dfeb3c (executeBatch)"),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data is not an OmniAccount execute or executeBatch function call",
+		)
+		.with_field("method_signature")
+		.with_received(format!("0x{}", hex::encode(method_sig)))
+		.with_expected("0xb61d27f6 (execute) or 0x18dfeb3c (executeBatch)")
+		.into());
 	}
 }
 
 /// Parse single execute(address,uint256,bytes) call
-fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String), PumpxRpcError> {
+fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String)> {
 	// Minimum length check: method(4) + target(32) + value(32) + data_offset(32) = 100 bytes
 	if call_bytes.len() < 100 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data too short for OmniAccount execute call",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected(
-				"100 bytes minimum (method + target + value + data_offset + data_length)",
-			),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data too short for OmniAccount execute call",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected("100 bytes minimum (method + target + value + data_offset + data_length)")
+		.into());
 	}
 
 	// Extract target address (bytes 16-36, last 20 bytes of the first 32-byte parameter)
@@ -363,15 +338,14 @@ fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String), PumpxRpc
 
 	// Skip method(4) + target(32) + value(32) + data_offset(32) = 100 bytes to get to data length
 	if call_bytes.len() < 132 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data too short to contain data length",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected("132 bytes minimum (method + params + data_length)"),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data too short to contain data length",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected("132 bytes minimum (method + params + data_length)")
+		.into());
 	}
 
 	// Extract data length (bytes 100-132)
@@ -386,15 +360,13 @@ fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String), PumpxRpc
 	// Extract the actual inner calldata
 	let data_start = 132;
 	if call_bytes.len() < data_start + data_length {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data too short for declared data length",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected(format!("{} bytes", data_start + data_length)),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data too short for declared data length",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected(format!("{} bytes", data_start + data_length).into()));
 	}
 
 	let inner_data = &call_bytes[data_start..data_start + data_length];
@@ -404,18 +376,17 @@ fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String), PumpxRpc
 }
 
 /// Parse executeBatch((address,uint256,bytes)[]) call
-fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>, PumpxRpcError> {
+fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>> {
 	// Minimum length: method(4) + array_offset(32) + array_length(32) = 68 bytes
 	if call_bytes.len() < 68 {
-		return Err(PumpxRpcError::from(
-			DetailedError::new(
-				AUTH_VERIFICATION_FAILED_CODE,
-				"Call data too short for executeBatch call",
-			)
-			.with_field("call_data_length")
-			.with_received(call_bytes.len().to_string())
-			.with_expected("68 bytes minimum"),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Call data too short for executeBatch call",
+		)
+		.with_field("call_data_length")
+		.with_received(call_bytes.len().to_string())
+		.with_expected("68 bytes minimum")
+		.into());
 	}
 
 	// Skip method signature (4 bytes) and array offset (32 bytes) to get array length
@@ -435,15 +406,14 @@ fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>, Pump
 	for i in 0..array_length {
 		// Each struct entry is at least 96 bytes (target + value + data_offset)
 		if current_pos + 96 > call_bytes.len() {
-			return Err(PumpxRpcError::from(
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					format!("Call data too short for batch entry {}", i),
-				)
-				.with_field("call_data_length")
-				.with_received(call_bytes.len().to_string())
-				.with_expected(format!("{} bytes minimum", current_pos + 96)),
-			));
+			return Err(DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				format!("Call data too short for batch entry {}", i),
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected(format!("{} bytes minimum", current_pos + 96))
+			.into());
 		}
 
 		// Extract target address (last 20 bytes of the 32-byte slot)
@@ -464,15 +434,14 @@ fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>, Pump
 		// The offset is relative to the start of the current Call struct
 		let data_length_pos = current_pos + relative_data_offset;
 		if data_length_pos + 32 > call_bytes.len() {
-			return Err(PumpxRpcError::from(
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					format!("Call data too short for batch entry {} data length", i),
-				)
-				.with_field("call_data_length")
-				.with_received(call_bytes.len().to_string())
-				.with_expected(format!("{} bytes minimum", data_length_pos + 32)),
-			));
+			return Err(DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				format!("Call data too short for batch entry {} data length", i),
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected(format!("{} bytes minimum", data_length_pos + 32))
+			.into());
 		}
 
 		// Extract data length
@@ -487,15 +456,14 @@ fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>, Pump
 		// Extract the actual data
 		let data_start = data_length_pos + 32;
 		if data_start + data_length > call_bytes.len() {
-			return Err(PumpxRpcError::from(
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					format!("Call data too short for batch entry {} data", i),
-				)
-				.with_field("call_data_length")
-				.with_received(call_bytes.len().to_string())
-				.with_expected(format!("{} bytes minimum", data_start + data_length)),
-			));
+			return Err(DetailedError::new(
+				AUTH_VERIFICATION_FAILED_CODE,
+				format!("Call data too short for batch entry {} data", i),
+			)
+			.with_field("call_data_length")
+			.with_received(call_bytes.len().to_string())
+			.with_expected(format!("{} bytes minimum", data_start + data_length))
+			.into());
 		}
 
 		let inner_data = &call_bytes[data_start..data_start + data_length];
@@ -515,18 +483,17 @@ fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>, Pump
 fn validate_backend_calldata(
 	user_operations: &[SerializablePackedUserOperation],
 	chain_id: ChainId,
-) -> Result<(), PumpxRpcError> {
+) -> Result<()> {
 	for (index, user_op) in user_operations.iter().enumerate() {
 		// Extract the target addresses and inner calldata from the execute()/executeBatch() calldata
 		let execute_params =
 			extract_execute_params_from_calldata(&user_op.call_data).map_err(|_e| {
-				PumpxRpcError::from(
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Failed to parse OmniAccount execute calldata",
-					)
-					.with_field(format!("user_operations[{}].call_data", index)),
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Failed to parse OmniAccount execute calldata",
 				)
+				.with_field(format!("user_operations[{}].call_data", index))
+				.into()
 			})?;
 
 		// Validate each execute call in the batch (or single call)
@@ -541,18 +508,17 @@ fn validate_backend_calldata(
 					};
 
 					if *target_address != expected_usdc.parse::<Address>().unwrap() {
-						return Err(PumpxRpcError::from(
-							DetailedError::new(
-								AUTH_VERIFICATION_FAILED_CODE,
-								"For Arbitrum backend requests, target contract must be USDC",
-							)
-							.with_field(format!(
-								"user_operations[{}].call[{}] target address",
-								index, call_index
-							))
-							.with_received(format!("{:?}", target_address))
-							.with_expected(expected_usdc),
-						));
+						return Err(DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"For Arbitrum backend requests, target contract must be USDC",
+						)
+						.with_field(format!(
+							"user_operations[{}].call[{}] target address",
+							index, call_index
+						))
+						.with_received(format!("{:?}", target_address))
+						.with_expected(expected_usdc)
+						.into());
 					}
 
 					validate_arbitrum_usdc_transfer(inner_calldata, chain_id)?;
@@ -560,29 +526,30 @@ fn validate_backend_calldata(
 				HYPEREVM_MAINNET | HYPEREVM_TESTNET => {
 					// For HyperEVM: target must be core writer and calldata must have valid action_id
 					if *target_address != HYPEREVM_CORE_WRITER_ADDRESS.parse::<Address>().unwrap() {
-						return Err(PumpxRpcError::from(
-							DetailedError::new(
-								AUTH_VERIFICATION_FAILED_CODE,
-								"For HyperEVM backend requests, target contract must be core writer",
-							)
-							.with_field(format!("user_operations[{}].call[{}] target address", index, call_index))
-							.with_received(format!("{:?}", target_address))
-							.with_expected(HYPEREVM_CORE_WRITER_ADDRESS),
-						));
+						return Err(DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"For HyperEVM backend requests, target contract must be core writer",
+						)
+						.with_field(format!(
+							"user_operations[{}].call[{}] target address",
+							index, call_index
+						))
+						.with_received(format!("{:?}", target_address))
+						.with_expected(HYPEREVM_CORE_WRITER_ADDRESS)
+						.into());
 					}
 
 					validate_hyperevm_core_writer(inner_calldata, chain_id)?;
 				},
 				_ => {
-					return Err(PumpxRpcError::from(
-						DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"Chain ID not supported for backend wallet_index validation",
-						)
-						.with_field("chain_id")
-						.with_received(chain_id.to_string())
-						.with_expected("42161, 421614, 999, or 998"),
-					));
+					return Err(DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Chain ID not supported for backend wallet_index validation",
+					)
+					.with_field("chain_id")
+					.with_received(chain_id.to_string())
+					.with_expected("42161, 421614, 999, or 998")
+					.into());
 				},
 			}
 		}
@@ -600,21 +567,19 @@ pub fn register_submit_user_op_with_auth<
 		.register_async_method("omni_submitUserOpWithAuth", |params, ctx, _ext| async move {
 			let params = params.parse::<SubmitUserOpWithAuthParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
+				DetailedError::new(
 						PARSE_ERROR_CODE,
 						"Failed to parse request parameters",
 					)
-					.with_reason(format!("Invalid JSON structure: {}", e)),
-				)
+					.with_reason(format!("Invalid JSON structure: {}", e)).into()
 			})?;
 
 			debug!("Received omni_submitUserOpWithAuth, params: {:?}", params);
 
 			// Validate common parameters
-			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(PumpxRpcError::from)?;
-			validate_wallet_index(params.wallet_index).map_err(PumpxRpcError::from)?;
-			validate_user_operations(&params.user_operations).map_err(PumpxRpcError::from)?;
+			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(|e| e.into())?;
+			validate_wallet_index(params.wallet_index).map_err(|e| e.into())?;
+			validate_user_operations(&params.user_operations).map_err(|e| e.into())?;
 
 			let main_address = match &params.client_auth {
 				ClientAuth::WildmetaHl {
@@ -629,14 +594,12 @@ pub fn register_submit_user_op_with_auth<
 					let business_data: serde_json::Value = serde_json::from_str(business_json)
 						.map_err(|e| {
 							error!("Failed to parse business_json: {:?}", e);
-							PumpxRpcError::from(
-								DetailedError::new(
+							DetailedError::new(
 									PARSE_ERROR_CODE,
 									"Failed to parse business JSON",
 								)
 								.with_field("business_json")
-								.with_reason(format!("JSON parse error: {}", e)),
-							)
+								.with_reason(format!("JSON parse error: {}", e)).into()
 						})?;
 
 					let timestamp = business_data
@@ -644,15 +607,13 @@ pub fn register_submit_user_op_with_auth<
 						.and_then(|v| v.as_u64())
 						.ok_or_else(|| {
 							error!("Missing timestamp in business_json");
-							PumpxRpcError::from(
-								DetailedError::new(
+							DetailedError::new(
 									crate::error_code::MISSING_REQUIRED_FIELD_CODE,
 									"Missing required field in business JSON",
 								)
 								.with_field("timestamp")
 								.with_expected("Unix timestamp as number")
-								.with_reason("Business JSON must contain a 'timestamp' field"),
-							)
+								.with_reason("Business JSON must contain a 'timestamp' field").into()
 						})?;
 
 					verify_payload_timestamp_wrapper(
@@ -667,28 +628,24 @@ pub fn register_submit_user_op_with_auth<
 						.await
 						.map_err(|e| {
 							error!("Failed to verify hyperliquid link: {:?}", e);
-							PumpxRpcError::from(
-								DetailedError::new(
+							DetailedError::new(
 									crate::error_code::EXTERNAL_API_ERROR_CODE,
 									"Failed to verify Hyperliquid account link",
 								)
 								.with_field("operation")
 								.with_received("verify_hyperliquid_link")
-								.with_reason("Could not verify agent and main address linkage"),
-							)
+								.with_reason("Could not verify agent and main address linkage").into()
 						})?;
 
 					if !linked {
 						error!("Agent and main addresses are not linked");
-						return Err(PumpxRpcError::from(
-							DetailedError::new(
+						return Err(DetailedError::new(
 								AUTH_VERIFICATION_FAILED_CODE,
 								"Agent and main addresses are not linked",
 							)
 							.with_field("agent_address")
 							.with_received(agent_address.to_string())
-							.with_suggestion("Ensure the agent address is properly linked to the main address"),
-						));
+							.with_suggestion("Ensure the agent address is properly linked to the main address").into());
 					}
 
 					Some(main_address.clone())
@@ -700,16 +657,14 @@ pub fn register_submit_user_op_with_auth<
 							"WildmetaBackend requires wallet_index to be 0 or 1, got: {}",
 							params.wallet_index
 						);
-						return Err(PumpxRpcError::from(
-							DetailedError::new(
+						return Err(DetailedError::new(
 								AUTH_VERIFICATION_FAILED_CODE,
 								"Invalid wallet index for WildmetaBackend authentication",
 							)
 							.with_field("wallet_index")
 							.with_received(params.wallet_index.to_string())
 							.with_expected("0 or 1")
-							.with_suggestion("WildmetaBackend authentication requires wallet_index to be 0 or 1"),
-						));
+							.with_suggestion("WildmetaBackend authentication requires wallet_index to be 0 or 1").into());
 					}
 
 					// Additional validation for wallet_index == 0
@@ -723,25 +678,21 @@ pub fn register_submit_user_op_with_auth<
 							"WildmetaBackend requires client_id to be 'wildmeta', got: {}",
 							params.client_id
 						);
-						return Err(PumpxRpcError::from(
-							DetailedError::new(
+						return Err(DetailedError::new(
 								AUTH_VERIFICATION_FAILED_CODE,
 								"Invalid client ID for WildmetaBackend authentication",
 							)
 							.with_field("client_id")
 							.with_received(params.client_id.clone())
 							.with_expected("wildmeta")
-							.with_suggestion("WildmetaBackend authentication requires client_id to be 'wildmeta'"),
-						));
+							.with_suggestion("WildmetaBackend authentication requires client_id to be 'wildmeta'").into());
 					}
 
 					// Get entry point address for the chain
 					let entry_point_client =
 						ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 							error!("No entry point client found for chain_id: {}", params.chain_id);
-							PumpxRpcError::from(
-								DetailedError::chain_not_supported(params.chain_id),
-							)
+							DetailedError::chain_not_supported(params.chain_id).into()
 						})?;
 
 					let entry_point_address = entry_point_client.entry_point_address();
@@ -759,28 +710,24 @@ pub fn register_submit_user_op_with_auth<
 				},
 				_ => {
 					error!("Invalid client auth type");
-					return Err(PumpxRpcError::from(
-						DetailedError::new(
+					return Err(DetailedError::new(
 							PARSE_ERROR_CODE,
 							"Invalid client authentication type",
 						)
 						.with_field("client_auth")
 						.with_expected("WildmetaHl or WildmetaBackend")
-						.with_suggestion("Use a supported authentication method"),
-					));
+						.with_suggestion("Use a supported authentication method").into());
 				},
 			};
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
 				error!("Failed to convert UserId to Identity: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
+				DetailedError::new(
 						crate::error_code::ACCOUNT_PARSE_ERROR_CODE,
 						"Invalid user identity format",
 					)
 					.with_field("user_id")
-					.with_reason(format!("Failed to parse user identity: {}", e)),
-				)
+					.with_reason(format!("Failed to parse user identity: {}", e)).into()
 			})?;
 
 			// Only validate main_address if it's provided (not None)
@@ -790,16 +737,14 @@ pub fn register_submit_user_op_with_auth<
 						if let UserId::Evm(user_address) = &params.user_id {
 							if user_address.to_lowercase() != main_addr.to_lowercase() {
 								error!("Main address does not match user_id for EVM identity");
-								return Err(PumpxRpcError::from(
-									DetailedError::new(
+								return Err(DetailedError::new(
 										AUTH_VERIFICATION_FAILED_CODE,
 										"User address does not match authenticated main address for EVM identity",
 									)
 									.with_field("user_address")
 									.with_received(user_address.to_string())
 									.with_expected(main_addr.to_string())
-									.with_suggestion("For EVM identity, the user_id must match the authenticated main address"),
-								));
+									.with_suggestion("For EVM identity, the user_id must match the authenticated main address").into());
 							}
 						}
 					},
@@ -815,38 +760,32 @@ pub fn register_submit_user_op_with_auth<
 							.await
 							.map_err(|e| {
 								error!("Failed to derive EVM address: {:?}", e);
-								PumpxRpcError::from(
-									DetailedError::signer_service_error(
+								DetailedError::signer_service_error(
 										"request_wallet",
 										&format!("Failed to derive wallet: {:?}", e),
-									),
-								)
+									).into()
 							})?;
 						let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
 							.map_err(|e| {
 								error!("Failed to convert derived pubkey to address: {:?}", e);
-								PumpxRpcError::from(
-									DetailedError::new(
+								DetailedError::new(
 										AUTH_VERIFICATION_FAILED_CODE,
 										"Failed to convert derived public key to address",
 									)
 									.with_field("operation")
 									.with_received("pubkey_to_address conversion")
-									.with_reason(format!("Internal error converting public key to address: {:?}", e)),
-								)
+									.with_reason(format!("Internal error converting public key to address: {:?}", e)).into()
 							})?;
 						if derived_address.to_lowercase() != main_addr.to_lowercase() {
 							error!("Main address does not match derived EVM address");
-							return Err(PumpxRpcError::from(
-								DetailedError::new(
+							return Err(DetailedError::new(
 									AUTH_VERIFICATION_FAILED_CODE,
 									"Derived address does not match authenticated address",
 								)
 								.with_field("derived_address")
 								.with_received(derived_address.to_string())
 								.with_expected(main_addr.to_string())
-								.with_suggestion("The derived EVM address must match the authenticated main address"),
-							));
+								.with_suggestion("The derived EVM address must match the authenticated main address").into());
 						}
 					},
 				}
@@ -859,13 +798,11 @@ pub fn register_submit_user_op_with_auth<
 			for (index, op) in params.user_operations.iter().enumerate() {
 				op.sender.parse::<Address>().map_err(|e| {
 					error!("Invalid sender address '{}': {}", op.sender, e);
-					PumpxRpcError::from(
-						DetailedError::invalid_address_format(
+					DetailedError::invalid_address_format(
 							&format!("user_operations[{}].sender", index),
 							&op.sender,
 							"0x-prefixed 20-byte Ethereum address (40 hex chars)",
-						),
-					)
+						).into()
 				})?;
 			}
 
@@ -879,7 +816,7 @@ pub fn register_submit_user_op_with_auth<
 			// Get EntryPoint client for this chain (needed for both signing and submission)
 			let entry_point_client = ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 				error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-				PumpxRpcError::from(DetailedError::chain_not_supported(params.chain_id))
+				DetailedError::chain_not_supported(params.chain_id).into().into()
 			})?;
 
 			// Parse whitelisted paymasters once
@@ -893,10 +830,10 @@ pub fn register_submit_user_op_with_auth<
 				let mut packed_user_op = convert_to_packed_user_op(serializable_user_op.clone())
 					.map_err(|e| {
 						error!("Failed to convert UserOperation {}: {}", index, e);
-						PumpxRpcError::from(DetailedError::invalid_user_operation_error(&format!(
+						DetailedError::invalid_user_operation_error(&format!(
 							"Invalid user operation at index {}",
 							index
-						)))
+						).into())
 					})?;
 
 				// Check userOp signature status and validate paymaster usage
@@ -912,12 +849,11 @@ pub fn register_submit_user_op_with_auth<
 									"UserOperation {} uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
 									index, paymaster_address
 								);
-								return Err(PumpxRpcError::from(
-									DetailedError::invalid_user_operation_error(&format!(
+								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"UserOperation at index {} uses non-whitelisted paymaster {}",
 										index, paymaster_address
-									)),
-								));
+									)).into()
+								);
 							}
 						}
 
@@ -941,12 +877,11 @@ pub fn register_submit_user_op_with_auth<
 									"Failed to process ERC20 paymaster data for UserOperation {}: {}",
 									index, e
 								);
-								return Err(PumpxRpcError::from(
-									DetailedError::invalid_user_operation_error(&format!(
+								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"ERC20 paymaster processing failed for operation at index {}: {}",
 										index, e
-									)),
-								));
+									)).into()
+								);
 							},
 						}
 					}
@@ -993,14 +928,13 @@ pub fn register_submit_user_op_with_auth<
 						Ok(sig) => substrate_to_ethereum_signature(&sig)
 							.map_err(|e| {
 								error!("Failed to convert signature: {}", e);
-								PumpxRpcError::from(DetailedError::signature_service_unavailable())
+								DetailedError::signature_service_unavailable().into()
 							})?
 							.to_vec(),
 						Err(_) => {
 							error!("Failed to sign user operation {}", index);
-							return Err(PumpxRpcError::from(
-								DetailedError::signature_service_unavailable(),
-							));
+							return Err(DetailedError::signature_service_unavailable().into()
+							);
 						},
 					};
 
@@ -1016,12 +950,11 @@ pub fn register_submit_user_op_with_auth<
 							"UserOperation {} is signed but has paymaster data. Signed userOps are only allowed without paymaster.",
 							index
 						);
-						return Err(PumpxRpcError::from(
-							DetailedError::invalid_user_operation_error(&format!(
+						return Err(DetailedError::invalid_user_operation_error(&format!(
 								"UserOperation at index {} is signed but specifies a paymaster",
 								index
-							)),
-						));
+							)).into()
+						);
 					}
 					info!("UserOperation {} is signed with no paymaster, processing", index);
 				}
@@ -1070,9 +1003,8 @@ pub fn register_submit_user_op_with_auth<
 				Err(e) => {
 					let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
 					error!("{}", err_msg.clone());
-					return Err(PumpxRpcError::from(
-						DetailedError::invalid_user_operation_error(&err_msg),
-					));
+					return Err(DetailedError::invalid_user_operation_error(&err_msg).into()
+					);
 				},
 			}
 
@@ -1105,14 +1037,12 @@ fn verify_wildmeta_signature_wrapper(
 	agent_address: &str,
 	business_json: &str,
 	signature: &str,
-) -> Result<(), PumpxRpcError> {
+) -> Result<()> {
 	verify_wildmeta_signature(agent_address, business_json, signature).map_err(|err| {
-		PumpxRpcError::from(
-			DetailedError::new(err.code(), "Wildmeta signature verification failed")
-				.with_field("agent_address")
-				.with_received(agent_address.to_string())
-				.with_suggestion("Ensure the signature is valid and matches the agent address"),
-		)
+		DetailedError::new(err.code(), "Wildmeta signature verification failed")
+			.with_field("agent_address")
+			.with_received(agent_address.to_string())
+			.with_suggestion("Ensure the signature is valid and matches the agent address")
 	})
 }
 
@@ -1120,14 +1050,12 @@ fn verify_payload_timestamp_wrapper(
 	storage: &Arc<WildmetaTimestampStorage>,
 	main_address: &str,
 	new_timestamp: u64,
-) -> Result<(), PumpxRpcError> {
+) -> Result<()> {
 	verify_payload_timestamp(storage, main_address, new_timestamp).map_err(|err| {
-		PumpxRpcError::from(
-			DetailedError::new(err.code(), "Timestamp verification failed")
-				.with_field("timestamp")
-				.with_received(new_timestamp.to_string())
-				.with_suggestion("Timestamp must be greater than the previously used timestamp"),
-		)
+		DetailedError::new(err.code(), "Timestamp verification failed")
+			.with_field("timestamp")
+			.with_received(new_timestamp.to_string())
+			.with_suggestion("Timestamp must be greater than the previously used timestamp")
 	})
 }
 
@@ -1137,7 +1065,7 @@ fn verify_wildmeta_backend_signature_wrapper(
 	chain_id: ChainId,
 	entry_point_address: Address,
 	expected_pubkey: &[u8; 33],
-) -> Result<(), PumpxRpcError> {
+) -> Result<()> {
 	verify_wildmeta_backend_signature(
 		signature,
 		user_operations,
@@ -1146,11 +1074,9 @@ fn verify_wildmeta_backend_signature_wrapper(
 		expected_pubkey,
 	)
 	.map_err(|err| {
-		PumpxRpcError::from(
-			DetailedError::new(err.code(), "Backend signature verification failed")
-				.with_field("signature")
-				.with_suggestion("Ensure the backend signature is valid for the given operations"),
-		)
+		DetailedError::new(err.code(), "Backend signature verification failed")
+			.with_field("signature")
+			.with_suggestion("Ensure the backend signature is valid for the given operations")
 	})
 }
 

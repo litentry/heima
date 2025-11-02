@@ -17,7 +17,6 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
 use crate::methods::omni::common::check_auth;
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use ethers::types::Bytes;
@@ -57,42 +56,34 @@ pub fn register_sign_limit_order_params<
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
 			let oa_str = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Authentication verification failed",
-					)
-					.with_suggestion("Please check your authentication credentials"),
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Authentication verification failed",
 				)
+				.with_suggestion("Please check your authentication credentials")
 			})?;
 
 			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
 			let omni_account = to_omni_account(&oa_str).map_err(|_| {
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				))
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
 			})?;
 
 			// Inline handle_pumpx_sign_limit_order logic
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
 				error!("Failed to map pumpx chain_id {}", params.chain_id);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(
-						crate::error_code::INVALID_CHAIN_ID_CODE,
-						"Chain not supported",
-					)
-					.with_reason(format!("Chain ID {} is not supported", params.chain_id)),
-				));
+				return Err(DetailedError::new(
+					crate::error_code::INVALID_CHAIN_ID_CODE,
+					"Chain not supported",
+				)
+				.with_reason(format!("Chain ID {} is not supported", params.chain_id))
+				.into());
 			};
 
 			let unsigned_tx_vec: Vec<Vec<u8>> =
@@ -108,13 +99,12 @@ pub fn register_sign_limit_order_params<
 				.await
 			else {
 				error!("Failed to request signatures from pumpx-signer");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(
-						crate::error_code::SIGNATURE_SERVICE_UNAVAILABLE_CODE,
-						"Signature service unavailable",
-					)
-					.with_suggestion("Please try again later"),
-				));
+				return Err(DetailedError::new(
+					crate::error_code::SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+					"Signature service unavailable",
+				)
+				.with_suggestion("Please try again later")
+				.into());
 			};
 
 			Ok(SignLimitOrderResponse {

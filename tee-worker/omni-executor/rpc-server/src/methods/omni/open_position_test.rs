@@ -1,6 +1,5 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_userop;
@@ -38,53 +37,44 @@ pub fn register_open_position_test<
 		.register_async_method("omni_openPositionTest", |params, ctx, _ext| async move {
 			let params = params.parse::<OpenPositionTestParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			debug!("Received omni_openPositionTest, params: {:?}", params);
 
 			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
 				error!("Failed to parse omni account");
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				))
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
 			})?;
 
 			let smart_wallet = &params.sender;
 			let ticker = &params.ticker;
 
 			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported").with_reason(e),
-				)
+				DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
+					.with_reason(e)
+					.into()
 			})?;
 
 			let (perp_meta, perp_mark_price, perp_mid_price) =
 				hypercore_client.get_perp_market_prices(ticker).await.map_err(|e| {
 					error!("Failed to get perp market prices for {}: {}", ticker, e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to get perp market prices: {}", e)),
-					)
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason(format!("Failed to get perp market prices: {}", e))
+						.into()
 				})?;
 
 			let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
 				error!("Failed to get perp asset ID: {}", e);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e)
 			})?;
 
 			let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
 				error!("Perp asset {} not found in meta", perp_asset_id);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Perp asset {} not found", perp_asset_id)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Perp asset {} not found", perp_asset_id))
+					.into()
 			})?;
 
 			let perp_sz_decimals = perp_asset.sz_decimals;
@@ -97,16 +87,14 @@ pub fn register_open_position_test<
 			let clamped_hedge_price = clamp_price(target_hedge_price, perp_sz_decimals, false);
 
 			let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Failed to parse clamped hedge size: {}", e)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to parse clamped hedge size: {}", e))
+					.into()
 			})?;
 			let clamped_hedge_price_f64 = clamped_hedge_price.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Failed to parse clamped hedge price: {}", e)),
-				)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!("Failed to parse clamped hedge price: {}", e))
+					.into()
 			})?;
 
 			let cloid = generate_cloid();
@@ -140,17 +128,15 @@ pub fn register_open_position_test<
 				.wait_for_order(smart_wallet, &cloid.to_string(), 20, OrderWaitCondition::Opened)
 				.await
 				.map_err(|e| {
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Hedge order failed to open: {}", e)),
-					)
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason(format!("Hedge order failed to open: {}", e))
+						.into()
 				})?;
 
 			if !order_opened {
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Hedge order was rejected or canceled"),
-				));
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Hedge order was rejected or canceled")
+					.into());
 			}
 
 			hypercore_client.print_account_state(smart_wallet, "After Open Position").await;

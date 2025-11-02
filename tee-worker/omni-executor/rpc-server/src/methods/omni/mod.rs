@@ -53,9 +53,6 @@ use get_omni_account::*;
 mod get_smart_wallet_root_signer;
 use get_smart_wallet_root_signer::*;
 
-mod submit_user_op;
-use submit_user_op::*;
-
 mod estimate_user_op_gas;
 use estimate_user_op_gas::*;
 

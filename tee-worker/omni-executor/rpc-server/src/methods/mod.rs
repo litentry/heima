@@ -5,8 +5,6 @@ use jsonrpsee::RpcModule;
 mod omni;
 use omni::*;
 
-pub use omni::PumpxRpcError;
-
 pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",
 	"omni_addWallet",

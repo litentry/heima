@@ -1,4 +1,4 @@
-use crate::methods::omni::{common::check_auth, PumpxRpcError};
+use crate::methods::omni::common::check_auth;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{PARSE_ERROR_CODE, *},
@@ -25,21 +25,17 @@ pub fn register_notify_limit_order_result<
 		.register_async_method("omni_notifyLimitOrderResult", |params, _ctx, ext| async move {
 			let _user = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Authentication verification failed",
-					)
-					.with_suggestion("Please check your authentication credentials"),
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Authentication verification failed",
 				)
+				.with_suggestion("Please check your authentication credentials")
 			})?;
 
 			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			debug!(
@@ -50,10 +46,9 @@ pub fn register_notify_limit_order_result<
 			// Inline handle_pumpx_notify_limit_order_result logic
 			if params.result != "ok" && params.result != "nok" {
 				error!("Invalid result value: {}. Must be 'ok' or 'nok'", params.result);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid input")
-						.with_reason("Result must be 'ok' or 'nok'"),
-				));
+				return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid input")
+					.with_reason("Result must be 'ok' or 'nok'")
+					.into());
 			}
 
 			if let Some(msg) = &params.message {

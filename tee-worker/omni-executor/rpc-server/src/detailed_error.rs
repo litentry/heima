@@ -1,11 +1,13 @@
 use crate::error_code::{
 	ACCOUNT_PARSE_ERROR_CODE, EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE,
-	INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
+	INTERNAL_ERROR_CODE, INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
 	INVALID_HEX_FORMAT_CODE, INVALID_USER_OPERATION_CODE, INVALID_WALLET_INDEX_CODE,
 	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
 	UNEXPECTED_RESPONSE_TYPE_CODE,
 };
-use jsonrpsee::types::ErrorObject;
+use jsonrpsee::types::{ErrorCode, ErrorObject};
+use parity_scale_codec::Codec;
+use pumpx::methods::common::ApiResponse;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +20,8 @@ pub struct DetailedError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorDetails {
 	#[serde(skip_serializing_if = "Option::is_none")]
+	pub backend_response: Option<BackendResponse>,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub field: Option<String>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub expected: Option<String>,
@@ -29,12 +33,19 @@ pub struct ErrorDetails {
 	pub suggestion: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BackendResponse {
+	pub code: i32,
+	pub message: String,
+}
+
 impl DetailedError {
 	pub fn new(code: i32, message: impl Into<String>) -> Self {
 		Self {
 			code,
 			message: message.into(),
 			details: ErrorDetails {
+				backend_response: None,
 				field: None,
 				expected: None,
 				received: None,
@@ -69,8 +80,22 @@ impl DetailedError {
 		self
 	}
 
+	pub fn with_backend_response(mut self, code: i32, message: impl Into<String>) -> Self {
+		self.details.backend_response = Some(BackendResponse { code, message: message.into() });
+		self
+	}
+
 	pub fn to_error_object(&self) -> ErrorObject<'static> {
 		ErrorObject::owned(self.code, self.message.clone(), Some(self.details.clone()))
+	}
+
+	/// Create an error from a backend API response
+	pub fn from_api_response<T>(api_response: ApiResponse<T>) -> Self
+	where
+		T: Codec,
+	{
+		Self::new(INTERNAL_ERROR_CODE, ErrorCode::InternalError.message())
+			.with_backend_response(api_response.code as i32, api_response.message)
 	}
 }
 
@@ -178,5 +203,11 @@ impl DetailedError {
 	pub fn signature_service_unavailable() -> Self {
 		Self::new(SIGNATURE_SERVICE_UNAVAILABLE_CODE, "Signature service temporarily unavailable")
 			.with_suggestion("Please try again in a few moments")
+	}
+}
+
+impl From<DetailedError> for ErrorObject<'static> {
+	fn from(error: DetailedError) -> Self {
+		error.to_error_object()
 	}
 }

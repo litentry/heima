@@ -2,7 +2,7 @@ use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE, *},
-	methods::omni::{common::check_auth, PumpxRpcError},
+	methods::omni::common::check_auth,
 	server::RpcContext,
 	Decode, Deserialize,
 };
@@ -112,65 +112,53 @@ pub fn register_submit_swap_order<
 		.register_async_method("omni_submitSwapOrder", |params, ctx, ext| async move {
 			let omni_account = check_auth(&ext).map_err(|e| {
 				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Authentication verification failed",
-					)
-					.with_suggestion("Please check your authentication credentials"),
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Authentication verification failed",
 				)
+				.with_suggestion("Please check your authentication credentials")
 			})?;
 
 			let params = params.parse::<SubmitSwapOrderParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			debug!("Received omni_submitSwapOrder, params: {:?}", params);
 
 			let Ok(omni_account_id) = AccountId::from_str(&omni_account) else {
 				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to parse omni account from authentication token"),
-				));
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Failed to parse omni account from authentication token")
+					.into());
 			};
 
 			let from_chain_asset = params.try_get_from_chain_asset().map_err(|_| {
 				error!("Failed to get from chain asset");
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-						.with_suggestion("Invalid method parameters"),
-				)
+				DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+					.with_suggestion("Invalid method parameters")
 			})?;
 			let to_chain_asset = params.try_get_to_chain_asset().map_err(|_| {
 				error!("Failed to get to chain asset");
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-						.with_suggestion("Invalid method parameters"),
-				)
+				DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+					.with_suggestion("Invalid method parameters")
 			})?;
 
 			if params.order_type == PumpxOrderType::Limit
 				&& !from_chain_asset.is_same_chain(&to_chain_asset)
 			{
 				error!("Limit order must be on the same chain");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-						.with_suggestion("Invalid method parameters"),
-				));
+				return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+					.with_suggestion("Invalid method parameters")
+					.into());
 			}
 
 			let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
 				.map_err(|_| {
 					error!("Failed to convert from_amount to BoundedVec");
-					PumpxRpcError::from(
-						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-							.with_suggestion("Invalid method parameters"),
-					)
+					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+						.with_suggestion("Invalid method parameters")
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
@@ -178,10 +166,9 @@ pub fn register_submit_swap_order<
 				storage.get(&(omni_account_id.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access token from storage");
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to get access token from storage"),
-				));
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason("Failed to get access token from storage")
+					.into());
 			};
 
 			let swap_order = SwapOrder {
@@ -195,10 +182,8 @@ pub fn register_submit_swap_order<
 			let user_trade_info =
 				ctx.pumpx_api.get_user_trade_info(&access_token).await.map_err(|e| {
 					error!("Failed to get user trade info: {:?}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-							.with_suggestion("Invalid method parameters"),
-					)
+					DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+						.with_suggestion("Invalid method parameters")
 				})?;
 
 			debug!("Response pumpx get_user_trade_info: {:?}", user_trade_info);
@@ -240,10 +225,9 @@ pub fn register_submit_swap_order<
 				SOLANA_CHAIN_ID => gas_type_sol.to_number() as u32,
 				_ => {
 					error!("Unsupported chain id: {}", params.to_chain_id);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
-							.with_suggestion("Invalid method parameters"),
-					));
+					return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid params")
+						.with_suggestion("Invalid method parameters")
+						.into());
 				},
 			};
 
@@ -280,10 +264,8 @@ pub fn register_submit_swap_order<
 				ccs_provider,
 				scs_provider.try_into().map_err(|_| {
 					error!("Failed to convert single chain swap provider");
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Failed to convert single chain swap provider"),
-					)
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to convert single chain swap provider")
 				})?,
 			);
 
@@ -295,20 +277,18 @@ pub fn register_submit_swap_order<
 				Ok(id) => id.unwrap_or_default(),
 				Err(_) => {
 					error!("Failed to read intent from store");
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Failed to read intent from store"),
-					));
+					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to read intent from store")
+						.into());
 				},
 			};
 
 			if params.intent_id == stored_intent_id + 1 {
 				if intent_id_storage.insert(&omni_account_id, params.intent_id).is_err() {
 					error!("Failed to save intent id");
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Failed to save intent id"),
-					));
+					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("Failed to save intent id")
+						.into());
 				}
 			} else {
 				error!(
@@ -316,10 +296,9 @@ pub fn register_submit_swap_order<
 					stored_intent_id + 1,
 					params.intent_id
 				);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Intent nonce mismatch")
-						.with_reason("Intent ID does not match expected value"),
-				));
+				return Err(DetailedError::new(INVALID_PARAMS_CODE, "Intent nonce mismatch")
+					.with_reason("Intent ID does not match expected value")
+					.into());
 			}
 
 			let swap_response = match intent {
@@ -329,10 +308,9 @@ pub fn register_submit_swap_order<
 				| Intent::TransferEthereum(_)
 				| Intent::TransferSolana(_) => {
 					info!("Intent temporarily rejected, intent_id: {}", params.intent_id);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("This intent type is temporarily not supported"),
-					));
+					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+						.with_reason("This intent type is temporarily not supported")
+						.into());
 				},
 				Intent::Swap(..) => {
 					let response = match ctx
@@ -350,10 +328,9 @@ pub fn register_submit_swap_order<
 					if let Some(response) = response {
 						response
 					} else {
-						return Err(PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason("Intent execution failed"),
-						));
+						return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason("Intent execution failed")
+							.into());
 					}
 				},
 			};
@@ -363,11 +340,8 @@ pub fn register_submit_swap_order<
 				let market_order_response: SendOrderTxResponse =
 					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 						error!("Failed to decode market order response: {:?}", e);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
-								format!("Failed to decode market order response: {:?}", e),
-							),
-						)
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason(format!("Failed to decode market order response: {:?}", e))
 					})?;
 				check_omni_api_response(market_order_response.clone(), "Market order".into())?;
 				let response = PumpxSubmitSwapOrderResponse {
@@ -381,11 +355,8 @@ pub fn register_submit_swap_order<
 				let limit_order_response: OrderInfoResponse =
 					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
 						error!("Failed to decode limit order response: {:?}", e);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(
-								format!("Failed to decode limit order response: {:?}", e),
-							),
-						)
+						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+							.with_reason(format!("Failed to decode limit order response: {:?}", e))
 					})?;
 				check_omni_api_response(limit_order_response.clone(), "Limit order".into())?;
 				let response = PumpxSubmitSwapOrderResponse {
@@ -403,15 +374,13 @@ pub fn register_submit_swap_order<
 fn check_and_get_option_user_trade_info_field<T>(
 	field_value: Option<T>,
 	field_name: &str,
-) -> Result<T, PumpxRpcError> {
+) -> Result<T> {
 	field_value.ok_or_else(|| {
 		error!("Response data.{} of call get_user_trade_info is none", field_name);
-		PumpxRpcError::from(
-			DetailedError::new(
-				PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
-				"Failed to get user trade info from API",
-			)
-			.with_suggestion("User trade info retrieval failed. Please try again later."),
+		DetailedError::new(
+			PUMPX_API_GET_ACCOUNT_USER_ID_FAILED_CODE,
+			"Failed to get user trade info from API",
 		)
+		.with_suggestion("User trade info retrieval failed. Please try again later.")
 	})
 }

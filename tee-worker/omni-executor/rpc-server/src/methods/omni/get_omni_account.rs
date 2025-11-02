@@ -16,7 +16,7 @@
 
 use crate::detailed_error::DetailedError;
 use crate::error_code::PARSE_ERROR_CODE;
-use crate::{methods::omni::common::PumpxRpcError, server::RpcContext};
+use crate::methods::omni::common::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::hex_encode, Web2IdentityType};
 use heima_primitives::Identity;
@@ -40,10 +40,8 @@ pub fn register_get_omni_account<
 		.register_async_method("omni_getOmniAccount", |params, _, _| async move {
 			let params = params.parse::<GetOmniAccountParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
+				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+					.with_reason("Invalid JSON format or missing required fields")
 			})?;
 
 			let account =
