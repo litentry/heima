@@ -114,7 +114,7 @@ pub fn register_submit_user_op_test<
 			// Get EntryPoint client for this chain (needed for both signing and submission)
 			let entry_point_client = ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 				error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-				DetailedError::chain_not_supported(params.chain_id as u64).to_rpc_error()
+				DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
 			})?;
 
 			// Parse whitelisted paymasters once

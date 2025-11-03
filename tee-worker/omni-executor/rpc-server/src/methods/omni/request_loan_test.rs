@@ -10,7 +10,7 @@ use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{AccountId, ChainId};
 use executor_storage::{LoanState, Storage};
 use hyperliquid::*;
-use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use jsonrpsee::RpcModule;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};

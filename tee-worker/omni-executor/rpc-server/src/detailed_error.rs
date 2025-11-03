@@ -85,7 +85,7 @@ impl DetailedError {
 		self
 	}
 
-	pub fn to_rpc_error(self) -> ErrorObjectOwned {
+	pub fn to_rpc_error(&self) -> ErrorObjectOwned {
 		ErrorObject::owned(self.code, self.message.clone(), Some(self.details.clone()))
 	}
 

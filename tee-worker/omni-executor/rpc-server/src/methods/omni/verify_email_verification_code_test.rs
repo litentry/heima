@@ -1,6 +1,5 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE};
-use crate::methods::RpcResult;
 use crate::verify_auth::verify_email_authentication;
 use crate::RpcContext;
 use executor_core::intent_executor::IntentExecutor;

@@ -22,7 +22,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
 use executor_storage::WildmetaTimestampStorage;
-use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use jsonrpsee::RpcModule;
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;

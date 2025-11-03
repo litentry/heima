@@ -15,7 +15,7 @@ use heima_primitives::{
 	SwapOrder,
 };
 use heima_utils::decode_hex;
-use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use jsonrpsee::RpcModule;
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
