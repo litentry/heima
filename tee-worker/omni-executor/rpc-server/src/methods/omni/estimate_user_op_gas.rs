@@ -20,7 +20,7 @@ use crate::server::RpcContext;
 use crate::utils::gas_estimation::estimate_user_op_gas;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::convert_to_packed_user_op;
-use crate::validation_helpers::validate_ethereum_address;
+use crate::utils::validation::validate_ethereum_address;
 use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -129,8 +129,7 @@ pub fn register_estimate_user_op_gas<
 			let packed_user_op =
 				convert_to_packed_user_op(params.user_operation.clone()).map_err(|e| {
 					error!("Failed to convert UserOperation: {}", e);
-					DetailedError::invalid_user_operation_error("Invalid user operation format")
-						.to_rpc_error()
+					DetailedError::invalid_user_op(&e).to_rpc_error()
 				})?;
 
 			// Perform gas estimation

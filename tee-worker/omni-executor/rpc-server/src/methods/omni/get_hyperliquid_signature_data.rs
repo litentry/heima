@@ -1,10 +1,10 @@
 use crate::{
-	auth_utils::{verify_payload_timestamp, verify_wildmeta_signature},
 	detailed_error::DetailedError,
 	error_code::*,
 	methods::RpcResult,
 	server::RpcContext,
-	validation_helpers::validate_ethereum_address,
+	utils::auth::{verify_payload_timestamp, verify_wildmeta_signature},
+	utils::validation::validate_ethereum_address,
 	verify_auth::verify_auth,
 };
 use chrono::Utc;

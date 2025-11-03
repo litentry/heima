@@ -1,18 +1,16 @@
-use crate::auth_utils::{
-	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
-};
 use crate::detailed_error::DetailedError;
-use crate::error_code::{
-	AUTH_VERIFICATION_FAILED_CODE, INVALID_USER_OPERATION_CODE, PARSE_ERROR_CODE,
-};
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_USEROP_CODE, PARSE_ERROR_CODE};
 use crate::methods::RpcResult;
 use crate::server::RpcContext;
+use crate::utils::auth::{
+	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
+};
 use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
 	process_erc20_paymaster_data,
 };
 use crate::utils::user_op::{convert_to_packed_user_op, substrate_to_ethereum_signature};
-use crate::validation_helpers::{
+use crate::utils::validation::{
 	validate_chain_id, validate_user_operations, validate_wallet_index,
 };
 use aa_contracts_client::calculate_user_operation_hash;
@@ -189,7 +187,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 	// First decode the actual payload from the method call parameters
 	if call_bytes.len() < 4 + 32 + 32 {
 		return Err(DetailedError::new(
-			INVALID_USER_OPERATION_CODE,
+			INVALID_USEROP_CODE,
 			"Call data too short for payload parameter",
 		)
 		.with_field("call_data_length")
@@ -211,7 +209,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 	// Ensure we have enough data for the payload
 	if call_bytes.len() < 68 + payload_length {
 		return Err(DetailedError::new(
-			INVALID_USER_OPERATION_CODE,
+			INVALID_USEROP_CODE,
 			"Call data too short for declared payload length",
 		)
 		.with_field("call_data_length")
@@ -226,7 +224,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 	// Validate payload format: minimum 4 bytes (1 version + 3 action_id)
 	if payload.len() < 4 {
 		return Err(DetailedError::new(
-			INVALID_USER_OPERATION_CODE,
+			INVALID_USEROP_CODE,
 			"Payload too short for version and action_id",
 		)
 		.with_field("payload_length")
@@ -238,7 +236,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 	// Extract version (first byte)
 	let version = payload[0];
 	if version != 0x01 {
-		return Err(DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid payload version")
+		return Err(DetailedError::new(INVALID_USEROP_CODE, "Invalid payload version")
 			.with_field("version")
 			.with_received(format!("0x{:02x}", version))
 			.with_expected("0x01")
@@ -260,7 +258,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 
 	if !valid_action_ids.contains(&action_id) {
 		return Err(DetailedError::new(
-			INVALID_USER_OPERATION_CODE,
+			INVALID_USEROP_CODE,
 			"Invalid action_id for HyperEVM core writer call",
 		)
 		.with_field("action_id")
@@ -808,229 +806,14 @@ pub fn register_submit_user_op_with_auth<
 				})?;
 			}
 
-			// Inlined handler logic from handle_submit_user_op
-			info!(
-				"Processing SubmitUserOp for {} UserOperations on chain_id: {}",
-				params.user_operations.len(),
-				params.chain_id
-			);
-
-			// Get EntryPoint client for this chain (needed for both signing and submission)
-			let entry_point_client = ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
-				error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-				DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
-			})?;
-
-			// Parse whitelisted paymasters once
-			let whitelisted_paymaster = parse_whitelisted_paymasters();
-
-			// Process each UserOperation in the batch
-			let mut aa_user_ops = Vec::new();
-
-			for (index, serializable_user_op) in params.user_operations.iter().enumerate() {
-				// Convert SerializablePackedUserOperation to PackedUserOperation
-				let mut packed_user_op = convert_to_packed_user_op(serializable_user_op.clone())
-					.map_err(|e| {
-						error!("Failed to convert UserOperation {}: {}", index, e);
-						DetailedError::invalid_user_operation_error(&format!(
-							"Invalid user operation at index {}",
-							index
-						))
-					})?;
-
-				// Check userOp signature status and validate paymaster usage
-				if packed_user_op.signature.is_empty() {
-					// UNSIGNED userOp: If paymaster specified, must be whitelisted
-					if !packed_user_op.paymasterAndData.is_empty() {
-						if let Some(paymaster_address) =
-							extract_paymaster_address(&packed_user_op.paymasterAndData)
-						{
-							if !is_whitelisted_paymaster(&paymaster_address, &whitelisted_paymaster)
-							{
-								error!(
-									"UserOperation {} uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
-									index, paymaster_address
-								);
-								return Err(DetailedError::invalid_user_operation_error(&format!(
-										"UserOperation at index {} uses non-whitelisted paymaster {}",
-										index, paymaster_address
-									))
-									.to_rpc_error()
-								);
-							}
-						}
-
-						match process_erc20_paymaster_data(
-							ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
-							&packed_user_op.paymasterAndData,
-							params.chain_id,
-						)
-						.await
-						{
-							Ok(Some(updated_paymaster_data)) => {
-								packed_user_op.paymasterAndData = updated_paymaster_data;
-								info!("Updated ERC20 paymaster data for UserOperation {}", index);
-							},
-							Ok(None) => {
-								// Not an ERC20 paymaster, continue as normal
-								debug!("UserOperation {} does not use ERC20 paymaster", index);
-							},
-							Err(e) => {
-								error!(
-									"Failed to process ERC20 paymaster data for UserOperation {}: {}",
-									index, e
-								);
-								return Err(DetailedError::invalid_user_operation_error(&format!(
-										"ERC20 paymaster processing failed for operation at index {}: {}",
-										index, e
-									))
-									.to_rpc_error()
-								);
-							},
-						}
-					}
-
-					info!("Requesting signature from pumpx signer for UserOperation {}", index);
-
-					// Log UserOp details for debugging
-					info!(
-						"UserOp details - Sender: {}, Nonce: {}, InitCode length: {}, CallData length: {}",
-						packed_user_op.sender,
-						packed_user_op.nonce,
-						packed_user_op.initCode.len(),
-						packed_user_op.callData.len()
-					);
-
-					let entry_point_address = entry_point_client.entry_point_address();
-
-					let user_op_hash_bytes = calculate_user_operation_hash(
-						&packed_user_op,
-						entry_point_address,
-						params.chain_id,
-					);
-					let message_to_sign = user_op_hash_bytes.to_vec();
-
-					info!(
-						"Signing UserOp hash: 0x{}, EntryPoint: {}, ChainID: {}",
-						hex::encode(user_op_hash_bytes),
-						entry_point_address,
-						params.chain_id
-					);
-
-					// Request signature from pumpx signer for EVM chain
-					let signature_result = ctx
-						.signer_client
-						.request_signature(
-							ChainType::Evm,
-							params.wallet_index,
-							account_id.clone().into(),
-							message_to_sign,
-						)
-						.await;
-
-					let signature = match signature_result {
-						Ok(sig) => substrate_to_ethereum_signature(&sig)
-							.map_err(|e| {
-								error!("Failed to convert signature: {}", e);
-								DetailedError::signature_service_unavailable().to_rpc_error()
-							})?
-							.to_vec(),
-						Err(_) => {
-							error!("Failed to sign user operation {}", index);
-							return Err(DetailedError::signature_service_unavailable().to_rpc_error()
-							);
-						},
-					};
-
-					// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
-					let mut signature_with_prefix: Vec<u8> = vec![0x01];
-					signature_with_prefix.extend_from_slice(&signature);
-					packed_user_op.signature = Bytes::from(signature_with_prefix);
-					info!("UserOperation {} signed successfully", index);
-				} else {
-					// SIGNED userOp: Only allowed if no paymaster specified
-					if !packed_user_op.paymasterAndData.is_empty() {
-						error!(
-							"UserOperation {} is signed but has paymaster data. Signed userOps are only allowed without paymaster.",
-							index
-						);
-						return Err(DetailedError::invalid_user_operation_error(&format!(
-								"UserOperation at index {} is signed but specifies a paymaster",
-								index
-							))
-							.to_rpc_error()
-						);
-					}
-					info!("UserOperation {} is signed with no paymaster, processing", index);
-				}
-
-				// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
-				let aa_user_op = aa_contracts_client::PackedUserOperation {
-					sender: packed_user_op.sender,
-					nonce: packed_user_op.nonce,
-					initCode: packed_user_op.initCode.clone(),
-					callData: packed_user_op.callData.clone(),
-					accountGasLimits: packed_user_op.accountGasLimits,
-					preVerificationGas: packed_user_op.preVerificationGas,
-					gasFees: packed_user_op.gasFees,
-					paymasterAndData: packed_user_op.paymasterAndData.clone(),
-					signature: packed_user_op.signature.clone(),
-				};
-				aa_user_ops.push(aa_user_op);
-			}
-
-			// Get beneficiary address from the EntryPoint client's wallet
-			let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
-				let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
-				error!("{}", err_msg.clone());
-				DetailedError::new(
-					crate::error_code::INTERNAL_ERROR_CODE,
-					err_msg,
-				).to_rpc_error()
-			})?;
-
-			// Run batch simulation for all UserOperations before submission
-			info!("Running batch simulation for {} UserOperations", aa_user_ops.len());
-			match entry_point_client.simulate_handle_ops(&aa_user_ops, beneficiary).await {
-				Ok(simulation_results) => {
-					for (index, result) in simulation_results.iter().enumerate() {
-						info!(
-							"UserOperation {} simulation successful. PreOpGas: {}, Paid: {}, AccountValidation: {}, PaymasterValidation: {}",
-							index,
-							result.preOpGas,
-							result.paid,
-							result.accountValidationData,
-							result.paymasterValidationData
-						);
-					}
-					info!("All {} UserOperations passed batch simulation checks", aa_user_ops.len());
-				},
-				Err(e) => {
-					let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
-					error!("{}", err_msg.clone());
-					return Err(DetailedError::invalid_user_operation_error(&err_msg).to_rpc_error()
-					);
-				},
-			}
-
-			// Submit all UserOperations via EntryPoint.handleOps() with retry logic
-			let transaction_hash =
-				match entry_point_client.handle_ops_with_retry(&aa_user_ops, beneficiary).await {
-					Ok(tx_hash) => {
-						// Return the actual transaction hash from handle_ops
-						Some(tx_hash)
-					},
-					Err(_) => {
-						let err_msg =
-							"Failed to submit UserOperations to EntryPoint via handleOps after retries"
-								.to_string();
-						error!("{}", err_msg.clone());
-						return Err(DetailedError::new(
-							crate::error_code::INTERNAL_ERROR_CODE,
-							err_msg,
-						).to_rpc_error());
-					},
-				};
+			// Call the common submission logic
+			let transaction_hash = submit_user_ops(
+				&ctx,
+				params.user_operations,
+				params.chain_id,
+				params.wallet_index,
+				&account_id,
+			).await?;
 
 			Ok(SubmitUserOpWithAuthResponse { transaction_hash })
 		})
@@ -1088,467 +871,232 @@ fn verify_wildmeta_backend_signature_wrapper(
 	})
 }
 
+/// Common user operation submission logic shared between test and auth endpoints
+/// This function handles the complete flow of processing, signing, and submitting user operations
+pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	ctx: &RpcContext<CrossChainIntentExecutor>,
+	user_operations: Vec<SerializablePackedUserOperation>,
+	chain_id: ChainId,
+	wallet_index: u32,
+	omni_account: &executor_primitives::AccountId,
+) -> RpcResult<Option<String>> {
+	use crate::error_code::INTERNAL_ERROR_CODE;
+
+	// Inlined handler logic from handle_submit_user_op
+	info!(
+		"Processing SubmitUserOp for {} UserOps on chain_id: {}",
+		user_operations.len(),
+		chain_id
+	);
+
+	// Get EntryPoint client for this chain (needed for both signing and submission)
+	let entry_point_client = ctx.entry_point_clients.get(&chain_id).ok_or_else(|| {
+		error!("No EntryPoint client configured for chain_id: {}", chain_id);
+		DetailedError::chain_not_supported(chain_id).to_rpc_error()
+	})?;
+
+	// Parse whitelisted paymasters once
+	let whitelisted_paymaster = parse_whitelisted_paymasters();
+
+	let mut user_ops = Vec::new();
+
+	for (index, serializable_user_op) in user_operations.iter().enumerate() {
+		let mut packed_user_op =
+			convert_to_packed_user_op(serializable_user_op.clone()).map_err(|e| {
+				error!("Failed to convert UserOp[{}]: {}", index, e);
+				DetailedError::invalid_user_op(&format!(
+					"Failed to convert UserOp[{}]: {}",
+					index, e
+				))
+				.to_rpc_error()
+			})?;
+
+		// Check userOp signature status and validate paymaster usage
+		if packed_user_op.signature.is_empty() {
+			// UNSIGNED userOp: If paymaster specified, must be whitelisted
+			if !packed_user_op.paymasterAndData.is_empty() {
+				if let Some(paymaster_address) =
+					extract_paymaster_address(&packed_user_op.paymasterAndData)
+				{
+					if !is_whitelisted_paymaster(&paymaster_address, &whitelisted_paymaster) {
+						error!(
+							"UserOp {} uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
+							index, paymaster_address
+						);
+						return Err(DetailedError::invalid_user_op(&format!(
+							"UserOp[{}] uses non-whitelisted paymaster {}",
+							index, paymaster_address
+						))
+						.to_rpc_error());
+					}
+				}
+
+				match process_erc20_paymaster_data(
+					ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
+					&packed_user_op.paymasterAndData,
+					chain_id,
+				)
+				.await
+				{
+					Ok(Some(updated_paymaster_data)) => {
+						packed_user_op.paymasterAndData = updated_paymaster_data;
+						info!("Updated ERC20 paymaster data for UserOp[{}]", index);
+					},
+					Ok(None) => {
+						// Not an ERC20 paymaster, continue as normal
+						debug!("UserOp[{}] does not use ERC20 paymaster", index);
+					},
+					Err(e) => {
+						error!(
+							"Failed to process ERC20 paymaster data for UserOp[{}]: {}",
+							index, e
+						);
+						return Err(DetailedError::invalid_user_op(&format!(
+							"ERC20 paymaster processing failed for UserOp[{}]: {}",
+							index, e
+						))
+						.to_rpc_error());
+					},
+				}
+			}
+
+			info!("Requesting signature from pumpx signer for UserOp[{}]", index);
+
+			// Log UserOp details for debugging
+			info!(
+				"UserOp details: sender={}, nonce={}, initCode len={}, callData len={}",
+				packed_user_op.sender,
+				packed_user_op.nonce,
+				packed_user_op.initCode.len(),
+				packed_user_op.callData.len()
+			);
+
+			let entry_point_address = entry_point_client.entry_point_address();
+
+			let user_op_hash_bytes =
+				calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
+			let message_to_sign = user_op_hash_bytes.to_vec();
+
+			info!(
+				"Signing UserOp hash: 0x{}, EntryPoint: {}, ChainID: {}",
+				hex::encode(user_op_hash_bytes),
+				entry_point_address,
+				chain_id
+			);
+
+			// Request signature from pumpx signer for EVM chain
+			let signature_result = ctx
+				.signer_client
+				.request_signature(
+					ChainType::Evm,
+					wallet_index,
+					omni_account.clone().into(),
+					message_to_sign,
+				)
+				.await;
+
+			let signature = match signature_result {
+				Ok(sig) => substrate_to_ethereum_signature(&sig)
+					.map_err(|e| {
+						error!("Failed to convert signature: {}", e);
+						DetailedError::signature_service_unavailable().to_rpc_error()
+					})?
+					.to_vec(),
+				Err(_) => {
+					error!("Failed to sign UserOp[{}]", index);
+					return Err(DetailedError::signature_service_unavailable().to_rpc_error());
+				},
+			};
+
+			// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
+			let mut signature_with_prefix: Vec<u8> = vec![0x01];
+			signature_with_prefix.extend_from_slice(&signature);
+			packed_user_op.signature = Bytes::from(signature_with_prefix);
+			info!("UserOp[{}] signed successfully", index);
+		} else {
+			// SIGNED userOp: Only allowed if no paymaster specified
+			if !packed_user_op.paymasterAndData.is_empty() {
+				error!(
+					"UserOp[{}] is signed but has paymaster data, signed userOps are only allowed without paymaster",
+					index
+				);
+				return Err(DetailedError::invalid_user_op(&format!(
+					"UserOp[{}] is signed but specifies a paymaster",
+					index
+				))
+				.to_rpc_error());
+			}
+			info!("UserOp[{}] is signed with no paymaster, processing", index);
+		}
+
+		// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
+		let aa_user_op = aa_contracts_client::PackedUserOperation {
+			sender: packed_user_op.sender,
+			nonce: packed_user_op.nonce,
+			initCode: packed_user_op.initCode.clone(),
+			callData: packed_user_op.callData.clone(),
+			accountGasLimits: packed_user_op.accountGasLimits,
+			preVerificationGas: packed_user_op.preVerificationGas,
+			gasFees: packed_user_op.gasFees,
+			paymasterAndData: packed_user_op.paymasterAndData.clone(),
+			signature: packed_user_op.signature.clone(),
+		};
+		user_ops.push(aa_user_op);
+	}
+
+	// Get beneficiary address from the EntryPoint client's wallet
+	let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
+		let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
+		error!("{}", err_msg.clone());
+		DetailedError::new(INTERNAL_ERROR_CODE, err_msg).to_rpc_error()
+	})?;
+
+	// Run batch simulation for all UserOperations before submission
+	info!("Running batch simulation for {} UserOps", user_ops.len());
+	match entry_point_client.simulate_handle_ops(&user_ops, beneficiary).await {
+		Ok(simulation_results) => {
+			for (index, result) in simulation_results.iter().enumerate() {
+				info!(
+					"UserOp[{}] simulation successful, preOpGas={}, paid={}, accountValidationData={}, paymasterValidationData={}",
+					index,
+					result.preOpGas,
+					result.paid,
+					result.accountValidationData,
+					result.paymasterValidationData
+				);
+			}
+			info!("All {} UserOps passed batch simulation checks", user_ops.len());
+		},
+		Err(e) => {
+			let err_msg: String = format!("Batch UserOp simulation failed: {}", e);
+			error!("{}", err_msg.clone());
+			return Err(DetailedError::invalid_user_op(&err_msg).to_rpc_error());
+		},
+	}
+
+	// Submit all UserOperations via EntryPoint.handleOps() with retry logic
+	let transaction_hash =
+		match entry_point_client.handle_ops_with_retry(&user_ops, beneficiary).await {
+			Ok(tx_hash) => {
+				// Return the actual transaction hash from handle_ops
+				Some(tx_hash)
+			},
+			Err(_) => {
+				let err_msg = "Failed to submit UserOps to EntryPoint after retries".to_string();
+				error!("{}", err_msg.clone());
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, err_msg).to_rpc_error());
+			},
+		};
+
+	Ok(transaction_hash)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::utils::user_op::convert_to_packed_user_op;
-	use executor_storage::StorageDB;
-	use tempfile::tempdir;
-
-	#[test]
-	fn test_verify_wildmeta_signature_with_real_data() {
-		let business_json = r#"{"action":"trade","amount":1.5,"customField1":"buy","customField2":"market","leverage":10,"metadata":{"features":{"darkMode":true,"notifications":false},"userAgent":"mobile-app","version":"1.0.0"},"positions":[{"entryPrice":50000,"metadata":{"openTime":1640995200,"strategy":"momentum"},"side":"long","size":1.5,"symbol":"BTC/USD"},{"entryPrice":3000,"metadata":{"openTime":1640995300,"strategy":"reversal"},"side":"short","size":2,"symbol":"ETH/USD"}],"price":50000,"riskManagement":{"maxLeverage":20,"stopLoss":{"enabled":true,"percentage":0.05},"takeProfit":{"enabled":true,"percentage":0.1}},"slippage":0.01,"symbol":"BTC/USD","timestamp":1752573555}"#;
-		let signature = "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c";
-		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
-
-		let result = verify_wildmeta_signature_wrapper(agent_address, business_json, signature);
-		assert!(result.is_ok(), "Signature verification should succeed");
-	}
-
-	#[test]
-	fn test_verify_wildmeta_signature_invalid_signature() {
-		let business_json = r#"{"action":"trade","timestamp":1752573555}"#;
-		let signature = "0x020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
-
-		let result = verify_wildmeta_signature_wrapper(agent_address, business_json, signature);
-		assert!(result.is_err(), "Should fail with invalid signature");
-	}
-
-	#[test]
-	fn test_verify_wildmeta_signature_wrong_signer() {
-		let business_json = r#"{"action":"trade","amount":1.5,"customField1":"buy","customField2":"market","leverage":10,"metadata":{"features":{"darkMode":true,"notifications":false},"userAgent":"mobile-app","version":"1.0.0"},"positions":[{"entryPrice":50000,"metadata":{"openTime":1640995200,"strategy":"momentum"},"side":"long","size":1.5,"symbol":"BTC/USD"},{"entryPrice":3000,"metadata":{"openTime":1640995300,"strategy":"reversal"},"side":"short","size":2,"symbol":"ETH/USD"}],"price":50000,"riskManagement":{"maxLeverage":20,"stopLoss":{"enabled":true,"percentage":0.05},"takeProfit":{"enabled":true,"percentage":0.1}},"slippage":0.01,"symbol":"BTC/USD","timestamp":1752573555}"#;
-
-		let signature = "0x46c737250d61b60cbf0f46a6755e59815844a2f7cdb9dc16bf867b57bfed3526424343a237c15eef9089d571d1f60fd0bd7f91d5888c649216a7df147b386a681c";
-		// Use a different address than the actual signer
-		let wrong_agent_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
-
-		let result = verify_wildmeta_signature(wrong_agent_address, business_json, signature);
-		assert!(result.is_err(), "Should fail with wrong signer address");
-	}
-
-	#[test]
-	fn test_verify_wildmeta_signature_invalid_hex() {
-		let business_json = r#"{"timestamp":1752573555}"#;
-		let signature = "invalid_hex";
-		let agent_address = "0xf8b16F021438B710fDE9d59dD17dDE1Eb2691BFd";
-
-		let result = verify_wildmeta_signature_wrapper(agent_address, business_json, signature);
-		assert!(result.is_err(), "Should fail with invalid hex signature");
-	}
-
-	#[test]
-	fn test_parse_business_json_timestamp() {
-		let business_json = r#"{"action":"trade","timestamp":1752573555}"#;
-
-		let parsed: serde_json::Value = serde_json::from_str(business_json).unwrap();
-		let timestamp = parsed.get("timestamp").and_then(|v| v.as_u64());
-
-		assert_eq!(timestamp, Some(1752573555), "Should correctly parse timestamp");
-	}
-
-	#[test]
-	fn test_parse_business_json_missing_timestamp() {
-		let business_json = r#"{"action":"trade","amount":1.5}"#;
-
-		let parsed: serde_json::Value = serde_json::from_str(business_json).unwrap();
-		let timestamp = parsed.get("timestamp").and_then(|v| v.as_u64());
-
-		assert_eq!(timestamp, None, "Should return None for missing timestamp");
-	}
-
-	#[test]
-	fn test_verify_payload_timestamp_success() {
-		let tmp_dir = tempdir().unwrap();
-		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-		let storage = Arc::new(WildmetaTimestampStorage::new(db));
-
-		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
-
-		// First timestamp should succeed
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
-		assert!(result.is_ok(), "First timestamp should succeed");
-
-		// Higher timestamp should succeed
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 2000);
-		assert!(result.is_ok(), "Higher timestamp should succeed");
-	}
-
-	#[test]
-	fn test_verify_payload_timestamp_fails_with_old_timestamp() {
-		let tmp_dir = tempdir().unwrap();
-		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-		let storage = Arc::new(WildmetaTimestampStorage::new(db));
-
-		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
-
-		// Store initial timestamp
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
-		assert!(result.is_ok());
-
-		// Same timestamp should fail
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
-		assert!(result.is_err(), "Same timestamp should fail");
-
-		// Lower timestamp should fail
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 500);
-		assert!(result.is_err(), "Lower timestamp should fail");
-	}
-
-	#[test]
-	fn test_verify_payload_timestamp_first_time() {
-		let tmp_dir = tempdir().unwrap();
-		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-		let storage = Arc::new(WildmetaTimestampStorage::new(db));
-
-		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
-
-		// Any timestamp should succeed for first time
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1);
-		assert!(result.is_ok(), "First timestamp should succeed even if it's 1");
-	}
-
-	#[test]
-	fn test_verify_payload_timestamp_persistence() {
-		let tmp_dir = tempdir().unwrap();
-		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-		let storage = Arc::new(WildmetaTimestampStorage::new(db));
-
-		let main_address = "0xA9d439F4DED81152DB00CB7CD94A8d908FEF903e";
-
-		// Store timestamp
-		verify_payload_timestamp_wrapper(&storage, main_address, 1000).unwrap();
-
-		// Verify it's persisted by checking that lower timestamp fails
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 999);
-		assert!(result.is_err(), "Timestamp should be persisted");
-
-		// Verify exact stored value fails
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1000);
-		assert!(result.is_err(), "Exact stored timestamp should fail");
-
-		// Higher should succeed
-		let result = verify_payload_timestamp_wrapper(&storage, main_address, 1001);
-		assert!(result.is_ok(), "Higher timestamp should succeed");
-	}
-
-	#[test]
-	fn test_wildmeta_backend_auth_parsing() {
-		use executor_primitives::ClientAuth;
-
-		let json =
-			r#"{"type": "wildmeta_backend", "value": { "signature": "0x1234567890abcdef" }}"#;
-		let deserialized: ClientAuth = serde_json::from_str(json).unwrap();
-
-		match deserialized {
-			ClientAuth::WildmetaBackend { signature } => {
-				assert_eq!(signature, "0x1234567890abcdef");
-			},
-			_ => panic!("Expected WildmetaBackend variant"),
-		}
-	}
-
-	#[test]
-	fn test_verify_wildmeta_backend_signature_wrapper_invalid_signature() {
-		use executor_core::types::SerializablePackedUserOperation;
-
-		// Create a test user operation
-		let user_op = SerializablePackedUserOperation {
-			sender: "0x1234567890123456789012345678901234567890".to_string(),
-			nonce: 42,
-			init_code: "0x".to_string(),
-			call_data: "0x".to_string(),
-			account_gas_limits:
-				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
-			pre_verification_gas: 21000,
-			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
-				.to_string(),
-			paymaster_and_data: "0x".to_string(),
-			signature: None,
-		};
-
-		let invalid_signature = "0x020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-		let chain_id = 1;
-		let entry_point_address = Address::from([0u8; 20]);
-		let expected_pubkey = [0u8; 33];
-
-		let result = verify_wildmeta_backend_signature_wrapper(
-			invalid_signature,
-			&[user_op],
-			chain_id,
-			entry_point_address,
-			&expected_pubkey,
-		);
-
-		assert!(result.is_err(), "Should fail with invalid signature");
-	}
-
-	#[test]
-	fn test_wildmeta_backend_validation_invalid_wallet_index() {
-		use executor_primitives::ClientAuth;
-
-		let auth = ClientAuth::WildmetaBackend { signature: "0x1234567890abcdef".to_string() };
-
-		// Test with wallet_index != 1 should fail
-		// This would be tested in an integration test with actual RPC call
-		// For now we verify the auth variant is parsed correctly
-		match auth {
-			ClientAuth::WildmetaBackend { signature } => {
-				assert_eq!(signature, "0x1234567890abcdef");
-			},
-			_ => panic!("Expected WildmetaBackend variant"),
-		}
-	}
-
-	#[test]
-	fn test_wildmeta_backend_validation_invalid_client_id() {
-		use executor_primitives::ClientAuth;
-
-		let auth = ClientAuth::WildmetaBackend { signature: "0x1234567890abcdef".to_string() };
-
-		// Test with client_id != "wildmeta" should fail
-		// This would be tested in an integration test with actual RPC call
-		// For now we verify the auth variant is parsed correctly
-		match auth {
-			ClientAuth::WildmetaBackend { signature } => {
-				assert_eq!(signature, "0x1234567890abcdef");
-			},
-			_ => panic!("Expected WildmetaBackend variant"),
-		}
-	}
-
-	#[test]
-	fn test_wildmeta_backend_valid_signature_verification() {
-		use aa_contracts_client::calculate_user_operation_hash;
-		use alloy::primitives::{keccak256, Address};
-		use executor_core::types::SerializablePackedUserOperation;
-		use executor_crypto::secp256k1::{
-			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
-		};
-
-		// Create a test private key (32 bytes)
-		let private_key: [u8; 32] = [
-			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
-			0x63, 0x7f, 0x34, 0x6c, 0x4b, 0x6f, 0x7d, 0x20, 0x45, 0x32, 0x15, 0x68, 0x91, 0x73,
-			0xa2, 0xb8, 0xc9, 0xe4,
-		];
-
-		// Create a test user operation
-		let user_op = SerializablePackedUserOperation {
-			sender: "0x1234567890123456789012345678901234567890".to_string(),
-			nonce: 42,
-			init_code: "0x".to_string(),
-			call_data: "0xabcdef".to_string(),
-			account_gas_limits:
-				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
-			pre_verification_gas: 21000,
-			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
-				.to_string(),
-			paymaster_and_data: "0x".to_string(),
-			signature: None,
-		};
-
-		let chain_id = 31337u64; // Local test chain
-		let entry_point_address = Address::from([0u8; 20]);
-
-		let mut combined_hash_data = Vec::new();
-		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
-		let user_op_hash =
-			calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
-		combined_hash_data.extend_from_slice(&user_op_hash.0);
-		let combined_hash = keccak256(&combined_hash_data);
-
-		// Sign the combined hash with our private key
-		let signature = match secp256k1_ecdsa_sign(&private_key, &combined_hash.0) {
-			Ok(sig) => sig,
-			Err(_) => panic!("Failed to sign with valid private key"),
-		};
-
-		// Derive the expected public key from the signature and hash
-		let expected_pubkey = match secp256k1_ecdsa_recover_compressed(&signature, &combined_hash.0)
-		{
-			Ok(pk) => pk,
-			Err(_) => panic!("Failed to recover pubkey from valid signature"),
-		};
-
-		// Convert signature to hex string with 0x prefix
-		let signature_hex = format!("0x{}", hex::encode(signature));
-
-		// Test the verification function
-		let result = verify_wildmeta_backend_signature_wrapper(
-			&signature_hex,
-			&[user_op],
-			chain_id,
-			entry_point_address,
-			&expected_pubkey,
-		);
-
-		assert!(result.is_ok(), "Valid signature verification should succeed");
-	}
-
-	#[test]
-	fn test_wildmeta_backend_multiple_operations_signature_verification() {
-		use aa_contracts_client::calculate_user_operation_hash;
-		use alloy::primitives::{keccak256, Address};
-		use executor_core::types::SerializablePackedUserOperation;
-		use executor_crypto::secp256k1::{
-			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
-		};
-
-		let private_key: [u8; 32] = [
-			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
-			0x63, 0x7f, 0x34, 0x6c, 0x4b, 0x6f, 0x7d, 0x20, 0x45, 0x32, 0x15, 0x68, 0x91, 0x73,
-			0xa2, 0xb8, 0xc9, 0xe4,
-		];
-
-		// Create multiple test user operations
-		let user_op1 = SerializablePackedUserOperation {
-			sender: "0x1234567890123456789012345678901234567890".to_string(),
-			nonce: 42,
-			init_code: "0x".to_string(),
-			call_data: "0xabcdef".to_string(),
-			account_gas_limits:
-				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
-			pre_verification_gas: 21000,
-			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
-				.to_string(),
-			paymaster_and_data: "0x".to_string(),
-			signature: None,
-		};
-
-		let user_op2 = SerializablePackedUserOperation {
-			sender: "0x9876543210987654321098765432109876543210".to_string(),
-			nonce: 43,
-			init_code: "0x".to_string(),
-			call_data: "0x123456".to_string(),
-			account_gas_limits:
-				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
-			pre_verification_gas: 22000,
-			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
-				.to_string(),
-			paymaster_and_data: "0x".to_string(),
-			signature: None,
-		};
-
-		let user_operations = vec![user_op1.clone(), user_op2.clone()];
-		let chain_id = 31337u64;
-		let entry_point_address = Address::from([0u8; 20]);
-
-		// Calculate combined hash for all operations (mimic the new implementation)
-		let mut combined_hash_data = Vec::new();
-		for user_op in &user_operations {
-			let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
-			let user_op_hash =
-				calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
-			combined_hash_data.extend_from_slice(&user_op_hash.0);
-		}
-		let combined_hash = keccak256(&combined_hash_data);
-
-		// Sign the combined hash
-		let signature = match secp256k1_ecdsa_sign(&private_key, &combined_hash.0) {
-			Ok(sig) => sig,
-			Err(_) => panic!("Failed to sign"),
-		};
-		let expected_pubkey = match secp256k1_ecdsa_recover_compressed(&signature, &combined_hash.0)
-		{
-			Ok(pk) => pk,
-			Err(_) => panic!("Failed to recover pubkey"),
-		};
-		let signature_hex = format!("0x{}", hex::encode(signature));
-
-		// Test with multiple operations
-		let result = verify_wildmeta_backend_signature_wrapper(
-			&signature_hex,
-			&user_operations,
-			chain_id,
-			entry_point_address,
-			&expected_pubkey,
-		);
-
-		assert!(result.is_ok(), "Multiple operations signature verification should succeed");
-
-		// Test that single operation would fail with same signature (different hash)
-		let single_op_result = verify_wildmeta_backend_signature_wrapper(
-			&signature_hex,
-			&[user_op1],
-			chain_id,
-			entry_point_address,
-			&expected_pubkey,
-		);
-
-		assert!(single_op_result.is_err(), "Single operation should fail with multi-op signature");
-	}
-
-	#[test]
-	fn test_wildmeta_backend_invalid_signature_wrong_key() {
-		use aa_contracts_client::calculate_user_operation_hash;
-		use alloy::primitives::{keccak256, Address};
-		use executor_core::types::SerializablePackedUserOperation;
-		use executor_crypto::secp256k1::secp256k1_ecdsa_sign;
-
-		// Create a test private key
-		let private_key: [u8; 32] = [
-			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
-			0x63, 0x7f, 0x34, 0x6c, 0x4b, 0x6f, 0x7d, 0x20, 0x45, 0x32, 0x15, 0x68, 0x91, 0x73,
-			0xa2, 0xb8, 0xc9, 0xe4,
-		];
-
-		// Wrong expected public key (different from the actual signature)
-		let wrong_expected_pubkey: [u8; 33] = [
-			0x03, 0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac, 0x55, 0xa0, 0x62, 0x95, 0xce,
-			0x87, 0x0b, 0x07, 0x02, 0x9b, 0xfb, 0xa3, 0x72, 0xdd, 0x89, 0x6e, 0x17, 0xc8, 0x43,
-			0x79, 0x1b, 0x19, 0x5f, 0x8d,
-		];
-
-		// Create a test user operation
-		let user_op = SerializablePackedUserOperation {
-			sender: "0x1234567890123456789012345678901234567890".to_string(),
-			nonce: 42,
-			init_code: "0x".to_string(),
-			call_data: "0xabcdef".to_string(),
-			account_gas_limits:
-				"0x0000000000000000000000000030d4000000000000000000000000000000c350".to_string(),
-			pre_verification_gas: 21000,
-			gas_fees: "0x000000000000000000000003b9aca0000000000000000000000000000b2d05e0"
-				.to_string(),
-			paymaster_and_data: "0x".to_string(),
-			signature: None,
-		};
-
-		let chain_id = 31337u64;
-		let entry_point_address = Address::from([0u8; 20]);
-
-		// Calculate combined hash (mimic the new implementation)
-		let mut combined_hash_data = Vec::new();
-		let packed_user_op = convert_to_packed_user_op(user_op.clone()).unwrap();
-		let user_op_hash =
-			calculate_user_operation_hash(&packed_user_op, entry_point_address, chain_id);
-		combined_hash_data.extend_from_slice(&user_op_hash.0);
-		let combined_hash = keccak256(&combined_hash_data);
-
-		// Sign the combined hash with our private key
-		let signature = match secp256k1_ecdsa_sign(&private_key, &combined_hash.0) {
-			Ok(sig) => sig,
-			Err(_) => panic!("Failed to sign with valid private key"),
-		};
-		let signature_hex = format!("0x{}", hex::encode(signature));
-
-		// Test with wrong expected public key - should fail
-		let result = verify_wildmeta_backend_signature_wrapper(
-			&signature_hex,
-			&[user_op],
-			chain_id,
-			entry_point_address,
-			&wrong_expected_pubkey,
-		);
-
-		assert!(result.is_err(), "Signature verification with wrong public key should fail");
-	}
 
 	#[test]
 	fn test_validate_arbitrum_usdc_transfer_valid() {
-		// Valid USDC transfer calldata: transfer(address recipient, uint256 amount)
-		// Method signature: 0xa9059cbb
 		// Recipient: ARB_TO_HYPER_BRIDGE_ADDRESS (padded to 32 bytes)
 		// Amount: 1000000 (1 USDC with 6 decimals, padded to 32 bytes)
 		let call_data = format!(

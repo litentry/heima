@@ -3,7 +3,6 @@
 mod auth_token_key_store;
 pub use auth_token_key_store::AuthTokenKeyStore;
 
-mod auth_utils;
 mod config;
 mod detailed_error;
 mod error_code;
@@ -19,7 +18,6 @@ mod server;
 pub use server::{start_server, RpcContext};
 
 pub mod utils;
-mod validation_helpers;
 mod verify_auth;
 
 pub use executor_crypto::shielding_key::ShieldingKey;

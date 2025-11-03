@@ -1,7 +1,7 @@
 use crate::error_code::{
 	ACCOUNT_PARSE_ERROR_CODE, EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE,
 	INTERNAL_ERROR_CODE, INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
-	INVALID_HEX_FORMAT_CODE, INVALID_USER_OPERATION_CODE, INVALID_WALLET_INDEX_CODE,
+	INVALID_HEX_FORMAT_CODE, INVALID_USEROP_CODE, INVALID_WALLET_INDEX_CODE,
 	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
 	UNEXPECTED_RESPONSE_TYPE_CODE,
 };
@@ -191,8 +191,8 @@ impl DetailedError {
 			.with_suggestion("Please use a supported chain ID")
 	}
 
-	pub fn invalid_user_operation_error(description: &str) -> Self {
-		Self::new(INVALID_USER_OPERATION_CODE, description)
+	pub fn invalid_user_op(reason: &str) -> Self {
+		Self::new(INVALID_USEROP_CODE, "Invalid UserOp").with_received(reason)
 	}
 
 	pub fn gas_estimation_failed() -> Self {

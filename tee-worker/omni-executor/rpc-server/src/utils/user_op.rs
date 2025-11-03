@@ -16,7 +16,7 @@
 
 use crate::detailed_error::DetailedError;
 use crate::error_code::{
-	INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, INVALID_USER_OPERATION_CODE,
+	INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, INVALID_USEROP_CODE,
 	SIGNATURE_SERVICE_UNAVAILABLE_CODE,
 };
 use crate::server::RpcContext;
@@ -227,7 +227,7 @@ pub(crate) async fn submit_corewriter_userop<
 	// Convert SerializablePackedUserOperation to PackedUserOperation
 	let mut packed_user_op = convert_to_packed_user_op(user_op.clone()).map_err(|e| {
 		error!("Failed to convert UserOperation: {}", e);
-		DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+		DetailedError::new(INVALID_USEROP_CODE, "Invalid user operation")
 			.with_reason(format!("Invalid user operation: {}", e))
 			.to_rpc_error()
 	})?;
@@ -244,15 +244,12 @@ pub(crate) async fn submit_corewriter_userop<
 						"UserOperation uses non-whitelisted paymaster {}. Only whitelisted paymasters are allowed for unsigned userOps.",
 						paymaster_address
 					);
-					return Err(DetailedError::new(
-						INVALID_USER_OPERATION_CODE,
-						"Invalid user operation",
-					)
-					.with_reason(format!(
-						"UserOperation uses non-whitelisted paymaster {}",
-						paymaster_address
-					))
-					.to_rpc_error());
+					return Err(DetailedError::new(INVALID_USEROP_CODE, "Invalid user operation")
+						.with_reason(format!(
+							"UserOperation uses non-whitelisted paymaster {}",
+							paymaster_address
+						))
+						.to_rpc_error());
 				}
 			}
 
@@ -272,12 +269,9 @@ pub(crate) async fn submit_corewriter_userop<
 				},
 				Err(e) => {
 					error!("Failed to process ERC20 paymaster data for UserOperation: {}", e);
-					return Err(DetailedError::new(
-						INVALID_USER_OPERATION_CODE,
-						"Invalid user operation",
-					)
-					.with_reason(format!("ERC20 paymaster processing failed: {}", e))
-					.to_rpc_error());
+					return Err(DetailedError::new(INVALID_USEROP_CODE, "Invalid user operation")
+						.with_reason(format!("ERC20 paymaster processing failed: {}", e))
+						.to_rpc_error());
 				},
 			}
 		}
@@ -353,7 +347,7 @@ pub(crate) async fn submit_corewriter_userop<
 			error!(
 				"UserOperation is signed but has paymaster data. Signed userOps are only allowed without paymaster."
 			);
-			return Err(DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+			return Err(DetailedError::new(INVALID_USEROP_CODE, "Invalid user operation")
 				.with_reason("UserOperation is signed but specifies a paymaster")
 				.to_rpc_error());
 		}
@@ -399,7 +393,7 @@ pub(crate) async fn submit_corewriter_userop<
 		Err(e) => {
 			let err_msg = format!("UserOperation simulation failed: {}", e);
 			error!("{}", err_msg);
-			return Err(DetailedError::new(INVALID_USER_OPERATION_CODE, "Invalid user operation")
+			return Err(DetailedError::new(INVALID_USEROP_CODE, "Invalid user operation")
 				.with_reason(err_msg)
 				.to_rpc_error());
 		},

@@ -5,7 +5,7 @@ use crate::{
 	server::RpcContext,
 	utils::omni::to_omni_account,
 	utils::pumpx::verify_google_code,
-	validation_helpers::{
+	utils::validation::{
 		validate_amount, validate_chain_id, validate_ethereum_address, validate_token_address,
 		validate_wallet_index,
 	},

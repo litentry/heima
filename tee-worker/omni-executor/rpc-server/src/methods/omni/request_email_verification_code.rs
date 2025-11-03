@@ -1,6 +1,6 @@
 use crate::{
 	detailed_error::DetailedError, error_code::PARSE_ERROR_CODE, server::RpcContext,
-	validation_helpers::validate_email, Deserialize,
+	utils::validation::validate_email, Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{Hashable, Identity, Web2IdentityType};
