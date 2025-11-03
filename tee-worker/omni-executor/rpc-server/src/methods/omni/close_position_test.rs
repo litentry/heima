@@ -44,7 +44,7 @@ pub fn register_close_position_test<
 			let params = params.parse::<ClosePositionTestParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields")
+						.with_reason("Invalid JSON format or missing required fields").to_rpc_error()
 			})?;
 
 			debug!("Received omni_closePositionTest, params: {:?}", params);
@@ -54,7 +54,7 @@ pub fn register_close_position_test<
 				DetailedError::new(
 					PARSE_ERROR_CODE,
 					"Failed to parse omni account",
-				).into()
+				).to_rpc_error()
 			})?;
 
 			let smart_wallet = &params.sender;
@@ -70,7 +70,7 @@ pub fn register_close_position_test<
 				hypercore_client.get_perp_clearinghouse_state(smart_wallet).await.map_err(|e| {
 					error!("Failed to get perp state: {}", e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to query perp state: {}", e)).into()
+							.with_reason(format!("Failed to query perp state: {}", e)).to_rpc_error()
 				})?;
 
 			// Filter positions based on ticker parameter
@@ -104,7 +104,7 @@ pub fn register_close_position_test<
 				let position_size = pos.position.szi.parse::<f64>().map_err(|e| {
 					error!("Failed to parse position size for {}: {}", ticker, e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to parse position size: {}", e)).into()
+							.with_reason(format!("Failed to parse position size: {}", e)).to_rpc_error()
 				})?;
 
 				info!("Closing position for {}: size={}", ticker, position_size);
@@ -114,7 +114,7 @@ pub fn register_close_position_test<
 					hypercore_client.get_perp_market_prices(ticker).await.map_err(|e| {
 						error!("Failed to get perp market prices for {}: {}", ticker, e);
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!("Failed to get perp market prices: {}", e)).into()
+								.with_reason(format!("Failed to get perp market prices: {}", e)).to_rpc_error()
 					})?;
 
 				let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
@@ -125,7 +125,7 @@ pub fn register_close_position_test<
 				let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
 					error!("Perp asset {} not found in meta", perp_asset_id);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Perp asset {} not found", perp_asset_id)).into()
+							.with_reason(format!("Perp asset {} not found", perp_asset_id)).to_rpc_error()
 				})?;
 
 				let perp_sz_decimals = perp_asset.sz_decimals;
@@ -146,12 +146,12 @@ pub fn register_close_position_test<
 				let clamped_close_size_f64 = clamped_close_size.parse::<f64>().map_err(|e| {
 					error!("Failed to parse clamped close size: {}", e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to parse clamped close size: {}", e)).into()
+							.with_reason(format!("Failed to parse clamped close size: {}", e)).to_rpc_error()
 				})?;
 				let clamped_close_price_f64 = clamped_close_price.parse::<f64>().map_err(|e| {
 					error!("Failed to parse clamped close price: {}", e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to parse clamped close price: {}", e)).into()
+							.with_reason(format!("Failed to parse clamped close price: {}", e)).to_rpc_error()
 				})?;
 
 				let close_size_units = to_price_units(clamped_close_size_f64);
@@ -199,13 +199,13 @@ pub fn register_close_position_test<
 					.map_err(|e| {
 						error!("Close order did not complete for {}: {}", ticker, e);
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!("Close order failed: {}", e)).into()
+								.with_reason(format!("Close order failed: {}", e)).to_rpc_error()
 					})?;
 
 				if !order_filled {
 					error!("Close order was rejected or canceled for {}", ticker);
 					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Close order was rejected or canceled for {}", ticker)).into()
+							.with_reason(format!("Close order was rejected or canceled for {}", ticker)).to_rpc_error()
 					);
 				}
 

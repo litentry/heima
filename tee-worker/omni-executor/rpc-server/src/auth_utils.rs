@@ -1,3 +1,4 @@
+use crate::methods::RpcResult;
 use crate::utils::user_op::convert_to_packed_user_op;
 use crate::{error_code::AUTH_VERIFICATION_FAILED_CODE, ErrorCode};
 use aa_contracts_client::calculate_user_operation_hash;
@@ -20,7 +21,7 @@ pub fn verify_wildmeta_signature(
 	agent_address: &str,
 	business_json: &str,
 	signature: &str,
-) -> Result<(), ErrorObject<'static>> {
+) -> RpcResult<()> {
 	let message = business_json.as_bytes();
 
 	let signature_bytes = decode_hex(signature).map_err(|e| {

@@ -39,7 +39,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				DetailedError::new(
 					AUTH_VERIFICATION_FAILED_CODE,
 					"Authentication verification failed"
-				).with_suggestion("Please check your authentication credentials").into()
+				).with_suggestion("Please check your authentication credentials").to_rpc_error()
 			})?;
 
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
@@ -47,7 +47,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				DetailedError::new(
 					PARSE_ERROR_CODE,
 					"Parse error"
-				).with_reason("Invalid JSON format or missing required fields").into()
+				).with_reason("Invalid JSON format or missing required fields").to_rpc_error()
 			})?;
 
 			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
@@ -56,7 +56,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				DetailedError::new(
 					PARSE_ERROR_CODE,
 					"Failed to parse omni account",
-				).into()
+				).to_rpc_error()
 			})?;
 
 			let aes_key = ctx
@@ -68,14 +68,14 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 					DetailedError::new(
 						DECRYPT_REQUEST_FAILED_CODE,
 						"Shielded value decryption failed"
-					).with_field("key").with_reason("The provided RSA-encrypted AES key could not be decrypted").with_suggestion("Ensure the RSA public key matches the encryption key").into()
+					).with_field("key").with_reason("The provided RSA-encrypted AES key could not be decrypted").with_suggestion("Ensure the RSA public key matches the encryption key").to_rpc_error()
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
 				error!("Failed to convert AesKey");
 				DetailedError::new(
 					AES_KEY_CONVERT_FAILED_CODE,
 					"AesKey convert failed"
-				).with_field("key").with_reason("The decrypted key is not a valid 256-bit AES key").with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)").into()
+				).with_field("key").with_reason("The decrypted key is not a valid 256-bit AES key").with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)").to_rpc_error()
 			})?;
 
 			// Inlined handler logic from handle_pumpx_export_wallet
@@ -84,7 +84,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 			else {
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
 				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to get access token").into());
+						.with_reason("Failed to get access token").to_rpc_error());
 			};
 
 			// Inline verify_google_code logic
@@ -111,13 +111,13 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 						PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
 						"Google code verification failed",
 					)
-					.with_suggestion("Please check your Google verification code and try again").into());
+					.with_suggestion("Please check your Google verification code and try again").to_rpc_error());
 			}
 
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
 				error!("Failed to map pumpx chain_id {}", params.chain_id);
 				return Err(DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-						.with_reason(format!("Chain ID {} is not supported", params.chain_id).into())
+						.with_reason(format!("Chain ID {} is not supported", params.chain_id)).to_rpc_error()
 				);
 			};
 
@@ -137,12 +137,12 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 						PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
 						"Failed to export wallet from pumpx-signer",
 					)
-					.with_suggestion("Please try again").into());
+					.with_suggestion("Please try again").to_rpc_error());
 			};
 			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
 				error!("Failed to decrypt wallet");
 				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to decrypt wallet").into());
+						.with_reason("Failed to decrypt wallet").to_rpc_error());
 			};
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
@@ -156,12 +156,12 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				if let Err(e) = omni_account_profile_storage.insert(&omni_account, profile) {
 					error!("Failed to update pumpx account profile: {:?}", e);
 					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Failed to update pumpx account profile").into());
+							.with_reason("Failed to update pumpx account profile").to_rpc_error());
 				};
 			} else {
 				error!("Failed to get pumpx account profile");
 				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to get pumpx account profile").into());
+						.with_reason("Failed to get pumpx account profile").to_rpc_error());
 			}
 
 			let encrypted_wallet: SerdeAesOutput =

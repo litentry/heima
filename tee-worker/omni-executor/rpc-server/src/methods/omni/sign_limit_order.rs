@@ -61,12 +61,14 @@ pub fn register_sign_limit_order_params<
 					"Authentication verification failed",
 				)
 				.with_suggestion("Please check your authentication credentials")
+				.to_rpc_error()
 			})?;
 
 			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_reason("Invalid JSON format or missing required fields")
+					.to_rpc_error()
 			})?;
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
@@ -83,7 +85,7 @@ pub fn register_sign_limit_order_params<
 					"Chain not supported",
 				)
 				.with_reason(format!("Chain ID {} is not supported", params.chain_id))
-				.into());
+				.to_rpc_error());
 			};
 
 			let unsigned_tx_vec: Vec<Vec<u8>> =
@@ -104,7 +106,7 @@ pub fn register_sign_limit_order_params<
 					"Signature service unavailable",
 				)
 				.with_suggestion("Please try again later")
-				.into());
+				.to_rpc_error());
 			};
 
 			Ok(SignLimitOrderResponse {

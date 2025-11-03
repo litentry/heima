@@ -50,7 +50,7 @@ pub fn register_transfer_withdraw<
 					AUTH_VERIFICATION_FAILED_CODE,
 					"Authentication failed"
 				)
-				.with_suggestion("Please provide valid authentication credentials").into()
+				.with_suggestion("Please provide valid authentication credentials").to_rpc_error()
 			})?;
 
 			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
@@ -59,30 +59,30 @@ pub fn register_transfer_withdraw<
 					PARSE_ERROR_CODE,
 					"Failed to parse request parameters"
 				)
-				.with_reason(format!("Invalid JSON structure: {}", e)).into()
+				.with_reason(format!("Invalid JSON structure: {}", e)).to_rpc_error()
 			})?;
 
 			debug!("Received omni_transferWithdraw, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
 		params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
 
-			validate_chain_id(params.chain_id, Some("evm")).map_err(|e| e.into())?;
+			validate_chain_id(params.chain_id, Some("evm")).map_err(|e| e.to_rpc_error())?;
 
-			validate_wallet_index(params.wallet_index).map_err(|e| e.into())?;
+			validate_wallet_index(params.wallet_index).map_err(|e| e.to_rpc_error())?;
 
 			validate_ethereum_address(&params.recipient_address, "recipient_address")
-				.map_err(|e| e.into())?;
+				.map_err(|e| e.to_rpc_error())?;
 
 			validate_token_address(&params.token_ca, "token_ca")
-				.map_err(|e| e.into())?;
+				.map_err(|e| e.to_rpc_error())?;
 
 			validate_amount(&params.amount, "amount")
-				.map_err(|e| e.into())?;
+				.map_err(|e| e.to_rpc_error())?;
 
 			let omni_account = to_omni_account(&oa_str).map_err(|_| {
 				DetailedError::new(
 					PARSE_ERROR_CODE,
 					"Failed to parse omni account",
-				).into()
+				).to_rpc_error()
 			})?;
 
 			// Inline handle_pumpx_transfer_withdraw logic
@@ -94,7 +94,7 @@ pub fn register_transfer_withdraw<
 				return Err(DetailedError::new(
 					INTERNAL_ERROR_CODE,
 					"Internal error"
-				).with_reason("Failed to get access token").into());
+				).with_reason("Failed to get access token").to_rpc_error());
 			};
 
 			// 2. Verify google code
@@ -111,7 +111,7 @@ pub fn register_transfer_withdraw<
 				return Err(DetailedError::new(
 					PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
 					"Google code verification failed"
-				).with_suggestion("Please check your Google verification code and try again").into());
+				).with_suggestion("Please check your Google verification code and try again").to_rpc_error());
 			}
 
 			// 3. Create a transfer tx and send to backend
@@ -131,7 +131,7 @@ pub fn register_transfer_withdraw<
 					DetailedError::new(
 						PUMPX_API_CREATE_TRANSFER_TX_FAILED_CODE,
 						"Failed to create transfer transaction"
-					).with_suggestion("Please check your transfer parameters and try again").into()
+					).with_suggestion("Please check your transfer parameters and try again").to_rpc_error()
 				})?;
 
 			check_omni_api_response(response.clone(), "Transfer withdraw".into())?;

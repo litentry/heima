@@ -100,7 +100,7 @@ pub fn register_estimate_user_op_gas<
 					"Failed to parse request parameters",
 				)
 				.with_reason(format!("Parse error: {}", e))
-				.into()
+				.to_rpc_error()
 			})?;
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
@@ -110,7 +110,7 @@ pub fn register_estimate_user_op_gas<
 			})?;
 
 			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
-				.map_err(|e| e.into())?;
+				.map_err(|e| e.to_rpc_error())?;
 
 			// Inlined handler logic from handle_estimate_user_op_gas
 			info!(
@@ -130,7 +130,7 @@ pub fn register_estimate_user_op_gas<
 				convert_to_packed_user_op(params.user_operation.clone()).map_err(|e| {
 					error!("Failed to convert UserOperation: {}", e);
 					DetailedError::invalid_user_operation_error("Invalid user operation format")
-						.into()
+						.to_rpc_error()
 				})?;
 
 			// Perform gas estimation

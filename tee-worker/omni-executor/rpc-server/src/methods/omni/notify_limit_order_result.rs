@@ -48,7 +48,7 @@ pub fn register_notify_limit_order_result<
 				error!("Invalid result value: {}. Must be 'ok' or 'nok'", params.result);
 				return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid input")
 					.with_reason("Result must be 'ok' or 'nok'")
-					.into());
+					.to_rpc_error());
 			}
 
 			if let Some(msg) = &params.message {

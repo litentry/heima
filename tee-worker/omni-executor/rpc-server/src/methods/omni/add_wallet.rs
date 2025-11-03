@@ -30,7 +30,7 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 					"Authentication verification failed",
 				)
 				.with_suggestion("Please check your authentication credentials")
-				.into()
+				.to_rpc_error()
 			})?;
 
 			debug!("Received omni_addWallet");
@@ -46,7 +46,7 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
 				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 					.with_reason("Failed to get access token")
-					.into());
+					.to_rpc_error());
 			};
 
 			// Call Pumpx API to add wallet
@@ -59,7 +59,7 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 						"Failed to add wallet through Pumpx API",
 					)
 					.with_reason(format!("{:?}", e))
-					.into()
+					.to_rpc_error()
 				})?;
 
 			check_omni_api_response(backend_response.clone(), "Add wallet".into())?;

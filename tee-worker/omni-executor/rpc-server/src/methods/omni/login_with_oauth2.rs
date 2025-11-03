@@ -79,7 +79,7 @@ pub fn register_login_with_oauth2<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_reason("Invalid JSON format or missing required fields")
-					.to_error_object()
+					.to_rpc_error()
 			})?;
 
 			let provider = parse_oauth2_provider(&params.provider).map_err(|_e| {
@@ -88,7 +88,7 @@ pub fn register_login_with_oauth2<
 					.with_field("provider")
 					.with_received(&params.provider)
 					.with_expected("google, apple")
-					.to_error_object()
+					.to_rpc_error()
 			})?;
 
 			let oauth2_data = OAuth2Data {
@@ -111,7 +111,7 @@ pub fn register_login_with_oauth2<
 						)
 						.with_reason(format!("{}", e))
 						.with_suggestion("Please check your OAuth2 credentials and try again")
-						.to_error_object()
+						.to_rpc_error()
 					})?;
 
 			let access_token = create_jwt_for_user(
@@ -124,7 +124,7 @@ pub fn register_login_with_oauth2<
 				error!("Failed to create access token for user");
 				DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create access token")
 					.with_reason("Internal error while generating JWT token")
-					.to_error_object()
+					.to_rpc_error()
 			})?;
 
 			let user_id = match &verified_identity {
@@ -134,7 +134,7 @@ pub fn register_login_with_oauth2<
 							error!("Failed to convert identity to string");
 							DetailedError::new(INTERNAL_ERROR_CODE, "Failed to parse identity")
 								.with_reason("Invalid UTF-8 in identity string")
-								.to_error_object()
+								.to_rpc_error()
 						})?
 						.to_string()
 				},
@@ -145,7 +145,7 @@ pub fn register_login_with_oauth2<
 						"Failed to extract user identity",
 					)
 					.with_reason("OAuth2 provider returned unsupported identity type")
-					.to_error_object());
+					.to_rpc_error());
 				},
 			};
 

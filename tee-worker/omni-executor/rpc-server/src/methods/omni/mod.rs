@@ -1,4 +1,5 @@
 use crate::detailed_error::DetailedError;
+use crate::methods::RpcResult;
 use crate::middlewares::RpcExtensions;
 use crate::server::RpcContext;
 use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
@@ -160,10 +161,7 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_close_position_test(module);
 }
 
-pub fn check_omni_api_response<T>(
-	response: ApiResponse<T>,
-	name: String,
-) -> Result<(), ErrorObject<'static>>
+pub fn check_omni_api_response<T>(response: ApiResponse<T>, name: String) -> RpcResult<()>
 where
 	T: Codec,
 {

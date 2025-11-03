@@ -73,7 +73,7 @@ fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> RpcRes
 			.with_field("chain_id")
 			.with_received(chain_id.to_string())
 			.with_expected("42161 or 421614")
-			.into());
+			.to_rpc_error());
 		},
 	};
 
@@ -87,7 +87,7 @@ fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> RpcRes
 			)
 			.with_field("call_data")
 			.with_reason(format!("Hex decode error: {}", e))
-			.into()
+			.to_rpc_error()
 		})?;
 
 	// Check if it's an ERC20 transfer call (method signature 0xa9059cbb)
@@ -104,7 +104,7 @@ fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> RpcRes
 			"<insufficient data>".to_string()
 		})
 		.with_expected("0xa9059cbb (ERC20.transfer)")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Decode the transfer call to get recipient
@@ -117,7 +117,7 @@ fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> RpcRes
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected("68 bytes minimum")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Extract recipient address (bytes 4-36, but we need the last 20 bytes)
@@ -133,7 +133,7 @@ fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> RpcRes
 		.with_field("recipient")
 		.with_received(recipient)
 		.with_expected(ARB_TO_HYPER_BRIDGE_ADDRESS)
-		.into());
+		.to_rpc_error());
 	}
 
 	Ok(())
@@ -151,7 +151,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 		.with_field("chain_id")
 		.with_received(chain_id.to_string())
 		.with_expected("999 or 998")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Parse calldata
@@ -164,7 +164,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 			)
 			.with_field("call_data")
 			.with_reason(format!("Hex decode error: {}", e))
-			.into()
+			.to_rpc_error()
 		})?;
 
 	// Extract method signature if available
@@ -177,7 +177,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected("4 bytes minimum")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Proper action_id extraction based on payload format:
@@ -195,7 +195,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected("68 bytes minimum (4 bytes method + 32 bytes offset + 32 bytes length)")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Skip method signature (4 bytes) and offset parameter (32 bytes)
@@ -217,7 +217,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected(format!("{} bytes", 68 + payload_length))
-		.into());
+		.to_rpc_error());
 	}
 
 	// Extract the actual payload
@@ -232,7 +232,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 		.with_field("payload_length")
 		.with_received(payload.len().to_string())
 		.with_expected("4 bytes minimum (1 version + 3 action_id)")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Extract version (first byte)
@@ -242,7 +242,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 			.with_field("version")
 			.with_received(format!("0x{:02x}", version))
 			.with_expected("0x01")
-			.into());
+			.to_rpc_error());
 	}
 
 	// Extract action_id (next 3 bytes) and convert to u32
@@ -266,7 +266,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 		.with_field("action_id")
 		.with_received(format!("0x{:06x}", action_id))
 		.with_expected("One of: 0x000002, 0x000003, 0x000004, 0x000005, 0x000007")
-		.into());
+		.to_rpc_error());
 	}
 
 	Ok(())
@@ -280,7 +280,7 @@ fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Addre
 			DetailedError::new(PARSE_ERROR_CODE, "Invalid hex encoding in call data")
 				.with_field("call_data")
 				.with_reason(format!("Hex decode error: {}", e))
-				.into()
+				.to_rpc_error()
 		})?;
 
 	if call_bytes.len() < 4 {
@@ -291,7 +291,7 @@ fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Addre
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected("4 bytes minimum")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Check method signatures
@@ -315,7 +315,7 @@ fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Addre
 		.with_field("method_signature")
 		.with_received(format!("0x{}", hex::encode(method_sig)))
 		.with_expected("0xb61d27f6 (execute) or 0x18dfeb3c (executeBatch)")
-		.into());
+		.to_rpc_error());
 	}
 }
 
@@ -330,7 +330,7 @@ fn parse_single_execute(call_bytes: &[u8]) -> RpcResult<(Address, String)> {
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected("100 bytes minimum (method + target + value + data_offset + data_length)")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Extract target address (bytes 16-36, last 20 bytes of the first 32-byte parameter)
@@ -346,7 +346,7 @@ fn parse_single_execute(call_bytes: &[u8]) -> RpcResult<(Address, String)> {
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected("132 bytes minimum (method + params + data_length)")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Extract data length (bytes 100-132)
@@ -367,7 +367,7 @@ fn parse_single_execute(call_bytes: &[u8]) -> RpcResult<(Address, String)> {
 		)
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
-		.with_expected(format!("{} bytes", data_start + data_length).into())
+		.with_expected(format!("{} bytes", data_start + data_length))
 		.to_rpc_error());
 	}
 
@@ -388,7 +388,7 @@ fn parse_execute_batch(call_bytes: &[u8]) -> RpcResult<Vec<(Address, String)>> {
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
 		.with_expected("68 bytes minimum")
-		.into());
+		.to_rpc_error());
 	}
 
 	// Skip method signature (4 bytes) and array offset (32 bytes) to get array length
@@ -415,7 +415,7 @@ fn parse_execute_batch(call_bytes: &[u8]) -> RpcResult<Vec<(Address, String)>> {
 			.with_field("call_data_length")
 			.with_received(call_bytes.len().to_string())
 			.with_expected(format!("{} bytes minimum", current_pos + 96))
-			.into());
+			.to_rpc_error());
 		}
 
 		// Extract target address (last 20 bytes of the 32-byte slot)
@@ -443,7 +443,7 @@ fn parse_execute_batch(call_bytes: &[u8]) -> RpcResult<Vec<(Address, String)>> {
 			.with_field("call_data_length")
 			.with_received(call_bytes.len().to_string())
 			.with_expected(format!("{} bytes minimum", data_length_pos + 32))
-			.into());
+			.to_rpc_error());
 		}
 
 		// Extract data length
@@ -465,7 +465,7 @@ fn parse_execute_batch(call_bytes: &[u8]) -> RpcResult<Vec<(Address, String)>> {
 			.with_field("call_data_length")
 			.with_received(call_bytes.len().to_string())
 			.with_expected(format!("{} bytes minimum", data_start + data_length))
-			.into());
+			.to_rpc_error());
 		}
 
 		let inner_data = &call_bytes[data_start..data_start + data_length];
@@ -495,7 +495,7 @@ fn validate_backend_calldata(
 					"Failed to parse OmniAccount execute calldata",
 				)
 				.with_field(format!("user_operations[{}].call_data", index))
-				.into()
+				.to_rpc_error()
 			})?;
 
 		// Validate each execute call in the batch (or single call)
@@ -520,7 +520,7 @@ fn validate_backend_calldata(
 						))
 						.with_received(format!("{:?}", target_address))
 						.with_expected(expected_usdc)
-						.into());
+						.to_rpc_error());
 					}
 
 					validate_arbitrum_usdc_transfer(inner_calldata, chain_id)?;
@@ -538,7 +538,7 @@ fn validate_backend_calldata(
 						))
 						.with_received(format!("{:?}", target_address))
 						.with_expected(HYPEREVM_CORE_WRITER_ADDRESS)
-						.into());
+						.to_rpc_error());
 					}
 
 					validate_hyperevm_core_writer(inner_calldata, chain_id)?;
@@ -551,7 +551,7 @@ fn validate_backend_calldata(
 					.with_field("chain_id")
 					.with_received(chain_id.to_string())
 					.with_expected("42161, 421614, 999, or 998")
-					.into());
+					.to_rpc_error());
 				},
 			}
 		}
@@ -573,15 +573,15 @@ pub fn register_submit_user_op_with_auth<
 						PARSE_ERROR_CODE,
 						"Failed to parse request parameters",
 					)
-					.with_reason(format!("Invalid JSON structure: {}", e)).into()
+					.with_reason(format!("Invalid JSON structure: {}", e)).to_rpc_error()
 			})?;
 
 			debug!("Received omni_submitUserOpWithAuth, params: {:?}", params);
 
 			// Validate common parameters
-			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(|e| e.into())?;
-			validate_wallet_index(params.wallet_index).map_err(|e| e.into())?;
-			validate_user_operations(&params.user_operations).map_err(|e| e.into())?;
+			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(|e| e.to_rpc_error())?;
+			validate_wallet_index(params.wallet_index).map_err(|e| e.to_rpc_error())?;
+			validate_user_operations(&params.user_operations).map_err(|e| e.to_rpc_error())?;
 
 			let main_address = match &params.client_auth {
 				ClientAuth::WildmetaHl {
@@ -601,7 +601,7 @@ pub fn register_submit_user_op_with_auth<
 									"Failed to parse business JSON",
 								)
 								.with_field("business_json")
-								.with_reason(format!("JSON parse error: {}", e)).into()
+								.with_reason(format!("JSON parse error: {}", e)).to_rpc_error()
 						})?;
 
 					let timestamp = business_data
@@ -615,7 +615,7 @@ pub fn register_submit_user_op_with_auth<
 								)
 								.with_field("timestamp")
 								.with_expected("Unix timestamp as number")
-								.with_reason("Business JSON must contain a 'timestamp' field").into()
+								.with_reason("Business JSON must contain a 'timestamp' field").to_rpc_error()
 						})?;
 
 					verify_payload_timestamp_wrapper(
@@ -636,7 +636,7 @@ pub fn register_submit_user_op_with_auth<
 								)
 								.with_field("operation")
 								.with_received("verify_hyperliquid_link")
-								.with_reason("Could not verify agent and main address linkage").into()
+								.with_reason("Could not verify agent and main address linkage").to_rpc_error()
 						})?;
 
 					if !linked {
@@ -647,7 +647,7 @@ pub fn register_submit_user_op_with_auth<
 							)
 							.with_field("agent_address")
 							.with_received(agent_address.to_string())
-							.with_suggestion("Ensure the agent address is properly linked to the main address").into());
+							.with_suggestion("Ensure the agent address is properly linked to the main address").to_rpc_error());
 					}
 
 					Some(main_address.clone())
@@ -666,7 +666,7 @@ pub fn register_submit_user_op_with_auth<
 							.with_field("wallet_index")
 							.with_received(params.wallet_index.to_string())
 							.with_expected("0 or 1")
-							.with_suggestion("WildmetaBackend authentication requires wallet_index to be 0 or 1").into());
+							.with_suggestion("WildmetaBackend authentication requires wallet_index to be 0 or 1").to_rpc_error());
 					}
 
 					// Additional validation for wallet_index == 0
@@ -687,7 +687,7 @@ pub fn register_submit_user_op_with_auth<
 							.with_field("client_id")
 							.with_received(params.client_id.clone())
 							.with_expected("wildmeta")
-							.with_suggestion("WildmetaBackend authentication requires client_id to be 'wildmeta'").into());
+							.with_suggestion("WildmetaBackend authentication requires client_id to be 'wildmeta'").to_rpc_error());
 					}
 
 					// Get entry point address for the chain
@@ -718,7 +718,7 @@ pub fn register_submit_user_op_with_auth<
 						)
 						.with_field("client_auth")
 						.with_expected("WildmetaHl or WildmetaBackend")
-						.with_suggestion("Use a supported authentication method").into());
+						.with_suggestion("Use a supported authentication method").to_rpc_error());
 				},
 			};
 
@@ -729,7 +729,7 @@ pub fn register_submit_user_op_with_auth<
 						"Invalid user identity format",
 					)
 					.with_field("user_id")
-					.with_reason(format!("Failed to parse user identity: {}", e)).into()
+					.with_reason(format!("Failed to parse user identity: {}", e)).to_rpc_error()
 			})?;
 
 			// Only validate main_address if it's provided (not None)
@@ -746,7 +746,7 @@ pub fn register_submit_user_op_with_auth<
 									.with_field("user_address")
 									.with_received(user_address.to_string())
 									.with_expected(main_addr.to_string())
-									.with_suggestion("For EVM identity, the user_id must match the authenticated main address").into());
+									.with_suggestion("For EVM identity, the user_id must match the authenticated main address").to_rpc_error());
 							}
 						}
 					},
@@ -765,7 +765,7 @@ pub fn register_submit_user_op_with_auth<
 								DetailedError::signer_service_error(
 										"request_wallet",
 										&format!("Failed to derive wallet: {:?}", e),
-									).into()
+									).to_rpc_error()
 							})?;
 						let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
 							.map_err(|e| {
@@ -776,7 +776,7 @@ pub fn register_submit_user_op_with_auth<
 									)
 									.with_field("operation")
 									.with_received("pubkey_to_address conversion")
-									.with_reason(format!("Internal error converting public key to address: {:?}", e)).into()
+									.with_reason(format!("Internal error converting public key to address: {:?}", e)).to_rpc_error()
 							})?;
 						if derived_address.to_lowercase() != main_addr.to_lowercase() {
 							error!("Main address does not match derived EVM address");
@@ -787,7 +787,7 @@ pub fn register_submit_user_op_with_auth<
 								.with_field("derived_address")
 								.with_received(derived_address.to_string())
 								.with_expected(main_addr.to_string())
-								.with_suggestion("The derived EVM address must match the authenticated main address").into());
+								.with_suggestion("The derived EVM address must match the authenticated main address").to_rpc_error());
 						}
 					},
 				}
@@ -804,7 +804,7 @@ pub fn register_submit_user_op_with_auth<
 							&format!("user_operations[{}].sender", index),
 							&op.sender,
 							"0x-prefixed 20-byte Ethereum address (40 hex chars)",
-						).into()
+						).to_rpc_error()
 				})?;
 			}
 
@@ -854,7 +854,8 @@ pub fn register_submit_user_op_with_auth<
 								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"UserOperation at index {} uses non-whitelisted paymaster {}",
 										index, paymaster_address
-									)).into()
+									))
+									.to_rpc_error()
 								);
 							}
 						}
@@ -882,7 +883,8 @@ pub fn register_submit_user_op_with_auth<
 								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"ERC20 paymaster processing failed for operation at index {}: {}",
 										index, e
-									)).into()
+									))
+									.to_rpc_error()
 								);
 							},
 						}
@@ -955,7 +957,8 @@ pub fn register_submit_user_op_with_auth<
 						return Err(DetailedError::invalid_user_operation_error(&format!(
 								"UserOperation at index {} is signed but specifies a paymaster",
 								index
-							)).into()
+							))
+							.to_rpc_error()
 						);
 					}
 					info!("UserOperation {} is signed with no paymaster, processing", index);
@@ -983,7 +986,7 @@ pub fn register_submit_user_op_with_auth<
 				DetailedError::new(
 					crate::error_code::INTERNAL_ERROR_CODE,
 					err_msg,
-				).into()
+				).to_rpc_error()
 			})?;
 
 			// Run batch simulation for all UserOperations before submission
@@ -1025,7 +1028,7 @@ pub fn register_submit_user_op_with_auth<
 						return Err(DetailedError::new(
 							crate::error_code::INTERNAL_ERROR_CODE,
 							err_msg,
-						).into());
+						).to_rpc_error());
 					},
 				};
 
@@ -1040,8 +1043,8 @@ fn verify_wildmeta_signature_wrapper(
 	business_json: &str,
 	signature: &str,
 ) -> RpcResult<()> {
-	verify_wildmeta_signature(agent_address, business_json, signature).map_err(|err| {
-		DetailedError::new(err.code(), "Wildmeta signature verification failed")
+	verify_wildmeta_signature(agent_address, business_json, signature).map_err(|e| {
+		DetailedError::new(e.code(), "Wildmeta signature verification failed")
 			.with_field("agent_address")
 			.with_received(agent_address.to_string())
 			.with_suggestion("Ensure the signature is valid and matches the agent address")
@@ -1054,14 +1057,13 @@ fn verify_payload_timestamp_wrapper(
 	main_address: &str,
 	new_timestamp: u64,
 ) -> RpcResult<()> {
-	verify_payload_timestamp(storage, main_address, new_timestamp)
-		.map_err(|err| {
-			DetailedError::new(err.code(), "Timestamp verification failed")
-				.with_field("timestamp")
-				.with_received(new_timestamp.to_string())
-				.with_suggestion("Timestamp must be greater than the previously used timestamp")
-		})
-		.to_rpc_error()
+	verify_payload_timestamp(storage, main_address, new_timestamp).map_err(|e| {
+		DetailedError::new(e.code(), "Timestamp verification failed")
+			.with_field("timestamp")
+			.with_received(new_timestamp.to_string())
+			.with_suggestion("Timestamp must be greater than the previously used timestamp")
+			.to_rpc_error()
+	})
 }
 
 fn verify_wildmeta_backend_signature_wrapper(
@@ -1078,12 +1080,12 @@ fn verify_wildmeta_backend_signature_wrapper(
 		entry_point_address,
 		expected_pubkey,
 	)
-	.map_err(|err| {
-		DetailedError::new(err.code(), "Backend signature verification failed")
+	.map_err(|e| {
+		DetailedError::new(e.code(), "Backend signature verification failed")
 			.with_field("signature")
 			.with_suggestion("Ensure the backend signature is valid for the given operations")
+			.to_rpc_error()
 	})
-	.to_rpc_error()
 }
 
 #[cfg(test)]

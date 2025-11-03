@@ -28,14 +28,14 @@ pub fn register_request_email_verification_code<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
 					.with_reason(format!("Invalid JSON structure: {}", e))
-					.to_error_object()
+					.to_rpc_error()
 			})?;
 
 			info!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, client_id: {}, user_email: {}", params.client_id, params.user_email);
 
 			validate_email(&params.user_email).map_err(|e| {
 				error!("[EMAIL_LIFECYCLE] Email validation failed for {}: {:?}", params.user_email, e);
-				e.to_error_object()
+				e.to_rpc_error()
 			})?;
 
 			let email_identity =
@@ -49,7 +49,7 @@ pub fn register_request_email_verification_code<
 				.insert(&omni_account.hash(), verification_code.clone())
 				.map_err(|e| {
 					error!("[EMAIL_LIFECYCLE] Failed to store verification code for {}: {:?}", params.user_email, e);
-					DetailedError::storage_error("insert verification code").to_error_object()
+					DetailedError::storage_error("insert verification code").to_rpc_error()
 				})?;
 
 			// Get the appropriate mailer for this client
@@ -63,7 +63,7 @@ pub fn register_request_email_verification_code<
 					.with_field("client_id")
 					.with_received(&params.client_id)
 					.with_reason(format!("Error: {}", e))
-					.to_error_object()
+					.to_rpc_error()
 				})?;
 
 			// Use Wildmeta template for wildmeta client
@@ -76,14 +76,14 @@ pub fn register_request_email_verification_code<
 				.await
 				.map_err(|e| {
 					error!("[EMAIL_LIFECYCLE] Failed to send Wildmeta verification email to {} (client: {}): {:?}", params.user_email, params.client_id, e);
-					DetailedError::email_service_error(&params.user_email).to_error_object()
+					DetailedError::email_service_error(&params.user_email).to_rpc_error()
 				})?;
 			} else {
 				send_verification_email(&*mailer, params.user_email.clone(), verification_code.clone())
 					.await
 					.map_err(|e| {
 						error!("[EMAIL_LIFECYCLE] Failed to send verification email to {} (client: {}): {:?}", params.user_email, params.client_id, e);
-						DetailedError::email_service_error(&params.user_email).to_error_object()
+						DetailedError::email_service_error(&params.user_email).to_rpc_error()
 					})?;
 			}
 

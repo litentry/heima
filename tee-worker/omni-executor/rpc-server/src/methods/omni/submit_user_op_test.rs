@@ -60,6 +60,7 @@ pub fn register_submit_user_op_test<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 						.with_reason("Invalid JSON format or missing required fields")
+						.to_rpc_error()
 			})?;
 
 			debug!("Received omni_submitUserOpTest, params: {:?}", params);
@@ -70,6 +71,7 @@ pub fn register_submit_user_op_test<
 						error!("Failed to decode omni account hex string");
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 								.with_reason("Failed to decode omni account hex string")
+								.to_rpc_error()
 					})?;
 
 			if address_bytes.len() != 32 {
@@ -77,11 +79,12 @@ pub fn register_submit_user_op_test<
 					"Invalid omni account length: expected 32 bytes, got {}",
 					address_bytes.len()
 				);
-				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(format!(
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(format!(
 						"Invalid omni account length: expected 32 bytes, got {}",
 						address_bytes.len()
-					)).into()
-				);
+					))
+					.to_rpc_error());
 			}
 
 			for op in &params.user_operations {
@@ -89,14 +92,16 @@ pub fn register_submit_user_op_test<
 					error!("Invalid sender address '{}': {}", op.sender, e);
 					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 							.with_field("sender")
-							.with_reason(format!("Invalid sender address '{}': {}", op.sender, e)).into()
+							.with_reason(format!("Invalid sender address '{}': {}", op.sender, e))
+							.to_rpc_error()
 				})?;
 			}
 
 			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
 				error!("Failed to decode AccountId from bytes");
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to decode AccountId from bytes").into()
+						.with_reason("Failed to decode AccountId from bytes")
+						.to_rpc_error()
 			})?;
 
 			// Inlined handler logic from handle_submit_user_op
@@ -109,7 +114,7 @@ pub fn register_submit_user_op_test<
 			// Get EntryPoint client for this chain (needed for both signing and submission)
 			let entry_point_client = ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 				error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-				DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
+				DetailedError::chain_not_supported(params.chain_id as u64).to_rpc_error()
 			})?;
 
 			// Parse whitelisted paymasters once
@@ -126,7 +131,8 @@ pub fn register_submit_user_op_test<
 						DetailedError::invalid_user_operation_error(&format!(
 							"Invalid user operation at index {}",
 							index
-						)).into()
+						))
+						.to_rpc_error()
 					})?;
 
 				// Check userOp signature status and validate paymaster usage
@@ -145,7 +151,8 @@ pub fn register_submit_user_op_test<
 								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"UserOperation at index {} uses non-whitelisted paymaster {}",
 										index, paymaster_address
-									)).into()
+									))
+									.to_rpc_error()
 								);
 							}
 						}
@@ -173,7 +180,8 @@ pub fn register_submit_user_op_test<
 								return Err(DetailedError::invalid_user_operation_error(&format!(
 										"ERC20 paymaster processing failed for operation at index {}: {}",
 										index, e
-									)).into()
+									))
+									.to_rpc_error()
 								);
 							},
 						}
@@ -246,7 +254,8 @@ pub fn register_submit_user_op_test<
 						return Err(DetailedError::invalid_user_operation_error(&format!(
 								"UserOperation at index {} is signed but specifies a paymaster",
 								index
-							)).into()
+							))
+							.to_rpc_error()
 						);
 					}
 					info!("UserOperation {} is signed with no paymaster, processing", index);
@@ -274,7 +283,7 @@ pub fn register_submit_user_op_test<
 				DetailedError::new(
 					crate::error_code::INTERNAL_ERROR_CODE,
 					err_msg,
-				).into()
+				).to_rpc_error()
 			})?;
 
 			// Run batch simulation for all UserOperations before submission
@@ -316,7 +325,7 @@ pub fn register_submit_user_op_test<
 						return Err(DetailedError::new(
 							crate::error_code::INTERNAL_ERROR_CODE,
 							err_msg,
-						).into());
+						).to_rpc_error());
 					},
 				};
 

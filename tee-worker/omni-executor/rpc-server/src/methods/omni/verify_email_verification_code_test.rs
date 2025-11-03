@@ -29,7 +29,7 @@ pub fn register_verify_email_verification_code_test<
 						error!("Failed to parse params: {:?}", e);
 						DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 							.with_reason("Invalid JSON format or missing required fields")
-							.to_error_object()
+							.to_rpc_error()
 					})?;
 
 				let email = match &params.user_id {
@@ -39,7 +39,7 @@ pub fn register_verify_email_verification_code_test<
 						return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid parameter")
 							.with_field("user_id")
 							.with_reason("user_id must be of type 'email'")
-							.to_error_object());
+							.to_rpc_error());
 					},
 				};
 
@@ -50,7 +50,7 @@ pub fn register_verify_email_verification_code_test<
 						return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid parameter")
 							.with_field("auth")
 							.with_reason("auth must be of type 'email' with verification code")
-							.to_error_object());
+							.to_rpc_error());
 					},
 				};
 
@@ -62,7 +62,7 @@ pub fn register_verify_email_verification_code_test<
 						);
 						DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication failed")
 							.with_reason(format!("Email verification failed: {}", e))
-							.to_error_object()
+							.to_rpc_error()
 					})?;
 
 				Ok::<(), ErrorObject>(())

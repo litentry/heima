@@ -39,6 +39,7 @@ pub fn register_open_position_test<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_reason("Invalid JSON format or missing required fields")
+					.to_rpc_error()
 			})?;
 
 			debug!("Received omni_openPositionTest, params: {:?}", params);
@@ -54,7 +55,7 @@ pub fn register_open_position_test<
 			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
 				DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
 					.with_reason(e)
-					.into()
+					.to_rpc_error()
 			})?;
 
 			let (perp_meta, perp_mark_price, perp_mid_price) =
@@ -62,19 +63,21 @@ pub fn register_open_position_test<
 					error!("Failed to get perp market prices for {}: {}", ticker, e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 						.with_reason(format!("Failed to get perp market prices: {}", e))
-						.into()
+						.to_rpc_error()
 				})?;
 
 			let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
 				error!("Failed to get perp asset ID: {}", e);
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e)
+				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
+					.with_reason(e)
+					.to_rpc_error()
 			})?;
 
 			let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
 				error!("Perp asset {} not found in meta", perp_asset_id);
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 					.with_reason(format!("Perp asset {} not found", perp_asset_id))
-					.into()
+					.to_rpc_error()
 			})?;
 
 			let perp_sz_decimals = perp_asset.sz_decimals;
@@ -89,12 +92,12 @@ pub fn register_open_position_test<
 			let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 					.with_reason(format!("Failed to parse clamped hedge size: {}", e))
-					.into()
+					.to_rpc_error()
 			})?;
 			let clamped_hedge_price_f64 = clamped_hedge_price.parse::<f64>().map_err(|e| {
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 					.with_reason(format!("Failed to parse clamped hedge price: {}", e))
-					.into()
+					.to_rpc_error()
 			})?;
 
 			let cloid = generate_cloid();
@@ -130,13 +133,13 @@ pub fn register_open_position_test<
 				.map_err(|e| {
 					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 						.with_reason(format!("Hedge order failed to open: {}", e))
-						.into()
+						.to_rpc_error()
 				})?;
 
 			if !order_opened {
 				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 					.with_reason("Hedge order was rejected or canceled")
-					.into());
+					.to_rpc_error());
 			}
 
 			hypercore_client.print_account_state(smart_wallet, "After Open Position").await;

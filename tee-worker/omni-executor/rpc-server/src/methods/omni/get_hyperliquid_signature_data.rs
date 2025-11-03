@@ -2,6 +2,7 @@ use crate::{
 	auth_utils::{verify_payload_timestamp, verify_wildmeta_signature},
 	detailed_error::DetailedError,
 	error_code::*,
+	methods::RpcResult,
 	server::RpcContext,
 	validation_helpers::validate_ethereum_address,
 	verify_auth::verify_auth,
@@ -14,7 +15,7 @@ use executor_primitives::{
 use hyperliquid_rust_sdk::{
 	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
 };
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::RpcModule;
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
@@ -117,7 +118,7 @@ pub fn register_get_hyperliquid_signature_data<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
 					.with_reason(format!("Invalid JSON structure: {}", e))
-					.to_error_object()
+					.to_rpc_error()
 			})?;
 
 			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
@@ -130,7 +131,7 @@ pub fn register_get_hyperliquid_signature_data<
 					.with_expected("Non-EVM user ID (Email, Twitter, Discord, etc.)")
 					.with_received("EVM type")
 					.with_suggestion("Use a non-EVM user ID type for this operation")
-					.to_error_object());
+					.to_rpc_error());
 			}
 
 			// Unified authentication logic
@@ -142,7 +143,7 @@ pub fn register_get_hyperliquid_signature_data<
 						DetailedError::new(PARSE_ERROR_CODE, "Failed to convert authentication data")
 							.with_field("user_auth")
 							.with_reason(format!("OmniAuth conversion error: {:?}", e))
-							.to_error_object()
+							.to_rpc_error()
 					})?;
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
@@ -151,7 +152,7 @@ pub fn register_get_hyperliquid_signature_data<
 						.with_field("user_auth")
 						.with_reason(format!("Verification error: {:?}", e))
 						.with_suggestion("Please check your authentication credentials")
-						.to_error_object()
+						.to_rpc_error()
 				})?;
 
 				// Get main address from derived wallet
@@ -160,7 +161,7 @@ pub fn register_get_hyperliquid_signature_data<
 					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
 						.with_field("user_id")
 						.with_reason(format!("Identity conversion error: {}", e))
-						.to_error_object()
+						.to_rpc_error()
 				})?;
 				let omni_account = identity.to_omni_account(&params.client_id);
 
@@ -173,13 +174,13 @@ pub fn register_get_hyperliquid_signature_data<
 						DetailedError::new(INTERNAL_ERROR_CODE, "Failed to derive wallet address")
 							.with_reason("Signer service failed to derive EVM address")
 							.with_suggestion("Please try again later")
-							.to_error_object()
+							.to_rpc_error()
 					})?;
 				pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|_| {
 					error!("Failed to convert derived pubkey to address");
 					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to convert public key")
 						.with_reason("Public key to address conversion failed")
-						.to_error_object()
+						.to_rpc_error()
 				})?
 			} else if let Some(client_auth) = &params.client_auth {
 				// Client authentication provided (WildMeta)
@@ -199,7 +200,7 @@ pub fn register_get_hyperliquid_signature_data<
 								DetailedError::new(PARSE_ERROR_CODE, "Failed to parse business JSON")
 									.with_field("business_json")
 									.with_reason(format!("JSON parse error: {:?}", e))
-									.to_error_object()
+									.to_rpc_error()
 							})?;
 
 						let timestamp = business_data
@@ -211,7 +212,7 @@ pub fn register_get_hyperliquid_signature_data<
 									.with_field("timestamp")
 									.with_expected("Unix timestamp as number")
 									.with_reason("Business JSON must contain a 'timestamp' field")
-									.to_error_object()
+									.to_rpc_error()
 							})?;
 
 						verify_payload_timestamp(
@@ -229,7 +230,7 @@ pub fn register_get_hyperliquid_signature_data<
 								DetailedError::new(INTERNAL_ERROR_CODE, "Failed to verify account linkage")
 									.with_reason("Hyperliquid link verification service error")
 									.with_suggestion("Please try again later")
-									.to_error_object()
+									.to_rpc_error()
 							})?;
 
 						if !linked {
@@ -239,7 +240,7 @@ pub fn register_get_hyperliquid_signature_data<
 								.with_expected("Linked to main address")
 								.with_received("Not linked")
 								.with_suggestion("Ensure the agent address is linked to your main address in Hyperliquid")
-								.to_error_object());
+								.to_rpc_error());
 						}
 
 						main_address.clone()
@@ -250,7 +251,7 @@ pub fn register_get_hyperliquid_signature_data<
 							.with_field("client_auth")
 							.with_expected("WildmetaHl")
 							.with_suggestion("Use a supported authentication method")
-							.to_error_object());
+							.to_rpc_error());
 					},
 				}
 			} else {
@@ -258,7 +259,7 @@ pub fn register_get_hyperliquid_signature_data<
 				return Err(DetailedError::new(MISSING_REQUIRED_FIELD_CODE, "Missing authentication data")
 					.with_expected("Either user_auth or client_auth")
 					.with_suggestion("Provide either user_auth or client_auth for authentication")
-					.to_error_object());
+					.to_rpc_error());
 			};
 
 			// Derive omni_account for signing (works for both auth methods)
@@ -267,7 +268,7 @@ pub fn register_get_hyperliquid_signature_data<
 				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
 					.with_field("user_id")
 					.with_reason(format!("Identity conversion error: {}", e))
-					.to_error_object()
+					.to_rpc_error()
 			})?;
 			let omni_account = identity.to_omni_account(&params.client_id);
 
@@ -285,7 +286,7 @@ pub fn register_get_hyperliquid_signature_data<
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						agent_address: validate_ethereum_address(&agent_address, "agent_address")
-							.map_err(|e| e.to_error_object())?,
+							.map_err(|e| e.to_rpc_error())?,
 						agent_name,
 						nonce,
 					};
@@ -295,7 +296,7 @@ pub fn register_get_hyperliquid_signature_data<
 				},
 				HyperliquidActionType::Withdraw3 { amount, destination } => {
                     let _ = validate_ethereum_address(&destination, "destination")
-							.map_err(|e| e.to_error_object())?;
+							.map_err(|e| e.to_rpc_error())?;
 					let action = Withdraw3 {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
@@ -313,7 +314,7 @@ pub fn register_get_hyperliquid_signature_data<
 						hyperliquid_chain,
 						max_fee_rate,
 						builder: validate_ethereum_address(&builder, "builder")
-							.map_err(|e| e.to_error_object())?,
+							.map_err(|e| e.to_rpc_error())?,
 						nonce,
 					};
 					let signature =
@@ -329,11 +330,11 @@ pub fn register_get_hyperliquid_signature_data<
 					from_sub_account,
 				} => {
 					let _ = validate_ethereum_address(&destination, "destination")
-						.map_err(|e| e.to_error_object())?;
+						.map_err(|e| e.to_rpc_error())?;
 					// Validate from_sub_account if it's not empty
 					if !from_sub_account.is_empty() {
 						let _ = validate_ethereum_address(&from_sub_account, "from_sub_account")
-							.map_err(|e| e.to_error_object())?;
+							.map_err(|e| e.to_rpc_error())?;
 					}
 					let action = SendAsset {
 						signature_chain_id: params.chain_id,
@@ -355,7 +356,7 @@ pub fn register_get_hyperliquid_signature_data<
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						user: validate_ethereum_address(&user, "user")
-							.map_err(|e| e.to_error_object())?,
+							.map_err(|e| e.to_rpc_error())?,
 						enabled,
 						nonce,
 					};
@@ -380,7 +381,7 @@ async fn generate_eip712_signature<
 	ctx: &RpcContext<CrossChainIntentExecutor>,
 	action: &T,
 	omni_account: &[u8; 32],
-) -> Result<String, ErrorObject<'static>> {
+) -> RpcResult<String> {
 	let message_hash = action.eip712_signing_hash();
 
 	let signature_bytes = ctx
@@ -392,7 +393,7 @@ async fn generate_eip712_signature<
 			DetailedError::new(INTERNAL_ERROR_CODE, "Failed to generate signature")
 				.with_reason("Signer service failed to sign EIP-712 message")
 				.with_suggestion("Please try again later")
-				.to_error_object()
+				.to_rpc_error()
 		})?;
 
 	Ok(hex_encode(&signature_bytes))

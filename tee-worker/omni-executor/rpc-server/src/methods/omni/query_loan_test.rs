@@ -32,6 +32,7 @@ pub fn register_query_loan_test<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_reason("Invalid JSON format or missing required fields")
+					.to_rpc_error()
 			})?;
 
 			debug!("Received omni_queryLoanTest, params: {:?}", params);
@@ -42,6 +43,7 @@ pub fn register_query_loan_test<
 						error!("Failed to decode omni account hex string");
 						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 							.with_reason("Failed to decode omni account hex string")
+							.to_rpc_error()
 					})?;
 
 			if address_bytes.len() != 32 {
@@ -54,13 +56,14 @@ pub fn register_query_loan_test<
 						"Invalid omni account length: expected 32 bytes, got {}",
 						address_bytes.len()
 					))
-					.into());
+					.to_rpc_error());
 			}
 
 			let omni_account = AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
 				error!("Failed to decode AccountId from bytes");
 				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
 					.with_reason("Failed to decode AccountId from bytes")
+					.to_rpc_error()
 			})?;
 
 			// Query records from storage

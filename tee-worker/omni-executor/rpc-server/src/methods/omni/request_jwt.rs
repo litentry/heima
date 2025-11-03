@@ -53,6 +53,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_reason("Invalid JSON format or missing required fields")
+					.to_rpc_error()
 			})?;
 
 			debug!(
@@ -69,6 +70,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 					"Authentication verification failed",
 				)
 				.with_suggestion("Please check your authentication credentials")
+				.to_rpc_error()
 			})?;
 
 			// Inlined handler logic from handle_pumpx_request_jwt
@@ -87,6 +89,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 					);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get account user ID")
 						.with_suggestion("Please try again")
+						.to_rpc_error()
 				},
 			)?;
 			debug!("Response pumpx get_account_user_id: {:?}", res);
@@ -98,7 +101,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 					"Failed to get account user ID",
 				)
 				.with_reason("User ID not found in response")
-				.into());
+				.to_rpc_error());
 			};
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", params.user_email, user_id);
@@ -115,7 +118,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				.map_err(|e| {
 					error!("Failed to create access token: {:?}", e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create authentication token")
-						.into()
+						.to_rpc_error()
 				})?;
 
 			debug!(
@@ -137,7 +140,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 					error!("Failed to connect user: {:?}", e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to connect user")
 						.with_suggestion("Please try again")
-						.into()
+						.to_rpc_error()
 				})?;
 			debug!("Response pumpx user_connect: {:?}", backend_response);
 
@@ -149,7 +152,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 					"Google code verification failed",
 				)
 				.with_suggestion("Please check your Google verification code and try again")
-				.into());
+				.to_rpc_error());
 			}
 
 			let id_token_claims = AuthTokenClaims::new(
@@ -162,7 +165,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key).map_err(|e| {
 					error!("Failed to create id token: {:?}", e);
 					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create authentication token")
-						.into()
+						.to_rpc_error()
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
