@@ -1,9 +1,9 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
+use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
 use crate::methods::RpcResult;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::submit_corewriter_userop;
+use crate::utils::user_op::submit_corewriter_user_ops;
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -100,8 +100,8 @@ pub fn register_request_loan_test<
 				nonce: params.loan_nonce.unwrap_or(params.user_operation.nonce as u64),
 			};
 
-			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
-				DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported").with_reason(e)
+			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|_| {
+				DetailedError::internal_error("HyperCore client error").to_rpc_error()
 			})?;
 
 			let exec_ctx = ExecutionContext {
@@ -547,7 +547,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	user_op.nonce = *current_nonce;
 	// init_code is kept as-is from skeleton
 
-	let spot_sell_tx_hash = submit_corewriter_userop(
+	let spot_sell_tx_hash = submit_corewriter_user_ops(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
 		&user_op,
@@ -686,7 +686,7 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 	user_op.nonce = *current_nonce;
 	user_op.init_code = "0x".to_string();
 
-	let to_perp_move_tx_hash = submit_corewriter_userop(
+	let to_perp_move_tx_hash = submit_corewriter_user_ops(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
 		&user_op,
@@ -790,7 +790,7 @@ async fn do_open_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 
 	user_op.nonce = current_nonce;
 	user_op.init_code = "0x".to_string();
 
-	let hedge_open_tx_hash = submit_corewriter_userop(
+	let hedge_open_tx_hash = submit_corewriter_user_ops(
 		exec_ctx.ctx.clone(),
 		exec_ctx.omni_account,
 		&user_op,

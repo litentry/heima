@@ -44,9 +44,9 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-				return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason("Failed to get access token")
-					.to_rpc_error());
+				return Err(
+					DetailedError::internal_error("Failed to get access token").to_rpc_error()
+				);
 			};
 
 			// Call Pumpx API to add wallet

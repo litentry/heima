@@ -122,7 +122,7 @@ pub fn register_estimate_user_op_gas<
 			let entry_point_client =
 				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 					error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-					DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
+					DetailedError::invalid_chain_id(params.chain_id).to_rpc_error()
 				})?;
 
 			// Convert SerializablePackedUserOperation to PackedUserOperation

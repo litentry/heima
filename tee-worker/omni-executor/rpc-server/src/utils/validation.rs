@@ -4,18 +4,9 @@ use alloy::primitives::Address;
 use email_address::EmailAddress;
 use std::str::FromStr;
 
-pub fn validate_chain_id(
-	chain_id: u32,
-	chain_type: Option<&str>,
-) -> Result<(), Box<DetailedError>> {
-	let is_valid = match chain_type {
-		Some("evm") => SUPPORTED_EVM_CHAINS.contains(&chain_id),
-		_ => SUPPORTED_EVM_CHAINS.contains(&chain_id),
-	};
-
-	if !is_valid {
-		let supported_chains: Vec<u64> = SUPPORTED_EVM_CHAINS.iter().map(|&c| c as u64).collect();
-		return Err(Box::new(DetailedError::invalid_chain_id(chain_id as u64, &supported_chains)));
+pub fn validate_chain_id(chain_id: u32) -> Result<(), Box<DetailedError>> {
+	if !SUPPORTED_EVM_CHAINS.contains(&chain_id) {
+		return Err(Box::new(DetailedError::invalid_chain_id(chain_id as u64)));
 	}
 	Ok(())
 }
@@ -161,49 +152,29 @@ mod tests {
 	#[test]
 	fn test_validate_chain_id_evm_valid() {
 		// Valid EVM chain IDs - Mainnets
-		assert!(validate_chain_id(1, Some("evm")).is_ok());
-		assert!(validate_chain_id(137, Some("evm")).is_ok());
-		assert!(validate_chain_id(42161, Some("evm")).is_ok());
-		assert!(validate_chain_id(10, Some("evm")).is_ok());
-		assert!(validate_chain_id(8453, Some("evm")).is_ok());
-		assert!(validate_chain_id(56, Some("evm")).is_ok());
+		assert!(validate_chain_id(1).is_ok());
+		assert!(validate_chain_id(137).is_ok());
+		assert!(validate_chain_id(42161).is_ok());
+		assert!(validate_chain_id(10).is_ok());
+		assert!(validate_chain_id(8453).is_ok());
+		assert!(validate_chain_id(56).is_ok());
 
 		// Valid EVM chain IDs - Testnets
-		assert!(validate_chain_id(11155111, Some("evm")).is_ok());
-		assert!(validate_chain_id(421614, Some("evm")).is_ok());
-		assert!(validate_chain_id(11155420, Some("evm")).is_ok());
-		assert!(validate_chain_id(80001, Some("evm")).is_ok());
-		assert!(validate_chain_id(84532, Some("evm")).is_ok());
-		assert!(validate_chain_id(97, Some("evm")).is_ok());
-		assert!(validate_chain_id(31337, Some("evm")).is_ok());
+		assert!(validate_chain_id(11155111).is_ok());
+		assert!(validate_chain_id(421614).is_ok());
+		assert!(validate_chain_id(11155420).is_ok());
+		assert!(validate_chain_id(80001).is_ok());
+		assert!(validate_chain_id(84532).is_ok());
+		assert!(validate_chain_id(97).is_ok());
+		assert!(validate_chain_id(31337).is_ok());
 	}
 
 	#[test]
 	fn test_validate_chain_id_evm_invalid() {
 		// Invalid EVM chain IDs
-		assert!(validate_chain_id(5, Some("evm")).is_err());
-		assert!(validate_chain_id(421613, Some("evm")).is_err());
-		assert!(validate_chain_id(84531, Some("evm")).is_err());
-	}
-
-	#[test]
-	fn test_validate_chain_id_any_type() {
-		// Any type should check EVM chains
-		assert!(validate_chain_id(1, None).is_ok()); // Ethereum Mainnet
-		assert!(validate_chain_id(11155111, None).is_ok()); // Sepolia
-		assert!(validate_chain_id(31337, None).is_ok()); // Local Anvil
-		assert!(validate_chain_id(999, None).is_ok()); // HyperEVM
-		assert!(validate_chain_id(5, None).is_err());
-	}
-
-	#[test]
-	fn test_validate_chain_id_no_memory_leak() {
-		// This test ensures the memory leak fix is working
-		// Previously this would leak memory on every call with None chain_type
-		for _ in 0..100 {
-			let _ = validate_chain_id(999, None);
-		}
-		// If memory leak was present, this would cause issues in valgrind/miri
+		assert!(validate_chain_id(5).is_err());
+		assert!(validate_chain_id(421613).is_err());
+		assert!(validate_chain_id(84531).is_err());
 	}
 
 	#[test]

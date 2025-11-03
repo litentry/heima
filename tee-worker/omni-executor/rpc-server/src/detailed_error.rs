@@ -1,6 +1,6 @@
 use crate::error_code::{
 	ACCOUNT_PARSE_ERROR_CODE, EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE,
-	INTERNAL_ERROR_CODE, INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
+	INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
 	INVALID_HEX_FORMAT_CODE, INVALID_USEROP_CODE, INVALID_WALLET_INDEX_CODE,
 	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
 	UNEXPECTED_RESPONSE_TYPE_CODE,
@@ -94,18 +94,29 @@ impl DetailedError {
 	where
 		T: Codec,
 	{
-		Self::new(INTERNAL_ERROR_CODE, ErrorCode::InternalError.message())
+		Self::new(ErrorCode::InternalError.code(), ErrorCode::InternalError.message())
 			.with_backend_response(api_response.code as i32, api_response.message)
 	}
 }
 
 impl DetailedError {
-	pub fn invalid_chain_id(chain_id: u64, supported_chains: &[u64]) -> Self {
-		Self::new(INVALID_CHAIN_ID_CODE, "Invalid or unsupported chain ID")
+	pub fn internal_error(reason: &str) -> Self {
+		Self::new(ErrorCode::InternalError.code(), ErrorCode::InternalError.message())
+			.with_reason(reason)
+	}
+
+	pub fn parse_error(reason: &str) -> Self {
+		Self::new(ErrorCode::ParseError.code(), ErrorCode::ParseError.message()).with_reason(reason)
+	}
+
+	pub fn invalid_chain_id(chain_id: u64) -> Self {
+		let supported: Vec<u64> =
+			crate::config::SUPPORTED_EVM_CHAINS.iter().map(|&c| c as u64).collect();
+
+		Self::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
 			.with_field("chain_id")
 			.with_received(chain_id.to_string())
-			.with_expected(format!("One of: {:?}", supported_chains))
-			.with_suggestion("Use a supported chain ID from the list")
+			.with_expected(format!("One of: {:?}", supported))
 	}
 
 	pub fn invalid_wallet_index(index: u32, max_index: u32) -> Self {
@@ -176,19 +187,6 @@ impl DetailedError {
 	pub fn storage_error(operation: &str) -> Self {
 		Self::new(STORAGE_SERVICE_ERROR_CODE, format!("Storage service error during {}", operation))
 			.with_suggestion("Storage operation failed. Please try again later.")
-	}
-
-	// Native task error factory methods
-	pub fn chain_not_supported(chain_id: u64) -> Self {
-		// Get supported chains from config
-		use crate::config::SUPPORTED_EVM_CHAINS;
-		let supported: Vec<u64> = SUPPORTED_EVM_CHAINS.iter().map(|&c| c as u64).collect();
-
-		Self::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-			.with_field("chain_id")
-			.with_received(chain_id.to_string())
-			.with_expected(format!("One of: {:?}", supported))
-			.with_suggestion("Please use a supported chain ID")
 	}
 
 	pub fn invalid_user_op(reason: &str) -> Self {

@@ -577,7 +577,7 @@ pub fn register_submit_user_op_with_auth<
 			debug!("Received omni_submitUserOpWithAuth, params: {:?}", params);
 
 			// Validate common parameters
-			validate_chain_id(params.chain_id as u32, Some("evm")).map_err(|e| e.to_rpc_error())?;
+			validate_chain_id(params.chain_id as u32).map_err(|e| e.to_rpc_error())?;
 			validate_wallet_index(params.wallet_index).map_err(|e| e.to_rpc_error())?;
 			validate_user_operations(&params.user_operations).map_err(|e| e.to_rpc_error())?;
 
@@ -692,7 +692,7 @@ pub fn register_submit_user_op_with_auth<
 					let entry_point_client =
 						ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 							error!("No entry point client found for chain_id: {}", params.chain_id);
-							DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
+							DetailedError::invalid_chain_id(params.chain_id).to_rpc_error()
 						})?;
 
 					let entry_point_address = entry_point_client.entry_point_address();
@@ -892,7 +892,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 	// Get EntryPoint client for this chain (needed for both signing and submission)
 	let entry_point_client = ctx.entry_point_clients.get(&chain_id).ok_or_else(|| {
 		error!("No EntryPoint client configured for chain_id: {}", chain_id);
-		DetailedError::chain_not_supported(chain_id).to_rpc_error()
+		DetailedError::invalid_chain_id(chain_id).to_rpc_error()
 	})?;
 
 	// Parse whitelisted paymasters once

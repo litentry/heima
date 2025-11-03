@@ -116,9 +116,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
 				error!("Failed to map pumpx chain_id {}", params.chain_id);
-				return Err(DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-						.with_reason(format!("Chain ID {} is not supported", params.chain_id)).to_rpc_error()
-				);
+				return Err(DetailedError::invalid_chain_id(params.chain_id.into()).to_rpc_error());
 			};
 
 			let Ok(mut wallet) = ctx

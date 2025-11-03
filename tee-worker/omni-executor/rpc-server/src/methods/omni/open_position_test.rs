@@ -1,8 +1,8 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
+use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::submit_corewriter_userop;
+use crate::utils::user_op::submit_corewriter_user_ops;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::ChainId;
@@ -52,10 +52,8 @@ pub fn register_open_position_test<
 			let smart_wallet = &params.sender;
 			let ticker = &params.ticker;
 
-			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
-				DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-					.with_reason(e)
-					.to_rpc_error()
+			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|_| {
+				DetailedError::internal_error("HyperCore client error").to_rpc_error()
 			})?;
 
 			let (perp_meta, perp_mark_price, perp_mid_price) =
@@ -109,7 +107,7 @@ pub fn register_open_position_test<
 				cloid,
 			);
 
-			let hedge_open_tx_hash = submit_corewriter_userop(
+			let hedge_open_tx_hash = submit_corewriter_user_ops(
 				ctx.clone(),
 				&omni_account,
 				&generate_userop(smart_wallet, params.nonce),

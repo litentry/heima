@@ -16,8 +16,7 @@
 
 use crate::detailed_error::DetailedError;
 use crate::error_code::{
-	INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, INVALID_USEROP_CODE,
-	SIGNATURE_SERVICE_UNAVAILABLE_CODE,
+	INTERNAL_ERROR_CODE, INVALID_USEROP_CODE, SIGNATURE_SERVICE_UNAVAILABLE_CODE,
 };
 use crate::server::RpcContext;
 use crate::utils::paymaster::{
@@ -146,7 +145,7 @@ pub fn convert_to_packed_user_op(
 /// Helper function to submit a CoreWriter userOp
 #[allow(clippy::too_many_arguments)]
 #[allow(dead_code)]
-pub(crate) async fn submit_corewriter_userop<
+pub(crate) async fn submit_corewriter_user_ops<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
@@ -160,9 +159,7 @@ pub(crate) async fn submit_corewriter_userop<
 
 	let entry_point_client = ctx.entry_point_clients.get(&chain_id).ok_or_else(|| {
 		error!("No EntryPoint client configured for chain_id: {}", chain_id);
-		DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-			.with_reason(format!("Chain ID {} is not supported", chain_id))
-			.to_rpc_error()
+		DetailedError::invalid_chain_id(chain_id).to_rpc_error()
 	})?;
 
 	let nonce = skeleton_user_op.nonce;
