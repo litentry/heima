@@ -17,7 +17,7 @@ importers:
     devDependencies:
       '@types/node':
         specifier: ^24.2.1
-        version: 24.9.1
+        version: 24.10.0
       colors:
         specifier: ^1.4.0
         version: 1.4.0
@@ -32,7 +32,7 @@ importers:
         version: 3.6.2
       ts-node:
         specifier: ^10.9.2
-        version: 10.9.2(@types/node@24.9.1)(typescript@5.9.3)
+        version: 10.9.2(@types/node@24.10.0)(typescript@5.9.3)
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
@@ -286,8 +286,8 @@ packages:
   '@types/node@22.7.5':
     resolution: {integrity: sha512-jML7s2NAzMWc//QSJ1a3prpk78cOPchGvXJsC3C6R6PSMoooztvRVQEz89gmBTBY1SPMaqo5teB4uNHPdetShQ==}
 
-  '@types/node@24.9.1':
-    resolution: {integrity: sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg==}
+  '@types/node@24.10.0':
+    resolution: {integrity: sha512-qzQZRBqkFsYyaSWXuEHc2WR9c0a0CXwiE5FWUvn7ZM+vdy1uZLfCunD38UzhuB7YN/J11ndbDBcTmOdxJo9Q7A==}
 
   acorn-walk@8.3.4:
     resolution: {integrity: sha512-ueEepnujpqee2o5aIYnvHU6C0A42MNdsIDeqy5BydrkuC5R1ZuUFnm27EeFJGoEHJQgn3uleRvmTXaJgfXbt4g==}
@@ -1138,7 +1138,7 @@ snapshots:
 
   '@types/bn.js@5.2.0':
     dependencies:
-      '@types/node': 24.9.1
+      '@types/node': 24.10.0
 
   '@types/node@14.18.63': {}
 
@@ -1146,7 +1146,7 @@ snapshots:
     dependencies:
       undici-types: 6.19.8
 
-  '@types/node@24.9.1':
+  '@types/node@24.10.0':
     dependencies:
       undici-types: 7.16.0
 
@@ -1525,14 +1525,14 @@ snapshots:
 
   traverse@0.3.9: {}
 
-  ts-node@10.9.2(@types/node@24.9.1)(typescript@5.9.3):
+  ts-node@10.9.2(@types/node@24.10.0)(typescript@5.9.3):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 24.9.1
+      '@types/node': 24.10.0
       acorn: 8.15.0
       acorn-walk: 8.3.4
       arg: 4.1.3
