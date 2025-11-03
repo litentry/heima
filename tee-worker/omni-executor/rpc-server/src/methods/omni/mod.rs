@@ -77,6 +77,9 @@ use attach_passkey::*;
 mod remove_passkey;
 use remove_passkey::*;
 
+mod list_passkey;
+use list_passkey::*;
+
 mod request_passkey_challenge;
 use request_passkey_challenge::*;
 
@@ -131,6 +134,7 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_request_passkey_challenge(module);
 	register_attach_passkey(module);
 	register_remove_passkey(module);
+	register_list_passkey(module);
 	register_login_with_oauth2(module);
 
 	register_request_jwt(module);

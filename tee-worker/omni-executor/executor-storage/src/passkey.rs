@@ -103,11 +103,11 @@ impl PasskeyStorage {
 	}
 
 	/// List all passkeys for a given omni_account
-	/// Returns a vector of tuples (credential_id, PasskeyRecord)
+	/// Returns a vector of tuples (credential_id, created_at)
 	pub fn list_passkeys(
 		&self,
 		omni_account: &AccountId,
-	) -> Result<Vec<(String, PasskeyRecord)>, PasskeyError> {
+	) -> Result<Vec<(String, u64)>, PasskeyError> {
 		let mut passkeys = Vec::new();
 
 		// The storage key structure is:
@@ -158,7 +158,7 @@ impl PasskeyStorage {
 						// This key belongs to our account, decode the record
 						match PasskeyRecord::decode(&mut &value[..]) {
 							Ok(record) => {
-								passkeys.push((record.credential_id.clone(), record));
+								passkeys.push((record.credential_id.clone(), record.created_at));
 							},
 							Err(e) => {
 								tracing::warn!(
@@ -317,7 +317,6 @@ mod tests {
 		let passkeys2 = storage.list_passkeys(&omni_account2).unwrap();
 		assert_eq!(passkeys2.len(), 1);
 		assert_eq!(passkeys2[0].0, "cred4");
-		assert_eq!(passkeys2[0].1.pubkey, test_pubkey4.to_vec());
 
 		// List passkeys for non-existent account
 		let omni_account3 = AccountId::from([7u8; 32]);
