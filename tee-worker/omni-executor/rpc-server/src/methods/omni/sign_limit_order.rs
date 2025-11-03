@@ -16,7 +16,7 @@
 
 use crate::detailed_error::DetailedError;
 use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
-use crate::methods::omni::common::check_auth;
+use crate::methods::omni::check_auth;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use ethers::types::Bytes;
@@ -72,7 +72,7 @@ pub fn register_sign_limit_order_params<
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
 			let omni_account = to_omni_account(&oa_str).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
 			})?;
 
 			// Inline handle_pumpx_sign_limit_order logic

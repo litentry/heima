@@ -1,8 +1,8 @@
-use super::common::check_omni_api_response;
+use crate::methods::RpcResult;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE, *},
-	methods::omni::common::check_auth,
+	methods::omni::{check_auth, check_omni_api_response},
 	server::RpcContext,
 	Decode, Deserialize,
 };
@@ -15,7 +15,7 @@ use heima_primitives::{
 	SwapOrder,
 };
 use heima_utils::decode_hex;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use pumpx::constants::*;
 use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
@@ -374,7 +374,7 @@ pub fn register_submit_swap_order<
 fn check_and_get_option_user_trade_info_field<T>(
 	field_value: Option<T>,
 	field_name: &str,
-) -> Result<T> {
+) -> RpcResult<T> {
 	field_value.ok_or_else(|| {
 		error!("Response data.{} of call get_user_trade_info is none", field_name);
 		DetailedError::new(
@@ -382,5 +382,6 @@ fn check_and_get_option_user_trade_info_field<T>(
 			"Failed to get user trade info from API",
 		)
 		.with_suggestion("User trade info retrieval failed. Please try again later.")
+		.to_rpc_error()
 	})
 }

@@ -1,4 +1,4 @@
-use crate::methods::omni::common::check_auth;
+use crate::methods::omni::check_auth;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{PARSE_ERROR_CODE, *},

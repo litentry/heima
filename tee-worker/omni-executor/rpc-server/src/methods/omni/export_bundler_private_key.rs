@@ -1,3 +1,4 @@
+use crate::methods::RpcResult;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{
@@ -15,7 +16,7 @@ use executor_crypto::{
 };
 use executor_primitives::utils::hex::decode_hex;
 use executor_storage::{Storage, WildmetaTimestampStorage};
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use rsa::Oaep;
 use sha2::Sha256;
 use std::sync::Arc;
@@ -38,13 +39,14 @@ fn verify_signature(
 	signature: &str,
 	expected_pubkey: &[u8; 33],
 	storage: &Arc<WildmetaTimestampStorage>,
-) -> Result<()> {
+) -> RpcResult<()> {
 	let current_time = SystemTime::now()
 		.duration_since(UNIX_EPOCH)
 		.map_err(|e| {
 			error!("Failed to get current time: {:?}", e);
 			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
 				.with_reason("System time error")
+				.to_rpc_error()
 		})?
 		.as_millis() as u64;
 
@@ -60,7 +62,7 @@ fn verify_signature(
 			TIMESTAMP_VALIDITY_WINDOW_MS / 60000
 		))
 		.with_suggestion("Use a recent timestamp")
-		.into());
+		.to_rpc_error());
 	}
 
 	if timestamp > current_time + TIMESTAMP_FUTURE_TOLERANCE_MS {
@@ -72,7 +74,7 @@ fn verify_signature(
 		.with_field("timestamp")
 		.with_reason("Timestamp is too far in the future")
 		.with_suggestion("Ensure system clock is synchronized")
-		.into());
+		.to_rpc_error());
 	}
 
 	let last_timestamp = storage
@@ -81,6 +83,7 @@ fn verify_signature(
 			error!("Failed to get last timestamp from storage: {:?}", e);
 			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
 				.with_reason("Failed to retrieve last timestamp from storage")
+				.to_rpc_error()
 		})?
 		.unwrap_or(0);
 
@@ -93,13 +96,14 @@ fn verify_signature(
 		.with_field("timestamp")
 		.with_reason("Timestamp must be greater than previously used timestamp")
 		.with_suggestion("This may be a replay attack. Use a fresh timestamp.")
-		.into());
+		.to_rpc_error());
 	}
 	let signature_bytes = decode_hex(signature).map_err(|e| {
 		error!("Failed to decode signature: {:?}", e);
 		DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 			.with_field("signature")
 			.with_reason("The signature could not be decoded from hex")
+			.to_rpc_error()
 	})?;
 
 	if signature_bytes.len() != 65 {
@@ -110,12 +114,14 @@ fn verify_signature(
 				"Invalid signature length: expected 65 bytes, got {}",
 				signature_bytes.len()
 			))
-			.into());
+			.to_rpc_error());
 	}
 
 	let signature_array: [u8; 65] = signature_bytes.try_into().map_err(|_| {
 		error!("Failed to convert signature bytes to array");
-		DetailedError::new(PARSE_ERROR_CODE, "Parse error").with_field("signature")
+		DetailedError::new(PARSE_ERROR_CODE, "Parse error")
+			.with_field("signature")
+			.to_rpc_error()
 	})?;
 
 	let timestamp_bytes = timestamp.to_string();
@@ -134,7 +140,7 @@ fn verify_signature(
 		.with_field("signature")
 		.with_reason("The signature does not match the challenge")
 		.with_suggestion("Ensure you are using the correct private key")
-		.into());
+		.to_rpc_error());
 	}
 
 	storage
@@ -143,6 +149,7 @@ fn verify_signature(
 			error!("Failed to store new timestamp: {:?}", e);
 			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
 				.with_reason("Failed to store timestamp in storage")
+				.to_rpc_error()
 		})?;
 
 	debug!("Timestamp {} validated and stored successfully", timestamp);
@@ -161,6 +168,7 @@ pub fn register_export_bundler_private_key<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_reason("Invalid JSON format or missing required fields")
+					.to_rpc_error()
 			})?;
 
 			debug!(
@@ -173,6 +181,7 @@ pub fn register_export_bundler_private_key<
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_field("key")
 					.with_reason("The key could not be decoded from hex")
+					.to_rpc_error()
 			})?;
 
 			let aes_key = ctx
@@ -188,6 +197,7 @@ pub fn register_export_bundler_private_key<
 					.with_field("key")
 					.with_reason("The provided RSA-encrypted AES key could not be decrypted")
 					.with_suggestion("Ensure the RSA public key matches the encryption key")
+					.to_rpc_error()
 				})?;
 
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
@@ -196,7 +206,7 @@ pub fn register_export_bundler_private_key<
 					.with_field("key")
 					.with_reason("The decrypted key is not a valid 256-bit AES key")
 					.with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)")
-					.into()
+					.to_rpc_error()
 			})?;
 
 			verify_signature(
@@ -210,7 +220,7 @@ pub fn register_export_bundler_private_key<
 
 			let encrypted_key: SerdeAesOutput =
 				aes_encrypt_default(&aes_key, &ctx.bundler_private_key).into();
-			Ok::<SerdeAesOutput>(encrypted_key)
+			Ok::<SerdeAesOutput, ErrorObjectOwned>(encrypted_key)
 		})
 		.expect("Failed to register omni_exportBundlerPrivateKey method");
 }

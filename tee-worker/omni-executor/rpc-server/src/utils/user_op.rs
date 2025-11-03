@@ -31,7 +31,7 @@ use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::utils::hex::decode_hex;
 use executor_primitives::AccountId;
 use hyperliquid::*;
-use jsonrpsee::types::ErrorObject;
+use jsonrpsee::types::ErrorObjectOwned;
 use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -155,7 +155,7 @@ pub(crate) async fn submit_corewriter_userop<
 	chain_id: u64,
 	wallet_index: u32,
 	call_data: String,
-) -> Result<Option<String>, ErrorObject> {
+) -> Result<Option<String>, ErrorObjectOwned> {
 	let smart_wallet_address = &skeleton_user_op.sender;
 
 	let entry_point_client = ctx.entry_point_clients.get(&chain_id).ok_or_else(|| {
@@ -414,7 +414,7 @@ pub(crate) async fn submit_corewriter_userop<
 					"Failed to submit UserOperation to EntryPoint via handleOps after retries"
 						.to_string();
 				error!("{}", err_msg);
-				return Err(DetailedError::new(INTERNAL_ERROR_CODE, err_msg));
+				return Err(DetailedError::new(INTERNAL_ERROR_CODE, err_msg).into());
 			},
 		};
 

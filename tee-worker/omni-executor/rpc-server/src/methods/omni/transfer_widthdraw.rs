@@ -1,8 +1,7 @@
-use super::common::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::*,
-	methods::omni::common::check_auth,
+	methods::omni::{check_auth, check_omni_api_response},
 	server::RpcContext,
 	utils::omni::to_omni_account,
 	utils::pumpx::verify_google_code,

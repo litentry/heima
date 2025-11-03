@@ -5,7 +5,7 @@ use crate::{
 	utils::omni::to_omni_account,
 };
 use executor_core::intent_executor::IntentExecutor;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use pumpx::pubkey_to_address;
 use serde::Deserialize;
 use signer_client::ChainType;
@@ -48,13 +48,13 @@ pub fn register_get_smart_wallet_root_signer<
 				error!("Failed to parse params: {:?}", e);
 				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
 					.with_reason("Invalid JSON format or missing required fields")
-					.into()
+					.to_rpc_error()
 			})?;
 
 			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 
 			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
 			})?;
 
 			let pubkey = ctx
@@ -69,7 +69,7 @@ pub fn register_get_smart_wallet_root_signer<
 					)
 					.with_reason("Signer service is temporarily unavailable")
 					.with_suggestion("Please try again later")
-					.into()
+					.to_rpc_error()
 				})?;
 
 			let address = pubkey_to_address(params.chain_type.into(), &pubkey).map_err(|_| {
@@ -80,10 +80,10 @@ pub fn register_get_smart_wallet_root_signer<
 				)
 				.with_reason("Public key conversion error")
 				.with_suggestion("Please check your chain type and try again")
-				.into()
+				.to_rpc_error()
 			})?;
 
-			Ok::<String>(address)
+			Ok::<String, ErrorObjectOwned>(address)
 		})
 		.expect("Failed to register omni_addWallet method");
 }

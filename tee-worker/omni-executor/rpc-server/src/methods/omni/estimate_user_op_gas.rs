@@ -106,7 +106,7 @@ pub fn register_estimate_user_op_gas<
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
 			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
 			})?;
 
 			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
@@ -122,7 +122,7 @@ pub fn register_estimate_user_op_gas<
 			let entry_point_client =
 				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 					error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-					DetailedError::chain_not_supported(params.chain_id).into()
+					DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
 				})?;
 
 			// Convert SerializablePackedUserOperation to PackedUserOperation
@@ -177,7 +177,7 @@ pub fn register_estimate_user_op_gas<
 				},
 				Err(e) => {
 					error!("Gas estimation failed: {}", e);
-					Err(DetailedError::gas_estimation_failed().into())
+					Err(DetailedError::gas_estimation_failed().to_rpc_error())
 				},
 			}
 		})

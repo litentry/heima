@@ -1,4 +1,4 @@
-use super::common::check_omni_api_response;
+use super::check_omni_api_response;
 use crate::{
 	error_code::*, server::RpcContext, verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
 };

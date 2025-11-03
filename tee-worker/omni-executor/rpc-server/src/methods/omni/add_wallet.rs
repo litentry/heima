@@ -1,7 +1,9 @@
-use super::common::check_omni_api_response;
 use crate::{
-	detailed_error::DetailedError, error_code::*, methods::omni::common::check_auth,
-	server::RpcContext, utils::omni::to_omni_account,
+	detailed_error::DetailedError,
+	error_code::*,
+	methods::omni::{check_auth, check_omni_api_response},
+	server::RpcContext,
+	utils::omni::to_omni_account,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_storage::{HeimaJwtStorage, Storage};
@@ -34,7 +36,7 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 			debug!("Received omni_addWallet");
 
 			let omni_account = to_omni_account(&oa_str).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").into()
+				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
 			})?;
 
 			// Inlined handler logic from handle_pumpx_add_wallet

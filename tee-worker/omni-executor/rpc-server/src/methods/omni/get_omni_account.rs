@@ -16,7 +16,7 @@
 
 use crate::detailed_error::DetailedError;
 use crate::error_code::PARSE_ERROR_CODE;
-use crate::methods::omni::common::server::RpcContext;
+use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::hex_encode, Web2IdentityType};
 use heima_primitives::Identity;

@@ -109,7 +109,7 @@ pub fn register_submit_user_op_test<
 			// Get EntryPoint client for this chain (needed for both signing and submission)
 			let entry_point_client = ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 				error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-				DetailedError::chain_not_supported(params.chain_id).into()
+				DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
 			})?;
 
 			// Parse whitelisted paymasters once
@@ -221,12 +221,12 @@ pub fn register_submit_user_op_test<
 						Ok(sig) => substrate_to_ethereum_signature(&sig)
 							.map_err(|e| {
 								error!("Failed to convert signature: {}", e);
-								DetailedError::signature_service_unavailable().into()
+								DetailedError::signature_service_unavailable().to_rpc_error()
 							})?
 							.to_vec(),
 						Err(_) => {
 							error!("Failed to sign user operation {}", index);
-							return Err(DetailedError::signature_service_unavailable().into()
+							return Err(DetailedError::signature_service_unavailable().to_rpc_error()
 							);
 						},
 					};
@@ -271,10 +271,10 @@ pub fn register_submit_user_op_test<
 			let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
 				let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
 				error!("{}", err_msg.clone());
-				PumpxRpcError::from_code_and_message(
+				DetailedError::new(
 					crate::error_code::INTERNAL_ERROR_CODE,
 					err_msg,
-				)
+				).into()
 			})?;
 
 			// Run batch simulation for all UserOperations before submission
@@ -296,7 +296,7 @@ pub fn register_submit_user_op_test<
 				Err(e) => {
 					let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
 					error!("{}", err_msg.clone());
-					return Err(DetailedError::invalid_user_operation_error(&err_msg).into()
+					return Err(DetailedError::invalid_user_operation_error(&err_msg).to_rpc_error()
 					);
 				},
 			}
@@ -313,10 +313,10 @@ pub fn register_submit_user_op_test<
 							"Failed to submit UserOperations to EntryPoint via handleOps after retries"
 								.to_string();
 						error!("{}", err_msg.clone());
-						return Err(PumpxRpcError::from_code_and_message(
+						return Err(DetailedError::new(
 							crate::error_code::INTERNAL_ERROR_CODE,
 							err_msg,
-						));
+						).into());
 					},
 				};
 

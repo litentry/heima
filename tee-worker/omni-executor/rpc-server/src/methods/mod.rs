@@ -1,9 +1,12 @@
 use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
+use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
 
 mod omni;
 use omni::*;
+
+pub type RpcResult<T> = Result<T, ErrorObjectOwned>;
 
 pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",

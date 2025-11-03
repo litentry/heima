@@ -1,4 +1,4 @@
-use super::common::check_omni_api_response;
+use super::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},

@@ -1,8 +1,11 @@
+use crate::detailed_error::DetailedError;
+use crate::middlewares::RpcExtensions;
 use crate::server::RpcContext;
-use jsonrpsee::RpcModule;
-
-mod common;
-pub use common::PumpxRpcError;
+use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
+use jsonrpsee::{Extensions, RpcModule};
+use parity_scale_codec::Codec;
+use pumpx::methods::common::ApiResponse;
+use tracing::error;
 
 mod get_health;
 use get_health::*;
@@ -128,7 +131,6 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_notify_limit_order_result(module);
 	register_get_omni_account(module);
 	register_get_smart_wallet_root_signer(module);
-	register_submit_user_op(module);
 	register_estimate_user_op_gas(module);
 	register_submit_user_op_with_auth(module);
 	register_get_hyperliquid_signature_data(module);
@@ -156,4 +158,29 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	#[cfg(feature = "test-endpoints")]
 	register_close_position_test(module);
+}
+
+pub fn check_omni_api_response<T>(
+	response: ApiResponse<T>,
+	name: String,
+) -> Result<(), ErrorObject<'static>>
+where
+	T: Codec,
+{
+	if response.code != 10000 {
+		error!("{} failed: code={}, message={}", name, response.code, response.message);
+		return Err(DetailedError::from_api_response(response).to_rpc_error());
+	}
+	Ok(())
+}
+
+/// This is used to verify that the request is authenticated.
+/// If the RpcExtensions is not found, it indicates that the request is not authenticated.
+/// If the RpcExtensions is found, it contains the sender's omni account extracted from the JWT.
+/// Check rpc_middleware.rs
+pub fn check_auth(ext: &Extensions) -> Result<String, ()> {
+	if let Some(rpc_extensions) = ext.get::<RpcExtensions>() {
+		return Ok(rpc_extensions.sender.clone());
+	}
+	Err(())
 }

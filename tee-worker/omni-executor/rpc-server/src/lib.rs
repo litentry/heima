@@ -1,22 +1,28 @@
 #![allow(clippy::result_large_err)]
 
 mod auth_token_key_store;
+pub use auth_token_key_store::AuthTokenKeyStore;
+
 mod auth_utils;
 mod config;
 mod detailed_error;
 mod error_code;
 mod mailer_factory;
+
 mod methods;
+pub use methods::RpcResult;
+
 mod middlewares;
 mod oauth2_factory;
+
 mod server;
+pub use server::{start_server, RpcContext};
+
 pub mod utils;
 mod validation_helpers;
 mod verify_auth;
 
-pub use auth_token_key_store::AuthTokenKeyStore;
 pub use executor_crypto::shielding_key::ShieldingKey;
-pub use server::start_server;
 
 // Removed unused hex imports - they may be used in other modules
 use jsonrpsee::types::ErrorCode;

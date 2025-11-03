@@ -5,7 +5,7 @@ use crate::error_code::{
 	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
 	UNEXPECTED_RESPONSE_TYPE_CODE,
 };
-use jsonrpsee::types::{ErrorCode, ErrorObject};
+use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
 use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;
 use serde::{Deserialize, Serialize};
@@ -85,7 +85,7 @@ impl DetailedError {
 		self
 	}
 
-	pub fn to_error_object(&self) -> ErrorObject<'static> {
+	pub fn to_rpc_error(self) -> ErrorObjectOwned {
 		ErrorObject::owned(self.code, self.message.clone(), Some(self.details.clone()))
 	}
 
@@ -206,8 +206,8 @@ impl DetailedError {
 	}
 }
 
-impl From<DetailedError> for ErrorObject<'static> {
+impl From<DetailedError> for ErrorObjectOwned {
 	fn from(error: DetailedError) -> Self {
-		error.to_error_object()
+		error.to_rpc_error()
 	}
 }

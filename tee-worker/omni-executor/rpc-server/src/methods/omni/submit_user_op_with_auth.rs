@@ -5,6 +5,7 @@ use crate::detailed_error::DetailedError;
 use crate::error_code::{
 	AUTH_VERIFICATION_FAILED_CODE, INVALID_USER_OPERATION_CODE, PARSE_ERROR_CODE,
 };
+use crate::methods::RpcResult;
 use crate::server::RpcContext;
 use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
@@ -21,7 +22,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
 use executor_storage::WildmetaTimestampStorage;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
@@ -60,7 +61,7 @@ pub struct SubmitUserOpWithAuthResponse {
 }
 
 /// Validates USDC transfer call for Arbitrum chains
-fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> Result<()> {
+fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> RpcResult<()> {
 	// Validate chain is supported for Arbitrum USDC validation
 	match chain_id {
 		ARBITRUM_MAINNET | ARBITRUM_SEPOLIA => {},
@@ -139,7 +140,7 @@ fn validate_arbitrum_usdc_transfer(call_data: &str, chain_id: ChainId) -> Result
 }
 
 /// Validates core writer call for HyperEVM chains
-fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<()> {
+fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResult<()> {
 	// Validate chain is HyperEVM
 	if chain_id != HYPEREVM_MAINNET && chain_id != HYPEREVM_TESTNET {
 		return Err(DetailedError::new(
@@ -272,7 +273,7 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> Result<(
 }
 
 /// Extract target addresses and inner calldata from OmniAccount execute() or executeBatch() calldata
-fn extract_execute_params_from_calldata(call_data: &str) -> Result<Vec<(Address, String)>> {
+fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Address, String)>> {
 	// Parse calldata - should be OmniAccount.execute() or executeBatch()
 	let call_bytes =
 		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
@@ -319,7 +320,7 @@ fn extract_execute_params_from_calldata(call_data: &str) -> Result<Vec<(Address,
 }
 
 /// Parse single execute(address,uint256,bytes) call
-fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String)> {
+fn parse_single_execute(call_bytes: &[u8]) -> RpcResult<(Address, String)> {
 	// Minimum length check: method(4) + target(32) + value(32) + data_offset(32) = 100 bytes
 	if call_bytes.len() < 100 {
 		return Err(DetailedError::new(
@@ -366,7 +367,8 @@ fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String)> {
 		)
 		.with_field("call_data_length")
 		.with_received(call_bytes.len().to_string())
-		.with_expected(format!("{} bytes", data_start + data_length).into()));
+		.with_expected(format!("{} bytes", data_start + data_length).into())
+		.to_rpc_error());
 	}
 
 	let inner_data = &call_bytes[data_start..data_start + data_length];
@@ -376,7 +378,7 @@ fn parse_single_execute(call_bytes: &[u8]) -> Result<(Address, String)> {
 }
 
 /// Parse executeBatch((address,uint256,bytes)[]) call
-fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>> {
+fn parse_execute_batch(call_bytes: &[u8]) -> RpcResult<Vec<(Address, String)>> {
 	// Minimum length: method(4) + array_offset(32) + array_length(32) = 68 bytes
 	if call_bytes.len() < 68 {
 		return Err(DetailedError::new(
@@ -483,7 +485,7 @@ fn parse_execute_batch(call_bytes: &[u8]) -> Result<Vec<(Address, String)>> {
 fn validate_backend_calldata(
 	user_operations: &[SerializablePackedUserOperation],
 	chain_id: ChainId,
-) -> Result<()> {
+) -> RpcResult<()> {
 	for (index, user_op) in user_operations.iter().enumerate() {
 		// Extract the target addresses and inner calldata from the execute()/executeBatch() calldata
 		let execute_params =
@@ -692,7 +694,7 @@ pub fn register_submit_user_op_with_auth<
 					let entry_point_client =
 						ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 							error!("No entry point client found for chain_id: {}", params.chain_id);
-							DetailedError::chain_not_supported(params.chain_id).into()
+							DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
 						})?;
 
 					let entry_point_address = entry_point_client.entry_point_address();
@@ -816,7 +818,7 @@ pub fn register_submit_user_op_with_auth<
 			// Get EntryPoint client for this chain (needed for both signing and submission)
 			let entry_point_client = ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 				error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-				DetailedError::chain_not_supported(params.chain_id).into().into()
+				DetailedError::chain_not_supported(params.chain_id).to_rpc_error()
 			})?;
 
 			// Parse whitelisted paymasters once
@@ -833,7 +835,7 @@ pub fn register_submit_user_op_with_auth<
 						DetailedError::invalid_user_operation_error(&format!(
 							"Invalid user operation at index {}",
 							index
-						).into())
+						))
 					})?;
 
 				// Check userOp signature status and validate paymaster usage
@@ -928,12 +930,12 @@ pub fn register_submit_user_op_with_auth<
 						Ok(sig) => substrate_to_ethereum_signature(&sig)
 							.map_err(|e| {
 								error!("Failed to convert signature: {}", e);
-								DetailedError::signature_service_unavailable().into()
+								DetailedError::signature_service_unavailable().to_rpc_error()
 							})?
 							.to_vec(),
 						Err(_) => {
 							error!("Failed to sign user operation {}", index);
-							return Err(DetailedError::signature_service_unavailable().into()
+							return Err(DetailedError::signature_service_unavailable().to_rpc_error()
 							);
 						},
 					};
@@ -978,10 +980,10 @@ pub fn register_submit_user_op_with_auth<
 			let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
 				let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
 				error!("{}", err_msg.clone());
-				PumpxRpcError::from_code_and_message(
+				DetailedError::new(
 					crate::error_code::INTERNAL_ERROR_CODE,
 					err_msg,
-				)
+				).into()
 			})?;
 
 			// Run batch simulation for all UserOperations before submission
@@ -1003,7 +1005,7 @@ pub fn register_submit_user_op_with_auth<
 				Err(e) => {
 					let err_msg: String = format!("Batch UserOperation simulation failed: {}", e);
 					error!("{}", err_msg.clone());
-					return Err(DetailedError::invalid_user_operation_error(&err_msg).into()
+					return Err(DetailedError::invalid_user_operation_error(&err_msg).to_rpc_error()
 					);
 				},
 			}
@@ -1020,10 +1022,10 @@ pub fn register_submit_user_op_with_auth<
 							"Failed to submit UserOperations to EntryPoint via handleOps after retries"
 								.to_string();
 						error!("{}", err_msg.clone());
-						return Err(PumpxRpcError::from_code_and_message(
+						return Err(DetailedError::new(
 							crate::error_code::INTERNAL_ERROR_CODE,
 							err_msg,
-						));
+						).into());
 					},
 				};
 
@@ -1032,17 +1034,18 @@ pub fn register_submit_user_op_with_auth<
 		.expect("Failed to register omni_submitUserOpWithAuth method");
 }
 
-// Wrapper functions to convert shared function return types to PumpxRpcError
+// Wrapper functions to convert shared function return types to DetailedError
 fn verify_wildmeta_signature_wrapper(
 	agent_address: &str,
 	business_json: &str,
 	signature: &str,
-) -> Result<()> {
+) -> RpcResult<()> {
 	verify_wildmeta_signature(agent_address, business_json, signature).map_err(|err| {
 		DetailedError::new(err.code(), "Wildmeta signature verification failed")
 			.with_field("agent_address")
 			.with_received(agent_address.to_string())
 			.with_suggestion("Ensure the signature is valid and matches the agent address")
+			.to_rpc_error()
 	})
 }
 
@@ -1050,13 +1053,15 @@ fn verify_payload_timestamp_wrapper(
 	storage: &Arc<WildmetaTimestampStorage>,
 	main_address: &str,
 	new_timestamp: u64,
-) -> Result<()> {
-	verify_payload_timestamp(storage, main_address, new_timestamp).map_err(|err| {
-		DetailedError::new(err.code(), "Timestamp verification failed")
-			.with_field("timestamp")
-			.with_received(new_timestamp.to_string())
-			.with_suggestion("Timestamp must be greater than the previously used timestamp")
-	})
+) -> RpcResult<()> {
+	verify_payload_timestamp(storage, main_address, new_timestamp)
+		.map_err(|err| {
+			DetailedError::new(err.code(), "Timestamp verification failed")
+				.with_field("timestamp")
+				.with_received(new_timestamp.to_string())
+				.with_suggestion("Timestamp must be greater than the previously used timestamp")
+		})
+		.to_rpc_error()
 }
 
 fn verify_wildmeta_backend_signature_wrapper(
@@ -1065,7 +1070,7 @@ fn verify_wildmeta_backend_signature_wrapper(
 	chain_id: ChainId,
 	entry_point_address: Address,
 	expected_pubkey: &[u8; 33],
-) -> Result<()> {
+) -> RpcResult<()> {
 	verify_wildmeta_backend_signature(
 		signature,
 		user_operations,
@@ -1078,6 +1083,7 @@ fn verify_wildmeta_backend_signature_wrapper(
 			.with_field("signature")
 			.with_suggestion("Ensure the backend signature is valid for the given operations")
 	})
+	.to_rpc_error()
 }
 
 #[cfg(test)]

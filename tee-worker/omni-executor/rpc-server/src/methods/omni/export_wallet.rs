@@ -1,7 +1,7 @@
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
-	methods::omni::common::check_auth,
+	methods::omni::check_auth,
 	server::RpcContext,
 	utils::omni::to_omni_account,
 	Deserialize,

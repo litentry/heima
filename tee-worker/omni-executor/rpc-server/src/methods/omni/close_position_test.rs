@@ -60,7 +60,7 @@ pub fn register_close_position_test<
 			let smart_wallet = &params.sender;
 
 			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
-				DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported").with_reason(e).into()
+				DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported").with_reason(e).to_rpc_error()
 			})?;
 
 			hypercore_client.print_account_state(smart_wallet, "Before Close Position").await;
@@ -119,7 +119,7 @@ pub fn register_close_position_test<
 
 				let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
 					error!("Failed to get perp asset ID: {}", e);
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e).into()
+					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e).to_rpc_error()
 				})?;
 
 				let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
