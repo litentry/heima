@@ -2,7 +2,6 @@
 // see https://www.jsonrpc.org/specification#error_object
 
 // Standard JSON-RPC error codes
-pub const PARSE_ERROR_CODE: i32 = -32700;
 pub const INVALID_PARAMS_CODE: i32 = -32602;
 pub const INTERNAL_ERROR_CODE: i32 = -32603;
 
@@ -54,9 +53,6 @@ pub const INVALID_TOKEN_ADDRESS_CODE: i32 = -32104;
 pub const MISSING_REQUIRED_FIELD_CODE: i32 = -32105;
 pub const INVALID_HEX_FORMAT_CODE: i32 = -32106;
 pub const INVALID_EMAIL_FORMAT_CODE: i32 = -32107;
-
-// Account/Identity Error Codes (-32120 to -32139)
-pub const ACCOUNT_PARSE_ERROR_CODE: i32 = -32121;
 
 // External Service Error Codes (-32160 to -32179)
 pub const SIGNER_SERVICE_ERROR_CODE: i32 = -32160;

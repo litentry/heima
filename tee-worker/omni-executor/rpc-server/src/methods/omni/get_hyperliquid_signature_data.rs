@@ -134,14 +134,9 @@ pub fn register_get_hyperliquid_signature_data<
 				// User authentication provided
 				let auth =
 					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
-						error!("Failed to convert to OmniAuth: {:?}", e);
-						DetailedError::new(
-							PARSE_ERROR_CODE,
-							"Failed to convert authentication data",
-						)
-						.with_field("user_auth")
-						.with_reason(format!("OmniAuth conversion error: {:?}", e))
-						.to_rpc_error()
+						let msg = format!("Failed to convert to OmniAuth: {:?}", e);
+						error!(msg);
+						DetailedError::parse_error(&msg).to_rpc_error()
 					})?;
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
@@ -158,11 +153,9 @@ pub fn register_get_hyperliquid_signature_data<
 
 				// Get main address from derived wallet
 				let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-					error!("Failed to convert user ID to identity: {}", e);
-					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
-						.with_field("user_id")
-						.with_reason(format!("Identity conversion error: {}", e))
-						.to_rpc_error()
+					let msg = format!("Failed to convert user ID to identity: {}", e);
+					error!(msg);
+					DetailedError::parse_error(&msg).to_rpc_error()
 				})?;
 				let omni_account = identity.to_omni_account(&params.client_id);
 
@@ -194,14 +187,9 @@ pub fn register_get_hyperliquid_signature_data<
 
 						let business_data: serde_json::Value = serde_json::from_str(business_json)
 							.map_err(|e| {
-								error!("Failed to parse business_json: {:?}", e);
-								DetailedError::new(
-									PARSE_ERROR_CODE,
-									"Failed to parse business JSON",
-								)
-								.with_field("business_json")
-								.with_reason(format!("JSON parse error: {:?}", e))
-								.to_rpc_error()
+								let msg = format!("Failed to parse business_json: {:?}", e);
+								error!(msg);
+								DetailedError::parse_error(&msg).to_rpc_error()
 							})?;
 
 						let timestamp = business_data
@@ -268,11 +256,9 @@ pub fn register_get_hyperliquid_signature_data<
 
 			// Derive omni_account for signing (works for both auth methods)
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-				error!("Failed to convert user ID to identity: {}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
-					.with_field("user_id")
-					.with_reason(format!("Identity conversion error: {}", e))
-					.to_rpc_error()
+				let msg = format!("Failed to convert user_id to identity: {}", e);
+				error!(msg);
+				DetailedError::parse_error(&msg).to_rpc_error()
 			})?;
 			let omni_account = identity.to_omni_account(&params.client_id);
 

@@ -1,5 +1,5 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_USEROP_CODE, PARSE_ERROR_CODE};
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_USEROP_CODE};
 use crate::server::RpcContext;
 use crate::utils::auth::{
 	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
@@ -269,10 +269,9 @@ fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Addre
 	// Parse calldata - should be OmniAccount.execute() or executeBatch()
 	let call_bytes =
 		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
-			DetailedError::new(PARSE_ERROR_CODE, "Invalid hex encoding in call data")
-				.with_field("call_data")
-				.with_reason(format!("Hex decode error: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failded to decode call_data: {}", e);
+			error!(msg);
+			DetailedError::parse_error(&msg).to_rpc_error()
 		})?;
 
 	if call_bytes.len() < 4 {
@@ -580,13 +579,9 @@ pub fn register_submit_user_op_with_auth<
 
 					let business_data: serde_json::Value = serde_json::from_str(business_json)
 						.map_err(|e| {
-							error!("Failed to parse business_json: {:?}", e);
-							DetailedError::new(
-									PARSE_ERROR_CODE,
-									"Failed to parse business JSON",
-								)
-								.with_field("business_json")
-								.with_reason(format!("JSON parse error: {}", e)).to_rpc_error()
+							let msg = format!("Failed to parse business_json: {:?}", e);
+							error!(msg);
+							DetailedError::parse_error(&msg).to_rpc_error()
 						})?;
 
 					let timestamp = business_data
@@ -696,25 +691,16 @@ pub fn register_submit_user_op_with_auth<
 					None
 				},
 				_ => {
-					error!("Invalid client auth type");
-					return Err(DetailedError::new(
-							PARSE_ERROR_CODE,
-							"Invalid client authentication type",
-						)
-						.with_field("client_auth")
-						.with_expected("WildmetaHl or WildmetaBackend")
-						.with_suggestion("Use a supported authentication method").to_rpc_error());
+					let msg = "Invalid client auth type";
+					error!(msg);
+					return Err(DetailedError::parse_error(&msg).to_rpc_error());
 				},
 			};
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-				error!("Failed to convert UserId to Identity: {:?}", e);
-				DetailedError::new(
-						crate::error_code::ACCOUNT_PARSE_ERROR_CODE,
-						"Invalid user identity format",
-					)
-					.with_field("user_id")
-					.with_reason(format!("Failed to parse user identity: {}", e)).to_rpc_error()
+				let msg = format!("Failed to convert user_id to identity: {:?}", e);
+				error!(msg);
+				DetailedError::parse_error(&msg).to_rpc_error()
 			})?;
 
 			// Only validate main_address if it's provided (not None)

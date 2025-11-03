@@ -1,10 +1,7 @@
 use crate::{
-	detailed_error::DetailedError,
-	error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE},
-	server::RpcContext,
-	utils::validation::parse_rpc_params,
-	verify_auth::verify_oauth2_authentication,
-	Deserialize, ErrorCode, Serialize,
+	detailed_error::DetailedError, error_code::AUTH_VERIFICATION_FAILED_CODE, server::RpcContext,
+	utils::validation::parse_rpc_params, verify_auth::verify_oauth2_authentication, Deserialize,
+	Serialize,
 };
 use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
@@ -15,7 +12,7 @@ use heima_authentication::{
 	constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
 use heima_primitives::Identity;
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::{core::RpcResult, types::ErrorObject, RpcModule};
 use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -35,13 +32,14 @@ pub struct LoginWithOAuth2Response {
 	pub access_token: String,
 }
 
-fn parse_oauth2_provider(provider: &str) -> Result<OAuth2Provider, ErrorCode> {
+fn parse_oauth2_provider(provider: &str) -> RpcResult<OAuth2Provider> {
 	match provider.to_lowercase().as_str() {
 		"google" => Ok(OAuth2Provider::Google),
 		"apple" => Ok(OAuth2Provider::Apple),
 		_ => {
-			error!("Unsupported OAuth2 provider: {}", provider);
-			Err(ErrorCode::InvalidParams)
+			let msg = format!("Unsupported OAuth2 provider: {}", provider);
+			error!(msg);
+			Err(DetailedError::parse_error(&msg).to_rpc_error())
 		},
 	}
 }
@@ -78,14 +76,7 @@ pub fn register_login_with_oauth2<
 		.register_async_method("omni_loginWithOAuth2", |params, ctx, _| async move {
 			let params = parse_rpc_params::<LoginWithOAuth2Params>(params)?;
 
-			let provider = parse_oauth2_provider(&params.provider).map_err(|_e| {
-				error!("Invalid OAuth2 provider: {}", params.provider);
-				DetailedError::new(PARSE_ERROR_CODE, "Invalid provider")
-					.with_field("provider")
-					.with_received(&params.provider)
-					.with_expected("google, apple")
-					.to_rpc_error()
-			})?;
+			let provider = parse_oauth2_provider(&params.provider)?;
 
 			let oauth2_data = OAuth2Data {
 				provider,

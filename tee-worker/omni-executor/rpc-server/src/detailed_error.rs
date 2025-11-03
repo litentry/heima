@@ -1,9 +1,8 @@
 use crate::error_code::{
-	ACCOUNT_PARSE_ERROR_CODE, EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE,
-	INVALID_ADDRESS_FORMAT_CODE, INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE,
-	INVALID_HEX_FORMAT_CODE, INVALID_USEROP_CODE, INVALID_WALLET_INDEX_CODE,
-	SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE, STORAGE_SERVICE_ERROR_CODE,
-	UNEXPECTED_RESPONSE_TYPE_CODE,
+	EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE, INVALID_ADDRESS_FORMAT_CODE,
+	INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE, INVALID_HEX_FORMAT_CODE, INVALID_USEROP_CODE,
+	INVALID_WALLET_INDEX_CODE, SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE,
+	STORAGE_SERVICE_ERROR_CODE, UNEXPECTED_RESPONSE_TYPE_CODE,
 };
 use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
 use parity_scale_codec::Codec;
@@ -155,14 +154,6 @@ impl DetailedError {
 			.with_received(value.to_string())
 			.with_expected(expected)
 			.with_suggestion("Check that the value is properly hex-encoded")
-	}
-
-	pub fn account_parse_error(account: &str, error: &str) -> Self {
-		Self::new(ACCOUNT_PARSE_ERROR_CODE, "Failed to parse account identifier")
-			.with_field("omni_account")
-			.with_received(account.to_string())
-			.with_expected("Valid 32-byte account identifier")
-			.with_suggestion(format!("Error: {}", error))
 	}
 
 	pub fn unexpected_response_type(expected: &str, received: &str) -> Self {
