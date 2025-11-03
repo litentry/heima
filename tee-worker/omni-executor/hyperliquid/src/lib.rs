@@ -24,6 +24,9 @@ pub const PERP_CLOSE_PRICE_RATIO: f64 = 0.98;
 /// Ratio for spot buy orders (2% above market to ensure fill)
 pub const SPOT_BUY_PRICE_RATIO: f64 = 1.02;
 
+/// Minimum notional value for perp and spot orders ($10 minimum)
+pub const MIN_NOTIONAL_VALUE: f64 = 10.0;
+
 // Unit conversion multipliers
 /// Multiplier for converting decimal prices to HyperLiquid price units (8 decimals)
 pub const PRICE_UNIT_MULTIPLIER: f64 = 100_000_000.0;
@@ -69,6 +72,28 @@ pub fn get_bid_ask_prices(mark_price: f64, mid_price: f64) -> (f64, f64) {
 		// markPx is bid (highest buy)
 		let ask = mid_price * 2.0 - mark_price;
 		(mark_price, ask)
+	}
+}
+
+/// Validate that the notional value (price * size) meets the minimum requirement
+///
+/// # Arguments
+/// * `price` - The price of the asset
+/// * `size` - The size/quantity (should be the clamped size)
+/// * `operation` - Description of the operation for error messages (e.g., "spot sell", "perp open")
+///
+/// # Returns
+/// * `Ok(notional)` - The calculated notional value if it meets the minimum
+/// * `Err(String)` - Error message if notional is below minimum
+pub fn validate_notional_value(price: f64, size: f64, operation: &str) -> Result<f64, String> {
+	let notional = price * size;
+	if notional < MIN_NOTIONAL_VALUE {
+		Err(format!(
+			"{} notional value ({:.2}) is below minimum required ({:.2})",
+			operation, notional, MIN_NOTIONAL_VALUE
+		))
+	} else {
+		Ok(notional)
 	}
 }
 

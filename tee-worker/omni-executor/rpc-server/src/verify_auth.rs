@@ -27,6 +27,7 @@ pub enum AuthenticationError {
 	VerificationCodeNotFound,
 	InvalidVerificationCode,
 	OAuth2Error(String),
+	OAuth2SubClaimMismatch,
 	AuthTokenError(AuthTokenError),
 	PasskeyError(String),
 }
@@ -45,6 +46,9 @@ impl Display for AuthenticationError {
 			},
 			AuthenticationError::OAuth2Error(msg) => {
 				write!(f, "OAuth2 error: {}", msg)
+			},
+			AuthenticationError::OAuth2SubClaimMismatch => {
+				write!(f, "OAuth2 sub claim mismatch between client and provider tokens")
 			},
 			AuthenticationError::AuthTokenError(err) => {
 				write!(f, "Auth token error: {:?}", err)
@@ -259,7 +263,7 @@ async fn verify_oauth2_provider<
 			))
 		})?;
 
-	let id_token_sub = match payload.provider {
+	let client_sub = match payload.provider {
 		OAuth2Provider::Google => {
 			let id_token: google::IdToken = oauth2_common::decode_id_token(&payload.id_token)
 				.map_err(|_| {
@@ -305,16 +309,49 @@ async fn verify_oauth2_provider<
 
 	let code = payload.code.clone();
 	let redirect_uri = payload.redirect_uri.clone();
-	let _token = oauth2_client.exchange_code_for_token(code, redirect_uri).await.map_err(|e| {
-		AuthenticationError::OAuth2Error(format!("Could not exchange code for token: {}", e))
-	})?;
+	let provider_id_token =
+		oauth2_client.exchange_code_for_token(code, redirect_uri).await.map_err(|e| {
+			AuthenticationError::OAuth2Error(format!("Could not exchange code for token: {}", e))
+		})?;
+
+	let provider_sub = match payload.provider {
+		OAuth2Provider::Google => {
+			let id_token: google::IdToken = oauth2_common::decode_id_token(&provider_id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error(
+						"Could not decode Google id token from provider".to_string(),
+					)
+				})?;
+
+			id_token.sub
+		},
+		OAuth2Provider::Apple => {
+			let id_token: apple::IdToken = oauth2_common::decode_id_token(&provider_id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error(
+						"Could not decode Apple id token from provider".to_string(),
+					)
+				})?;
+
+			id_token.sub
+		},
+	};
+
+	if client_sub != provider_sub {
+		tracing::warn!(
+			"OAuth2 sub claim mismatch: client_sub={}, provider_sub={}",
+			client_sub,
+			provider_sub
+		);
+		return Err(AuthenticationError::OAuth2SubClaimMismatch);
+	}
 
 	let identity_type = match payload.provider {
 		OAuth2Provider::Google => Web2IdentityType::Google,
 		OAuth2Provider::Apple => Web2IdentityType::Apple,
 	};
 
-	let identity = Identity::from_web2_account(&id_token_sub, identity_type);
+	let identity = Identity::from_web2_account(&provider_sub, identity_type);
 
 	Ok(identity)
 }

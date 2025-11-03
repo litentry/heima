@@ -121,7 +121,7 @@ pub fn get_perp_asset_id(ticker: &str, meta: &MetaResponse) -> Result<u32, Strin
 /// Calculate the USDC received from a spot sell fill
 /// For a sell order: USDC received = price * size - fee (if fee is in USDC)
 /// Returns the net USDC amount received
-pub fn calculate_usdc_received_from_spot_sell(fill: &Fill) -> Result<f64, String> {
+pub fn usdc_from_spot_fill(fill: &Fill) -> Result<f64, String> {
 	// Parse price and size
 	let price = fill
 		.px
@@ -155,7 +155,7 @@ pub fn calculate_usdc_received_from_spot_sell(fill: &Fill) -> Result<f64, String
 	};
 
 	debug!(
-		"Spot sell fill: price={}, size={}, fee={} {}, gross_usdc={:.2}, net_usdc={:.2}",
+		"Spot sell fill: price={}, size={}, fee={} {}, gross_usdc={}, net_usdc={}",
 		price, size, fee, fill.fee_token, gross_usdc, net_usdc
 	);
 
@@ -272,7 +272,7 @@ pub fn clamp_price(price: f64, sz_decimals: u8, is_spot: bool) -> String {
 ///
 /// Size rules:
 /// - Sizes are truncated (rounded down) to the sz_decimals of the asset
-/// - Example: if sz_decimals = 3, then 1.001 is valid but 1.0001 truncates to 1.001
+/// - Example: if sz_decimals = 3, then 1.001 is valid but 1.0001 truncates to 1.000
 ///
 /// # Arguments
 /// * `size` - The size to clamp

@@ -143,20 +143,6 @@ pub fn convert_to_packed_user_op(
 	})
 }
 
-/// Prepare a skeleton user op with incremented nonce and cleared init_code if needed
-#[allow(dead_code)]
-pub(crate) fn prepare_skeleton_with_nonce(
-	base: &SerializablePackedUserOperation,
-	nonce: u128,
-) -> SerializablePackedUserOperation {
-	let mut skeleton = base.clone();
-	skeleton.nonce = nonce;
-	if nonce > base.nonce {
-		skeleton.init_code = "0x".to_string();
-	}
-	skeleton
-}
-
 /// Helper function to submit a CoreWriter userOp
 #[allow(clippy::too_many_arguments)]
 #[allow(dead_code)]
@@ -169,7 +155,6 @@ pub(crate) async fn submit_corewriter_userop<
 	chain_id: u64,
 	wallet_index: u32,
 	call_data: String,
-	_client_id: &str,
 ) -> Result<Option<String>, PumpxRpcError> {
 	let smart_wallet_address = &skeleton_user_op.sender;
 
