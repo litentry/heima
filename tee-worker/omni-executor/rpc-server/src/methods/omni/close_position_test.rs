@@ -2,6 +2,7 @@ use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_user_ops;
+use crate::utils::validation::{parse_as, parse_rpc_params};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::ChainId;
@@ -40,11 +41,7 @@ pub fn register_close_position_test<
 ) {
 	module
 		.register_async_method("omni_closePositionTest", |params, ctx, _ext| async move {
-			let params = params.parse::<ClosePositionTestParams>().map_err(|e| {
-				let msg = format!("Failed to parse params: {:?}", e);
-				error!(msg);
-				DetailedError::parse_error(&msg).to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<ClosePositionTestParams>(params)?;
 
 			debug!("Received omni_closePositionTest, params: {:?}", params);
 
@@ -95,11 +92,7 @@ pub fn register_close_position_test<
 
 			for pos in positions_to_close {
 				let ticker = &pos.position.coin;
-				let position_size = pos.position.szi.parse::<f64>().map_err(|e| {
-					let msg = format!("Failed to parse position size for {}: {}", ticker, e);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?;
+				let position_size: f64 = parse_as(&pos.position.szi, "position_size")?;
 
 				info!("Closing position for {}: size={}", ticker, position_size);
 
@@ -138,16 +131,8 @@ pub fn register_close_position_test<
 					ticker, perp_mark_price, perp_mid_price, perp_bid_price, PERP_CLOSE_PRICE_RATIO, target_close_price, clamped_close_price
 				);
 
-				let clamped_close_size_f64 = clamped_close_size.parse::<f64>().map_err(|e| {
-					let msg = format!("Failed to parse clamped close size: {}", e);
-					error!(msg);
-					DetailedError::parse_error(&msg).to_rpc_error()
-				})?;
-				let clamped_close_price_f64 = clamped_close_price.parse::<f64>().map_err(|e| {
-					let msg = format!("Failed to parse clamped close price: {}", e);
-					error!(msg);
-					DetailedError::parse_error(&msg).to_rpc_error()
-				})?;
+				let clamped_close_size_f64: f64 = parse_as(&clamped_close_size, "clamped_close_size")?;
+				let clamped_close_price_f64: f64 = parse_as(&clamped_close_price, "clamped_close_price")?;
 
 				let close_size_units = to_price_units(clamped_close_size_f64);
 				let close_price_units = to_price_units(clamped_close_price_f64);

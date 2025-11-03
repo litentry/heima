@@ -4,6 +4,44 @@ use crate::RpcResult;
 use alloy::primitives::Address;
 use email_address::EmailAddress;
 use std::str::FromStr;
+use tracing::error;
+
+/// Generic function to parse a string into a numeric type (f64, u128, etc.)
+/// Returns RpcResult with field name in error message for better debugging
+///
+/// # Example
+/// ```ignore
+/// let value: f64 = parse_as(&some_string, "collateral_size")?;
+/// let count: u128 = parse_as(&count_string, "hedge_open_cloid")?;
+/// ```
+pub fn parse_as<T>(value: &str, field_name: &str) -> RpcResult<T>
+where
+	T: FromStr,
+	T::Err: std::fmt::Display,
+{
+	value.parse::<T>().map_err(|e| {
+		DetailedError::parse_error(&format!("Failed to parse {}: {}", field_name, e))
+			.with_field(field_name)
+			.with_received(value.to_string())
+			.to_rpc_error()
+	})
+}
+
+/// Generic function to parse JSON-RPC params into a typed struct
+/// Returns RpcResult with consistent error handling
+///
+/// # Example
+/// ```ignore
+/// let params = parse_rpc_params::<RequestLoanTestParams>(params)?;
+/// ```
+pub fn parse_rpc_params<T: serde::de::DeserializeOwned>(
+	params: jsonrpsee::types::Params,
+) -> RpcResult<T> {
+	params.parse::<T>().map_err(|e| {
+		error!("Failed to parse RPC params: {:?}", e);
+		DetailedError::parse_error("Invalid JSON format or missing required fields").to_rpc_error()
+	})
+}
 
 pub fn validate_chain_id(chain_id: u32) -> RpcResult<()> {
 	if !SUPPORTED_EVM_CHAINS.contains(&chain_id) {
@@ -262,5 +300,44 @@ mod tests {
 		for email in invalid_emails {
 			assert!(validate_email(email).is_err(), "Should fail for: {}", email);
 		}
+	}
+
+	#[test]
+	fn test_parse_as_f64() {
+		// Valid f64 parsing
+		let result: f64 = parse_as("123.456", "test_field").unwrap();
+		assert_eq!(result, 123.456);
+
+		let result: f64 = parse_as("0.001", "test_field").unwrap();
+		assert_eq!(result, 0.001);
+
+		// Invalid f64 parsing
+		let result: Result<f64, _> = parse_as("not_a_number", "test_field");
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn test_parse_as_u128() {
+		// Valid u128 parsing
+		let result: u128 = parse_as("123456789", "test_field").unwrap();
+		assert_eq!(result, 123456789u128);
+
+		// Invalid u128 parsing
+		let result: Result<u128, _> = parse_as("123.456", "test_field");
+		assert!(result.is_err());
+
+		let result: Result<u128, _> = parse_as("-100", "test_field");
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn test_parse_as_u32() {
+		// Valid u32 parsing
+		let result: u32 = parse_as("42161", "chain_id").unwrap();
+		assert_eq!(result, 42161u32);
+
+		// Invalid u32 parsing (overflow)
+		let result: Result<u32, _> = parse_as("999999999999", "chain_id");
+		assert!(result.is_err());
 	}
 }

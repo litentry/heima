@@ -1,6 +1,7 @@
 use super::check_omni_api_response;
 use crate::{
-	error_code::*, server::RpcContext, verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
+	error_code::*, server::RpcContext, utils::validation::parse_rpc_params,
+	verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
 };
 
 use chrono::{Days, Utc};
@@ -49,10 +50,7 @@ pub fn register_user_login<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 ) {
 	module
 		.register_async_method("omni_userLogin", |params, ctx, _| async move {
-			let params = params.parse::<UserLoginParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				ErrorCode::ParseError
-			})?;
+			let params = parse_rpc_params::<UserLoginParams>(params)?;
 			let auth = OmniAuth::try_from(params.clone()).map_err(|e| {
 				error!("Failed to convert params to OmniAuth: {:?}", e);
 				ErrorCode::ParseError

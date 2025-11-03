@@ -19,7 +19,7 @@ use crate::server::RpcContext;
 use crate::utils::gas_estimation::estimate_user_op_gas;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::convert_to_packed_user_op;
-use crate::utils::validation::validate_ethereum_address;
+use crate::utils::validation::{parse_rpc_params, validate_ethereum_address};
 use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -92,15 +92,7 @@ pub fn register_estimate_user_op_gas<
 ) {
 	module
 		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {
-			let params = params.parse::<EstimateUserOpGasParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(
-					crate::error_code::MISSING_REQUIRED_FIELD_CODE,
-					"Failed to parse request parameters",
-				)
-				.with_reason(format!("Parse error: {}", e))
-				.to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<EstimateUserOpGasParams>(params)?;
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 

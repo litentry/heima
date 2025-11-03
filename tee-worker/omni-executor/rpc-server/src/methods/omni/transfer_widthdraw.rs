@@ -6,8 +6,8 @@ use crate::{
 	utils::omni::to_omni_account,
 	utils::pumpx::verify_google_code,
 	utils::validation::{
-		validate_amount, validate_chain_id, validate_ethereum_address, validate_token_address,
-		validate_wallet_index,
+		parse_rpc_params, validate_amount, validate_chain_id, validate_ethereum_address,
+		validate_token_address, validate_wallet_index,
 	},
 	Deserialize,
 };
@@ -53,14 +53,7 @@ pub fn register_transfer_withdraw<
 				.with_suggestion("Please provide valid authentication credentials").to_rpc_error()
 			})?;
 
-			let params = params.parse::<TransferWithdrawParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse request parameters"
-				)
-				.with_reason(format!("Invalid JSON structure: {}", e)).to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<TransferWithdrawParams>(params)?;
 
 			debug!("Received omni_transferWithdraw, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
 		params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);

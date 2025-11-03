@@ -1,7 +1,8 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::{AUTH_VERIFICATION_FAILED_CODE, INTERNAL_ERROR_CODE, PARSE_ERROR_CODE},
+	error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE},
 	server::RpcContext,
+	utils::validation::parse_rpc_params,
 	verify_auth::verify_oauth2_authentication,
 	Deserialize, ErrorCode, Serialize,
 };
@@ -75,12 +76,7 @@ pub fn register_login_with_oauth2<
 ) {
 	module
 		.register_async_method("omni_loginWithOAuth2", |params, ctx, _| async move {
-			let params = params.parse::<LoginWithOAuth2Params>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_reason("Invalid JSON format or missing required fields")
-					.to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<LoginWithOAuth2Params>(params)?;
 
 			let provider = parse_oauth2_provider(&params.provider).map_err(|_e| {
 				error!("Invalid OAuth2 provider: {}", params.provider);
@@ -121,31 +117,26 @@ pub fn register_login_with_oauth2<
 				&ctx.jwt_rsa_private_key,
 			)
 			.map_err(|_| {
-				error!("Failed to create access token for user");
-				DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create access token")
-					.with_reason("Internal error while generating JWT token")
-					.to_rpc_error()
+				let msg = "Failed to create access token for user";
+				error!(msg);
+				DetailedError::internal_error(msg).to_rpc_error()
 			})?;
 
 			let user_id = match &verified_identity {
 				Identity::Google(identity_string) | Identity::Apple(identity_string) => {
 					std::str::from_utf8(identity_string.inner_ref())
 						.map_err(|_| {
-							error!("Failed to convert identity to string");
-							DetailedError::new(INTERNAL_ERROR_CODE, "Failed to parse identity")
-								.with_reason("Invalid UTF-8 in identity string")
-								.to_rpc_error()
+							let msg = "Failed to convert identity to string";
+							error!(msg);
+							DetailedError::internal_error(msg).to_rpc_error()
 						})?
 						.to_string()
 				},
 				_ => {
-					error!("Unexpected identity type for OAuth2: {:?}", verified_identity);
-					return Err(DetailedError::new(
-						INTERNAL_ERROR_CODE,
-						"Failed to extract user identity",
-					)
-					.with_reason("OAuth2 provider returned unsupported identity type")
-					.to_rpc_error());
+					let msg =
+						format!("Unexpected identity type for OAuth2: {:?}", verified_identity);
+					error!(msg);
+					return Err(DetailedError::internal_error(&msg).to_rpc_error());
 				},
 			};
 

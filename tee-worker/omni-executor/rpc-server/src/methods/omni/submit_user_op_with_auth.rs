@@ -6,7 +6,7 @@ use crate::utils::auth::{
 };
 use crate::utils::user_op::submit_user_ops;
 use crate::utils::validation::{
-	validate_chain_id, validate_user_operations, validate_wallet_index,
+	parse_rpc_params, validate_chain_id, validate_user_operations, validate_wallet_index,
 };
 use crate::RpcResult;
 use alloy::primitives::{hex, Address};
@@ -559,14 +559,7 @@ pub fn register_submit_user_op_with_auth<
 ) {
 	module
 		.register_async_method("omni_submitUserOpWithAuth", |params, ctx, _ext| async move {
-			let params = params.parse::<SubmitUserOpWithAuthParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(
-						PARSE_ERROR_CODE,
-						"Failed to parse request parameters",
-					)
-					.with_reason(format!("Invalid JSON structure: {}", e)).to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<SubmitUserOpWithAuthParams>(params)?;
 
 			debug!("Received omni_submitUserOpWithAuth, params: {:?}", params);
 

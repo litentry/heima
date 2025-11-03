@@ -1,4 +1,5 @@
 use crate::server::RpcContext;
+use crate::utils::validation::parse_rpc_params;
 use crate::ErrorCode;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::utils::hex::hex_encode;
@@ -24,7 +25,7 @@ pub fn register_get_web3_sign_in_message<
 ) {
 	module
 		.register_async_method("omni_getWeb3SignInMessage", |params, ctx, _| async move {
-			let params = params.parse::<GetWeb3SignInMessageParams>()?;
+			let params = parse_rpc_params::<GetWeb3SignInMessageParams>(params)?;
 			let omni_account = AccountId::from_str(&params.omni_account).map_err(|_| {
 				error!("Could not parse AccountId: {:?}", params.omni_account);
 				ErrorCode::InvalidParams

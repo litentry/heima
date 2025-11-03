@@ -15,6 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::server::RpcContext;
+use crate::utils::validation::parse_rpc_params;
 use crate::ErrorCode;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::AccountId;
@@ -37,7 +38,7 @@ pub fn register_get_next_intent_id<
 ) {
 	module
 		.register_async_method("omni_getNextIntentId", |params, ctx, _| async move {
-			let params = params.parse::<GetNextIntentIdParams>()?;
+			let params = parse_rpc_params::<GetNextIntentIdParams>(params)?;
 			let account = AccountId::from_str(&params.omni_account).map_err(|e| {
 				error!("Could not parse AccountId: {:?}", e);
 				<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InvalidParams)

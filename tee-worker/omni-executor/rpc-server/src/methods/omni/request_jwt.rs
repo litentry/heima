@@ -1,8 +1,9 @@
 use super::check_omni_api_response;
 use crate::{
 	detailed_error::DetailedError,
-	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
+	error_code::{INTERNAL_ERROR_CODE, *},
 	server::RpcContext,
+	utils::validation::parse_rpc_params,
 	verify_auth::verify_auth,
 	Deserialize,
 };
@@ -49,12 +50,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 ) {
 	module
 		.register_async_method("omni_requestJwt", |params, ctx, _ext| async move {
-			let params = params.parse::<RequestJwtParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_reason("Invalid JSON format or missing required fields")
-					.to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<RequestJwtParams>(params)?;
 
 			debug!(
 				"Received omni_requestJwt, user_email: {}, client_id: {}",

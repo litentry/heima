@@ -1,5 +1,6 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE};
+use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_PARAMS_CODE};
+use crate::utils::validation::parse_rpc_params;
 use crate::verify_auth::verify_email_authentication;
 use crate::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
@@ -23,13 +24,7 @@ pub fn register_verify_email_verification_code_test<
 		.register_async_method(
 			"omni_verifyEmailVerificationCodeTest",
 			|params, ctx, _ext| async move {
-				let params =
-					params.parse::<VerifyEmailVerificationCodeTestParams>().map_err(|e| {
-						error!("Failed to parse params: {:?}", e);
-						DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-							.with_reason("Invalid JSON format or missing required fields")
-							.to_rpc_error()
-					})?;
+				let params = parse_rpc_params::<VerifyEmailVerificationCodeTestParams>(params)?;
 
 				let email = match &params.user_id {
 					UserId::Email(email) => email.clone(),

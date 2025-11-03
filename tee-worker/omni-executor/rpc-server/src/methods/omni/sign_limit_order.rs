@@ -15,10 +15,11 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, PARSE_ERROR_CODE};
+use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::methods::omni::check_auth;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
+use crate::utils::validation::parse_rpc_params;
 use ethers::types::Bytes;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{PumpxChainId, PumxWalletIndex};
@@ -64,12 +65,7 @@ pub fn register_sign_limit_order_params<
 				.to_rpc_error()
 			})?;
 
-			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_reason("Invalid JSON format or missing required fields")
-					.to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<SignLimitOrderParams>(params)?;
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 

@@ -1,6 +1,8 @@
 use crate::{
-	detailed_error::DetailedError, error_code::PARSE_ERROR_CODE, server::RpcContext,
-	utils::validation::validate_email, Deserialize,
+	detailed_error::DetailedError,
+	server::RpcContext,
+	utils::validation::{parse_rpc_params, validate_email},
+	Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{Hashable, Identity, Web2IdentityType};
@@ -24,12 +26,7 @@ pub fn register_request_email_verification_code<
 ) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
-			let params = params.parse::<RequestEmailVerificationCodeParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
-					.with_reason(format!("Invalid JSON structure: {}", e))
-					.to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<RequestEmailVerificationCodeParams>(params)?;
 
 			info!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, client_id: {}, user_email: {}", params.client_id, params.user_email);
 

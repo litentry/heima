@@ -1,8 +1,6 @@
 use crate::{
-	detailed_error::DetailedError,
-	error_code::{PARSE_ERROR_CODE, *},
-	server::RpcContext,
-	utils::omni::to_omni_account,
+	detailed_error::DetailedError, error_code::*, server::RpcContext, utils::omni::to_omni_account,
+	utils::validation::parse_rpc_params,
 };
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
@@ -44,12 +42,7 @@ pub fn register_get_smart_wallet_root_signer<
 ) {
 	module
 		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {
-			let params = params.parse::<GetSmartWalletRootSignerParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_reason("Invalid JSON format or missing required fields")
-					.to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<GetSmartWalletRootSignerParams>(params)?;
 
 			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 

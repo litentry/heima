@@ -4,6 +4,7 @@ use crate::{
 		AES_KEY_CONVERT_FAILED_CODE, AUTH_VERIFICATION_FAILED_CODE, DECRYPT_REQUEST_FAILED_CODE,
 	},
 	server::RpcContext,
+	utils::validation::parse_rpc_params,
 	Deserialize, RpcResult,
 };
 use alloy::primitives::keccak256;
@@ -154,11 +155,7 @@ pub fn register_export_bundler_private_key<
 ) {
 	module
 		.register_method("omni_exportBundlerPrivateKey", |params, ctx, _ext| {
-			let params = params.parse::<ExportBundlerPrivateKeyParams>().map_err(|e| {
-				let msg = format!("Failed to parse params: {:?}", e);
-				error!(msg);
-				DetailedError::parse_error(&msg).to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<ExportBundlerPrivateKeyParams>(params)?;
 
 			debug!(
 				"Received omni_exportBundlerPrivateKey request with timestamp: {}",

@@ -1,8 +1,9 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE, *},
+	error_code::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, *},
 	methods::omni::{check_auth, check_omni_api_response},
 	server::RpcContext,
+	utils::validation::parse_rpc_params,
 	Decode, Deserialize, RpcResult,
 };
 use executor_core::intent_executor::IntentExecutor;
@@ -119,12 +120,7 @@ pub fn register_submit_swap_order<
 				.to_rpc_error()
 			})?;
 
-			let params = params.parse::<SubmitSwapOrderParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_reason("Invalid JSON format or missing required fields")
-					.to_rpc_error()
-			})?;
+			let params = parse_rpc_params::<SubmitSwapOrderParams>(params)?;
 
 			debug!("Received omni_submitSwapOrder, params: {:?}", params);
 

@@ -1,9 +1,7 @@
 use crate::methods::omni::check_auth;
 use crate::{
-	detailed_error::DetailedError,
-	error_code::{PARSE_ERROR_CODE, *},
-	server::RpcContext,
-	Deserialize,
+	detailed_error::DetailedError, error_code::*, server::RpcContext,
+	utils::validation::parse_rpc_params, Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::RpcModule;
@@ -32,11 +30,7 @@ pub fn register_notify_limit_order_result<
 				.with_suggestion("Please check your authentication credentials")
 			})?;
 
-			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_reason("Invalid JSON format or missing required fields")
-			})?;
+			let params = parse_rpc_params::<NotifyLimitOrderResultParams>(params)?;
 
 			debug!(
 				"Received omni_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
