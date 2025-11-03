@@ -35,9 +35,7 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 
 			debug!("Received omni_addWallet");
 
-			let omni_account = to_omni_account(&oa_str).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
-			})?;
+			let omni_account = to_omni_account(&oa_str)?;
 
 			// Inlined handler logic from handle_pumpx_add_wallet
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());

@@ -1,12 +1,10 @@
-use crate::methods::RpcResult;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{
 		AES_KEY_CONVERT_FAILED_CODE, AUTH_VERIFICATION_FAILED_CODE, DECRYPT_REQUEST_FAILED_CODE,
-		PARSE_ERROR_CODE,
 	},
 	server::RpcContext,
-	Deserialize,
+	Deserialize, RpcResult,
 };
 use alloy::primitives::keccak256;
 use executor_core::intent_executor::IntentExecutor;
@@ -99,29 +97,21 @@ fn verify_signature(
 		.to_rpc_error());
 	}
 	let signature_bytes = decode_hex(signature).map_err(|e| {
-		error!("Failed to decode signature: {:?}", e);
-		DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-			.with_field("signature")
-			.with_reason("The signature could not be decoded from hex")
-			.to_rpc_error()
+		let msg = format!("Failed to decode signature: {:?}", e);
+		error!(msg);
+		DetailedError::parse_error(&msg).to_rpc_error()
 	})?;
 
 	if signature_bytes.len() != 65 {
-		error!("Invalid signature length: expected 65 bytes, got {}", signature_bytes.len());
-		return Err(DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-			.with_field("signature")
-			.with_reason(format!(
-				"Invalid signature length: expected 65 bytes, got {}",
-				signature_bytes.len()
-			))
-			.to_rpc_error());
+		let msg = format!("Invalid signature length, expected 65, got {}", signature_bytes.len());
+		error!(msg);
+		return Err(DetailedError::parse_error(&msg).to_rpc_error());
 	}
 
 	let signature_array: [u8; 65] = signature_bytes.try_into().map_err(|_| {
-		error!("Failed to convert signature bytes to array");
-		DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-			.with_field("signature")
-			.to_rpc_error()
+		let msg = format!("Failed to convert signature bytes to array");
+		error!(msg);
+		DetailedError::parse_error(&msg).to_rpc_error()
 	})?;
 
 	let timestamp_bytes = timestamp.to_string();
@@ -165,10 +155,9 @@ pub fn register_export_bundler_private_key<
 	module
 		.register_method("omni_exportBundlerPrivateKey", |params, ctx, _ext| {
 			let params = params.parse::<ExportBundlerPrivateKeyParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_reason("Invalid JSON format or missing required fields")
-					.to_rpc_error()
+				let msg = format!("Failed to parse params: {:?}", e);
+				error!(msg);
+				DetailedError::parse_error(&msg).to_rpc_error()
 			})?;
 
 			debug!(
@@ -177,11 +166,9 @@ pub fn register_export_bundler_private_key<
 			);
 
 			let key_bytes = decode_hex(&params.key).map_err(|e| {
-				error!("Failed to decode key hex: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-					.with_field("key")
-					.with_reason("The key could not be decoded from hex")
-					.to_rpc_error()
+				let msg = format!("Failed to decode key hex: {:?}", e);
+				error!(msg);
+				DetailedError::parse_error(&msg).to_rpc_error()
 			})?;
 
 			let aes_key = ctx

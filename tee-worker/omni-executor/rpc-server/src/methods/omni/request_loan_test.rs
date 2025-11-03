@@ -1,9 +1,9 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
-use crate::methods::RpcResult;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_user_ops;
+use crate::RpcResult;
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -315,8 +315,7 @@ pub fn register_request_loan_test<
 }
 
 fn precheck_params(params: &RequestLoanTestParams) -> RpcResult<(AccountId, String, f64, f64)> {
-	let omni_account = to_omni_account(&params.omni_account)
-		.map_err(|_| DetailedError::new(PARSE_ERROR_CODE, "Invalid omni account").to_rpc_error())?;
+	let omni_account = to_omni_account(&params.omni_account)?;
 
 	params.user_operation.sender.parse::<Address>().map_err(|e| {
 		DetailedError::new(PARSE_ERROR_CODE, "Invalid sender address")

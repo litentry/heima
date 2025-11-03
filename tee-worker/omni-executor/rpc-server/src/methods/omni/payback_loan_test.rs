@@ -1,9 +1,9 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
-use crate::methods::RpcResult;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_user_ops;
+use crate::RpcResult;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::AccountId;

@@ -33,10 +33,7 @@ pub fn register_request_email_verification_code<
 
 			info!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, client_id: {}, user_email: {}", params.client_id, params.user_email);
 
-			validate_email(&params.user_email).map_err(|e| {
-				error!("[EMAIL_LIFECYCLE] Email validation failed for {}: {:?}", params.user_email, e);
-				e.to_rpc_error()
-			})?;
+			validate_email(&params.user_email)?;
 
 			let email_identity =
 				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);

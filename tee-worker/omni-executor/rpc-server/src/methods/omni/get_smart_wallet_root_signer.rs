@@ -53,9 +53,7 @@ pub fn register_get_smart_wallet_root_signer<
 
 			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 
-			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
-			})?;
+			let omni_account = to_omni_account(&params.omni_account)?;
 
 			let pubkey = ctx
 				.signer_client

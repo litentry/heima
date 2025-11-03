@@ -15,7 +15,6 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::detailed_error::DetailedError;
-use crate::error_code::PARSE_ERROR_CODE;
 use crate::server::RpcContext;
 use crate::utils::gas_estimation::estimate_user_op_gas;
 use crate::utils::omni::to_omni_account;
@@ -105,12 +104,8 @@ pub fn register_estimate_user_op_gas<
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
-			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
-			})?;
-
-			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
-				.map_err(|e| e.to_rpc_error())?;
+			let omni_account = to_omni_account(&params.omni_account)?;
+			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")?;
 
 			// Inlined handler logic from handle_estimate_user_op_gas
 			info!(

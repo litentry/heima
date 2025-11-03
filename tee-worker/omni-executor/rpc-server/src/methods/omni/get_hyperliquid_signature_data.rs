@@ -1,11 +1,11 @@
 use crate::{
 	detailed_error::DetailedError,
 	error_code::*,
-	methods::RpcResult,
 	server::RpcContext,
 	utils::auth::{verify_payload_timestamp, verify_wildmeta_signature},
 	utils::validation::validate_ethereum_address,
 	verify_auth::verify_auth,
+	RpcResult,
 };
 use chrono::Utc;
 use executor_core::intent_executor::IntentExecutor;
@@ -285,8 +285,7 @@ pub fn register_get_hyperliquid_signature_data<
 					let action = ApproveAgent {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
-						agent_address: validate_ethereum_address(&agent_address, "agent_address")
-							.map_err(|e| e.to_rpc_error())?,
+						agent_address: validate_ethereum_address(&agent_address, "agent_address")?,
 						agent_name,
 						nonce,
 					};
@@ -295,8 +294,7 @@ pub fn register_get_hyperliquid_signature_data<
 					(HyperliquidAction::ApproveAgent(action), signature)
 				},
 				HyperliquidActionType::Withdraw3 { amount, destination } => {
-                    let _ = validate_ethereum_address(&destination, "destination")
-							.map_err(|e| e.to_rpc_error())?;
+                    let _ = validate_ethereum_address(&destination, "destination")?;
 					let action = Withdraw3 {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
@@ -313,8 +311,7 @@ pub fn register_get_hyperliquid_signature_data<
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						max_fee_rate,
-						builder: validate_ethereum_address(&builder, "builder")
-							.map_err(|e| e.to_rpc_error())?,
+						builder: validate_ethereum_address(&builder, "builder")?,
 						nonce,
 					};
 					let signature =
@@ -329,12 +326,10 @@ pub fn register_get_hyperliquid_signature_data<
 					amount,
 					from_sub_account,
 				} => {
-					let _ = validate_ethereum_address(&destination, "destination")
-						.map_err(|e| e.to_rpc_error())?;
+					let _ = validate_ethereum_address(&destination, "destination")?;
 					// Validate from_sub_account if it's not empty
 					if !from_sub_account.is_empty() {
-						let _ = validate_ethereum_address(&from_sub_account, "from_sub_account")
-							.map_err(|e| e.to_rpc_error())?;
+						let _ = validate_ethereum_address(&from_sub_account, "from_sub_account")?;
 					}
 					let action = SendAsset {
 						signature_chain_id: params.chain_id,
@@ -355,8 +350,7 @@ pub fn register_get_hyperliquid_signature_data<
 					let action = UserDexAbstraction {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
-						user: validate_ethereum_address(&user, "user")
-							.map_err(|e| e.to_rpc_error())?,
+						user: validate_ethereum_address(&user, "user")?,
 						enabled,
 						nonce,
 					};

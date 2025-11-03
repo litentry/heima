@@ -65,21 +65,16 @@ pub fn register_transfer_withdraw<
 			debug!("Received omni_transferWithdraw, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
 		params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
 
-			validate_chain_id(params.chain_id).map_err(|e| e.to_rpc_error())?;
-			validate_wallet_index(params.wallet_index).map_err(|e| e.to_rpc_error())?;
+			validate_chain_id(params.chain_id)?;
+			validate_wallet_index(params.wallet_index)?;
 			validate_ethereum_address(&params.recipient_address, "recipient_address")
-				.map_err(|e| e.to_rpc_error())?;
+				?;
 			validate_token_address(&params.token_ca, "token_ca")
-				.map_err(|e| e.to_rpc_error())?;
+				?;
 			validate_amount(&params.amount, "amount")
-				.map_err(|e| e.to_rpc_error())?;
+				?;
 
-			let omni_account = to_omni_account(&oa_str).map_err(|_| {
-				DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				).to_rpc_error()
-			})?;
+			let omni_account = to_omni_account(&oa_str)?;
 
 			// Inline handle_pumpx_transfer_withdraw logic
 			// 1. Verify we have a valid Pumpx "access" token for the user

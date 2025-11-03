@@ -1,7 +1,7 @@
 use crate::detailed_error::DetailedError;
-use crate::methods::RpcResult;
 use crate::middlewares::RpcExtensions;
 use crate::server::RpcContext;
+use crate::RpcResult;
 use jsonrpsee::{Extensions, RpcModule};
 use parity_scale_codec::Codec;
 use pumpx::methods::common::ApiResponse;

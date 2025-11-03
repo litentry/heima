@@ -44,10 +44,7 @@ pub fn register_open_position_test<
 
 			debug!("Received omni_openPositionTest, params: {:?}", params);
 
-			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				error!("Failed to parse omni account");
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
-			})?;
+			let omni_account = to_omni_account(&params.omni_account)?;
 
 			let smart_wallet = &params.sender;
 			let ticker = &params.ticker;

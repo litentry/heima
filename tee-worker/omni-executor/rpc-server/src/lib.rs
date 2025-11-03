@@ -9,7 +9,7 @@ mod error_code;
 mod mailer_factory;
 
 mod methods;
-pub use methods::RpcResult;
+pub use methods::*;
 
 mod middlewares;
 mod oauth2_factory;
@@ -22,7 +22,7 @@ mod verify_auth;
 
 pub use executor_crypto::shielding_key::ShieldingKey;
 
-// Removed unused hex imports - they may be used in other modules
+use jsonrpsee::core::RpcResult;
 use jsonrpsee::types::ErrorCode;
 use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};

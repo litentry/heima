@@ -1,5 +1,4 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::PARSE_ERROR_CODE;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_user_ops;
@@ -42,20 +41,14 @@ pub fn register_close_position_test<
 	module
 		.register_async_method("omni_closePositionTest", |params, ctx, _ext| async move {
 			let params = params.parse::<ClosePositionTestParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields").to_rpc_error()
+				let msg = format!("Failed to parse params: {:?}", e);
+				error!(msg);
+				DetailedError::parse_error(&msg).to_rpc_error()
 			})?;
 
 			debug!("Received omni_closePositionTest, params: {:?}", params);
 
-			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				error!("Failed to parse omni account");
-				DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				).to_rpc_error()
-			})?;
+			let omni_account = to_omni_account(&params.omni_account)?;
 
 			let smart_wallet = &params.sender;
 

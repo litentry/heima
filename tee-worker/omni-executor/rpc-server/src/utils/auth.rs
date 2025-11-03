@@ -1,5 +1,5 @@
-use crate::methods::RpcResult;
 use crate::utils::user_op::convert_to_packed_user_op;
+use crate::RpcResult;
 use crate::{error_code::AUTH_VERIFICATION_FAILED_CODE, ErrorCode};
 use aa_contracts_client::calculate_user_operation_hash;
 use alloy::primitives::Address;

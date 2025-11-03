@@ -17,6 +17,7 @@
 use crate::detailed_error::DetailedError;
 use crate::error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE};
 use crate::server::RpcContext;
+use crate::utils::user_op::submit_user_ops;
 use alloy::primitives::Address;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -97,7 +98,7 @@ pub fn register_submit_user_op_test<
 			})?;
 
 			// Call the common submission logic
-			let transaction_hash = crate::methods::omni::submit_user_op_with_auth::submit_user_ops(
+			let transaction_hash = submit_user_ops(
 				&ctx,
 				params.user_operations,
 				params.chain_id,

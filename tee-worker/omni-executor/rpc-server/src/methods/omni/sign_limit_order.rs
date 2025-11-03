@@ -73,9 +73,7 @@ pub fn register_sign_limit_order_params<
 
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
-			let omni_account = to_omni_account(&oa_str).map_err(|_| {
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse omni account").to_rpc_error()
-			})?;
+			let omni_account = to_omni_account(&oa_str)?;
 
 			// Inline handle_pumpx_sign_limit_order logic
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {

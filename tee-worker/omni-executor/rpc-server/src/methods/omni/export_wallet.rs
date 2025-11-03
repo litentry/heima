@@ -1,10 +1,6 @@
 use crate::{
-	detailed_error::DetailedError,
-	error_code::{INTERNAL_ERROR_CODE, PARSE_ERROR_CODE, *},
-	methods::omni::check_auth,
-	server::RpcContext,
-	utils::omni::to_omni_account,
-	Deserialize,
+	detailed_error::DetailedError, error_code::*, methods::omni::check_auth, server::RpcContext,
+	utils::omni::to_omni_account, Deserialize,
 };
 use ::pumpx::signer_client::PumpxChainId as _;
 use ethers::types::Bytes;
@@ -43,22 +39,14 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 			})?;
 
 			let params = params.parse::<ExportWalletParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Parse error"
-				).with_reason("Invalid JSON format or missing required fields").to_rpc_error()
+				let msg = format!("Failed to parse params: {:?}", e);
+				error!(msg);
+				DetailedError::parse_error(&msg).to_rpc_error()
 			})?;
 
 			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
 
-			let omni_account = to_omni_account(&oa_str).map_err(|_| {
-				DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				).to_rpc_error()
-			})?;
-
+			let omni_account = to_omni_account(&oa_str)?;
 			let aes_key = ctx
 				.shielding_key
 				.private_key()

@@ -1,121 +1,115 @@
 use crate::config::{MAX_WALLET_INDEX, SUPPORTED_EVM_CHAINS};
 use crate::detailed_error::DetailedError;
+use crate::RpcResult;
 use alloy::primitives::Address;
 use email_address::EmailAddress;
 use std::str::FromStr;
 
-pub fn validate_chain_id(chain_id: u32) -> Result<(), Box<DetailedError>> {
+pub fn validate_chain_id(chain_id: u32) -> RpcResult<()> {
 	if !SUPPORTED_EVM_CHAINS.contains(&chain_id) {
-		return Err(Box::new(DetailedError::invalid_chain_id(chain_id as u64)));
+		return Err(DetailedError::invalid_chain_id(chain_id as u64).to_rpc_error());
 	}
 	Ok(())
 }
 
-pub fn validate_wallet_index(index: u32) -> Result<(), Box<DetailedError>> {
+pub fn validate_wallet_index(index: u32) -> RpcResult<()> {
 	if index > MAX_WALLET_INDEX {
-		return Err(Box::new(DetailedError::invalid_wallet_index(index, MAX_WALLET_INDEX)));
+		return Err(DetailedError::invalid_wallet_index(index, MAX_WALLET_INDEX).to_rpc_error());
 	}
 	Ok(())
 }
 
-pub fn validate_ethereum_address(
-	address: &str,
-	field_name: &str,
-) -> Result<Address, Box<DetailedError>> {
+pub fn validate_ethereum_address(address: &str, field_name: &str) -> RpcResult<Address> {
 	Address::from_str(address).map_err(|e| {
-		Box::new(
-			DetailedError::invalid_address_format(
-				field_name,
-				address,
-				"0x-prefixed 20-byte Ethereum address (40 hex chars)",
-			)
-			.with_reason(format!("Parse error: {}", e)),
+		DetailedError::invalid_address_format(
+			field_name,
+			address,
+			"0x-prefixed 20-byte Ethereum address (40 hex chars)",
 		)
+		.with_reason(format!("Parse error: {}", e))
+		.to_rpc_error()
 	})
 }
 
-pub fn validate_amount(amount_str: &str, field_name: &str) -> Result<u128, Box<DetailedError>> {
+pub fn validate_amount(amount_str: &str, field_name: &str) -> RpcResult<u128> {
 	// Check if empty
 	if amount_str.is_empty() {
-		return Err(Box::new(DetailedError::invalid_amount(
+		return Err(DetailedError::invalid_amount(
 			field_name,
 			amount_str,
 			"Amount cannot be empty",
-		)));
+		)
+		.to_rpc_error());
 	}
 
 	// Parse as u128
 	let amount = amount_str.parse::<u128>().map_err(|e| {
-		Box::new(DetailedError::invalid_amount(
+		DetailedError::invalid_amount(
 			field_name,
 			amount_str,
 			&format!("Failed to parse amount: {}", e),
-		))
+		)
+		.to_rpc_error()
 	})?;
 
 	// Check if zero
 	if amount == 0 {
-		return Err(Box::new(DetailedError::invalid_amount(
+		return Err(DetailedError::invalid_amount(
 			field_name,
 			amount_str,
 			"Amount must be greater than zero",
-		)));
+		)
+		.to_rpc_error());
 	}
 
 	Ok(amount)
 }
 
-pub fn validate_token_address(
-	address: &str,
-	field_name: &str,
-) -> Result<Address, Box<DetailedError>> {
+pub fn validate_token_address(address: &str, field_name: &str) -> RpcResult<Address> {
 	// For native token transfers, address might be "0x0" or similar
 	if address == "0x0" || address == "0x0000000000000000000000000000000000000000" {
 		return Ok(Address::ZERO);
 	}
 
 	validate_ethereum_address(address, field_name).map_err(|_e| {
-		Box::new(
-			DetailedError::new(
-				crate::error_code::INVALID_TOKEN_ADDRESS_CODE,
-				"Invalid token contract address",
-			)
-			.with_field(field_name)
-			.with_received(address.to_string())
-			.with_expected("Valid ERC20 token contract address or 0x0 for native token")
-			.with_suggestion("Ensure the token address is correct for the selected chain"),
+		DetailedError::new(
+			crate::error_code::INVALID_TOKEN_ADDRESS_CODE,
+			"Invalid token contract address",
 		)
+		.with_field(field_name)
+		.with_received(address.to_string())
+		.with_expected("Valid ERC20 token contract address or 0x0 for native token")
+		.with_suggestion("Ensure the token address is correct for the selected chain")
+		.to_rpc_error()
 	})
 }
 
-pub fn validate_email(email: &str) -> Result<(), Box<DetailedError>> {
+pub fn validate_email(email: &str) -> RpcResult<()> {
 	if !EmailAddress::is_valid(email) {
-		return Err(Box::new(
-			DetailedError::new(
-				crate::error_code::INVALID_EMAIL_FORMAT_CODE,
-				"Invalid email format",
-			)
-			.with_field("email")
-			.with_received(email.to_string())
-			.with_expected("Valid email address (e.g., user@example.com)")
-			.with_suggestion("Please provide a valid email address"),
-		));
+		return Err(DetailedError::new(
+			crate::error_code::INVALID_EMAIL_FORMAT_CODE,
+			"Invalid email format",
+		)
+		.with_field("email")
+		.with_received(email.to_string())
+		.with_expected("Valid email address (e.g., user@example.com)")
+		.with_suggestion("Please provide a valid email address")
+		.to_rpc_error());
 	}
 
 	// Additionally require a TLD (at least one dot after @)
 	if let Some(at_pos) = email.find('@') {
 		let domain = &email[at_pos + 1..];
 		if !domain.contains('.') {
-			return Err(Box::new(
-				DetailedError::new(
-					crate::error_code::INVALID_EMAIL_FORMAT_CODE,
-					"Invalid email format",
-				)
-				.with_field("email")
-				.with_received(email.to_string())
-				.with_expected("Email address with a valid domain (e.g., user@example.com)")
-				.with_suggestion("Email domain must include a top-level domain (TLD)"),
-			));
+			return Err(DetailedError::new(
+				crate::error_code::INVALID_EMAIL_FORMAT_CODE,
+				"Invalid email format",
+			)
+			.with_field("email")
+			.with_received(email.to_string())
+			.with_expected("Email address with a valid domain (e.g., user@example.com)")
+			.with_suggestion("Email domain must include a top-level domain (TLD)")
+			.to_rpc_error());
 		}
 	}
 
@@ -124,17 +118,16 @@ pub fn validate_email(email: &str) -> Result<(), Box<DetailedError>> {
 
 pub fn validate_user_operations(
 	operations: &[executor_core::types::SerializablePackedUserOperation],
-) -> Result<(), Box<DetailedError>> {
+) -> RpcResult<()> {
 	if operations.is_empty() {
-		return Err(Box::new(
-			DetailedError::new(
-				crate::error_code::MISSING_REQUIRED_FIELD_CODE,
-				"User operations cannot be empty",
-			)
-			.with_field("user_operations")
-			.with_expected("At least one user operation")
-			.with_suggestion("Provide at least one user operation to submit"),
-		));
+		return Err(DetailedError::new(
+			crate::error_code::MISSING_REQUIRED_FIELD_CODE,
+			"User operations cannot be empty",
+		)
+		.with_field("user_operations")
+		.with_expected("At least one user operation")
+		.with_suggestion("Provide at least one user operation to submit")
+		.to_rpc_error());
 	}
 
 	// Validate each operation's sender address
