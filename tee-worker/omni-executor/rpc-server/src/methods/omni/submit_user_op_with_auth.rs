@@ -608,15 +608,11 @@ pub fn register_submit_user_op_with_auth<
 						.wildmeta_api
 						.verify_hyperliquid_link(agent_address, main_address, *login_type)
 						.await
-						.map_err(|e| {
-							error!("Failed to verify hyperliquid link: {:?}", e);
-							DetailedError::new(
-									crate::error_code::EXTERNAL_API_ERROR_CODE,
-									"Failed to verify Hyperliquid account link",
-								)
-								.with_field("operation")
-								.with_received("verify_hyperliquid_link")
-								.with_reason("Could not verify agent and main address linkage").to_rpc_error()
+						.map_err(|_| {
+							let msg = "Failed to verify hyperliquid link";
+							error!(msg);
+							DetailedError::wildmeta_service_error("verify_hyperliquid_link")
+								.to_rpc_error()
 						})?;
 
 					if !linked {
@@ -731,23 +727,14 @@ pub fn register_submit_user_op_with_auth<
 								*omni_account.as_ref(),
 							)
 							.await
-							.map_err(|e| {
-								error!("Failed to derive EVM address: {:?}", e);
-								DetailedError::signer_service_error(
-										"request_wallet",
-										&format!("Failed to derive wallet: {:?}", e),
-									).to_rpc_error()
+							.map_err(|_| {
+								DetailedError::signer_service_error().to_rpc_error()
 							})?;
 						let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
-							.map_err(|e| {
-								error!("Failed to convert derived pubkey to address: {:?}", e);
-								DetailedError::new(
-										AUTH_VERIFICATION_FAILED_CODE,
-										"Failed to convert derived public key to address",
-									)
-									.with_field("operation")
-									.with_received("pubkey_to_address conversion")
-									.with_reason(format!("Internal error converting public key to address: {:?}", e)).to_rpc_error()
+							.map_err(|_| {
+								let msg = "Failed to convert pubkey to address";
+								error!(msg);
+								DetailedError::internal_error(msg).to_rpc_error()
 							})?;
 						if derived_address.to_lowercase() != main_addr.to_lowercase() {
 							error!("Main address does not match derived EVM address");

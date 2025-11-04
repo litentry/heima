@@ -15,10 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::detailed_error::DetailedError;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
-use crate::methods::omni::check_auth;
 use crate::server::RpcContext;
-use crate::utils::omni::to_omni_account;
+use crate::utils::omni::extract_omni_account;
 use crate::utils::validation::parse_rpc_params;
 use ethers::types::Bytes;
 use executor_core::intent_executor::IntentExecutor;
@@ -55,21 +53,11 @@ pub fn register_sign_limit_order_params<
 ) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
-			let oa_str = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed",
-				)
-				.with_suggestion("Please check your authentication credentials")
-				.to_rpc_error()
-			})?;
+			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
 			let params = parse_rpc_params::<SignLimitOrderParams>(params)?;
 
-			debug!("Received omni_signLimitOrder, params: {:?}", params);
-
-			let omni_account = to_omni_account(&oa_str)?;
+			let omni_account = extract_omni_account(&ext)?;
 
 			// Inline handle_pumpx_sign_limit_order logic
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
@@ -79,7 +67,7 @@ pub fn register_sign_limit_order_params<
 
 			let unsigned_tx_vec: Vec<Vec<u8>> =
 				params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect();
-			let Ok(signed_txs) = ctx
+			let signed_txs = ctx
 				.signer_client
 				.request_signatures(
 					chain,
@@ -88,15 +76,7 @@ pub fn register_sign_limit_order_params<
 					unsigned_tx_vec,
 				)
 				.await
-			else {
-				error!("Failed to request signatures from pumpx-signer");
-				return Err(DetailedError::new(
-					crate::error_code::SIGNATURE_SERVICE_UNAVAILABLE_CODE,
-					"Signature service unavailable",
-				)
-				.with_suggestion("Please try again later")
-				.to_rpc_error());
-			};
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
 
 			Ok(SignLimitOrderResponse {
 				intent_id: params.intent_id,

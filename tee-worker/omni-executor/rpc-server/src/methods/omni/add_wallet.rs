@@ -1,9 +1,6 @@
 use crate::{
-	detailed_error::DetailedError,
-	error_code::*,
-	methods::omni::{check_auth, check_omni_api_response},
-	server::RpcContext,
-	utils::omni::to_omni_account,
+	detailed_error::DetailedError, methods::omni::check_backend_response, server::RpcContext,
+	utils::omni::extract_omni_account,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_storage::{HeimaJwtStorage, Storage};
@@ -23,44 +20,26 @@ pub fn register_add_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 ) {
 	module
 		.register_async_method("omni_addWallet", |_params, ctx, ext| async move {
-			let oa_str = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed",
-				)
-				.with_suggestion("Please check your authentication credentials")
-				.to_rpc_error()
-			})?;
-
 			debug!("Received omni_addWallet");
 
-			let omni_account = to_omni_account(&oa_str)?;
+			let omni_account = extract_omni_account(&ext)?;
 
 			// Inlined handler logic from handle_pumpx_add_wallet
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get pumpx_{}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-				return Err(
-					DetailedError::internal_error("Failed to get access token").to_rpc_error()
-				);
+				return Err(DetailedError::storage_service_error("get access token").to_rpc_error());
 			};
 
 			// Call Pumpx API to add wallet
 			debug!("Calling pumpx add_wallet");
 			let backend_response =
 				ctx.pumpx_api.add_wallet(&access_token, None).await.map_err(|e| {
-					error!("Failed to add wallet through Pumpx API: {:?}", e);
-					DetailedError::new(
-						PUMPX_API_ADD_WALLET_FAILED_CODE,
-						"Failed to add wallet through Pumpx API",
-					)
-					.with_reason(format!("{:?}", e))
-					.to_rpc_error()
+					DetailedError::pumpx_service_error("add_wallet", format!("{:?}", e))
 				})?;
 
-			check_omni_api_response(backend_response.clone(), "Add wallet".into())?;
+			check_backend_response(&backend_response, "add_wallet")?;
 			Ok(RPCAddWalletResponse { backend_response })
 		})
 		.expect("Failed to register omni_addWallet method");

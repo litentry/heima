@@ -43,7 +43,7 @@ pub fn register_request_email_verification_code<
 				.insert(&omni_account.hash(), verification_code.clone())
 				.map_err(|e| {
 					error!("[EMAIL_LIFECYCLE] Failed to store verification code for {}: {:?}", params.user_email, e);
-					DetailedError::storage_error("insert verification code").to_rpc_error()
+					DetailedError::storage_service_error("insert verification code").to_rpc_error()
 				})?;
 
 			// Get the appropriate mailer for this client

@@ -114,19 +114,15 @@ pub fn register_get_hyperliquid_signature_data<
 ) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
-			let params = parse_rpc_params::<GetHyperliquidSignatureDataParams>(params)?;
-
 			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
+			let params = parse_rpc_params::<GetHyperliquidSignatureDataParams>(params)?;
 
 			// Make sure `user_id` is non-evm type
 			if matches!(params.user_id, UserId::Evm(_)) {
-				error!("Invalid user_id type, expected non-Evm");
-				return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid user ID type")
-					.with_field("user_id")
-					.with_expected("Non-EVM user ID (Email, Twitter, Discord, etc.)")
-					.with_received("EVM type")
-					.with_suggestion("Use a non-EVM user ID type for this operation")
-					.to_rpc_error());
+				error!("Invalid user_id type, expected non-evm");
+				return Err(
+					DetailedError::invalid_params("user_id", "expect non-evm").to_rpc_error()
+				);
 			}
 
 			// Unified authentication logic
@@ -169,7 +165,7 @@ pub fn register_get_hyperliquid_signature_data<
 						DetailedError::internal_error(msg).to_rpc_error()
 					})?;
 				pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|_| {
-					let msg = "Failed to convert derived pubkey to address";
+					let msg = "Failed to convert pubkey to address";
 					error!(msg);
 					DetailedError::internal_error(msg).to_rpc_error()
 				})?
@@ -220,7 +216,8 @@ pub fn register_get_hyperliquid_signature_data<
 							.map_err(|_| {
 								let msg = "Failed to verify hyperliquid link";
 								error!(msg);
-								DetailedError::internal_error(msg).to_rpc_error()
+								DetailedError::wildmeta_service_error("verify_hyperliquid_link")
+									.to_rpc_error()
 							})?;
 
 						if !linked {
@@ -233,13 +230,10 @@ pub fn register_get_hyperliquid_signature_data<
 					},
 					_ => {
 						error!("Invalid client auth type");
-						return Err(DetailedError::new(
-							INVALID_PARAMS_CODE,
-							"Invalid client authentication type",
+						return Err(DetailedError::invalid_params(
+							"client_auth",
+							"expect wildmeta_hl",
 						)
-						.with_field("client_auth")
-						.with_expected("WildmetaHl")
-						.with_suggestion("Use a supported authentication method")
 						.to_rpc_error());
 					},
 				}

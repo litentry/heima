@@ -1,5 +1,5 @@
-use crate::methods::omni::check_auth;
 use crate::server::RpcContext;
+use crate::utils::omni::extract_omni_account;
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 
@@ -11,9 +11,7 @@ pub fn register_test_protected_method<
 ) {
 	module
 		.register_method("omni_testProtectedMethod", |_, _, ext| {
-			if let Ok(omni_account) = check_auth(ext) {
-				return Ok::<String, ErrorObject>(omni_account);
-			}
+			let _ = extract_omni_account(ext)?;
 			panic!("RpcExtensions not found in request extensions");
 		})
 		.expect("Failed to register test method");

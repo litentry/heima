@@ -1,3 +1,4 @@
+use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::validation::parse_rpc_params;
 use crate::ErrorCode;
@@ -36,12 +37,20 @@ pub fn register_get_web3_sign_in_message<
 				Ok(Some(message_code)) => message_code,
 				Ok(None) => {
 					let message_code = generate_otp(8);
-					verification_code_storage
-						.insert(&storage_key, message_code.clone())
-						.map_err(|_| ErrorCode::InternalError)?;
+					verification_code_storage.insert(&storage_key, message_code.clone()).map_err(
+						|e| {
+							error!("Failed to store verification code: {:?}", e);
+							DetailedError::storage_service_error("insert verification code")
+								.to_rpc_error()
+						},
+					)?;
 					message_code
 				},
-				Err(_) => return Err(ErrorCode::InternalError.into()),
+				Err(e) => {
+					error!("Failed to get verification code from storage: {:?}", e);
+					return Err(DetailedError::storage_service_error("get verification code")
+						.to_rpc_error());
+				},
 			};
 
 			Ok::<HeimaMessagePayload, ErrorObject>(HeimaMessagePayload {

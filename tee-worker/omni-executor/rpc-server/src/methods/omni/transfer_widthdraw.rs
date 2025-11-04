@@ -1,9 +1,8 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::*,
-	methods::omni::{check_auth, check_omni_api_response},
+	methods::omni::check_backend_response,
 	server::RpcContext,
-	utils::omni::to_omni_account,
+	utils::omni::extract_omni_account,
 	utils::pumpx::verify_google_code,
 	utils::validation::{
 		parse_rpc_params, validate_amount, validate_chain_id, validate_ethereum_address,
@@ -44,41 +43,25 @@ pub fn register_transfer_withdraw<
 ) {
 	module
 		.register_async_method("omni_transferWithdraw", |params, ctx, ext| async move {
-			let oa_str = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication failed"
-				)
-				.with_suggestion("Please provide valid authentication credentials").to_rpc_error()
-			})?;
+			debug!("Received omni_transferWithdraw, params: {:?}", params);
 
 			let params = parse_rpc_params::<TransferWithdrawParams>(params)?;
-
-			debug!("Received omni_transferWithdraw, chain_id: {}, wallet_index: {}, recipient_address: {}, token_ca: {}, amount: {}",
-		params.chain_id, params.wallet_index, params.recipient_address, params.token_ca, params.amount);
+			let omni_account = extract_omni_account(&ext)?;
 
 			validate_chain_id(params.chain_id)?;
 			validate_wallet_index(params.wallet_index)?;
-			validate_ethereum_address(&params.recipient_address, "recipient_address")
-				?;
-			validate_token_address(&params.token_ca, "token_ca")
-				?;
-			validate_amount(&params.amount, "amount")
-				?;
-
-			let omni_account = to_omni_account(&oa_str)?;
+			validate_ethereum_address(&params.recipient_address, "recipient_address")?;
+			validate_token_address(&params.token_ca, "token_ca")?;
+			validate_amount(&params.amount, "amount")?;
 
 			// Inline handle_pumpx_transfer_withdraw logic
 			// 1. Verify we have a valid Pumpx "access" token for the user
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account, AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) =
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
 				error!("Failed to get access_token within TransferWidthdraw");
-				return Err(DetailedError::new(
-					INTERNAL_ERROR_CODE,
-					"Internal error"
-				).with_reason("Failed to get access token").to_rpc_error());
+				return Err(DetailedError::storage_service_error("get access token").to_rpc_error());
 			};
 
 			// 2. Verify google code
@@ -91,11 +74,9 @@ pub fn register_transfer_withdraw<
 			.await;
 
 			if !verify_success {
-				error!("Failed to verify google code within TransferWidthdraw");
-				return Err(DetailedError::new(
-					PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
-					"Google code verification failed"
-				).with_suggestion("Please check your Google verification code and try again").to_rpc_error());
+				let msg = "Failed to verify google code within TransferWidthdraw";
+				error!(msg);
+				return Err(DetailedError::internal_error(msg).to_rpc_error());
 			}
 
 			// 3. Create a transfer tx and send to backend
@@ -109,16 +90,17 @@ pub fn register_transfer_withdraw<
 			};
 
 			debug!("Calling pumpx create_transfer_tx, body {:?}", body);
-			let response = ctx.pumpx_api.create_transfer_tx(&access_token, body, params.lang.clone()).await
+			let response = ctx
+				.pumpx_api
+				.create_transfer_tx(&access_token, body, params.lang.clone())
+				.await
 				.map_err(|e| {
-					error!("Failed to create transfer tx: {}", e);
-					DetailedError::new(
-						PUMPX_API_CREATE_TRANSFER_TX_FAILED_CODE,
-						"Failed to create transfer transaction"
-					).with_suggestion("Please check your transfer parameters and try again").to_rpc_error()
+					error!("Failed to create transfer tx: {:?}", e);
+					DetailedError::pumpx_service_error("create_transfer_tx", format!("{:?}", e))
+						.to_rpc_error()
 				})?;
 
-			check_omni_api_response(response.clone(), "Transfer withdraw".into())?;
+			check_backend_response(&response, "transfer_withdraw")?;
 			Ok(TransferWithdrawResponse { backend_response: response })
 		})
 		.expect("Failed to register omni_transferWithdraw method");

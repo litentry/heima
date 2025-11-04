@@ -1,5 +1,5 @@
 use crate::{
-	detailed_error::DetailedError, error_code::*, server::RpcContext, utils::omni::to_omni_account,
+	detailed_error::DetailedError, server::RpcContext, utils::omni::to_omni_account,
 	utils::validation::parse_rpc_params,
 };
 use executor_core::intent_executor::IntentExecutor;
@@ -52,26 +52,12 @@ pub fn register_get_smart_wallet_root_signer<
 				.signer_client
 				.request_wallet(params.chain_type.into(), params.wallet_index, omni_account.into())
 				.await
-				.map_err(|_| {
-					error!("Failed to request wallet from signer client");
-					DetailedError::new(
-						PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
-						"Failed to request wallet from signer service",
-					)
-					.with_reason("Signer service is temporarily unavailable")
-					.with_suggestion("Please try again later")
-					.to_rpc_error()
-				})?;
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
 
 			let address = pubkey_to_address(params.chain_type.into(), &pubkey).map_err(|_| {
-				error!("Failed to convert pubkey to address");
-				DetailedError::new(
-					PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
-					"Failed to convert public key to address",
-				)
-				.with_reason("Public key conversion error")
-				.with_suggestion("Please check your chain type and try again")
-				.to_rpc_error()
+				let msg = "Failed to convert pubkey to address";
+				error!(msg);
+				DetailedError::internal_error(msg).to_rpc_error()
 			})?;
 
 			Ok::<String, ErrorObjectOwned>(address)

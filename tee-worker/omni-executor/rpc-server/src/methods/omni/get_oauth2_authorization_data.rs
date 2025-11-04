@@ -99,7 +99,11 @@ pub fn register_get_oauth2_authorization_data<
 				nonce: authorize_data.nonce.clone(),
 			};
 
-			storage.insert(&key, verification_data).map_err(|_| ErrorCode::InternalError)?;
+			storage.insert(&key, verification_data).map_err(|e| {
+				error!("Failed to store OAuth2 verification data: {:?}", e);
+				DetailedError::storage_service_error("insert OAuth2 verification data")
+					.to_rpc_error()
+			})?;
 
 			let response_mode = provider_config.use_response_mode.then(|| "form_post".to_string());
 

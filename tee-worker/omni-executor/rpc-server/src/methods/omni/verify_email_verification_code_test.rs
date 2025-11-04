@@ -1,5 +1,5 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_PARAMS_CODE};
+use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::utils::validation::parse_rpc_params;
 use crate::verify_auth::verify_email_authentication;
 use crate::RpcContext;
@@ -30,10 +30,9 @@ pub fn register_verify_email_verification_code_test<
 					UserId::Email(email) => email.clone(),
 					_ => {
 						error!("Invalid user_id type: expected Email, got {:?}", params.user_id);
-						return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid parameter")
-							.with_field("user_id")
-							.with_reason("user_id must be of type 'email'")
-							.to_rpc_error());
+						return Err(
+							DetailedError::invalid_params("user_id", "expect email").to_rpc_error()
+						);
 					},
 				};
 
@@ -41,10 +40,9 @@ pub fn register_verify_email_verification_code_test<
 					UserAuth::Email(code) => code.clone(),
 					_ => {
 						error!("Invalid auth type: expected Email, got {:?}", params.auth);
-						return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid parameter")
-							.with_field("auth")
-							.with_reason("auth must be of type 'email' with verification code")
-							.to_rpc_error());
+						return Err(
+							DetailedError::invalid_params("auth", "expect email").to_rpc_error()
+						);
 					},
 				};
 

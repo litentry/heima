@@ -1,4 +1,4 @@
-use super::check_omni_api_response;
+use super::check_backend_response;
 use crate::{
 	detailed_error::DetailedError,
 	error_code::{INTERNAL_ERROR_CODE, *},
@@ -83,8 +83,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 						"Failed to get_account_user_id for email {}: {:?}",
 						params.user_email, e
 					);
-					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to get account user ID")
-						.with_suggestion("Please try again")
+					DetailedError::pumpx_service_error("get_account_user_id", format!("{:?}", e))
 						.to_rpc_error()
 				},
 			)?;
@@ -139,16 +138,13 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 						.to_rpc_error()
 				})?;
 			debug!("Response pumpx user_connect: {:?}", backend_response);
+			check_backend_response(&backend_response, "user_connect")?;
 
 			// check google auth value
 			if !backend_response.data.google_auth_check.unwrap_or(false) {
-				error!("Google code verification failed from user_connect");
-				return Err(DetailedError::new(
-					PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
-					"Google code verification failed",
-				)
-				.with_suggestion("Please check your Google verification code and try again")
-				.to_rpc_error());
+				let msg = "Failed to verify google auth within RequestJwt";
+				error!(msg);
+				return Err(DetailedError::internal_error(msg).to_rpc_error());
 			}
 
 			let id_token_claims = AuthTokenClaims::new(
@@ -165,18 +161,26 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			if storage
+			if let Err(e) = storage
 				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
-				.is_err()
 			{
-				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ACCESS_TYPE);
+				error!(
+					"Failed to insert pumpx_{}_jwt_token into storage: {:?}",
+					AUTH_TOKEN_ACCESS_TYPE, e
+				);
+				return Err(
+					DetailedError::storage_service_error("insert access token").to_rpc_error()
+				);
 			};
 
-			if storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()).is_err() {
-				error!("Failed to insert pumpx_{}_jwt_token into storage", AUTH_TOKEN_ID_TYPE);
+			if let Err(e) = storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()) {
+				error!(
+					"Failed to insert pumpx_{}_jwt_token into storage: {:?}",
+					AUTH_TOKEN_ID_TYPE, e
+				);
+				return Err(DetailedError::storage_service_error("insert ID token").to_rpc_error());
 			};
 
-			check_omni_api_response(backend_response.clone(), "Request pumpx jwt".into())?;
 			Ok(RequestJwtResponse { access_token, id_token, backend_response })
 		})
 		.expect("Failed to register omni_requestJwt method");

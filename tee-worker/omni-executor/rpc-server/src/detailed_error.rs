@@ -1,8 +1,8 @@
 use crate::error_code::{
 	EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE, INVALID_ADDRESS_FORMAT_CODE,
-	INVALID_AMOUNT_CODE, INVALID_CHAIN_ID_CODE, INVALID_HEX_FORMAT_CODE, INVALID_USEROP_CODE,
-	INVALID_WALLET_INDEX_CODE, SIGNATURE_SERVICE_UNAVAILABLE_CODE, SIGNER_SERVICE_ERROR_CODE,
-	STORAGE_SERVICE_ERROR_CODE, UNEXPECTED_RESPONSE_TYPE_CODE,
+	INVALID_AMOUNT_CODE, INVALID_BACKEND_RESPONSE_CODE, INVALID_CHAIN_ID_CODE, INVALID_USEROP_CODE,
+	INVALID_WALLET_INDEX_CODE, PUMPX_SERVICE_ERROR_CODE, SIGNER_SERVICE_ERROR_CODE,
+	STORAGE_SERVICE_ERROR_CODE, WILDMETA_SERVICE_ERROR_CODE,
 };
 use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
 use parity_scale_codec::Codec;
@@ -87,15 +87,6 @@ impl DetailedError {
 	pub fn to_rpc_error(&self) -> ErrorObjectOwned {
 		ErrorObject::owned(self.code, self.message.clone(), Some(self.details.clone()))
 	}
-
-	/// Create an error from a backend API response
-	pub fn from_api_response<T>(api_response: ApiResponse<T>) -> Self
-	where
-		T: Codec,
-	{
-		Self::new(ErrorCode::InternalError.code(), ErrorCode::InternalError.message())
-			.with_backend_response(api_response.code as i32, api_response.message)
-	}
 }
 
 impl DetailedError {
@@ -106,6 +97,18 @@ impl DetailedError {
 
 	pub fn parse_error(reason: &str) -> Self {
 		Self::new(ErrorCode::ParseError.code(), ErrorCode::ParseError.message()).with_reason(reason)
+	}
+
+	pub fn invalid_params(field: &str, reason: &str) -> Self {
+		Self::new(ErrorCode::InvalidParams.code(), ErrorCode::InvalidParams.message())
+			.with_field(field)
+			.with_reason(reason)
+	}
+
+	pub fn invalid_backend_response<T: Codec>(response: &ApiResponse<T>, op: &str) -> Self {
+		Self::new(INVALID_BACKEND_RESPONSE_CODE, "Invalid backend response")
+			.with_field(op)
+			.with_backend_response(response.code as i32, response.message.to_owned())
 	}
 
 	pub fn invalid_chain_id(chain_id: u64) -> Self {
@@ -142,30 +145,8 @@ impl DetailedError {
 			.with_suggestion(reason)
 	}
 
-	pub fn invalid_hex_format(field: &str, value: &str, expected_length: Option<usize>) -> Self {
-		let expected = if let Some(len) = expected_length {
-			format!("0x-prefixed hex string of {} bytes", len)
-		} else {
-			"Valid hexadecimal string".to_string()
-		};
-
-		Self::new(INVALID_HEX_FORMAT_CODE, "Invalid hexadecimal format")
-			.with_field(field)
-			.with_received(value.to_string())
-			.with_expected(expected)
-			.with_suggestion("Check that the value is properly hex-encoded")
-	}
-
-	pub fn unexpected_response_type(expected: &str, received: &str) -> Self {
-		Self::new(UNEXPECTED_RESPONSE_TYPE_CODE, "Unexpected response type from service")
-			.with_expected(expected)
-			.with_received(received)
-			.with_suggestion("This is likely an internal error. Please contact support.")
-	}
-
-	pub fn signer_service_error(operation: &str, error: &str) -> Self {
-		Self::new(SIGNER_SERVICE_ERROR_CODE, format!("Signer service error during {}", operation))
-			.with_suggestion(format!("Signer error: {}", error))
+	pub fn signer_service_error() -> Self {
+		Self::new(SIGNER_SERVICE_ERROR_CODE, "Signer service error")
 	}
 
 	pub fn email_service_error(email: &str) -> Self {
@@ -175,9 +156,17 @@ impl DetailedError {
 			.with_suggestion("Failed to send verification email. Please try again later.")
 	}
 
-	pub fn storage_error(operation: &str) -> Self {
-		Self::new(STORAGE_SERVICE_ERROR_CODE, format!("Storage service error during {}", operation))
-			.with_suggestion("Storage operation failed. Please try again later.")
+	pub fn storage_service_error(op: &str) -> Self {
+		Self::new(STORAGE_SERVICE_ERROR_CODE, format!("Storage service error in {}", op))
+	}
+
+	pub fn pumpx_service_error(op: &str, reason: impl Into<String>) -> Self {
+		Self::new(PUMPX_SERVICE_ERROR_CODE, format!("Pumpx service error in {}", op))
+			.with_reason(reason)
+	}
+
+	pub fn wildmeta_service_error(op: &str) -> Self {
+		Self::new(WILDMETA_SERVICE_ERROR_CODE, format!("Wildmeta service error in {}", op))
 	}
 
 	pub fn invalid_user_op(reason: &str) -> Self {
@@ -185,13 +174,7 @@ impl DetailedError {
 	}
 
 	pub fn gas_estimation_failed() -> Self {
-		Self::new(GAS_ESTIMATION_FAILED_CODE, "Unable to estimate gas for operation")
-			.with_suggestion("Please check the user operation parameters and try again")
-	}
-
-	pub fn signature_service_unavailable() -> Self {
-		Self::new(SIGNATURE_SERVICE_UNAVAILABLE_CODE, "Signature service temporarily unavailable")
-			.with_suggestion("Please try again in a few moments")
+		Self::new(GAS_ESTIMATION_FAILED_CODE, "Gas estimaton failed")
 	}
 }
 

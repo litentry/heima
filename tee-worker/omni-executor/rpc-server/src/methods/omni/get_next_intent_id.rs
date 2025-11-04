@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::validation::parse_rpc_params;
 use crate::ErrorCode;
@@ -49,7 +50,7 @@ pub fn register_get_next_intent_id<
 				.get(&account)
 				.map_err(|e| {
 					error!("Could not get IntentId from store: {:?}", e);
-					<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
+					DetailedError::storage_service_error("get intent ID").to_rpc_error()
 				})?
 				.unwrap_or_default();
 

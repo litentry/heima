@@ -332,7 +332,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 			);
 
 			// Request signature from pumpx signer for EVM chain
-			let signature_result = ctx
+			let sig = ctx
 				.signer_client
 				.request_signature(
 					ChainType::Evm,
@@ -340,20 +340,16 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 					omni_account.clone().into(),
 					message_to_sign,
 				)
-				.await;
+				.await
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
 
-			let signature = match signature_result {
-				Ok(sig) => substrate_to_ethereum_signature(&sig)
-					.map_err(|e| {
-						error!("Failed to convert signature: {}", e);
-						DetailedError::signature_service_unavailable().to_rpc_error()
-					})?
-					.to_vec(),
-				Err(_) => {
-					error!("Failed to sign UserOp[{}]", index);
-					return Err(DetailedError::signature_service_unavailable().to_rpc_error());
-				},
-			};
+			let signature = substrate_to_ethereum_signature(&sig)
+				.map_err(|e| {
+					let msg = format!("Failed to convert signature: {}", e);
+					error!(msg);
+					DetailedError::internal_error(&msg).to_rpc_error()
+				})?
+				.to_vec();
 
 			// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
 			let mut signature_with_prefix: Vec<u8> = vec![0x01];

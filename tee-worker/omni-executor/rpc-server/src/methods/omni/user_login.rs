@@ -1,7 +1,8 @@
-use super::check_omni_api_response;
+use super::check_backend_response;
 use crate::{
-	error_code::*, server::RpcContext, utils::validation::parse_rpc_params,
-	verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
+	detailed_error::DetailedError, error_code::*, server::RpcContext,
+	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, ErrorCode,
+	Serialize,
 };
 
 use chrono::{Days, Utc};
@@ -91,24 +92,26 @@ pub fn register_user_login<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 					client_auth: params.client_auth,
 					heima_login_success: true,
 				};
-				let Ok(backend_response) =
-					ctx.pumpx_api.post_heima_login(&access_token, body).await
-				else {
-					error!("Post_heima_login failed for Wildmeta client");
-					return Err(ErrorCode::ServerError(POST_HEIMA_LOGIN_FAILED_CODE).into());
-				};
+				let backend_response =
+					ctx.pumpx_api.post_heima_login(&access_token, body).await.map_err(|e| {
+						error!("Failed to call post_heim_login: {:?}", e);
+						DetailedError::pumpx_service_error("post_heima_login", format!("{:?}", e))
+							.to_rpc_error()
+					})?;
 
-				check_omni_api_response(backend_response.clone(), "Post heima login".into())?;
+				check_backend_response(&backend_response, "post_heima_login")?;
 
 				let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 				let omni_account = identity.to_omni_account(&params.client_id);
-				if storage
-					.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
-					.is_err()
+				if let Err(e) =
+					storage.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				{
 					error!(
-						"Failed to insert pumpx_{}_jwt_token into storage",
-						AUTH_TOKEN_ACCESS_TYPE
+						"Failed to insert pumpx_{}_jwt_token into storage: {:?}",
+						AUTH_TOKEN_ACCESS_TYPE, e
+					);
+					return Err(
+						DetailedError::storage_service_error("insert access token").to_rpc_error()
 					);
 				};
 				Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse {

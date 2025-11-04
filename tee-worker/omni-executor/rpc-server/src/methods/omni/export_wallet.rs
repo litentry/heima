@@ -1,6 +1,6 @@
 use crate::{
-	detailed_error::DetailedError, error_code::*, methods::omni::check_auth, server::RpcContext,
-	utils::omni::to_omni_account, utils::validation::parse_rpc_params, Deserialize,
+	detailed_error::DetailedError, error_code::*, server::RpcContext,
+	utils::omni::extract_omni_account, utils::validation::parse_rpc_params, Deserialize,
 };
 use ::pumpx::signer_client::PumpxChainId as _;
 use ethers::types::Bytes;
@@ -30,19 +30,11 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 ) {
 	module
 		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {
-			let oa_str = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed"
-				).with_suggestion("Please check your authentication credentials").to_rpc_error()
-			})?;
+			debug!("Received omni_exportWallet, params: {:?}", params);
 
 			let params = parse_rpc_params::<ExportWalletParams>(params)?;
+			let omni_account = extract_omni_account(&ext)?;
 
-			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
-
-			let omni_account = to_omni_account(&oa_str)?;
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
@@ -51,29 +43,35 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 					error!("Failed to decrypt shielded value: {:?}", e);
 					DetailedError::new(
 						DECRYPT_REQUEST_FAILED_CODE,
-						"Shielded value decryption failed"
-					).with_field("key").with_reason("The provided RSA-encrypted AES key could not be decrypted").with_suggestion("Ensure the RSA public key matches the encryption key").to_rpc_error()
+						"Shielded value decryption failed",
+					)
+					.with_field("key")
+					.with_reason("The provided RSA-encrypted AES key could not be decrypted")
+					.with_suggestion("Ensure the RSA public key matches the encryption key")
+					.to_rpc_error()
 				})?;
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
 				error!("Failed to convert AesKey");
-				DetailedError::new(
-					AES_KEY_CONVERT_FAILED_CODE,
-					"AesKey convert failed"
-				).with_field("key").with_reason("The decrypted key is not a valid 256-bit AES key").with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)").to_rpc_error()
+				DetailedError::new(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed")
+					.with_field("key")
+					.with_reason("The decrypted key is not a valid 256-bit AES key")
+					.with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)")
+					.to_rpc_error()
 			})?;
 
 			// Inlined handler logic from handle_pumpx_export_wallet
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-			let Ok(Some(access_token)) = storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+			let Ok(Some(access_token)) =
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
 			else {
-				let msg = format!("Failed to get {}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
-				error!(msg);
-				return Err(DetailedError::internal_error(&msg).to_rpc_error());
+				error!("Failed to get {}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
+				return Err(DetailedError::storage_service_error("get access token").to_rpc_error());
 			};
 
 			// Inline verify_google_code logic
 			debug!("Calling pumpx verify_google_code, code: {}", params.google_code);
-			let verify_result = ctx.pumpx_api.verify_google_code(&access_token, params.google_code, None).await;
+			let verify_result =
+				ctx.pumpx_api.verify_google_code(&access_token, params.google_code, None).await;
 			let verify_success = verify_result.map_or_else(
 				|e| {
 					error!("Google code verification request failed: {:?}", e);
@@ -90,12 +88,9 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				},
 			);
 			if !verify_success {
-				error!("Failed to verify google code within NativeTask::PumpxExportWallet");
-				return Err(DetailedError::new(
-						PUMPX_API_GOOGLE_CODE_VERIFICATION_FAILED_CODE,
-						"Google code verification failed",
-					)
-					.with_suggestion("Please check your Google verification code and try again").to_rpc_error());
+				let msg = "Failed to verify google code within ExportWallet";
+				error!(msg);
+				return Err(DetailedError::internal_error(msg).to_rpc_error());
 			}
 
 			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
@@ -103,7 +98,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				return Err(DetailedError::invalid_chain_id(params.chain_id.into()).to_rpc_error());
 			};
 
-			let Ok(mut wallet) = ctx
+			let mut wallet = ctx
 				.signer_client
 				.export_wallet(
 					chain,
@@ -113,14 +108,8 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 					params.wallet_address,
 				)
 				.await
-			else {
-				error!("Failed to export wallet from pumpx-signer");
-				return Err(DetailedError::new(
-						PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
-						"Failed to export wallet from pumpx-signer",
-					)
-					.with_suggestion("Please try again").to_rpc_error());
-			};
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
+
 			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
 				let msg = "Failed to decrypt wallet";
 				error!(msg);
@@ -135,15 +124,15 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 						p
 					})
 					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
-				omni_account_profile_storage.insert(&omni_account, profile).map_err(|_| {
-					let msg = "Failed to update pumpx account profile";
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
+				omni_account_profile_storage.insert(&omni_account, profile).map_err(|e| {
+					error!("Failed to update pumpx account profile: {:?}", e);
+					DetailedError::storage_service_error("insert account profile").to_rpc_error()
 				})?;
 			} else {
-				let msg = "Failed to get pumpx account profile";
-				error!(msg);
-				return Err(DetailedError::internal_error(&msg).to_rpc_error());
+				error!("Failed to get pumpx account profile");
+				return Err(
+					DetailedError::storage_service_error("get account profile").to_rpc_error()
+				);
 			}
 
 			let encrypted_wallet: SerdeAesOutput =
