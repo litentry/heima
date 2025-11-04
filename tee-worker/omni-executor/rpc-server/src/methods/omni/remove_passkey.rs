@@ -8,7 +8,7 @@ use executor_primitives::{to_omni_auth, UserAuth, UserId};
 use executor_storage::{PasskeyError, PasskeyStorage};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use tracing::error;
+use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RemovePasskeyParams {
@@ -33,6 +33,8 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 				error!("Failed to parse params: {:?}", e);
 				ErrorCode::ParseError
 			})?;
+
+			debug!("Received omni_removePasskey, params: {:?}", params);
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 				error!("Invalid user ID format");

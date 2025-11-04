@@ -11,7 +11,7 @@ use executor_storage::{
 };
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use tracing::error;
+use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AttachPasskeyParams {
@@ -37,6 +37,8 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 				error!("Failed to parse params: {:?}", e);
 				ErrorCode::ParseError
 			})?;
+
+			debug!("Received omni_attachPasskey, params: {:?}", params);
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 				error!("Invalid existing user ID format");
