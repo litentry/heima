@@ -2,10 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {OmniAccountV1} from "../src/accounts/OmniAccountV1.sol";
-import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPointV1} from "../src/core/EntryPointV1.sol";
-import {Counter} from "../src/Counter.sol";
+import {OmniAccountV1} from "../../src/accounts/OmniAccountV1.sol";
+import {BaseAccount} from "../../src/core/BaseAccount.sol";
+import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
+import {Counter} from "../../src/Counter.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 
 contract OmniAccountAsEntryPoint is Test {

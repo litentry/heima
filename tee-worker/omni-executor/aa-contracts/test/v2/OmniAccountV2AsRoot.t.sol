@@ -2,28 +2,31 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {OmniAccountV1} from "../src/accounts/OmniAccountV1.sol";
-import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPointV1} from "../src/core/EntryPointV1.sol";
-import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
-import {Counter} from "../src/Counter.sol";
-import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
-import {TestUtils} from "./TestUtils.sol";
-import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
-import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
-import {Passkey} from "../src/interfaces/Passkey.sol";
+import {OmniAccountV2} from "../../src/accounts/OmniAccountV2.sol";
+import {BaseAccount} from "../../src/core/BaseAccount.sol";
+import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
+import {UserOpSigner} from "../../src/interfaces/UserOpSigner.sol";
+import {Counter} from "../../src/Counter.sol";
+import {OmniAccountV2TestUtils} from "./OmniAccountV2TestUtils.sol";
+import {TestUtils} from "../TestUtils.sol";
+import {PackedUserOperation} from "../../src/interfaces/PackedUserOperation.sol";
+import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../../src//core/Helpers.sol";
+import {Passkey} from "../../src/interfaces/Passkey.sol";
+import {MockModule} from "./MockModule.sol";
 
-contract OmniAccountAsRoot is Test {
-    OmniAccountV1 public account;
+contract OmniAccountV2AsRoot is Test {
+    OmniAccountV2 public account;
     EntryPointV1 public entryPoint;
     Counter public counter;
+    MockModule public module;
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
     bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, rootAddress);
+        module = new MockModule();
     }
 
     function test_Execute() public {
@@ -42,7 +45,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_ValidateOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -60,7 +63,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_ValidateOpFailsWithWrongSigner() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -83,7 +86,7 @@ contract OmniAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
 
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -105,7 +108,7 @@ contract OmniAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
 
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -129,7 +132,7 @@ contract OmniAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, alicePk);
 
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
         bytes memory initCode = "";
@@ -167,7 +170,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotCallAddRootSignerViaUserOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address newRoot = 0x0000000000000000000000000000000000000002;
 
@@ -193,7 +196,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotCallRemoveRootSignerViaUserOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         // Prepare UserOp that calls removeRootSigner
         address sender = address(account);
@@ -222,7 +225,7 @@ contract OmniAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
 
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address newRoot = 0x0000000000000000000000000000000000000002;
 
@@ -248,7 +251,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotExecuteBatchViaUserOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         // Prepare UserOp that calls executeBatch
         address sender = address(account);
@@ -275,7 +278,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotCallAddRootSignerViaExecute() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address newRoot = 0x0000000000000000000000000000000000000002;
 
@@ -308,7 +311,7 @@ contract OmniAccountAsRoot is Test {
 
         bytes memory sessionProof = prepareSession(session, sessionExpiration, rootPk);
 
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address newRoot = 0x0000000000000000000000000000000000000002;
 
@@ -336,7 +339,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotCallAddPasskeySignerViaUserOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
 
@@ -362,7 +365,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotCallRemovePasskeySignerViaUserOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
 
@@ -388,7 +391,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotCallWithdrawDepositToViaUserOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         // Add some deposit first
         vm.deal(address(account), 1 ether);
@@ -421,7 +424,7 @@ contract OmniAccountAsRoot is Test {
 
     function test_RootCannotCallUpgradeToAndCallViaUserOp() public {
         (address root, uint256 rootPk) = makeAddrAndKey("root");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, root);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
 
         address newImplementation = address(0x1234567890123456789012345678901234567890);
         bytes memory data = "";
@@ -466,5 +469,72 @@ contract OmniAccountAsRoot is Test {
     function test_UpgradeToAndCall_As_Not_Allowed() public {
         vm.expectRevert("only owner");
         account.upgradeToAndCall(address(0x1), "");
+    }
+
+    // ============ Module Management Tests ============
+
+    function test_RootCannotRegisterModule() public {
+        vm.expectRevert("only owner");
+        vm.prank(rootAddress);
+        account.registerModule(address(module));
+    }
+
+    function test_RootCannotUnregisterModule() public {
+        vm.prank(ownerAddress);
+        account.registerModule(address(module));
+
+        vm.expectRevert("only owner");
+        vm.prank(rootAddress);
+        account.unregisterModule(address(module));
+    }
+
+    function test_RootCannotRegisterModuleViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
+
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("registerModule(address)", address(module));
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        // Validation should fail because root is trying to call a restricted function
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    function test_SessionKeyCannotRegisterModuleViaUserOp() public {
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (address session, uint256 sessionPk) = makeAddrAndKey("session");
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, root);
+
+        uint256 sessionExpiration = block.timestamp + 1000;
+        bytes32 sessionDigest = sha256(abi.encodePacked(session, sessionExpiration));
+        (uint8 sv, bytes32 sr, bytes32 ss) = vm.sign(rootPk, sessionDigest);
+        bytes memory sessionProof = abi.encodePacked(sr, ss, sv);
+
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("registerModule(address)", address(module));
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(sessionPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.SessionKey), r, s, v, sessionExpiration, sessionProof);
+
+        // Validation should fail because session key is trying to call a restricted function
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_FAILED, validationData);
     }
 }

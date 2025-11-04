@@ -2,19 +2,19 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {OmniAccountV1 as OmniAccount} from "../src/accounts/OmniAccountV1.sol";
-import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPointV1 as EntryPoint} from "../src/core/EntryPointV1.sol";
-import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
-import {OwnerType} from "../src/interfaces/OwnerType.sol";
-import {Passkey} from "../src/interfaces/Passkey.sol";
-import {Counter} from "../src/Counter.sol";
-import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
-import {TestUtils} from "./TestUtils.sol";
-import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
-import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../src/core/Helpers.sol";
+import {OmniAccountV2 as OmniAccount} from "../../src/accounts/OmniAccountV2.sol";
+import {BaseAccount} from "../../src/core/BaseAccount.sol";
+import {EntryPointV1 as EntryPoint} from "../../src/core/EntryPointV1.sol";
+import {UserOpSigner} from "../../src/interfaces/UserOpSigner.sol";
+import {OwnerType} from "../../src/interfaces/OwnerType.sol";
+import {Passkey} from "../../src/interfaces/Passkey.sol";
+import {Counter} from "../../src/Counter.sol";
+import {OmniAccountV2TestUtils} from "./OmniAccountV2TestUtils.sol";
+import {TestUtils} from "../TestUtils.sol";
+import {PackedUserOperation} from "../../src/interfaces/PackedUserOperation.sol";
+import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../../src/core/Helpers.sol";
 
-contract OmniAccountNonEvmOwnerWithPasskeySigner is Test {
+contract OmniAccountV2NonEvmOwnerWithPasskeySigner is Test {
     OmniAccount public account;
     EntryPoint public entryPoint;
     Counter public counter;
@@ -26,7 +26,7 @@ contract OmniAccountNonEvmOwnerWithPasskeySigner is Test {
     function setUp() public {
         // Set up with Email owner type (non-EVM)
         (counter, entryPoint, account) =
-            OmniAccountTestUtils.setUpWithOwnerType(ownerAddress, clientId, rootAddress, OwnerType.Email);
+            OmniAccountV2TestUtils.setUpWithOwnerType(ownerAddress, clientId, rootAddress, OwnerType.Email);
     }
 
     function test_RootCannotCallOnlyOwnerWhenPasskeySignersExist() public {

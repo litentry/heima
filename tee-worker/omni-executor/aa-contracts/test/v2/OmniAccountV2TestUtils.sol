@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.28;
 
-import {Counter} from "../src/Counter.sol";
+import {Counter} from "../../src/Counter.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {OmniAccountV1 as OmniAccount} from "../src/accounts/OmniAccountV1.sol";
-import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPointV1 as EntryPoint} from "../src/core/EntryPointV1.sol";
-import {OwnerType} from "../src/interfaces/OwnerType.sol";
+import {OmniAccountV2 as OmniAccount} from "../../src/accounts/OmniAccountV2.sol";
+import {BaseAccount} from "../../src/core/BaseAccount.sol";
+import {EntryPointV1 as EntryPoint} from "../../src/core/EntryPointV1.sol";
+import {OwnerType} from "../../src/interfaces/OwnerType.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TestUtils} from "./TestUtils.sol";
+import {TestUtils} from "../TestUtils.sol";
 
-library OmniAccountTestUtils {
+library OmniAccountV2TestUtils {
     function setUpWithOwnerType(address ownerAddress, bytes memory clientId, address rootAddress, OwnerType ownerType)
         external
         returns (Counter, EntryPoint, OmniAccount)

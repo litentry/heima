@@ -2,20 +2,20 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {OmniAccountV1} from "../src/accounts/OmniAccountV1.sol";
-import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPointV1} from "../src/core/EntryPointV1.sol";
-import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
-import {Counter} from "../src/Counter.sol";
-import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
-import {TestUtils} from "./TestUtils.sol";
-import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
-import {SIG_VALIDATION_FAILED} from "../src//core/Helpers.sol";
+import {OmniAccountV2} from "../../src/accounts/OmniAccountV2.sol";
+import {BaseAccount} from "../../src/core/BaseAccount.sol";
+import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
+import {UserOpSigner} from "../../src/interfaces/UserOpSigner.sol";
+import {Counter} from "../../src/Counter.sol";
+import {OmniAccountV2TestUtils} from "./OmniAccountV2TestUtils.sol";
+import {TestUtils} from "../TestUtils.sol";
+import {PackedUserOperation} from "../../src/interfaces/PackedUserOperation.sol";
+import {SIG_VALIDATION_FAILED} from "../../src//core/Helpers.sol";
 
 // add test cases for revert if called by non authorized address
 
-contract OmniAccountTest is Test {
-    OmniAccountV1 public account;
+contract OmniAccountV2Test is Test {
+    OmniAccountV2 public account;
     EntryPointV1 public entryPoint;
     Counter public counter;
 
@@ -24,7 +24,7 @@ contract OmniAccountTest is Test {
     bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
 
     function test_Owner() public view {
@@ -63,7 +63,7 @@ contract OmniAccountTest is Test {
     }
 
     function test_ValidateOp() public {
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, rootAddress);
         (, uint256 bobPk) = makeAddrAndKey("bob");
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;

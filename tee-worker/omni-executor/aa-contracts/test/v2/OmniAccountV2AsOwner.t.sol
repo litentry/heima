@@ -2,28 +2,31 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {OmniAccountV1} from "../src/accounts/OmniAccountV1.sol";
-import {BaseAccount} from "../src/core/BaseAccount.sol";
-import {EntryPointV1} from "../src/core/EntryPointV1.sol";
-import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
-import {Counter} from "../src/Counter.sol";
-import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
-import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
-import {TestUtils} from "./TestUtils.sol";
-import {SIG_VALIDATION_SUCCESS} from "../src//core/Helpers.sol";
-import {Passkey} from "../src/interfaces/Passkey.sol";
+import {OmniAccountV2} from "../../src/accounts/OmniAccountV2.sol";
+import {BaseAccount} from "../../src/core/BaseAccount.sol";
+import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
+import {UserOpSigner} from "../../src/interfaces/UserOpSigner.sol";
+import {Counter} from "../../src/Counter.sol";
+import {OmniAccountV2TestUtils} from "./OmniAccountV2TestUtils.sol";
+import {PackedUserOperation} from "../../src/interfaces/PackedUserOperation.sol";
+import {TestUtils} from "../TestUtils.sol";
+import {SIG_VALIDATION_SUCCESS} from "../../src//core/Helpers.sol";
+import {Passkey} from "../../src/interfaces/Passkey.sol";
+import {MockModule} from "./MockModule.sol";
 
-contract OmniAccountAsOwner is Test {
-    OmniAccountV1 public account;
+contract OmniAccountV2AsOwner is Test {
+    OmniAccountV2 public account;
     EntryPointV1 public entryPoint;
     Counter public counter;
+    MockModule public module;
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
     address rootAddress = 0x0000000000000000000000000000000000000001;
     bytes clientId = bytes("test_client");
 
     function setUp() public {
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(ownerAddress, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, rootAddress);
+        module = new MockModule();
     }
 
     function test_Execute_As_Not_Allowed() public {
@@ -49,7 +52,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_ValidateOp() public {
         (address alice, uint256 alicePk) = makeAddrAndKey("alice");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(alice, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(alice, clientId, rootAddress);
 
         address sender = 0x0eAfeE130Ab1F6261885eE7080f9e8B2513111d4;
 
@@ -68,7 +71,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallAddRootSignerViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         address newRoot = 0x0000000000000000000000000000000000000002;
 
@@ -104,7 +107,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallRemoveRootSignerViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         // First add a root signer directly
         vm.prank(owner);
@@ -143,7 +146,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallWithdrawDepositViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         // Add some deposit first
         vm.deal(address(account), 1 ether);
@@ -176,7 +179,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanExecuteBatchViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         // Prepare UserOp that calls executeBatch
         address sender = address(account);
@@ -213,7 +216,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanExecuteWithRestrictedInnerCallViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         address newRoot = 0x0000000000000000000000000000000000000004;
 
@@ -249,7 +252,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallAddRootSignerDirectlyViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         address newRoot = 0x0000000000000000000000000000000000000005;
 
@@ -283,7 +286,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallWithdrawDepositDirectlyViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         // Add some deposit first
         vm.deal(address(account), 1 ether);
@@ -325,7 +328,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallAddPasskeySignerViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
 
@@ -360,7 +363,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallRemovePasskeySignerViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         Passkey.PublicKey memory pk = Passkey.PublicKey({x: 12345, y: 67890});
 
@@ -400,7 +403,7 @@ contract OmniAccountAsOwner is Test {
 
     function test_OwnerCanCallUpgradeToAndCallViaUserOp() public {
         (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
-        (counter, entryPoint, account) = OmniAccountTestUtils.setUp(owner, clientId, rootAddress);
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
 
         address newImplementation = address(0x1234567890123456789012345678901234567890);
         bytes memory data = "";
@@ -439,5 +442,120 @@ contract OmniAccountAsOwner is Test {
         vm.prank(ownerAddress);
         account.removePasskeySigner(pk);
         assert(!account.passkeySigners(key));
+    }
+
+    // ============ Module Management Tests ============
+
+    function test_OwnerCanRegisterModule() public {
+        assertFalse(account.isModuleRegistered(address(module)));
+
+        vm.prank(ownerAddress);
+        account.registerModule(address(module));
+
+        assertTrue(account.isModuleRegistered(address(module)));
+    }
+
+    function test_OwnerCanUnregisterModule() public {
+        vm.prank(ownerAddress);
+        account.registerModule(address(module));
+        assertTrue(account.isModuleRegistered(address(module)));
+
+        vm.prank(ownerAddress);
+        account.unregisterModule(address(module));
+        assertFalse(account.isModuleRegistered(address(module)));
+    }
+
+    function test_RegisterModuleEmitsEvent() public {
+        vm.expectEmit(true, false, false, false);
+        emit OmniAccountV2.ModuleRegistered(address(module));
+
+        vm.prank(ownerAddress);
+        account.registerModule(address(module));
+    }
+
+    function test_UnregisterModuleEmitsEvent() public {
+        vm.prank(ownerAddress);
+        account.registerModule(address(module));
+
+        vm.expectEmit(true, false, false, false);
+        emit OmniAccountV2.ModuleUnregistered(address(module));
+
+        vm.prank(ownerAddress);
+        account.unregisterModule(address(module));
+    }
+
+    function test_OwnerCanRegisterModuleViaUserOp() public {
+        (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
+
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("registerModule(address)", address(module));
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
+
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
+
+        vm.prank(address(entryPoint));
+        (bool success,) = address(account).call(callData);
+        assertTrue(success);
+
+        assertTrue(account.isModuleRegistered(address(module)));
+    }
+
+    function test_OwnerCanUnregisterModuleViaUserOp() public {
+        (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, rootAddress);
+
+        vm.prank(owner);
+        account.registerModule(address(module));
+        assertTrue(account.isModuleRegistered(address(module)));
+
+        address sender = address(account);
+        bytes memory initCode = "";
+        bytes memory callData = abi.encodeWithSignature("unregisterModule(address)", address(module));
+
+        PackedUserOperation memory packedOp = TestUtils.preparePackedOp(sender, initCode);
+        packedOp.callData = callData;
+
+        bytes32 packedOpHash = entryPoint.getUserOpHash(packedOp);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, packedOpHash);
+        packedOp.signature = abi.encodePacked(uint8(UserOpSigner.Owner), r, s, v);
+
+        vm.prank(address(entryPoint));
+        uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
+        assertEq(SIG_VALIDATION_SUCCESS, validationData);
+
+        vm.prank(address(entryPoint));
+        (bool success,) = address(account).call(callData);
+        assertTrue(success);
+
+        assertFalse(account.isModuleRegistered(address(module)));
+    }
+
+    function test_NonOwnerCannotRegisterModule() public {
+        address unauthorized = address(0x9999);
+        vm.expectRevert("only owner");
+        vm.prank(unauthorized);
+        account.registerModule(address(module));
+    }
+
+    function test_NonOwnerCannotUnregisterModule() public {
+        vm.prank(ownerAddress);
+        account.registerModule(address(module));
+
+        address unauthorized = address(0x9999);
+        vm.expectRevert("only owner");
+        vm.prank(unauthorized);
+        account.unregisterModule(address(module));
     }
 }
