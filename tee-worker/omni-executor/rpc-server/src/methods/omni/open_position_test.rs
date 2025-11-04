@@ -1,6 +1,7 @@
 use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
+use crate::utils::types::{RpcOptionExt, RpcResultExt};
 use crate::utils::user_op::submit_corewriter_user_ops;
 use crate::utils::validation::{parse_as, parse_rpc_params};
 use executor_core::intent_executor::IntentExecutor;
@@ -9,7 +10,7 @@ use executor_primitives::ChainId;
 use hyperliquid::*;
 use jsonrpsee::RpcModule;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 #[derive(Debug, Deserialize)]
 pub struct OpenPositionTestParams {
@@ -48,24 +49,18 @@ pub fn register_open_position_test<
 				DetailedError::internal_error("HyperCore client error").to_rpc_error()
 			})?;
 
-			let (perp_meta, perp_mark_price, perp_mid_price) =
-				hypercore_client.get_perp_market_prices(ticker).await.map_err(|e| {
-					let msg = format!("Failed to get perp market prices for {}: {}", ticker, e);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?;
+			let (perp_meta, perp_mark_price, perp_mid_price) = hypercore_client
+				.get_perp_market_prices(ticker)
+				.await
+				.map_err_internal("Failed to get perp market prices")?;
 
-			let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
-				let msg = format!("Failed to get perp asset ID: {}", e);
-				error!(msg);
-				DetailedError::internal_error(&msg).to_rpc_error()
-			})?;
+			let perp_asset_id = get_perp_asset_id(ticker, &perp_meta)
+				.map_err_internal("Failed to get perp asset id")?;
 
-			let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
-				let msg = format!("Perp asset {} not found in meta", perp_asset_id);
-				error!(msg);
-				DetailedError::internal_error(&msg).to_rpc_error()
-			})?;
+			let perp_asset = perp_meta
+				.universe
+				.get(perp_asset_id as usize)
+				.ok_or_internal("Perp asset not found in meta")?;
 
 			let perp_sz_decimals = perp_asset.sz_decimals;
 

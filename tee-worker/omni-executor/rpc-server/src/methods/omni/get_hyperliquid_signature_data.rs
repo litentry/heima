@@ -3,6 +3,7 @@ use crate::{
 	error_code::*,
 	server::RpcContext,
 	utils::auth::{verify_payload_timestamp, verify_wildmeta_signature},
+	utils::types::RpcResultExt,
 	utils::validation::{parse_rpc_params, validate_evm_address},
 	verify_auth::verify_auth,
 	RpcResult,
@@ -128,12 +129,8 @@ pub fn register_get_hyperliquid_signature_data<
 			// Unified authentication logic
 			let main_address = if let Some(user_auth) = &params.user_auth {
 				// User authentication provided
-				let auth =
-					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
-						let msg = format!("Failed to convert to OmniAuth: {:?}", e);
-						error!(msg);
-						DetailedError::parse_error(&msg).to_rpc_error()
-					})?;
+				let auth = to_omni_auth(user_auth, &params.user_id, &params.client_id)
+					.map_err_parse("Failed to convert to OmniAuth")?;
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 					error!("Failed to verify user authentication: {:?}", e);
@@ -148,27 +145,21 @@ pub fn register_get_hyperliquid_signature_data<
 				})?;
 
 				// Get main address from derived wallet
-				let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-					let msg = format!("Failed to convert user ID to identity: {}", e);
-					error!(msg);
-					DetailedError::parse_error(&msg).to_rpc_error()
-				})?;
+				let identity = Identity::try_from(params.user_id.clone())
+					.map_err_parse("Failed to convert user ID to identity")?;
 				let omni_account = identity.to_omni_account(&params.client_id);
 
-				let derived_pubkey = ctx
-					.signer_client
+				ctx.signer_client
 					.request_wallet(ChainType::Evm, 0, *omni_account.as_ref())
 					.await
 					.map_err(|_| {
-						let msg = "Failed to derive EVM address";
-						error!(msg);
-						DetailedError::internal_error(msg).to_rpc_error()
-					})?;
-				pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|_| {
-					let msg = "Failed to convert pubkey to address";
-					error!(msg);
-					DetailedError::internal_error(msg).to_rpc_error()
-				})?
+						error!("Failed to derive EVM address");
+						DetailedError::signer_service_error().to_rpc_error()
+					})
+					.and_then(|pk| {
+						pubkey_to_address(ChainType::Evm, &pk)
+							.map_err_internal("Failed to convert pubkey to address")
+					})?
 			} else if let Some(client_auth) = &params.client_auth {
 				// Client authentication provided (WildMeta)
 				match client_auth {
@@ -182,11 +173,7 @@ pub fn register_get_hyperliquid_signature_data<
 						verify_wildmeta_signature(agent_address, business_json, signature)?;
 
 						let business_data: serde_json::Value = serde_json::from_str(business_json)
-							.map_err(|e| {
-								let msg = format!("Failed to parse business_json: {:?}", e);
-								error!(msg);
-								DetailedError::parse_error(&msg).to_rpc_error()
-							})?;
+							.map_err_parse("Failed to parse business_json")?;
 
 						let timestamp = business_data
 							.get("timestamp")
@@ -241,11 +228,8 @@ pub fn register_get_hyperliquid_signature_data<
 			};
 
 			// Derive omni_account for signing (works for both auth methods)
-			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-				let msg = format!("Failed to convert user_id to identity: {}", e);
-				error!(msg);
-				DetailedError::parse_error(&msg).to_rpc_error()
-			})?;
+			let identity = Identity::try_from(params.user_id.clone())
+				.map_err_parse("Failed to convert user_id to identity")?;
 			let omni_account = identity.to_omni_account(&params.client_id);
 
 			let nonce = Utc::now().timestamp_millis() as u64;
@@ -361,7 +345,7 @@ async fn generate_eip712_signature<
 		.map_err(|_| {
 			let msg = "Failed to sign message";
 			error!(msg);
-			DetailedError::internal_error(msg).to_rpc_error()
+			DetailedError::signer_service_error().to_rpc_error()
 		})?;
 
 	Ok(hex_encode(&signature_bytes))

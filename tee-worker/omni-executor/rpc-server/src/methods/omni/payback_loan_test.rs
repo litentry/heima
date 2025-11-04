@@ -1,6 +1,7 @@
 use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
+use crate::utils::types::{RpcOptionExt, RpcResultExt};
 use crate::utils::user_op::submit_corewriter_user_ops;
 use crate::utils::validation::{parse_as, parse_rpc_params};
 use crate::RpcResult;
@@ -105,16 +106,8 @@ pub fn register_payback_loan_test<
 			let loan_record = ctx
 				.loan_record_storage
 				.get(&storage_key)
-				.map_err(|_| {
-					let msg = "Failed to retrieve loan record from storage".to_string();
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?
-				.ok_or_else(|| {
-					let msg = format!("Loan record not found for nonce {}", loan_nonce);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?;
+				.map_err_internal("Failed to retrieve loan record from storage")?
+				.ok_or_internal("Loan record not found")?;
 
 			info!("Retrieved loan record: {:?}", loan_record);
 
@@ -139,18 +132,13 @@ pub fn register_payback_loan_test<
 				LoanState::HedgeOpened => {
 					info!("Starting payback from HedgeOpened state");
 
-					let hedge_open_cloid_str = loan_record
+					let hedge_open_cloid = loan_record
 						.cloids
 						.iter()
 						.find(|(name, _)| name == "hedge_open")
 						.map(|(_, cloid)| cloid.clone())
-						.ok_or_else(|| {
-							let msg = "hedge_open cloid not found in loan record".to_string();
-							error!(msg);
-							DetailedError::internal_error(&msg).to_rpc_error()
-						})?;
-					let hedge_open_cloid: u128 =
-						parse_as(&hedge_open_cloid_str, "hedge_open_cloid")?;
+						.ok_or_internal("hedge_open_cloid not found in loan record")
+						.and_then(|s| parse_as(&s, "hedge_open_cloid"))?;
 
 					let close_ctx = precheck_close_hedge(
 						&ctx,
@@ -296,21 +284,13 @@ async fn verify_hedge_position(
 	let perp_state = hypercore_client
 		.get_perp_clearinghouse_state(smart_wallet_address)
 		.await
-		.map_err(|e| {
-			let msg = format!("Failed to get perp state: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.map_err_internal("Failed to get perp state")?;
 
 	let hedge_position = perp_state
 		.asset_positions
 		.iter()
 		.find(|pos| pos.position.coin.eq_ignore_ascii_case(collateral_ticker))
-		.ok_or_else(|| {
-			let msg = format!("Hedge position for {} not found", collateral_ticker);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.ok_or_internal("Hedge position not found")?;
 
 	let position_size: f64 = parse_as(&hedge_position.position.szi, "position_size")?;
 
@@ -326,14 +306,10 @@ async fn verify_hedge_position(
 
 	// Parse additional position data
 	let unrealized_pnl: f64 = parse_as(&hedge_position.position.unrealized_pnl, "unrealized_pnl")?;
-
 	let cum_funding_all_time: f64 =
 		parse_as(&hedge_position.position.cum_funding.all_time, "cum_funding_all_time")?;
-
 	let margin_used: f64 = parse_as(&hedge_position.position.margin_used, "margin_used")?;
-
 	let position_value: f64 = parse_as(&hedge_position.position.position_value, "position_value")?;
-
 	let withdrawable: f64 = parse_as(&perp_state.withdrawable, "withdrawable")?;
 
 	info!(
@@ -379,12 +355,10 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 
 	// Check USDC balance in spot account
 	info!("Checking USDC balance in spot account...");
-	let usdc_balance =
-		hypercore_client.get_spot_balance(smart_wallet, "USDC").await.map_err(|e| {
-			let msg = format!("Failed to get USDC balance: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+	let usdc_balance = hypercore_client
+		.get_spot_balance(smart_wallet, "USDC")
+		.await
+		.map_err_internal("Failed to get USDC balance")?;
 
 	info!("User USDC balance: {}, loan amount: {}", usdc_balance, usdc_loaned);
 
@@ -397,24 +371,18 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 	info!("✓ USDC balance check passed: user has sufficient USDC");
 
 	// Get perp market data
-	let (perp_meta, perp_mark_price, perp_mid_price) =
-		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
-			let msg = format!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+	let (perp_meta, perp_mark_price, perp_mid_price) = hypercore_client
+		.get_perp_market_prices(collateral_ticker)
+		.await
+		.map_err_internal("Failed to get perp market prices")?;
 
-	let perp_asset_id = get_perp_asset_id(collateral_ticker, &perp_meta).map_err(|e| {
-		let msg = format!("Failed to get perp asset ID: {}", e);
-		error!(msg);
-		DetailedError::internal_error(&msg).to_rpc_error()
-	})?;
+	let perp_asset_id = get_perp_asset_id(collateral_ticker, &perp_meta)
+		.map_err_internal("Failed to get perp asset ID")?;
 
-	let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
-		let msg = format!("Perp asset {} not found in meta", perp_asset_id);
-		error!(msg);
-		DetailedError::internal_error(&msg).to_rpc_error()
-	})?;
+	let perp_asset = perp_meta
+		.universe
+		.get(perp_asset_id as usize)
+		.ok_or_internal("Perp asset not found in meta")?;
 
 	let perp_sz_decimals = perp_asset.sz_decimals;
 
@@ -424,11 +392,7 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 	let order_status = hypercore_client
 		.get_order_status(smart_wallet, &hedge_open_cloid.to_string())
 		.await
-		.map_err(|e| {
-			let msg = format!("Failed to get order status for cloid {}: {}", hedge_open_cloid, e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.map_err_internal("Failed to get order status")?;
 
 	let mut position_data: Option<(f64, f64, f64, f64, f64)> = None;
 
@@ -580,11 +544,8 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 
 		// For closing long position (selling), we want to sell at the highest buy price (bid)
 		let (perp_bid_price, _) = get_bid_ask_prices(perp_mark_price, perp_mid_price);
-		validate_notional_value(perp_bid_price, clamped_size_f64, "Perp close").map_err(|e| {
-			let msg = format!("Notional value too low: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		validate_notional_value(perp_bid_price, clamped_size_f64, "Perp close")
+			.map_err_internal("Notional value too low")?;
 	}
 
 	info!("✓ Close position precheck passed");
@@ -609,12 +570,10 @@ async fn precheck_move_to_spot(
 ) -> RpcResult<MoveToSpotContext> {
 	let initial_margin = usdc_sold - usdc_loaned;
 
-	let perp_state =
-		hypercore_client.get_perp_clearinghouse_state(smart_wallet).await.map_err(|e| {
-			let msg = format!("Failed to get perp state: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+	let perp_state = hypercore_client
+		.get_perp_clearinghouse_state(smart_wallet)
+		.await
+		.map_err_internal("Failed to get perp state")?;
 
 	let withdrawable_usdc: f64 = parse_as(&perp_state.withdrawable, "withdrawable_usdc")?;
 
@@ -664,28 +623,19 @@ async fn precheck_buy_spot(
 	collateral_ticker: &str,
 	collateral_size: f64,
 ) -> RpcResult<BuySpotContext> {
-	let (spot_meta, spot_mark_price, spot_mid_price) =
-		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
-			let msg = format!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+	let (spot_meta, spot_mark_price, spot_mid_price) = hypercore_client
+		.get_spot_market_prices(collateral_ticker)
+		.await
+		.map_err_internal("Failed to get spot market prices")?;
 
-	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
-		let msg = format!("Failed to get spot asset ID: {}", e);
-		error!(msg);
-		DetailedError::internal_error(&msg).to_rpc_error()
-	})?;
+	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta)
+		.map_err_internal("Failed to get spot asset id")?;
 
 	let spot_token = spot_meta
 		.tokens
 		.iter()
 		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
-		.ok_or_else(|| {
-			let msg = format!("Token {} not found in spot meta", collateral_ticker);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.ok_or_internal("Token not found in spot meta")?;
 
 	let spot_sz_decimals = spot_token.sz_decimals;
 
@@ -695,11 +645,8 @@ async fn precheck_buy_spot(
 
 	// For buying, we want to buy at the lowest sell price (ask)
 	let (_, spot_ask_price) = get_bid_ask_prices(spot_mark_price, spot_mid_price);
-	validate_notional_value(spot_ask_price, clamped_size_f64, "Spot buy").map_err(|e| {
-		let msg = format!("Notional value too low: {}", e);
-		error!(msg);
-		DetailedError::internal_error(&msg).to_rpc_error()
-	})?;
+	validate_notional_value(spot_ask_price, clamped_size_f64, "Spot buy")
+		.map_err_internal("Notional value too low")?;
 
 	info!("✓ Buy spot precheck passed");
 
@@ -748,11 +695,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 				OrderWaitCondition::Canceled,
 			)
 			.await
-			.map_err(|e| {
-				let msg = format!("Order cancel did not complete: {}", e);
-				error!(msg);
-				DetailedError::internal_error(&msg).to_rpc_error()
-			})?;
+			.map_err_internal("Order cancel did not complete")?;
 
 		if !order_canceled {
 			let msg = "Order cancel was rejected or expired";
@@ -829,11 +772,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 				OrderWaitCondition::Filled,
 			)
 			.await
-			.map_err(|e| {
-				let msg = format!("Hedge close order did not complete: {}", e);
-				error!(msg);
-				DetailedError::internal_error(&msg).to_rpc_error()
-			})?;
+			.map_err_internal("Hedge close order did not complete")?;
 
 		if !order_filled {
 			let msg = "Hedge close order was rejected or canceled";
@@ -879,25 +818,17 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		.hypercore_client
 		.get_spot_balance(exec_ctx.smart_wallet, "USDC")
 		.await
-		.map_err(|e| {
-			let msg = format!("Failed to get initial spot USDC balance: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.map_err_internal("Failed to get initial spot USDC balance")?;
 
 	let perp_state = exec_ctx
 		.hypercore_client
 		.get_perp_clearinghouse_state(exec_ctx.smart_wallet)
 		.await
-		.map_err(|e| {
-			let msg = format!("Failed to get perp state: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.map_err_internal("Failed to get perp state")?;
 
 	let withdrawable_usdc: f64 = parse_as(&perp_state.withdrawable, "withdrawable_usdc")?;
-
 	let final_amount = move_ctx.transfer_amount.min(withdrawable_usdc);
+
 	info!(
 		"Calculated transfer_amount={}, withdrawable_usdc={}, final_amount={}",
 		move_ctx.transfer_amount, withdrawable_usdc, final_amount
@@ -933,11 +864,7 @@ async fn do_move_to_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 			30,
 		)
 		.await
-		.map_err(|e| {
-			let msg = format!("USD transfer to spot failed: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.map_err_internal("USD transfer to spot failed")?;
 
 	info!("to_spot_move completed");
 
@@ -970,11 +897,7 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 		.hypercore_client
 		.get_spot_balance(exec_ctx.smart_wallet, "USDC")
 		.await
-		.map_err(|e| {
-			let msg = format!("Failed to get current spot USDC balance: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.map_err_internal("Failed to get current spot USDC balance")?;
 
 	info!("Current spot USDC balance: {} USDC", current_spot_usdc);
 
@@ -1041,11 +964,7 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 			OrderWaitCondition::Filled,
 		)
 		.await
-		.map_err(|e| {
-			let msg = format!("Spot buy order did not complete: {}", e);
-			error!(msg);
-			DetailedError::internal_error(&msg).to_rpc_error()
-		})?;
+		.map_err_internal("Spot buy order did not complete")?;
 
 	if !buy_order_filled {
 		let msg = "Spot buy order was rejected or canceled";

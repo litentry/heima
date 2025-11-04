@@ -1,6 +1,6 @@
 use crate::{
 	detailed_error::DetailedError, error_code::AUTH_VERIFICATION_FAILED_CODE, server::RpcContext,
-	utils::validation::parse_rpc_params, Deserialize, RpcResult,
+	utils::types::RpcResultExt, utils::validation::parse_rpc_params, Deserialize, RpcResult,
 };
 use alloy::primitives::keccak256;
 use executor_core::intent_executor::IntentExecutor;
@@ -92,23 +92,16 @@ fn verify_signature(
 		.with_suggestion("This may be a replay attack. Use a fresh timestamp.")
 		.to_rpc_error());
 	}
-	let signature_bytes = decode_hex(signature).map_err(|e| {
-		let msg = format!("Failed to decode signature: {:?}", e);
-		error!(msg);
-		DetailedError::parse_error(&msg).to_rpc_error()
-	})?;
-
+	let signature_bytes = decode_hex(signature).map_err_parse("Failed to decode signature")?;
 	if signature_bytes.len() != 65 {
 		let msg = format!("Invalid signature length, expected 65, got {}", signature_bytes.len());
 		error!(msg);
 		return Err(DetailedError::parse_error(&msg).to_rpc_error());
 	}
 
-	let signature_array: [u8; 65] = signature_bytes.try_into().map_err(|_| {
-		let msg = "Failed to convert signature bytes to array".to_string();
-		error!(msg);
-		DetailedError::parse_error(&msg).to_rpc_error()
-	})?;
+	let signature_array: [u8; 65] = signature_bytes
+		.try_into()
+		.map_err_parse("Failed to convert signature bytes to array")?;
 
 	let timestamp_bytes = timestamp.to_string();
 	let challenge_hash = keccak256(timestamp_bytes.as_bytes());
@@ -157,27 +150,16 @@ pub fn register_export_bundler_private_key<
 				params.timestamp
 			);
 
-			let key_bytes = decode_hex(&params.key).map_err(|e| {
-				let msg = format!("Failed to decode key hex: {:?}", e);
-				error!(msg);
-				DetailedError::parse_error(&msg).to_rpc_error()
-			})?;
+			let key_bytes = decode_hex(&params.key).map_err_parse("Failed to decode key hex")?;
 
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &key_bytes)
-				.map_err(|e| {
-					let msg = format!("Failed to decrypt shielded value: {:?}", e);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?;
+				.map_err_internal("Failed to decrypt shielded value")?;
 
-			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				let msg = "Failed to convert AesKey".to_string();
-				error!(msg);
-				DetailedError::internal_error(&msg).to_rpc_error()
-			})?;
+			let aes_key: Aes256Key =
+				aes_key.try_into().map_err_internal("Failed to convert AesKey")?;
 
 			verify_signature(
 				params.timestamp,

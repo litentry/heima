@@ -4,6 +4,7 @@ use crate::server::RpcContext;
 use crate::utils::auth::{
 	verify_payload_timestamp, verify_wildmeta_backend_signature, verify_wildmeta_signature,
 };
+use crate::utils::types::RpcResultExt;
 use crate::utils::user_op::submit_user_ops;
 use crate::utils::validation::{
 	parse_rpc_params, validate_chain_id, validate_user_operations, validate_wallet_index,
@@ -267,12 +268,8 @@ fn validate_hyperevm_core_writer(call_data: &str, chain_id: ChainId) -> RpcResul
 /// Extract target addresses and inner calldata from OmniAccount execute() or executeBatch() calldata
 fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Address, String)>> {
 	// Parse calldata - should be OmniAccount.execute() or executeBatch()
-	let call_bytes =
-		hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data)).map_err(|e| {
-			let msg = format!("Failded to decode call_data: {}", e);
-			error!(msg);
-			DetailedError::parse_error(&msg).to_rpc_error()
-		})?;
+	let call_bytes = hex::decode(call_data.strip_prefix("0x").unwrap_or(call_data))
+		.map_err_parse("Failded to decode call_data")?;
 
 	if call_bytes.len() < 4 {
 		return Err(DetailedError::new(
@@ -578,11 +575,7 @@ pub fn register_submit_user_op_with_auth<
 					verify_wildmeta_signature_wrapper(agent_address, business_json, signature)?;
 
 					let business_data: serde_json::Value = serde_json::from_str(business_json)
-						.map_err(|e| {
-							let msg = format!("Failed to parse business_json: {:?}", e);
-							error!(msg);
-							DetailedError::parse_error(&msg).to_rpc_error()
-						})?;
+						.map_err_internal("Failed to parse business_json")?;
 
 					let timestamp = business_data
 						.get("timestamp")
@@ -688,11 +681,7 @@ pub fn register_submit_user_op_with_auth<
 				},
 			};
 
-			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-				let msg = format!("Failed to convert user_id to identity: {:?}", e);
-				error!(msg);
-				DetailedError::parse_error(&msg).to_rpc_error()
-			})?;
+			let identity = Identity::try_from(params.user_id.clone()).map_err_parse("Failed to convert user_id to identity")?;
 
 			// Only validate main_address if it's provided (not None)
 			if let Some(main_addr) = &main_address {
@@ -714,7 +703,7 @@ pub fn register_submit_user_op_with_auth<
 					},
 					_ => {
 						let omni_account = identity.to_omni_account(&params.client_id);
-						let derived_pubkey = ctx
+						let derived_address = ctx
 							.signer_client
 							.request_wallet(
 								ChainType::Evm,
@@ -724,13 +713,9 @@ pub fn register_submit_user_op_with_auth<
 							.await
 							.map_err(|_| {
 								DetailedError::signer_service_error().to_rpc_error()
-							})?;
-						let derived_address = pubkey_to_address(ChainType::Evm, &derived_pubkey)
-							.map_err(|_| {
-								let msg = "Failed to convert pubkey to address";
-								error!(msg);
-								DetailedError::internal_error(msg).to_rpc_error()
-							})?;
+							})
+							.and_then(|pk| pubkey_to_address(ChainType::Evm, &pk).map_err_internal("Failed to convert pubkey to address"))?;
+
 						if derived_address.to_lowercase() != main_addr.to_lowercase() {
 							error!("Main address does not match derived EVM address");
 							return Err(DetailedError::new(

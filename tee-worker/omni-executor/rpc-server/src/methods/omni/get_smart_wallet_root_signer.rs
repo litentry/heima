@@ -1,13 +1,13 @@
 use crate::{
 	detailed_error::DetailedError, server::RpcContext, utils::omni::to_omni_account,
-	utils::validation::parse_rpc_params,
+	utils::types::RpcResultExt, utils::validation::parse_rpc_params,
 };
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use pumpx::pubkey_to_address;
 use serde::Deserialize;
 use signer_client::ChainType;
-use tracing::{debug, error};
+use tracing::debug;
 
 // used in rpc with backend only
 #[derive(Debug, Copy, Deserialize, Clone, PartialEq)]
@@ -48,17 +48,15 @@ pub fn register_get_smart_wallet_root_signer<
 
 			let omni_account = to_omni_account(&params.omni_account)?;
 
-			let pubkey = ctx
+			let address = ctx
 				.signer_client
 				.request_wallet(params.chain_type.into(), params.wallet_index, omni_account.into())
 				.await
-				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
-
-			let address = pubkey_to_address(params.chain_type.into(), &pubkey).map_err(|_| {
-				let msg = "Failed to convert pubkey to address";
-				error!(msg);
-				DetailedError::internal_error(msg).to_rpc_error()
-			})?;
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())
+				.and_then(|pk| {
+					pubkey_to_address(params.chain_type.into(), &pk)
+						.map_err_internal("Failed to convert pubkey to address")
+				})?;
 
 			Ok::<String, ErrorObjectOwned>(address)
 		})

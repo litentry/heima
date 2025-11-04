@@ -1,6 +1,6 @@
 use crate::{
 	detailed_error::DetailedError, server::RpcContext, utils::omni::extract_omni_account,
-	utils::validation::parse_rpc_params, Deserialize,
+	utils::types::RpcResultExt, utils::validation::parse_rpc_params, Deserialize,
 };
 use ::pumpx::signer_client::PumpxChainId as _;
 use ethers::types::Bytes;
@@ -39,17 +39,10 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				.shielding_key
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
-				.map_err(|e| {
-					let msg = format!("Failed to decrypt shielded value: {:?}", e);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?;
+				.map_err_internal("Failed to decrypt shielded value")?;
 
-			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				let msg = "Failed to convert AesKey".to_string();
-				error!(msg);
-				DetailedError::internal_error(&msg).to_rpc_error()
-			})?;
+			let aes_key: Aes256Key =
+				aes_key.try_into().map_err_internal("Failed to convert AesKey")?;
 
 			// Inlined handler logic from handle_pumpx_export_wallet
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
@@ -102,11 +95,8 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				.await
 				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
 
-			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
-				let msg = "Failed to decrypt wallet";
-				error!(msg);
-				return Err(DetailedError::internal_error(msg).to_rpc_error());
-			};
+			let decrypted_wallet = aes_decrypt(&ctx.aes256_key, &mut wallet)
+				.ok_or(DetailedError::internal_error("Failed to decrypt wallet").to_rpc_error())?;
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
 			if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account) {

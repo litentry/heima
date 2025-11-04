@@ -1,7 +1,12 @@
 use super::check_backend_response;
 use crate::{
-	detailed_error::DetailedError, error_code::*, server::RpcContext,
-	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize,
+	detailed_error::DetailedError,
+	error_code::*,
+	server::RpcContext,
+	utils::types::{RpcOptionExt, RpcResultExt},
+	utils::validation::parse_rpc_params,
+	verify_auth::verify_auth,
+	Deserialize,
 };
 use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
@@ -85,11 +90,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			)?;
 			debug!("Response pumpx get_account_user_id: {:?}", res);
 
-			let Some(user_id) = res.data.user_id else {
-				let msg = "Empty data.user_id".to_string();
-				error!(msg);
-				return Err(DetailedError::internal_error(&msg).to_rpc_error());
-			};
+			let user_id = res.data.user_id.ok_or_internal("Empty data.user_id")?;
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", params.user_email, user_id);
 			let omni_account = Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx)
@@ -102,11 +103,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				auth_options.clone(),
 			);
 			let access_token = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
-				.map_err(|e| {
-					let msg = format!("Failed to create access token: {:?}", e);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?;
+				.map_err_internal("Failed to create access token")?;
 
 			debug!(
 				"Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}",
@@ -144,12 +141,8 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				params.client_id.to_string(),
 				auth_options,
 			);
-			let id_token =
-				jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key).map_err(|e| {
-					let msg = format!("Failed to create id token: {:?}", e);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?;
+			let id_token = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key)
+				.map_err_internal("Failed to create id token")?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			if let Err(e) = storage

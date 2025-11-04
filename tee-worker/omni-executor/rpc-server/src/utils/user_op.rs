@@ -20,6 +20,7 @@ use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
 	process_erc20_paymaster_data,
 };
+use crate::utils::types::RpcResultExt;
 use crate::RpcResult;
 use aa_contracts_client::calculate_user_operation_hash;
 use alloy::primitives::{hex, Address, Bytes, FixedBytes, U256};
@@ -180,12 +181,10 @@ pub(crate) async fn submit_corewriter_user_ops<
 		)
 	} else {
 		info!("Calculating gas fees");
-		let (max_fee_per_gas, max_priority_fee_per_gas) =
-			entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
-				let msg = format!("Failed to calculate gas fees: {:?}", e);
-				error!(msg);
-				DetailedError::internal_error(&msg).to_rpc_error()
-			})?;
+		let (max_fee_per_gas, max_priority_fee_per_gas) = entry_point_client
+			.calculate_gas_fees_with_buffer(20)
+			.await
+			.map_err_internal("Failed to calculate gas fees")?;
 		(
 			pack_gas_fees(max_fee_per_gas.to::<u128>(), max_priority_fee_per_gas.to::<u128>()),
 			format!("0x{}", hex::encode(pack_account_gas_limits(1_000_000, 2_000_000).as_slice())),
@@ -342,11 +341,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
 
 			let signature = substrate_to_ethereum_signature(&sig)
-				.map_err(|e| {
-					let msg = format!("Failed to convert signature: {}", e);
-					error!(msg);
-					DetailedError::internal_error(&msg).to_rpc_error()
-				})?
+				.map_err_internal("Failed to convert signature")?
 				.to_vec();
 
 			// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
@@ -386,11 +381,10 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 	}
 
 	// Get beneficiary address from the EntryPoint client's wallet
-	let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
-		let msg = "Failed to get wallet address from EntryPoint client";
-		error!(msg);
-		DetailedError::internal_error(msg).to_rpc_error()
-	})?;
+	let beneficiary = entry_point_client
+		.get_wallet_address()
+		.await
+		.map_err_internal("Failed to get wallet address from EntryPoint client")?;
 
 	// Run batch simulation for all UserOperations before submission
 	info!("Running batch simulation for {} UserOps", user_ops.len());
@@ -417,17 +411,10 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 
 	// Submit all UserOperations via EntryPoint.handleOps() with retry logic
 	let transaction_hash =
-		match entry_point_client.handle_ops_with_retry(&user_ops, beneficiary).await {
-			Ok(tx_hash) => {
-				// Return the actual transaction hash from handle_ops
-				Some(tx_hash)
-			},
-			Err(_) => {
-				let msg = "Failed to submit UserOps to EntryPoint after retries";
-				error!(msg);
-				return Err(DetailedError::internal_error(msg).to_rpc_error());
-			},
-		};
+		entry_point_client
+			.handle_ops_with_retry(&user_ops, beneficiary)
+			.await
+			.map_err_internal("Failed to submit UserOps to EntryPoint after retries")?;
 
-	Ok(transaction_hash)
+	Ok(Some(transaction_hash))
 }

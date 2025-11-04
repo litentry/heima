@@ -1,7 +1,10 @@
 use crate::{
-	detailed_error::DetailedError, error_code::AUTH_VERIFICATION_FAILED_CODE, server::RpcContext,
-	utils::validation::parse_rpc_params, verify_auth::verify_oauth2_authentication, Deserialize,
-	Serialize,
+	detailed_error::DetailedError,
+	error_code::AUTH_VERIFICATION_FAILED_CODE,
+	server::RpcContext,
+	utils::{types::RpcResultExt, validation::parse_rpc_params},
+	verify_auth::verify_oauth2_authentication,
+	Deserialize, Serialize,
 };
 use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
@@ -107,20 +110,12 @@ pub fn register_login_with_oauth2<
 				&params.client_id,
 				&ctx.jwt_rsa_private_key,
 			)
-			.map_err(|_| {
-				let msg = "Failed to create access token for user";
-				error!(msg);
-				DetailedError::internal_error(msg).to_rpc_error()
-			})?;
+			.map_err_internal("Failed to create access token for user")?;
 
 			let user_id = match &verified_identity {
 				Identity::Google(identity_string) | Identity::Apple(identity_string) => {
 					std::str::from_utf8(identity_string.inner_ref())
-						.map_err(|_| {
-							let msg = "Failed to convert identity to string";
-							error!(msg);
-							DetailedError::internal_error(msg).to_rpc_error()
-						})?
+						.map_err_internal("Failed to convert identity to string")?
 						.to_string()
 				},
 				_ => {
