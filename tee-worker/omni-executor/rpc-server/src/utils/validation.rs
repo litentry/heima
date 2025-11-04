@@ -52,74 +52,30 @@ pub fn validate_chain_id(chain_id: u32) -> RpcResult<()> {
 
 pub fn validate_wallet_index(index: u32) -> RpcResult<()> {
 	if index > MAX_WALLET_INDEX {
-		return Err(DetailedError::invalid_wallet_index(index, MAX_WALLET_INDEX).to_rpc_error());
+		return Err(DetailedError::invalid_params(
+			"wallet_index",
+			&format!("exceed {}", MAX_WALLET_INDEX),
+		)
+		.to_rpc_error());
 	}
 	Ok(())
 }
 
-pub fn validate_ethereum_address(address: &str, field_name: &str) -> RpcResult<Address> {
+pub fn validate_evm_address(address: &str, field: &str) -> RpcResult<Address> {
 	Address::from_str(address).map_err(|e| {
-		DetailedError::invalid_address_format(
-			field_name,
-			address,
-			"0x-prefixed 20-byte Ethereum address (40 hex chars)",
-		)
-		.with_reason(format!("Parse error: {}", e))
-		.to_rpc_error()
+		DetailedError::invalid_params(field, &format!("invalid evm address: {:?}", e))
+			.to_rpc_error()
 	})
 }
 
-pub fn validate_amount(amount_str: &str, field_name: &str) -> RpcResult<u128> {
-	// Check if empty
-	if amount_str.is_empty() {
-		return Err(DetailedError::invalid_amount(
-			field_name,
-			amount_str,
-			"Amount cannot be empty",
-		)
-		.to_rpc_error());
-	}
+pub fn validate_amount(amount: &str, field: &str) -> RpcResult<u128> {
+	let amount = parse_as::<u128>(amount, field)?;
 
-	// Parse as u128
-	let amount = amount_str.parse::<u128>().map_err(|e| {
-		DetailedError::invalid_amount(
-			field_name,
-			amount_str,
-			&format!("Failed to parse amount: {}", e),
-		)
-		.to_rpc_error()
-	})?;
-
-	// Check if zero
 	if amount == 0 {
-		return Err(DetailedError::invalid_amount(
-			field_name,
-			amount_str,
-			"Amount must be greater than zero",
-		)
-		.to_rpc_error());
+		return Err(DetailedError::invalid_params(field, "expect non-zero").to_rpc_error());
 	}
 
 	Ok(amount)
-}
-
-pub fn validate_token_address(address: &str, field_name: &str) -> RpcResult<Address> {
-	// For native token transfers, address might be "0x0" or similar
-	if address == "0x0" || address == "0x0000000000000000000000000000000000000000" {
-		return Ok(Address::ZERO);
-	}
-
-	validate_ethereum_address(address, field_name).map_err(|_e| {
-		DetailedError::new(
-			crate::error_code::INVALID_TOKEN_ADDRESS_CODE,
-			"Invalid token contract address",
-		)
-		.with_field(field_name)
-		.with_received(address.to_string())
-		.with_expected("Valid ERC20 token contract address or 0x0 for native token")
-		.with_suggestion("Ensure the token address is correct for the selected chain")
-		.to_rpc_error()
-	})
 }
 
 pub fn validate_email(email: &str) -> RpcResult<()> {
@@ -170,7 +126,7 @@ pub fn validate_user_operations(
 
 	// Validate each operation's sender address
 	for (index, op) in operations.iter().enumerate() {
-		validate_ethereum_address(&op.sender, &format!("user_operations[{}].sender", index))?;
+		validate_evm_address(&op.sender, &format!("user_operations[{}].sender", index))?;
 	}
 
 	Ok(())
@@ -222,7 +178,7 @@ mod tests {
 	}
 
 	#[test]
-	fn test_validate_ethereum_address_valid() {
+	fn test_validate_evm_address_valid() {
 		let addresses = vec![
 			"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9",
 			"0x0000000000000000000000000000000000000000",
@@ -230,12 +186,12 @@ mod tests {
 		];
 
 		for addr in addresses {
-			assert!(validate_ethereum_address(addr, "test").is_ok());
+			assert!(validate_evm_address(addr, "test").is_ok());
 		}
 	}
 
 	#[test]
-	fn test_validate_ethereum_address_invalid() {
+	fn test_validate_evm_address_invalid() {
 		let invalid_addresses = vec![
 			"not_an_address",
 			"0x",
@@ -244,7 +200,7 @@ mod tests {
 		];
 
 		for addr in invalid_addresses {
-			assert!(validate_ethereum_address(addr, "test").is_err());
+			assert!(validate_evm_address(addr, "test").is_err());
 		}
 	}
 
@@ -260,22 +216,6 @@ mod tests {
 		assert!(validate_amount("0", "test").is_err()); // Zero
 		assert!(validate_amount("abc", "test").is_err()); // Non-numeric
 		assert!(validate_amount("-100", "test").is_err()); // Negative
-	}
-
-	#[test]
-	fn test_validate_token_address_native() {
-		// Native token addresses
-		assert_eq!(validate_token_address("0x0", "test").unwrap(), Address::ZERO);
-		assert_eq!(
-			validate_token_address("0x0000000000000000000000000000000000000000", "test").unwrap(),
-			Address::ZERO
-		);
-	}
-
-	#[test]
-	fn test_validate_token_address_erc20() {
-		let erc20_addr = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9";
-		assert!(validate_token_address(erc20_addr, "test").is_ok());
 	}
 
 	#[test]

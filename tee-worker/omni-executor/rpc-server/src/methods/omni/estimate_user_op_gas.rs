@@ -19,7 +19,7 @@ use crate::server::RpcContext;
 use crate::utils::gas_estimation::estimate_user_op_gas;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::convert_to_packed_user_op;
-use crate::utils::validation::{parse_rpc_params, validate_ethereum_address};
+use crate::utils::validation::{parse_rpc_params, validate_evm_address};
 use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -97,7 +97,7 @@ pub fn register_estimate_user_op_gas<
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
 			let omni_account = to_omni_account(&params.omni_account)?;
-			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")?;
+			validate_evm_address(&params.user_operation.sender, "user_operation.sender")?;
 
 			// Inlined handler logic from handle_estimate_user_op_gas
 			info!(

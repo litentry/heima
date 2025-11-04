@@ -753,19 +753,6 @@ pub fn register_submit_user_op_with_auth<
 
 			let account_id = identity.to_omni_account(&params.client_id);
 
-			// Validate each operation's sender address (already done by validate_user_operations)
-			// Additional validation for address format if needed
-			for (index, op) in params.user_operations.iter().enumerate() {
-				op.sender.parse::<Address>().map_err(|e| {
-					error!("Invalid sender address '{}': {}", op.sender, e);
-					DetailedError::invalid_address_format(
-							&format!("user_operations[{}].sender", index),
-							&op.sender,
-							"0x-prefixed 20-byte Ethereum address (40 hex chars)",
-						).to_rpc_error()
-				})?;
-			}
-
 			// Call the common submission logic
 			let transaction_hash = submit_user_ops(
 				&ctx,

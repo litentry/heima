@@ -3,7 +3,7 @@ use crate::error_code::INTERNAL_ERROR_CODE;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_user_ops;
-use crate::utils::validation::{parse_as, parse_rpc_params, validate_ethereum_address};
+use crate::utils::validation::{parse_as, parse_rpc_params, validate_evm_address};
 use crate::RpcResult;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -305,7 +305,7 @@ pub fn register_request_loan_test<
 fn precheck_params(params: &RequestLoanTestParams) -> RpcResult<(AccountId, String, f64, f64)> {
 	let omni_account = to_omni_account(&params.omni_account)?;
 
-	validate_ethereum_address(&params.user_operation.sender, "sender")?;
+	validate_evm_address(&params.user_operation.sender, "sender")?;
 
 	if params.collateral_ticker.is_empty() {
 		return Err(DetailedError::parse_error("Empty collateral_ticker").to_rpc_error());

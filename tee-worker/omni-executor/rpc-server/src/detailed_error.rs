@@ -1,7 +1,6 @@
 use crate::error_code::{
-	EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE, INVALID_ADDRESS_FORMAT_CODE,
-	INVALID_AMOUNT_CODE, INVALID_BACKEND_RESPONSE_CODE, INVALID_CHAIN_ID_CODE, INVALID_USEROP_CODE,
-	INVALID_WALLET_INDEX_CODE, PUMPX_SERVICE_ERROR_CODE, SIGNER_SERVICE_ERROR_CODE,
+	EMAIL_SERVICE_ERROR_CODE, GAS_ESTIMATION_FAILED_CODE, INVALID_BACKEND_RESPONSE_CODE,
+	INVALID_USEROP_CODE, PUMPX_SERVICE_ERROR_CODE, SIGNER_SERVICE_ERROR_CODE,
 	STORAGE_SERVICE_ERROR_CODE, WILDMETA_SERVICE_ERROR_CODE,
 };
 use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
@@ -114,35 +113,10 @@ impl DetailedError {
 	pub fn invalid_chain_id(chain_id: u64) -> Self {
 		let supported: Vec<u64> =
 			crate::config::SUPPORTED_EVM_CHAINS.iter().map(|&c| c as u64).collect();
-
-		Self::new(INVALID_CHAIN_ID_CODE, "Chain not supported")
-			.with_field("chain_id")
-			.with_received(chain_id.to_string())
-			.with_expected(format!("One of: {:?}", supported))
-	}
-
-	pub fn invalid_wallet_index(index: u32, max_index: u32) -> Self {
-		Self::new(INVALID_WALLET_INDEX_CODE, "Wallet index out of bounds")
-			.with_field("wallet_index")
-			.with_received(index.to_string())
-			.with_expected(format!("0 to {}", max_index))
-			.with_suggestion(format!("Use a wallet index between 0 and {}", max_index))
-	}
-
-	pub fn invalid_address_format(field: &str, address: &str, expected_format: &str) -> Self {
-		Self::new(INVALID_ADDRESS_FORMAT_CODE, "Invalid address format")
-			.with_field(field)
-			.with_received(address.to_string())
-			.with_expected(expected_format)
-			.with_suggestion("Ensure the address follows the correct format")
-	}
-
-	pub fn invalid_amount(field: &str, amount: &str, reason: &str) -> Self {
-		Self::new(INVALID_AMOUNT_CODE, "Invalid amount value")
-			.with_field(field)
-			.with_received(amount.to_string())
-			.with_expected("Positive number within valid range")
-			.with_suggestion(reason)
+		Self::invalid_params(
+			"chain_id",
+			&format!("invalid chain_id: {}, expected one of {:?}", chain_id, supported),
+		)
 	}
 
 	pub fn signer_service_error() -> Self {

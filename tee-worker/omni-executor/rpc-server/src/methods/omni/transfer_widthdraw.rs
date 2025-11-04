@@ -5,8 +5,8 @@ use crate::{
 	utils::omni::extract_omni_account,
 	utils::pumpx::verify_google_code,
 	utils::validation::{
-		parse_rpc_params, validate_amount, validate_chain_id, validate_ethereum_address,
-		validate_token_address, validate_wallet_index,
+		parse_rpc_params, validate_amount, validate_chain_id, validate_evm_address,
+		validate_wallet_index,
 	},
 	Deserialize,
 };
@@ -50,8 +50,8 @@ pub fn register_transfer_withdraw<
 
 			validate_chain_id(params.chain_id)?;
 			validate_wallet_index(params.wallet_index)?;
-			validate_ethereum_address(&params.recipient_address, "recipient_address")?;
-			validate_token_address(&params.token_ca, "token_ca")?;
+			validate_evm_address(&params.recipient_address, "recipient_address")?;
+			validate_evm_address(&params.token_ca, "token_ca")?;
 			validate_amount(&params.amount, "amount")?;
 
 			// Inline handle_pumpx_transfer_withdraw logic
