@@ -69,7 +69,7 @@ contract OmniAccountV2AsEntryPoint is Test {
         bytes memory callData = abi.encodeWithSignature("increment()");
 
         vm.prank(address(entryPoint));
-        bytes memory returnData = account.executeModuleCall(address(module), callData);
+        account.executeModuleCall(address(module), callData);
 
         // Module executed successfully (delegatecall modifies account's storage, not module's)
         // We verify success by checking that no revert occurred
