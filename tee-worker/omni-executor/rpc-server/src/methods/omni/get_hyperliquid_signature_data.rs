@@ -193,14 +193,8 @@ pub fn register_get_hyperliquid_signature_data<
 							.and_then(|v| v.as_u64())
 							.ok_or_else(|| {
 								error!("Missing timestamp in business_json");
-								DetailedError::new(
-									MISSING_REQUIRED_FIELD_CODE,
-									"Missing required field in business JSON",
-								)
-								.with_field("timestamp")
-								.with_expected("Unix timestamp as number")
-								.with_reason("Business JSON must contain a 'timestamp' field")
-								.to_rpc_error()
+								DetailedError::invalid_params("business_json", "missing timestamp")
+									.to_rpc_error()
 							})?;
 
 						verify_payload_timestamp(
@@ -239,12 +233,10 @@ pub fn register_get_hyperliquid_signature_data<
 				}
 			} else {
 				error!("Either user_auth or client_auth must be provided");
-				return Err(DetailedError::new(
-					MISSING_REQUIRED_FIELD_CODE,
-					"Missing authentication data",
+				return Err(DetailedError::invalid_params(
+					"auth",
+					"expect either user_auth or client_auth",
 				)
-				.with_expected("Either user_auth or client_auth")
-				.with_suggestion("Provide either user_auth or client_auth for authentication")
 				.to_rpc_error());
 			};
 

@@ -589,13 +589,8 @@ pub fn register_submit_user_op_with_auth<
 						.and_then(|v| v.as_u64())
 						.ok_or_else(|| {
 							error!("Missing timestamp in business_json");
-							DetailedError::new(
-									crate::error_code::MISSING_REQUIRED_FIELD_CODE,
-									"Missing required field in business JSON",
-								)
-								.with_field("timestamp")
-								.with_expected("Unix timestamp as number")
-								.with_reason("Business JSON must contain a 'timestamp' field").to_rpc_error()
+							DetailedError::invalid_params("business_json", "missing timestamp")
+								.to_rpc_error()
 						})?;
 
 					verify_payload_timestamp_wrapper(
@@ -689,7 +684,7 @@ pub fn register_submit_user_op_with_auth<
 				_ => {
 					let msg = "Invalid client auth type";
 					error!(msg);
-					return Err(DetailedError::parse_error(&msg).to_rpc_error());
+					return Err(DetailedError::parse_error(msg).to_rpc_error());
 				},
 			};
 

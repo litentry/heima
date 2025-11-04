@@ -106,7 +106,7 @@ pub fn register_payback_loan_test<
 				.loan_record_storage
 				.get(&storage_key)
 				.map_err(|_| {
-					let msg = format!("Failed to retrieve loan record from storage");
+					let msg = "Failed to retrieve loan record from storage".to_string();
 					error!(msg);
 					DetailedError::internal_error(&msg).to_rpc_error()
 				})?
@@ -145,7 +145,7 @@ pub fn register_payback_loan_test<
 						.find(|(name, _)| name == "hedge_open")
 						.map(|(_, cloid)| cloid.clone())
 						.ok_or_else(|| {
-							let msg = format!("hedge_open cloid not found in loan record");
+							let msg = "hedge_open cloid not found in loan record".to_string();
 							error!(msg);
 							DetailedError::internal_error(&msg).to_rpc_error()
 						})?;
@@ -252,7 +252,7 @@ pub fn register_payback_loan_test<
 					})
 				},
 				LoanState::SpotBought => {
-					let msg = format!("Payback already completed");
+					let msg = "Payback already completed".to_string();
 					error!(msg);
 					Err(DetailedError::internal_error(&msg).to_rpc_error())
 				},
@@ -757,7 +757,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 		if !order_canceled {
 			let msg = "Order cancel was rejected or expired";
 			error!(msg);
-			return Err(DetailedError::internal_error(&msg).to_rpc_error());
+			return Err(DetailedError::internal_error(msg).to_rpc_error());
 		}
 
 		info!("Order canceled successfully");
@@ -838,7 +838,7 @@ async fn do_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync +
 		if !order_filled {
 			let msg = "Hedge close order was rejected or canceled";
 			error!(msg);
-			return Err(DetailedError::internal_error(&msg).to_rpc_error());
+			return Err(DetailedError::internal_error(msg).to_rpc_error());
 		}
 
 		info!("Hedge position closed successfully");
@@ -1050,7 +1050,7 @@ async fn do_buy_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	if !buy_order_filled {
 		let msg = "Spot buy order was rejected or canceled";
 		error!(msg);
-		return Err(DetailedError::internal_error(&msg).to_rpc_error());
+		return Err(DetailedError::internal_error(msg).to_rpc_error());
 	}
 
 	info!("Spot buy order filled successfully");

@@ -1,6 +1,6 @@
 use crate::{
-	detailed_error::DetailedError, error_code::*, server::RpcContext,
-	utils::omni::extract_omni_account, utils::validation::parse_rpc_params, Deserialize,
+	detailed_error::DetailedError, server::RpcContext, utils::omni::extract_omni_account,
+	utils::validation::parse_rpc_params, Deserialize,
 };
 use ::pumpx::signer_client::PumpxChainId as _;
 use ethers::types::Bytes;
@@ -40,23 +40,15 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
 				.map_err(|e| {
-					error!("Failed to decrypt shielded value: {:?}", e);
-					DetailedError::new(
-						DECRYPT_REQUEST_FAILED_CODE,
-						"Shielded value decryption failed",
-					)
-					.with_field("key")
-					.with_reason("The provided RSA-encrypted AES key could not be decrypted")
-					.with_suggestion("Ensure the RSA public key matches the encryption key")
-					.to_rpc_error()
+					let msg = format!("Failed to decrypt shielded value: {:?}", e);
+					error!(msg);
+					DetailedError::internal_error(&msg).to_rpc_error()
 				})?;
+
 			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				error!("Failed to convert AesKey");
-				DetailedError::new(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed")
-					.with_field("key")
-					.with_reason("The decrypted key is not a valid 256-bit AES key")
-					.with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)")
-					.to_rpc_error()
+				let msg = "Failed to convert AesKey".to_string();
+				error!(msg);
+				DetailedError::internal_error(&msg).to_rpc_error()
 			})?;
 
 			// Inlined handler logic from handle_pumpx_export_wallet
@@ -113,7 +105,7 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 			let Some(decrypted_wallet) = aes_decrypt(&ctx.aes256_key, &mut wallet) else {
 				let msg = "Failed to decrypt wallet";
 				error!(msg);
-				return Err(DetailedError::internal_error(&msg).to_rpc_error());
+				return Err(DetailedError::internal_error(msg).to_rpc_error());
 			};
 
 			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());

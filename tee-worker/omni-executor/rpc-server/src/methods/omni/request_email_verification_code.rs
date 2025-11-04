@@ -11,7 +11,7 @@ use heima_identity_verification::web2::email::{
 	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
 };
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use tracing::{error, info};
+use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestEmailVerificationCodeParams {
@@ -26,10 +26,9 @@ pub fn register_request_email_verification_code<
 ) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
+			debug!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, params: {:?}", params);
+
 			let params = parse_rpc_params::<RequestEmailVerificationCodeParams>(params)?;
-
-			info!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, client_id: {}, user_email: {}", params.client_id, params.user_email);
-
 			validate_email(&params.user_email)?;
 
 			let email_identity =

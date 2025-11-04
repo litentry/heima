@@ -15,7 +15,6 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::detailed_error::DetailedError;
-use crate::error_code::INTERNAL_ERROR_CODE;
 use crate::server::RpcContext;
 use crate::utils::paymaster::{
 	extract_paymaster_address, is_whitelisted_paymaster, parse_whitelisted_paymasters,
@@ -183,10 +182,9 @@ pub(crate) async fn submit_corewriter_user_ops<
 		info!("Calculating gas fees");
 		let (max_fee_per_gas, max_priority_fee_per_gas) =
 			entry_point_client.calculate_gas_fees_with_buffer(20).await.map_err(|e| {
-				error!("Failed to calculate gas fees: {:?}", e);
-				DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-					.with_reason("Failed to calculate gas fees")
-					.to_rpc_error()
+				let msg = format!("Failed to calculate gas fees: {:?}", e);
+				error!(msg);
+				DetailedError::internal_error(&msg).to_rpc_error()
 			})?;
 		(
 			pack_gas_fees(max_fee_per_gas.to::<u128>(), max_priority_fee_per_gas.to::<u128>()),
@@ -389,9 +387,9 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 
 	// Get beneficiary address from the EntryPoint client's wallet
 	let beneficiary = entry_point_client.get_wallet_address().await.map_err(|_| {
-		let err_msg = "Failed to get wallet address from EntryPoint client".to_string();
-		error!("{}", err_msg.clone());
-		DetailedError::new(INTERNAL_ERROR_CODE, err_msg).to_rpc_error()
+		let msg = "Failed to get wallet address from EntryPoint client";
+		error!(msg);
+		DetailedError::internal_error(msg).to_rpc_error()
 	})?;
 
 	// Run batch simulation for all UserOperations before submission
@@ -425,9 +423,9 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 				Some(tx_hash)
 			},
 			Err(_) => {
-				let err_msg = "Failed to submit UserOps to EntryPoint after retries".to_string();
-				error!("{}", err_msg.clone());
-				return Err(DetailedError::new(INTERNAL_ERROR_CODE, err_msg).to_rpc_error());
+				let msg = "Failed to submit UserOps to EntryPoint after retries";
+				error!(msg);
+				return Err(DetailedError::internal_error(msg).to_rpc_error());
 			},
 		};
 

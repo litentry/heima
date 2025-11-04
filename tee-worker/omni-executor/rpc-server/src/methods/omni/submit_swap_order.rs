@@ -1,7 +1,7 @@
 use crate::{
-	detailed_error::DetailedError, error_code::INTERNAL_ERROR_CODE,
-	methods::omni::check_backend_response, server::RpcContext, utils::omni::extract_omni_account,
-	utils::validation::parse_rpc_params, Decode, Deserialize, RpcResult,
+	detailed_error::DetailedError, methods::omni::check_backend_response, server::RpcContext,
+	utils::omni::extract_omni_account, utils::validation::parse_rpc_params, Decode, Deserialize,
+	RpcResult,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_storage::{HeimaJwtStorage, IntentIdStorage, Storage};
@@ -17,7 +17,7 @@ use pumpx::methods::common::{OrderInfoResponse, SwapType};
 use pumpx::methods::send_order_tx::SendOrderTxResponse;
 use pumpx::{constants::*, methods::get_user_trade_info::UserTradeInfoResponse};
 use serde::Serialize;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitSwapOrderParams {
@@ -129,7 +129,7 @@ pub fn register_submit_swap_order<
 
 			let from_amount = BoundedVec::try_from(params.from_amount.as_bytes().to_vec())
 				.map_err(|_| {
-					let msg = format!("Failed to convert from_amount to BoundedVec");
+					let msg = "Failed to convert from_amount to BoundedVec".to_string();
 					error!(msg);
 					DetailedError::parse_error(&msg).to_rpc_error()
 				})?;
@@ -212,10 +212,9 @@ pub fn register_submit_swap_order<
 				swap_order,
 				ccs_provider,
 				scs_provider.try_into().map_err(|_| {
-					error!("Failed to convert single chain swap provider");
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Failed to convert single chain swap provider")
-						.to_rpc_error()
+					let msg = "Failed to convert single chain swap provider";
+					error!(msg);
+					DetailedError::internal_error(msg).to_rpc_error()
 				})?,
 			);
 
@@ -257,10 +256,10 @@ pub fn register_submit_swap_order<
 				| Intent::CallEthereum(_)
 				| Intent::TransferEthereum(_)
 				| Intent::TransferSolana(_) => {
-					info!("Intent temporarily rejected, intent_id: {}", params.intent_id);
-					return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("This intent type is temporarily not supported")
-						.to_rpc_error());
+					let msg =
+						format!("Intent temporarily rejected, intent_id: {}", params.intent_id);
+					error!(msg);
+					return Err(DetailedError::internal_error(&msg).to_rpc_error());
 				},
 				Intent::Swap(..) => {
 					let response = match ctx
@@ -275,13 +274,9 @@ pub fn register_submit_swap_order<
 							None
 						},
 					};
-					if let Some(response) = response {
-						response
-					} else {
-						return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason("Intent execution failed")
-							.to_rpc_error());
-					}
+					response.ok_or(
+						DetailedError::internal_error("Intent execution failed").to_rpc_error(),
+					)?
 				},
 			};
 
@@ -289,10 +284,9 @@ pub fn register_submit_swap_order<
 			if params.order_type == PumpxOrderType::Market {
 				let market_order_response: SendOrderTxResponse =
 					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
-						error!("Failed to decode market order response: {:?}", e);
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to decode market order response: {:?}", e))
-							.to_rpc_error()
+						let msg = format!("Failed to decode market order response: {:?}", e);
+						error!(msg);
+						DetailedError::internal_error(&msg).to_rpc_error()
 					})?;
 				check_backend_response(&market_order_response, "market_order")?;
 				let response = PumpxSubmitSwapOrderResponse {
@@ -305,10 +299,9 @@ pub fn register_submit_swap_order<
 			} else {
 				let limit_order_response: OrderInfoResponse =
 					Decode::decode(&mut swap_response.as_slice()).map_err(|e| {
-						error!("Failed to decode limit order response: {:?}", e);
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to decode limit order response: {:?}", e))
-							.to_rpc_error()
+						let msg = format!("Failed to decode limit order response: {:?}", e);
+						error!(msg);
+						DetailedError::internal_error(&msg).to_rpc_error()
 					})?;
 				check_backend_response(&limit_order_response, "limit_order")?;
 				let response = PumpxSubmitSwapOrderResponse {

@@ -1,11 +1,7 @@
 use super::check_backend_response;
 use crate::{
-	detailed_error::DetailedError,
-	error_code::{INTERNAL_ERROR_CODE, *},
-	server::RpcContext,
-	utils::validation::parse_rpc_params,
-	verify_auth::verify_auth,
-	Deserialize,
+	detailed_error::DetailedError, error_code::*, server::RpcContext,
+	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize,
 };
 use chrono::{Days, Utc};
 use executor_core::intent_executor::IntentExecutor;
@@ -90,13 +86,9 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			debug!("Response pumpx get_account_user_id: {:?}", res);
 
 			let Some(user_id) = res.data.user_id else {
-				error!("Response data.user_id of call get_account_user_id is none");
-				return Err(DetailedError::new(
-					INTERNAL_ERROR_CODE,
-					"Failed to get account user ID",
-				)
-				.with_reason("User ID not found in response")
-				.to_rpc_error());
+				let msg = "Empty data.user_id".to_string();
+				error!(msg);
+				return Err(DetailedError::internal_error(&msg).to_rpc_error());
 			};
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", params.user_email, user_id);
@@ -111,9 +103,9 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			);
 			let access_token = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
 				.map_err(|e| {
-					error!("Failed to create access token: {:?}", e);
-					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create authentication token")
-						.to_rpc_error()
+					let msg = format!("Failed to create access token: {:?}", e);
+					error!(msg);
+					DetailedError::internal_error(&msg).to_rpc_error()
 				})?;
 
 			debug!(
@@ -133,8 +125,7 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 				.await
 				.map_err(|e| {
 					error!("Failed to connect user: {:?}", e);
-					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to connect user")
-						.with_suggestion("Please try again")
+					DetailedError::pumpx_service_error("user_connect", format!("{:?}", e))
 						.to_rpc_error()
 				})?;
 			debug!("Response pumpx user_connect: {:?}", backend_response);
@@ -155,29 +146,23 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			);
 			let id_token =
 				jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key).map_err(|e| {
-					error!("Failed to create id token: {:?}", e);
-					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to create authentication token")
-						.to_rpc_error()
+					let msg = format!("Failed to create id token: {:?}", e);
+					error!(msg);
+					DetailedError::internal_error(&msg).to_rpc_error()
 				})?;
 
 			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
 			if let Err(e) = storage
 				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 			{
-				error!(
-					"Failed to insert pumpx_{}_jwt_token into storage: {:?}",
-					AUTH_TOKEN_ACCESS_TYPE, e
-				);
+				error!("Failed to insert access token into storage: {:?}", e);
 				return Err(
 					DetailedError::storage_service_error("insert access token").to_rpc_error()
 				);
 			};
 
 			if let Err(e) = storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()) {
-				error!(
-					"Failed to insert pumpx_{}_jwt_token into storage: {:?}",
-					AUTH_TOKEN_ID_TYPE, e
-				);
+				error!("Failed to id token into storage: {:?}", e);
 				return Err(DetailedError::storage_service_error("insert ID token").to_rpc_error());
 			};
 

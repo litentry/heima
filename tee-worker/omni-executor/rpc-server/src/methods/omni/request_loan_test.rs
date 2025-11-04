@@ -1,5 +1,4 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::INTERNAL_ERROR_CODE;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_corewriter_user_ops;
@@ -176,17 +175,10 @@ pub fn register_request_loan_test<
 					if existing.collateral_ticker != collateral_ticker
 						|| existing.collateral_size != format!("{}", collateral_size)
 					{
-						return Err(DetailedError::new(
-							INTERNAL_ERROR_CODE,
-							"Loan parameters mismatch",
+						return Err(DetailedError::invalid_params(
+							"collateral",
+							"mismatch collateral ticker or size",
 						)
-						.with_reason(format!(
-							"Existing: {}@{}; Requested: {}@{}",
-							existing.collateral_ticker,
-							existing.collateral_size,
-							collateral_ticker,
-							collateral_size
-						))
 						.to_rpc_error());
 					}
 
@@ -292,9 +284,11 @@ pub fn register_request_loan_test<
 								hedge_open_tx_hash,
 							})
 						},
-						_ => Err(DetailedError::new(INTERNAL_ERROR_CODE, "Invalid loan state")
-							.with_reason(format!("Cannot resume from state: {:?}", existing.state))
-							.to_rpc_error()),
+						_ => Err(DetailedError::internal_error(&format!(
+							"Unexpected state: {:?}",
+							existing.state
+						))
+						.to_rpc_error()),
 					}
 				},
 			}
@@ -334,17 +328,15 @@ async fn precheck_sell_spot(
 ) -> RpcResult<SellSpotContext> {
 	let (spot_meta, spot_mark_price, spot_mid_price) =
 		hypercore_client.get_spot_market_prices(collateral_ticker).await.map_err(|e| {
-			error!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to get spot market prices: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failed to get spot market prices for {}: {}", collateral_ticker, e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	let spot_asset_id = get_spot_asset_id(collateral_ticker, &spot_meta).map_err(|e| {
-		error!("Failed to get spot asset ID: {}", e);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason(e)
-			.to_rpc_error()
+		let msg = format!("Failed to get spot asset ID: {}", e);
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	let spot_token = spot_meta
@@ -352,20 +344,18 @@ async fn precheck_sell_spot(
 		.iter()
 		.find(|t| t.name.eq_ignore_ascii_case(collateral_ticker))
 		.ok_or_else(|| {
-			error!("Token {} not found in spot meta", collateral_ticker);
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Token {} not found in spot meta", collateral_ticker))
-				.to_rpc_error()
+			let msg = format!("Token {} not found in spot meta", collateral_ticker);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	let spot_sz_decimals = spot_token.sz_decimals;
 
 	// Validate trade size
 	validate_trade_size(collateral_size, spot_sz_decimals, None).map_err(|e| {
-		error!("Invalid collateral size for spot trading: {}", e);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason(format!("Invalid collateral size: {}", e))
-			.to_rpc_error()
+		let msg = format!("Invalid collateral size for spot trading: {}", e);
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	// Validate notional value with clamped size
@@ -374,8 +364,9 @@ async fn precheck_sell_spot(
 
 	let (spot_bid_price, _) = get_bid_ask_prices(spot_mark_price, spot_mid_price);
 	validate_notional_value(spot_bid_price, clamped_size_f64, "Spot sell").map_err(|e| {
-		error!("{}", e);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e)
+		let msg = format!("Notional value too long: {}", e);
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	// Validate balance
@@ -383,20 +374,16 @@ async fn precheck_sell_spot(
 		.get_spot_balance(smart_wallet, collateral_ticker)
 		.await
 		.map_err(|e| {
-			error!("Failed to get user balance: {}", e);
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to query balance: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failed to get user balance: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	if user_balance < collateral_size {
-		error!("Insufficient balance: has {} but needs {}", user_balance, collateral_size);
-		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Insufficient balance")
-			.with_reason(format!(
-				"User has {} but needs {} {}",
-				user_balance, collateral_size, collateral_ticker
-			))
-			.to_rpc_error());
+		let msg =
+			format!("Insufficient balance: has {} but needs {}", user_balance, collateral_size);
+		error!(msg);
+		return Err(DetailedError::internal_error(&msg).to_rpc_error());
 	}
 
 	info!("✓ Spot sell precheck passed");
@@ -412,24 +399,21 @@ async fn precheck_open_hedge(
 ) -> RpcResult<OpenHedgeContext> {
 	let (perp_meta, perp_mark_price, perp_mid_price) =
 		hypercore_client.get_perp_market_prices(collateral_ticker).await.map_err(|e| {
-			error!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to get perp market prices: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failed to get perp market prices for {}: {}", collateral_ticker, e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	let perp_asset_id = get_perp_asset_id(collateral_ticker, &perp_meta).map_err(|e| {
-		error!("Failed to get perp asset ID: {}", e);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason(e)
-			.to_rpc_error()
+		let msg = format!("Failed to get perp asset ID: {}", e);
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
-		error!("Perp asset {} not found in meta", perp_asset_id);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason(format!("Perp asset {} not found", perp_asset_id))
-			.to_rpc_error()
+		let msg = format!("Perp asset {} not found in meta", perp_asset_id);
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	let perp_sz_decimals = perp_asset.sz_decimals;
@@ -444,13 +428,9 @@ async fn precheck_open_hedge(
 	let estimated_hedge_size = estimated_notional / perp_ask_price;
 
 	validate_trade_size(estimated_hedge_size, perp_sz_decimals, None).map_err(|e| {
-		error!("Invalid estimated hedge size for perp trading: {}", e);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason(format!(
-				"Invalid estimated hedge size (margin={:.2}, leverage={:.2}x, perp_price={:.2}, size={}): {}",
-				usdc_for_perp, effective_leverage, perp_ask_price, estimated_hedge_size, e
-			))
-			.to_rpc_error()
+		let msg = format!("Invalid estimated hedge size for perp trading: {}", e);
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	// Validate notional value with clamped size
@@ -458,8 +438,9 @@ async fn precheck_open_hedge(
 	let clamped_size_f64: f64 = parse_as(&clamped_size, "clamped_hedge_size")?;
 
 	validate_notional_value(perp_ask_price, clamped_size_f64, "Perp open").map_err(|e| {
-		error!("{}", e);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Notional value too low").with_reason(e)
+		let msg = e.to_string();
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	info!("✓ Open hedge precheck passed");
@@ -527,17 +508,15 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		)
 		.await
 		.map_err(|e| {
-			error!("Spot sell order did not complete: {}", e);
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Spot sell order failed: {}", e))
-				.to_rpc_error()
+			let msg = format!("Spot sell order did not complete: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	if !order_filled {
-		error!("Spot sell order was rejected or canceled");
-		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason("Spot sell order was rejected or canceled")
-			.to_rpc_error());
+		let msg = "Spot sell order was rejected or canceled".to_string();
+		error!(msg);
+		return Err(DetailedError::internal_error(&msg).to_rpc_error());
 	}
 
 	let spot_sell_fill = exec_ctx
@@ -545,17 +524,15 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		.get_fill_by_cloid(exec_ctx.smart_wallet, spot_sell_cloid)
 		.await
 		.map_err(|e| {
-			error!("Failed to get fill for spot sell order: {}", e);
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to get fill: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failed to get fill for spot sell order: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	let usdc_sold_f64 = usdc_from_spot_fill(&spot_sell_fill).map_err(|e| {
-		error!("Failed to calculate USDC received: {}", e);
-		DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason(format!("Failed to calculate USDC: {}", e))
-			.to_rpc_error()
+		let msg = format!("Failed to calculate USDC received: {}", e);
+		error!(msg);
+		DetailedError::internal_error(&msg).to_rpc_error()
 	})?;
 
 	let usdc_loaned_f64 = usdc_sold_f64 * lending_ratio_f64;
@@ -585,10 +562,9 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 			},
 		)
 		.map_err(|e| {
-			error!("Failed to create loan record: {}", e);
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to create loan record: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failed to create loan record: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	// Populate spot_sell tx and cloid
@@ -619,9 +595,9 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		.get_perp_clearinghouse_state(exec_ctx.smart_wallet)
 		.await
 		.map_err(|e| {
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to query perp balance: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failed to query perp balance: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	let initial_perp_balance: f64 =
@@ -658,9 +634,9 @@ async fn do_move_to_perp<CrossChainIntentExecutor: IntentExecutor + Send + Sync 
 		)
 		.await
 		.map_err(|e| {
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("to_perp_move failed: {}", e))
-				.to_rpc_error()
+			let msg = format!("to_perp_move failed: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	info!("to_perp_move completed");
@@ -701,9 +677,9 @@ async fn do_open_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 
 		.get_perp_market_prices(collateral_ticker)
 		.await
 		.map_err(|e| {
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Failed to refresh perp prices: {}", e))
-				.to_rpc_error()
+			let msg = format!("Failed to refresh perp prices: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	let (_, perp_ask_price) = get_bid_ask_prices(perp_mark_price, perp_mid_price);
@@ -756,15 +732,15 @@ async fn do_open_hedge<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 
 		)
 		.await
 		.map_err(|e| {
-			DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-				.with_reason(format!("Hedge order failed to open: {}", e))
-				.to_rpc_error()
+			let msg = format!("Hedge order failed to open: {}", e);
+			error!(msg);
+			DetailedError::internal_error(&msg).to_rpc_error()
 		})?;
 
 	if !order_opened {
-		return Err(DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-			.with_reason("Hedge order was rejected or canceled")
-			.to_rpc_error());
+		let msg = "Hedge order was rejected or canceled";
+		error!(msg);
+		return Err(DetailedError::internal_error(msg).to_rpc_error());
 	}
 
 	// Update loan record with position size, state: HedgeOpened, and populate hedge_open tx and cloid

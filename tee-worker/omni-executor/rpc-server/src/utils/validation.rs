@@ -80,14 +80,10 @@ pub fn validate_amount(amount: &str, field: &str) -> RpcResult<u128> {
 
 pub fn validate_email(email: &str) -> RpcResult<()> {
 	if !EmailAddress::is_valid(email) {
-		return Err(DetailedError::new(
-			crate::error_code::INVALID_EMAIL_FORMAT_CODE,
-			"Invalid email format",
+		return Err(DetailedError::invalid_params(
+			"email",
+			&format!("invalid email address: {}", email),
 		)
-		.with_field("email")
-		.with_received(email.to_string())
-		.with_expected("Valid email address (e.g., user@example.com)")
-		.with_suggestion("Please provide a valid email address")
 		.to_rpc_error());
 	}
 
@@ -95,14 +91,10 @@ pub fn validate_email(email: &str) -> RpcResult<()> {
 	if let Some(at_pos) = email.find('@') {
 		let domain = &email[at_pos + 1..];
 		if !domain.contains('.') {
-			return Err(DetailedError::new(
-				crate::error_code::INVALID_EMAIL_FORMAT_CODE,
-				"Invalid email format",
+			return Err(DetailedError::invalid_params(
+				"email",
+				&format!("expect TLD in email address: {}", email),
 			)
-			.with_field("email")
-			.with_received(email.to_string())
-			.with_expected("Email address with a valid domain (e.g., user@example.com)")
-			.with_suggestion("Email domain must include a top-level domain (TLD)")
 			.to_rpc_error());
 		}
 	}
@@ -114,14 +106,9 @@ pub fn validate_user_operations(
 	operations: &[executor_core::types::SerializablePackedUserOperation],
 ) -> RpcResult<()> {
 	if operations.is_empty() {
-		return Err(DetailedError::new(
-			crate::error_code::MISSING_REQUIRED_FIELD_CODE,
-			"User operations cannot be empty",
-		)
-		.with_field("user_operations")
-		.with_expected("At least one user operation")
-		.with_suggestion("Provide at least one user operation to submit")
-		.to_rpc_error());
+		return Err(
+			DetailedError::invalid_params("user_operations", "expect non-empty").to_rpc_error()
+		);
 	}
 
 	// Validate each operation's sender address
