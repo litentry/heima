@@ -605,6 +605,8 @@ jobs:
 
       - name: Install foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: 'v1.2.3'
 
       - name: Install solana sdk
         run: |
