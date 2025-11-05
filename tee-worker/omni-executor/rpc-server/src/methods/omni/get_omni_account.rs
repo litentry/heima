@@ -14,15 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::detailed_error::DetailedError;
-use crate::error_code::PARSE_ERROR_CODE;
-use crate::{methods::omni::common::PumpxRpcError, server::RpcContext};
+use crate::server::RpcContext;
+use crate::utils::validation::parse_rpc_params;
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{utils::hex::hex_encode, Web2IdentityType};
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use serde::{Deserialize, Serialize};
-use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GetOmniAccountParams {
@@ -38,13 +36,7 @@ pub fn register_get_omni_account<
 ) {
 	module
 		.register_async_method("omni_getOmniAccount", |params, _, _| async move {
-			let params = params.parse::<GetOmniAccountParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
-			})?;
+			let params = parse_rpc_params::<GetOmniAccountParams>(params)?;
 
 			let account =
 				Identity::from_web2_account(params.user_email.as_str(), Web2IdentityType::Email)

@@ -37,7 +37,7 @@ describe('Hyperliquid Signature Data Tests', function () {
         expect(result).to.have.property('hyperliquid_signature_data');
         expect(result.main_address).to.be.a('string');
         expect(result.main_address).to.match(/^0x[a-fA-F0-9]{40}$/);
-        
+
         const data = result.hyperliquid_signature_data;
         expect(data).to.have.property('action');
         expect(data).to.have.property('nonce');
@@ -45,7 +45,7 @@ describe('Hyperliquid Signature Data Tests', function () {
         expect(data.nonce).to.be.a('number');
         expect(data.nonce).to.be.greaterThan(0);
         expect(data.nonce).to.be.lessThan(Date.now() + 60000);
-        
+
         validateEIP712Signature(data.signature);
     }
 
@@ -683,7 +683,7 @@ describe('Hyperliquid Signature Data Tests', function () {
                 await omniApi.getHyperliquidSignatureData(params);
                 expect.fail('Expected method to throw an error for invalid agent_address');
             } catch (error: any) {
-                expect(error).to.have.property('message', 'Invalid address format');
+                expect(error).to.have.property('message', 'Invalid params');
             }
         });
 
@@ -720,7 +720,7 @@ describe('Hyperliquid Signature Data Tests', function () {
                 await omniApi.getHyperliquidSignatureData(params);
                 expect.fail('Expected method to throw an error for invalid destination');
             } catch (error: any) {
-                expect(error).to.have.property('message', 'Invalid address format');
+                expect(error).to.have.property('message', 'Invalid params');
             }
         });
 
@@ -757,7 +757,7 @@ describe('Hyperliquid Signature Data Tests', function () {
                 await omniApi.getHyperliquidSignatureData(params);
                 expect.fail('Expected method to throw an error for invalid builder address');
             } catch (error: any) {
-                expect(error).to.have.property('message', 'Invalid address format');
+                expect(error).to.have.property('message', 'Invalid params');
             }
         });
     });
