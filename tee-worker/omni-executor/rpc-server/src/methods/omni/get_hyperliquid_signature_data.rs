@@ -178,15 +178,9 @@ pub fn register_get_hyperliquid_signature_data<
 					.to_rpc_error()
 				})?;
 
-				let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-					error!("Failed to convert user ID to identity: {}", e);
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Failed to parse user identity",
-					)
-					.with_field("user_id")
-					.with_reason(format!("Identity conversion error: {}", e))
-					.to_rpc_error()
+				let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
+					error!("Invalid existing user ID format");
+					DetailedError::parse_error("Invalid user ID format").to_rpc_error()
 				})?;
 				let omni_account = identity.to_omni_account(&params.client_id);
 

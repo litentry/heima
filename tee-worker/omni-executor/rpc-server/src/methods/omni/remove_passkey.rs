@@ -14,8 +14,8 @@ use tracing::*;
 pub struct RemovePasskeyParams {
 	pub user_id: UserId,
 	pub user_auth: UserAuth,
-	pub credential_id: String,
 	pub client_id: String,
+	pub credential_id: String,
 }
 
 #[derive(Serialize, Clone)]

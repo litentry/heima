@@ -35,13 +35,8 @@ pub fn register_request_passkey_challenge<
 			debug!("Received omni_requestPasskeyChallenge, params: {:?}", params);
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
-				error!("Invalid user ID format");
-				DetailedError::parse_error("Invalid user ID format")
-					.with_field("user_id")
-					.with_suggestion(
-						"Ensure user_id follows the correct format for the specified type",
-					)
-					.to_rpc_error()
+				error!("Invalid existing user ID format");
+				DetailedError::parse_error("Invalid user ID format").to_rpc_error()
 			})?;
 
 			// Generate a random 32-byte challenge
