@@ -20,6 +20,7 @@ use oauth_providers::{
 };
 use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
+use tracing::debug;
 
 #[derive(Debug, PartialEq)]
 pub enum AuthenticationError {
@@ -411,6 +412,11 @@ pub fn verify_passkey_authentication<
 			client_data.type_.as_str()
 		)));
 	}
+
+	debug!(
+		"TEST, client_data: {:?}, user_id: {:?}, client_id: {:?}, omni: {:?}",
+		client_data, passkey_data.user_id, passkey_data.client_id, omni_account
+	);
 
 	// Verify challenge
 	let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());

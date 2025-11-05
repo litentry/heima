@@ -70,6 +70,11 @@ pub fn register_request_passkey_challenge<
 				},
 			)?;
 
+			debug!(
+				"TEST, passkey challenge: {:?}, user_id: {:?}, client_id: {:?}, omni: {:?}",
+				challenge, params.user_id, params.client_id, omni_account
+			);
+
 			Ok::<RequestPasskeyChallengeResponse, ErrorObject>(RequestPasskeyChallengeResponse {
 				challenge,
 				timeout,
