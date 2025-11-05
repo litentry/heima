@@ -1,11 +1,12 @@
 use crate::{
-	detailed_error::DetailedError, error_code::*, server::RpcContext, Deserialize, Serialize,
+	detailed_error::DetailedError, server::RpcContext, utils::validation::parse_rpc_params,
+	Deserialize, Serialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::UserId;
 use executor_storage::PasskeyChallengeStorage;
 use heima_primitives::Identity;
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::RpcModule;
 use tracing::*;
 
 const CHALLENGE_TIMEOUT_SECONDS: u64 = 300; // 5 minutes
@@ -29,24 +30,18 @@ pub fn register_request_passkey_challenge<
 ) {
 	module
 		.register_async_method("omni_requestPasskeyChallenge", |params, ctx, _| async move {
-			let params = params.parse::<RequestPasskeyChallengeParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
-					.with_reason(format!("Invalid JSON structure: {}", e))
-					.to_error_object()
-			})?;
+			let params = parse_rpc_params::<RequestPasskeyChallengeParams>(params)?;
 
 			debug!("Received omni_requestPasskeyChallenge, params: {:?}", params);
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 				error!("Invalid user ID format");
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
+				DetailedError::parse_error("Invalid user ID format")
 					.with_field("user_id")
-					.with_reason("Invalid user ID format")
 					.with_suggestion(
 						"Ensure user_id follows the correct format for the specified type",
 					)
-					.to_error_object()
+					.to_rpc_error()
 			})?;
 
 			// Generate a random 32-byte challenge
@@ -67,19 +62,15 @@ pub fn register_request_passkey_challenge<
 			challenge_storage.store_challenge(&omni_account, &challenge, timeout).map_err(
 				|_| {
 					error!("Failed to store challenge");
-					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to store challenge")
-						.with_reason("Challenge storage operation failed")
+					DetailedError::storage_service_error("passkey challenge storage")
 						.with_suggestion(
 							"Please try again later or contact support if the issue persists",
 						)
-						.to_error_object()
+						.to_rpc_error()
 				},
 			)?;
 
-			Ok::<RequestPasskeyChallengeResponse, ErrorObject>(RequestPasskeyChallengeResponse {
-				challenge,
-				timeout,
-			})
+			Ok(RequestPasskeyChallengeResponse { challenge, timeout })
 		})
 		.expect("Failed to register omni_requestPasskeyChallenge method");
 }

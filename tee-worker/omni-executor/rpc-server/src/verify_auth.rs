@@ -382,7 +382,7 @@ pub fn verify_passkey_authentication<
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	passkey_data: &PasskeyData,
 ) -> Result<(), AuthenticationError> {
-	use crate::methods::omni::common::{get_origin_for_client, get_rp_id_for_client};
+	use crate::methods::omni::{get_origin_for_client, get_rp_id_for_client};
 	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
 	use executor_storage::PasskeyStorage;
 

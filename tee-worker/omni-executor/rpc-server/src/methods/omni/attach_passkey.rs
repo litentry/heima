@@ -1,6 +1,7 @@
 use crate::{
-	detailed_error::DetailedError, error_code::*, server::RpcContext, verify_auth::verify_auth,
-	Deserialize, ErrorCode, Serialize,
+	detailed_error::DetailedError, error_code::AUTH_VERIFICATION_FAILED_CODE, server::RpcContext,
+	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, RpcResult,
+	Serialize,
 };
 
 use executor_core::intent_executor::IntentExecutor;
@@ -10,7 +11,7 @@ use executor_storage::{
 	PasskeyChallengeError, PasskeyChallengeStorage, PasskeyError, PasskeyStorage,
 };
 use heima_primitives::Identity;
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::RpcModule;
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -33,27 +34,24 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 ) {
 	module
 		.register_async_method("omni_attachPasskey", |params, ctx, _| async move {
-			let params = params.parse::<AttachPasskeyParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				ErrorCode::ParseError
-			})?;
+			let params = parse_rpc_params::<AttachPasskeyParams>(params)?;
 
 			debug!("Received omni_attachPasskey, params: {:?}", params);
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 				error!("Invalid existing user ID format");
-				ErrorCode::ParseError
+				DetailedError::parse_error("Invalid user ID format").to_rpc_error()
 			})?;
 
 			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
 				.map_err(|e| {
 					error!("Failed to convert to OmniAuth: {:?}", e);
-					ErrorCode::ParseError
+					DetailedError::parse_error("Failed to convert to OmniAuth").to_rpc_error()
 				})?;
 
 			verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 				error!("Failed to verify existing user authentication: {:?}", e);
-				e.to_detailed_error().to_error_object()
+				e.to_detailed_error().to_rpc_error()
 			})?;
 
 			let omni_account = identity.to_omni_account(&params.client_id);
@@ -113,7 +111,7 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 					.with_field("client_data_json")
 					.with_reason(format!("Verification error: {:?}", e)),
 				}
-				.to_error_object()
+				.to_rpc_error()
 			})?;
 
 			let AttestationResult { credential_id, public_key } =
@@ -133,7 +131,7 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 						.with_field("attestation_object")
 						.with_reason(format!("Verification error: {:?}", e)),
 					}
-					.to_error_object()
+					.to_rpc_error()
 				})?;
 
 			let public_key_sec1_bytes = public_key.verifying_key.to_sec1_bytes();
@@ -151,16 +149,16 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 							DetailedError::passkey_already_exists(&credential_id)
 						},
 						PasskeyError::StorageError => {
-							DetailedError::storage_error("passkey attachment")
+							DetailedError::storage_service_error("passkey attachment")
 						},
-						_ => DetailedError::new(INTERNAL_ERROR_CODE, "Failed to attach passkey")
+						_ => DetailedError::internal_error("Failed to attach passkey")
 							.with_reason(format!("Storage error: {:?}", e))
 							.with_suggestion("Please try again later"),
 					}
-					.to_error_object()
+					.to_rpc_error()
 				})?;
 
-			Ok::<AttachPasskeyResponse, ErrorObject>(AttachPasskeyResponse {
+			Ok::<AttachPasskeyResponse, _>(AttachPasskeyResponse {
 				success: true,
 				message: format!(
 					"Passkey ({}) successfully attached to account {}",

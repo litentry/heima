@@ -144,37 +144,49 @@ pub fn register_get_hyperliquid_signature_data<
 			if let Some(attach_passkey_data) = &params.attach_passkey {
 				let user_auth = params.user_auth.as_ref().ok_or_else(|| {
 					error!("user_auth is required when attach_passkey is provided");
-					DetailedError::new(MISSING_REQUIRED_FIELD_CODE, "Missing required authentication")
-						.with_field("user_auth")
-						.with_expected("User authentication data")
-						.with_reason("user_auth must be provided when attaching a passkey")
-						.with_suggestion("Provide user_auth to authenticate before attaching a passkey")
-						.to_error_object()
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Missing required authentication",
+					)
+					.with_field("user_auth")
+					.with_expected("User authentication data")
+					.with_reason("user_auth must be provided when attaching a passkey")
+					.with_suggestion("Provide user_auth to authenticate before attaching a passkey")
+					.to_rpc_error()
 				})?;
 				let auth =
 					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
 						error!("Failed to convert to OmniAuth: {:?}", e);
-						DetailedError::new(PARSE_ERROR_CODE, "Failed to convert authentication data")
-							.with_field("user_auth")
-							.with_reason(format!("OmniAuth conversion error: {:?}", e))
-							.to_error_object()
+						DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Failed to convert authentication data",
+						)
+						.with_field("user_auth")
+						.with_reason(format!("OmniAuth conversion error: {:?}", e))
+						.to_rpc_error()
 					})?;
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 					error!("Failed to verify user authentication: {:?}", e);
-					DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-						.with_field("user_auth")
-						.with_reason(format!("Verification error: {:?}", e))
-						.with_suggestion("Please check your authentication credentials")
-						.to_error_object()
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_field("user_auth")
+					.with_reason(format!("Verification error: {:?}", e))
+					.with_suggestion("Please check your authentication credentials")
+					.to_rpc_error()
 				})?;
 
 				let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
 					error!("Failed to convert user ID to identity: {}", e);
-					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
-						.with_field("user_id")
-						.with_reason(format!("Identity conversion error: {}", e))
-						.to_error_object()
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Failed to parse user identity",
+					)
+					.with_field("user_id")
+					.with_reason(format!("Identity conversion error: {}", e))
+					.to_rpc_error()
 				})?;
 				let omni_account = identity.to_omni_account(&params.client_id);
 
@@ -234,30 +246,28 @@ pub fn register_get_hyperliquid_signature_data<
 						.with_field("attach_passkey.client_data_json")
 						.with_reason(format!("Verification error: {:?}", e)),
 					}
-					.to_error_object()
+					.to_rpc_error()
 				})?;
 
 				// Verify attestation and extract credential_id and public_key
-				let AttestationResult { credential_id, public_key } = PasskeyVerifier::verify_attestation(
-					&attach_passkey_data.attestation_object,
-				)
-				.map_err(|e| {
-					error!("WebAuthn attestation verification failed during passkey attachment: {:?}", e);
-					match e {
-						executor_crypto::passkey::PasskeyError::AttestationParseError(err) => {
-							DetailedError::passkey_attestation_parse_error(&err)
+				let AttestationResult { credential_id, public_key } =
+					PasskeyVerifier::verify_attestation(&attach_passkey_data.attestation_object)
+						.map_err(|e| {
+							error!("WebAuthn attestation verification failed during passkey attachment: {:?}", e);
+							match e {
+								executor_crypto::passkey::PasskeyError::AttestationParseError(
+									err,
+								) => DetailedError::passkey_attestation_parse_error(&err)
+									.with_field("attach_passkey.attestation_object"),
+								_ => DetailedError::new(
+									AUTH_VERIFICATION_FAILED_CODE,
+									"Attestation verification failed",
+								)
 								.with_field("attach_passkey.attestation_object")
-						},
-						_ => DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"Attestation verification failed",
-						)
-						.with_field("attach_passkey.attestation_object")
-						.with_reason(format!("Verification error: {:?}", e)),
-					}
-					.to_error_object()
-				})?;
-
+								.with_reason(format!("Verification error: {:?}", e)),
+							}
+							.to_rpc_error()
+						})?;
 
 				// Store public key as direct SEC1 bytes for direct usage without parsing
 				let public_key_sec1_bytes = public_key.verifying_key.to_sec1_bytes();
@@ -265,30 +275,28 @@ pub fn register_get_hyperliquid_signature_data<
 				// Store the new passkey to the authenticated user's account
 				let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 				passkey_storage
-					.add_passkey(
-						&omni_account,
-						&credential_id,
-						&public_key_sec1_bytes,
-					)
+					.add_passkey(&omni_account, &credential_id, &public_key_sec1_bytes)
 					.map_err(|e| {
-						error!("Failed to attach passkey to omni_account {}: {:?}", hex_encode(omni_account.as_ref()), e);
+						error!(
+							"Failed to attach passkey to omni_account {}: {:?}",
+							hex_encode(omni_account.as_ref()),
+							e
+						);
 						let detailed_error = match e {
 							PasskeyError::DuplicatePasskey => {
 								DetailedError::passkey_already_exists(&credential_id)
 									.with_field("attach_passkey")
 							},
 							PasskeyError::StorageError => {
-								DetailedError::storage_error("passkey attachment")
+								DetailedError::storage_service_error("passkey attachment")
 									.with_field("attach_passkey")
 							},
-							_ => {
-								DetailedError::new(INTERNAL_ERROR_CODE, "Failed to attach passkey")
-									.with_field("attach_passkey")
-									.with_reason(format!("Storage error: {:?}", e))
-									.with_suggestion("Please try again later")
-							}
+							_ => DetailedError::internal_error("Failed to attach passkey")
+								.with_field("attach_passkey")
+								.with_reason(format!("Storage error: {:?}", e))
+								.with_suggestion("Please try again later"),
 						};
-						detailed_error.to_error_object()
+						detailed_error.to_rpc_error()
 					})?;
 			}
 

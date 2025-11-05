@@ -1,13 +1,13 @@
 use crate::{
-	detailed_error::DetailedError, server::RpcContext, verify_auth::verify_auth, Deserialize,
-	ErrorCode, Serialize,
+	detailed_error::DetailedError, server::RpcContext, utils::validation::parse_rpc_params,
+	verify_auth::verify_auth, Deserialize, Serialize,
 };
 
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{to_omni_auth, UserAuth, UserId};
 use executor_storage::{PasskeyError, PasskeyStorage};
 use heima_primitives::Identity;
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::RpcModule;
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -29,27 +29,24 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 ) {
 	module
 		.register_async_method("omni_removePasskey", |params, ctx, _| async move {
-			let params = params.parse::<RemovePasskeyParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				ErrorCode::ParseError
-			})?;
+			let params = parse_rpc_params::<RemovePasskeyParams>(params)?;
 
 			debug!("Received omni_removePasskey, params: {:?}", params);
 
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 				error!("Invalid user ID format");
-				ErrorCode::ParseError
+				DetailedError::parse_error("Invalid user ID format").to_rpc_error()
 			})?;
 
 			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
 				.map_err(|e| {
 					error!("Failed to convert to OmniAuth: {:?}", e);
-					ErrorCode::ParseError
+					DetailedError::parse_error("Failed to convert to OmniAuth").to_rpc_error()
 				})?;
 
 			verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 				error!("Failed to verify user authentication: {:?}", e);
-				e.to_detailed_error().to_error_object()
+				e.to_detailed_error().to_rpc_error()
 			})?;
 
 			let omni_account = identity.to_omni_account(&params.client_id);
@@ -57,9 +54,7 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			if !passkey_storage.exists_passkey(&omni_account, &params.credential_id) {
 				error!("Passkey not found for this account and credential");
-				return Err(
-					DetailedError::passkey_not_found(&params.credential_id).to_error_object()
-				);
+				return Err(DetailedError::passkey_not_found(&params.credential_id).to_rpc_error());
 			}
 
 			passkey_storage
@@ -67,15 +62,15 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 				.map_err(|e| match e {
 					PasskeyError::StorageError => {
 						error!("Failed to remove passkey: storage error");
-						DetailedError::storage_error("passkey removal").to_error_object()
+						DetailedError::storage_service_error("passkey removal").to_rpc_error()
 					},
 					_ => {
 						error!("Failed to remove passkey: {:?}", e);
-						DetailedError::storage_error("passkey removal").to_error_object()
+						DetailedError::storage_service_error("passkey removal").to_rpc_error()
 					},
 				})?;
 
-			Ok::<RemovePasskeyResponse, ErrorObject>(RemovePasskeyResponse {
+			Ok(RemovePasskeyResponse {
 				success: true,
 				message: format!("Passkey {} successfully removed", params.credential_id),
 			})
