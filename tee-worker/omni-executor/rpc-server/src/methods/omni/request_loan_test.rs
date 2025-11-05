@@ -306,6 +306,10 @@ fn precheck_params(params: &RequestLoanTestParams) -> RpcResult<(AccountId, Stri
 		return Err(DetailedError::parse_error("Empty collateral_ticker").to_rpc_error());
 	}
 
+	if params.collateral_ticker.to_uppercase() == "USDC" {
+		return Err(DetailedError::parse_error("Expect non-USDC collateral_ticker").to_rpc_error());
+	}
+
 	if params.collateral_size.is_empty() {
 		return Err(DetailedError::parse_error("Empty collateral_size").to_rpc_error());
 	}
