@@ -136,14 +136,14 @@ This allows **identical addresses across all chains** when using the same salt a
 ✅ **Deterministic Addresses**: Same contract address on all chains
 ✅ **Order Independent**: Deploy contracts in any order
 ✅ **Predictable**: Know contract addresses before deployment
-✅ **Frontrun Protected**: Using sender-specific salts prevents address squatting
-✅ **Multi-Chain Ready**: Deploy to new networks without nonce coordination
+✅ **Truly Universal**: Same addresses for all deployers
+✅ **Multi-Chain Ready**: Deploy to new networks without any coordination
 
 ### CREATE2 Deployment Strategy
 
 #### Step 1: Deploy the CREATE2 Factory
 
-The `Create2Factory` contract must be deployed **once per network** using a **fresh EOA** (recommended for consistency, though not strictly required).
+The `Create2FactoryV1` contract must be deployed **once per network** using a **fresh EOA** (recommended for consistency, though not strictly required).
 
 ```bash
 # Set up environment
@@ -175,15 +175,38 @@ After deployment, add the factory address to `deployments/create2-factories.json
 
 #### Step 2: Deploy AA Contracts via CREATE2
 
-Once the factory is deployed, use it to deploy AA contracts:
+Once the factory is deployed, you can deploy AA contracts using two methods:
+
+**Option A: Deploy All Contracts at Once**
 
 ```bash
-# Set factory address and version
+# Set factory address
 export CREATE2_FACTORY_ADDRESS=0x...  # From step 1
-export CONTRACT_VERSION=v1.0.0         # Version for salt generation
 
-# Deploy AA contracts via CREATE2
+# Deploy all AA contracts via CREATE2
 forge script script/DeployWithCreate2.s.sol:DeployWithCreate2 \
+    --rpc-url $RPC_URL \
+    --private-key $PRIVATE_KEY \
+    --broadcast \
+    -vvv
+```
+
+**Option B: Deploy Individual Contract**
+
+```bash
+# Set factory address
+export CREATE2_FACTORY_ADDRESS=0x...  # From step 1
+
+# Deploy a single contract
+CONTRACT_NAME=EntryPointV1 forge script script/DeployContract.s.sol:DeployContract \
+    --rpc-url $RPC_URL \
+    --private-key $PRIVATE_KEY \
+    --broadcast \
+    -vvv
+
+# Deploy factory (requires EntryPoint)
+CONTRACT_NAME=OmniAccountFactoryV1 ENTRYPOINT_ADDRESS=0x... \
+    forge script script/DeployContract.s.sol:DeployContract \
     --rpc-url $RPC_URL \
     --private-key $PRIVATE_KEY \
     --broadcast \
@@ -195,17 +218,15 @@ forge script script/DeployWithCreate2.s.sol:DeployWithCreate2 \
 To deploy to a new network with the **same addresses**:
 
 1. Deploy the CREATE2 factory on the new network (step 1)
-2. Use the **same deployer EOA** and **same version** from step 2
-3. Contracts will deploy to **identical addresses**!
+2. Deploy contracts using either method from step 2
+3. Contracts will deploy to **identical addresses** automatically!
 
 ```bash
 # Example: Deploy to new network
 export RPC_URL=https://new-network-rpc.example.com
 export CREATE2_FACTORY_ADDRESS=0x...  # Factory on new network
 
-# Same version = same addresses!
-export CONTRACT_VERSION=v1.0.0
-
+# Addresses will be identical across all chains!
 forge script script/DeployWithCreate2.s.sol:DeployWithCreate2 \
     --rpc-url $RPC_URL \
     --private-key $PRIVATE_KEY \
@@ -215,12 +236,11 @@ forge script script/DeployWithCreate2.s.sol:DeployWithCreate2 \
 
 ### CREATE2 Configuration
 
-All standard environment variables from `Deploy.s.sol` are supported, plus:
+**DeployWithCreate2.s.sol** - All standard environment variables from `Deploy.s.sol` are supported, plus:
 
 ```bash
 # CREATE2-specific variables
-CREATE2_FACTORY_ADDRESS=0x...  # Address of deployed Create2Factory (required)
-CONTRACT_VERSION=v1.0.0         # Version string for salt generation (default: v1.0.0)
+CREATE2_FACTORY_ADDRESS=0x...  # Address of deployed Create2FactoryV1 (required)
 
 # All standard variables still work
 DEPLOY_ENTRYPOINT=true
@@ -233,18 +253,37 @@ SAVE_DEPLOYMENT_FILE=true
 DEPLOYMENT_ENV=production
 ```
 
+**DeployContract.s.sol** - For individual contract deployment:
+
+```bash
+# Required
+CREATE2_FACTORY_ADDRESS=0x...  # Address of deployed Create2FactoryV1
+CONTRACT_NAME=EntryPointV1      # Contract to deploy (EntryPointV1, OmniAccountFactoryV1, SimplePaymaster, ERC20PaymasterV1)
+
+# Required for Factory/Paymaster contracts
+ENTRYPOINT_ADDRESS=0x...        # Address of deployed EntryPoint
+
+# Optional for Paymaster contracts
+INITIAL_BUNDLER=0x...           # Default: deployer address
+PAYMASTER_INITIAL_DEPOSIT=1000000000000000000  # Default: 1 ETH
+
+# Optional
+SAVE_DEPLOYMENT_FILE=true       # Default: false
+DEPLOYMENT_ENV=production       # Default: empty
+```
+
 ### Salt Generation Strategy
 
-The `DeployWithCreate2` script uses **sender-protected salts** to prevent frontrunning:
+The deployment scripts use **purely deterministic salts** based only on contract name:
 
 ```solidity
-salt = keccak256(abi.encode(contractName, version, msg.sender))
+salt = keccak256(abi.encode(contractName))
 ```
 
 This means:
-- **Same deployer EOA** + **same version** = **same addresses** across all chains
-- Different deployers will get different addresses (security feature)
-- Update `CONTRACT_VERSION` when you want new addresses for updated contracts
+- **Same contract name** = **same address** on all chains for all deployers
+- Truly universal addresses across all EVM chains
+- Anyone can deploy to the predicted address (first deployment wins)
 
 ### Address Prediction
 
@@ -261,8 +300,8 @@ You can also compute addresses manually:
 
 ```solidity
 // In Solidity
-Create2Factory factory = Create2Factory(factoryAddress);
-bytes32 salt = factory.generateSalt("EntryPointV1", "v1.0.0", msg.sender);
+Create2FactoryV1 factory = Create2FactoryV1(factoryAddress);
+bytes32 salt = factory.generateSalt("EntryPointV1");
 address predicted = factory.computeAddress(salt, type(EntryPointV1).creationCode);
 ```
 
@@ -299,13 +338,13 @@ optimizer_runs = 1000000
 ### Troubleshooting
 
 **Problem**: Addresses don't match across chains
-**Solution**: Ensure you're using the same deployer EOA and CONTRACT_VERSION
+**Solution**: Ensure the Create2FactoryV1 is deployed to the same address on all chains (use same fresh EOA)
 
 **Problem**: Factory deployment fails
 **Solution**: Make sure you have enough ETH for deployment gas
 
 **Problem**: "AddressAlreadyDeployed" error
-**Solution**: Contract was already deployed. Either use it or change the CONTRACT_VERSION
+**Solution**: Contract was already deployed to this deterministic address. Check if it's functioning correctly or use a different contract name
 
 **Problem**: Verification fails with "Bytecode does not match"
 **Solution**: Ensure your local build uses the same compiler settings as deployment
