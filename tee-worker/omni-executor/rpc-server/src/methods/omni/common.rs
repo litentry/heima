@@ -128,14 +128,14 @@ pub fn check_auth(ext: &Extensions) -> Result<String, ()> {
 
 pub fn get_rp_id_for_client(client_id: &str) -> &str {
 	match client_id {
-		"wildmeta" => "wildmeta.io",
+		"wildmeta" => "app.wildmeta.ai",
 		_ => "localhost", // Development/testing
 	}
 }
 
 pub fn get_origin_for_client(client_id: &str) -> &str {
 	match client_id {
-		"wildmeta" => "https://wildmeta.io",
+		"wildmeta" => "https://app.wildmeta.ai",
 		_ => "http://localhost:3000", // Development/testing
 	}
 }
