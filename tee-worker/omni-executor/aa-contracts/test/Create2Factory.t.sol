@@ -2,11 +2,11 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Create2Factory} from "../src/core/Create2Factory.sol";
+import {Create2FactoryV1} from "../src/core/Create2FactoryV1.sol";
 import {Counter} from "../src/Counter.sol";
 
 contract Create2FactoryTest is Test {
-    Create2Factory public factory;
+    Create2FactoryV1 public factory;
 
     address deployer1 = makeAddr("deployer1");
     address deployer2 = makeAddr("deployer2");
@@ -14,7 +14,7 @@ contract Create2FactoryTest is Test {
     event ContractDeployed(address indexed deployed, bytes32 indexed salt, address indexed deployer);
 
     function setUp() public {
-        factory = new Create2Factory();
+        factory = new Create2FactoryV1();
     }
 
     // ============ Constructor Tests ============
@@ -37,9 +37,8 @@ contract Create2FactoryTest is Test {
 
         // Manual calculation should match
         bytes32 bytecodeHash = keccak256(bytecode);
-        address expectedAddress = address(
-            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(factory), salt, bytecodeHash))))
-        );
+        address expectedAddress =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(factory), salt, bytecodeHash)))));
 
         assertEq(predicted, expectedAddress);
     }
@@ -176,7 +175,7 @@ contract Create2FactoryTest is Test {
         // Second deployment should revert
         vm.expectRevert(
             abi.encodeWithSelector(
-                Create2Factory.AddressAlreadyDeployed.selector, factory.computeAddress(salt, bytecode)
+                Create2FactoryV1.AddressAlreadyDeployed.selector, factory.computeAddress(salt, bytecode)
             )
         );
         factory.deploy(salt, bytecode);
@@ -192,7 +191,7 @@ contract Create2FactoryTest is Test {
         address deployed = factory.deploy(salt, bytecode);
 
         // Try to deploy again - should revert
-        vm.expectRevert(abi.encodeWithSelector(Create2Factory.AddressAlreadyDeployed.selector, deployed));
+        vm.expectRevert(abi.encodeWithSelector(Create2FactoryV1.AddressAlreadyDeployed.selector, deployed));
         factory.deploy(salt, bytecode);
     }
 
@@ -200,73 +199,27 @@ contract Create2FactoryTest is Test {
 
     function test_GenerateSalt() public view {
         string memory contractName = "TestContract";
-        string memory version = "v1.0.0";
-        address sender = deployer1;
 
-        bytes32 salt = factory.generateSalt(contractName, version, sender);
+        bytes32 salt = factory.generateSalt(contractName);
 
         // Salt should be non-zero
         assertTrue(salt != bytes32(0));
 
         // Salt should be deterministic
-        bytes32 salt2 = factory.generateSalt(contractName, version, sender);
+        bytes32 salt2 = factory.generateSalt(contractName);
         assertEq(salt, salt2);
 
-        // Salt should include sender (different sender = different salt)
-        bytes32 salt3 = factory.generateSalt(contractName, version, deployer2);
-        assertTrue(salt != salt3);
+        // Salt should be consistent across all deployers (deterministic addresses)
+        // Same contract name always produces same salt
+        assertEq(keccak256(abi.encode(contractName)), salt);
     }
 
     function test_GenerateSalt_DifferentNames() public view {
-        bytes32 salt1 = factory.generateSalt("Contract1", "v1.0.0", deployer1);
-        bytes32 salt2 = factory.generateSalt("Contract2", "v1.0.0", deployer1);
+        bytes32 salt1 = factory.generateSalt("Contract1");
+        bytes32 salt2 = factory.generateSalt("Contract2");
 
         // Different names should produce different salts
         assertTrue(salt1 != salt2);
-    }
-
-    function test_GenerateSalt_DifferentVersions() public view {
-        bytes32 salt1 = factory.generateSalt("TestContract", "v1.0.0", deployer1);
-        bytes32 salt2 = factory.generateSalt("TestContract", "v2.0.0", deployer1);
-
-        // Different versions should produce different salts
-        assertTrue(salt1 != salt2);
-    }
-
-    function test_GenerateSalt_DifferentSenders() public view {
-        bytes32 salt1 = factory.generateSalt("TestContract", "v1.0.0", deployer1);
-        bytes32 salt2 = factory.generateSalt("TestContract", "v1.0.0", deployer2);
-
-        // Different senders should produce different salts (frontrunning protection)
-        assertTrue(salt1 != salt2);
-    }
-
-    function test_GenerateSimpleSalt() public view {
-        string memory contractName = "TestContract";
-        string memory version = "v1.0.0";
-
-        bytes32 salt = factory.generateSimpleSalt(contractName, version);
-
-        // Salt should be non-zero
-        assertTrue(salt != bytes32(0));
-
-        // Salt should be deterministic
-        bytes32 salt2 = factory.generateSimpleSalt(contractName, version);
-        assertEq(salt, salt2);
-
-        // Simple salt should be same for all senders (no frontrunning protection)
-        // This is implicit - the function doesn't take a sender parameter
-    }
-
-    function test_GenerateSimpleSalt_VsGenerateSalt() public view {
-        string memory contractName = "TestContract";
-        string memory version = "v1.0.0";
-
-        bytes32 simpleSalt = factory.generateSimpleSalt(contractName, version);
-        bytes32 protectedSalt = factory.generateSalt(contractName, version, deployer1);
-
-        // Simple salt and protected salt should be different
-        assertTrue(simpleSalt != protectedSalt);
     }
 
     // ============ Deployment Tracking Tests ============
@@ -296,22 +249,20 @@ contract Create2FactoryTest is Test {
 
     // ============ Integration Tests ============
 
-    function test_EndToEnd_SenderProtectedDeployment() public {
-        // Scenario: Deploy same contract to same address on multiple "chains" (test runs)
-        // using sender-protected salt
+    function test_EndToEnd_DeterministicDeployment() public {
+        // Scenario: Deploy same contract to same address regardless of deployer
+        // using deterministic salt based only on contract name
 
         string memory contractName = "EntryPointV1";
-        string memory version = "v1.0.0";
 
-        // Generate sender-protected salt
-        vm.prank(deployer1);
-        bytes32 salt = factory.generateSalt(contractName, version, deployer1);
+        // Generate deterministic salt
+        bytes32 salt = factory.generateSalt(contractName);
 
         // Predict address
         bytes memory bytecode = type(Counter).creationCode;
         address predicted = factory.computeAddress(salt, bytecode);
 
-        // Deploy
+        // Deploy (can be from any deployer)
         vm.prank(deployer1);
         address deployed = factory.deploy(salt, bytecode);
 
@@ -319,10 +270,9 @@ contract Create2FactoryTest is Test {
         assertEq(deployed, predicted);
         assertTrue(factory.isDeployed(deployed));
 
-        // Verify only deployer1 can deploy to this address
-        // (deployer2 would generate a different salt and thus different address)
-        bytes32 salt2 = factory.generateSalt(contractName, version, deployer2);
-        assertTrue(salt != salt2);
+        // Verify same salt is generated regardless of who calls it
+        bytes32 salt2 = factory.generateSalt(contractName);
+        assertEq(salt, salt2);
     }
 
     function test_EndToEnd_MultiChainDeployment() public {
@@ -330,11 +280,10 @@ contract Create2FactoryTest is Test {
         // In reality this would be different factory instances, but we can test the logic
 
         string memory contractName = "TestContract";
-        string memory version = "v1.0.0";
         bytes memory bytecode = type(Counter).creationCode;
 
-        // "Chain 1" deployment
-        bytes32 salt1 = factory.generateSalt(contractName, version, deployer1);
+        // "Chain 1" deployment (any deployer gets same address)
+        bytes32 salt1 = factory.generateSalt(contractName);
         address predicted1 = factory.computeAddress(salt1, bytecode);
         vm.prank(deployer1);
         address deployed1 = factory.deploy(salt1, bytecode);
@@ -342,8 +291,8 @@ contract Create2FactoryTest is Test {
         assertEq(deployed1, predicted1);
 
         // In a real multi-chain scenario, deploying with the same salt and bytecode
-        // from the same deployer on a different chain (different factory instance)
-        // would yield the same address - but the factory address would need to be the same
+        // on a different chain (different factory instance) will yield the same address
+        // as long as the factory is deployed to the same address on each chain
         // That's why we deploy the factory with a fresh EOA on each chain
     }
 
@@ -370,14 +319,15 @@ contract Create2FactoryTest is Test {
         assertTrue(factory.isDeployed(deployed));
     }
 
-    function testFuzz_GenerateSalt(string memory name, string memory version, address sender) public view {
-        vm.assume(sender != address(0));
-
-        bytes32 salt = factory.generateSalt(name, version, sender);
+    function testFuzz_GenerateSalt(string memory name) public view {
+        bytes32 salt = factory.generateSalt(name);
 
         // Salt should be deterministic
-        bytes32 salt2 = factory.generateSalt(name, version, sender);
+        bytes32 salt2 = factory.generateSalt(name);
         assertEq(salt, salt2);
+
+        // Salt should match manual calculation
+        assertEq(salt, keccak256(abi.encode(name)));
     }
 
     // ============ Edge Cases ============
