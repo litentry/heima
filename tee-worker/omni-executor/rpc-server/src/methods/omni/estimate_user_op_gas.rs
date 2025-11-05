@@ -14,14 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::PumpxRpcError;
 use crate::detailed_error::DetailedError;
-use crate::error_code::PARSE_ERROR_CODE;
 use crate::server::RpcContext;
 use crate::utils::gas_estimation::estimate_user_op_gas;
 use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::convert_to_packed_user_op;
-use crate::validation_helpers::validate_ethereum_address;
+use crate::utils::validation::{parse_rpc_params, validate_evm_address};
 use alloy::primitives::utils::format_units;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
@@ -94,28 +92,12 @@ pub fn register_estimate_user_op_gas<
 ) {
 	module
 		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {
-			let params = params.parse::<EstimateUserOpGasParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
-						crate::error_code::MISSING_REQUIRED_FIELD_CODE,
-						"Failed to parse request parameters",
-					)
-					.with_reason(format!("Parse error: {}", e)),
-				)
-			})?;
+			let params = parse_rpc_params::<EstimateUserOpGasParams>(params)?;
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
-			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				))
-			})?;
-
-			validate_ethereum_address(&params.user_operation.sender, "user_operation.sender")
-				.map_err(PumpxRpcError::from)?;
+			let omni_account = to_omni_account(&params.omni_account)?;
+			validate_evm_address(&params.user_operation.sender, "user_operation.sender")?;
 
 			// Inlined handler logic from handle_estimate_user_op_gas
 			info!(
@@ -127,16 +109,14 @@ pub fn register_estimate_user_op_gas<
 			let entry_point_client =
 				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
 					error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
-					PumpxRpcError::from(DetailedError::chain_not_supported(params.chain_id))
+					DetailedError::invalid_chain_id(params.chain_id).to_rpc_error()
 				})?;
 
 			// Convert SerializablePackedUserOperation to PackedUserOperation
 			let packed_user_op =
 				convert_to_packed_user_op(params.user_operation.clone()).map_err(|e| {
 					error!("Failed to convert UserOperation: {}", e);
-					PumpxRpcError::from(DetailedError::invalid_user_operation_error(
-						"Invalid user operation format",
-					))
+					DetailedError::invalid_user_op(&e).to_rpc_error()
 				})?;
 
 			// Perform gas estimation
@@ -183,7 +163,7 @@ pub fn register_estimate_user_op_gas<
 				},
 				Err(e) => {
 					error!("Gas estimation failed: {}", e);
-					Err(PumpxRpcError::from(DetailedError::gas_estimation_failed()))
+					Err(DetailedError::gas_estimation_failed().to_rpc_error())
 				},
 			}
 		})

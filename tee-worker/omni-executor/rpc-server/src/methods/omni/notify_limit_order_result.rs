@@ -1,9 +1,6 @@
-use crate::methods::omni::{common::check_auth, PumpxRpcError};
 use crate::{
-	detailed_error::DetailedError,
-	error_code::{PARSE_ERROR_CODE, *},
-	server::RpcContext,
-	Deserialize,
+	detailed_error::DetailedError, server::RpcContext, utils::omni::extract_omni_account,
+	utils::validation::parse_rpc_params, Deserialize,
 };
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::RpcModule;
@@ -23,37 +20,17 @@ pub fn register_notify_limit_order_result<
 ) {
 	module
 		.register_async_method("omni_notifyLimitOrderResult", |params, _ctx, ext| async move {
-			let _user = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Authentication verification failed",
-					)
-					.with_suggestion("Please check your authentication credentials"),
-				)
-			})?;
+			debug!("Received omni_notifyLimitOrderResult, params: {:?}", params);
 
-			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
-			})?;
-
-			debug!(
-				"Received omni_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
-				params.intent_id, params.result, params.message
-			);
+			let params = parse_rpc_params::<NotifyLimitOrderResultParams>(params)?;
+			let _ = extract_omni_account(&ext)?;
 
 			// Inline handle_pumpx_notify_limit_order_result logic
 			if params.result != "ok" && params.result != "nok" {
 				error!("Invalid result value: {}. Must be 'ok' or 'nok'", params.result);
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INVALID_PARAMS_CODE, "Invalid input")
-						.with_reason("Result must be 'ok' or 'nok'"),
-				));
+				return Err(
+					DetailedError::invalid_params("result", "must be ok or nok").to_rpc_error()
+				);
 			}
 
 			if let Some(msg) = &params.message {

@@ -58,8 +58,7 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			let omni_account = identity.to_omni_account(&params.client_id);
 
-			let expected_origin =
-				crate::methods::omni::common::get_origin_for_client(&params.client_id);
+			let expected_origin = super::get_origin_for_client(&params.client_id);
 
 			// Verify client data JSON and consume challenge
 			let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());

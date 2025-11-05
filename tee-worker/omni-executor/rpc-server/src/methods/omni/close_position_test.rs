@@ -1,9 +1,9 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::submit_corewriter_userop;
+use crate::utils::types::{RpcOptionExt, RpcResultExt};
+use crate::utils::user_op::submit_corewriter_user_ops;
+use crate::utils::validation::{parse_as, parse_rpc_params};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::ChainId;
@@ -42,43 +42,23 @@ pub fn register_close_position_test<
 ) {
 	module
 		.register_async_method("omni_closePositionTest", |params, ctx, _ext| async move {
-			let params = params.parse::<ClosePositionTestParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
-			})?;
+			let params = parse_rpc_params::<ClosePositionTestParams>(params)?;
 
 			debug!("Received omni_closePositionTest, params: {:?}", params);
 
-			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				error!("Failed to parse omni account");
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				))
-			})?;
+			let omni_account = to_omni_account(&params.omni_account)?;
 
 			let smart_wallet = &params.sender;
 
-			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported").with_reason(e),
-				)
+			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|_| {
+				DetailedError::internal_error("HyperCore client error").to_rpc_error()
 			})?;
 
 			hypercore_client.print_account_state(smart_wallet, "Before Close Position").await;
 
 			// Get current positions
 			let perp_state =
-				hypercore_client.get_perp_clearinghouse_state(smart_wallet).await.map_err(|e| {
-					error!("Failed to get perp state: {}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to query perp state: {}", e)),
-					)
-				})?;
+				hypercore_client.get_perp_clearinghouse_state(smart_wallet).await.map_err_internal("Failed to get perp state")?;
 
 			// Filter positions based on ticker parameter
 			let positions_to_close: Vec<_> = perp_state
@@ -108,41 +88,15 @@ pub fn register_close_position_test<
 
 			for pos in positions_to_close {
 				let ticker = &pos.position.coin;
-				let position_size = pos.position.szi.parse::<f64>().map_err(|e| {
-					error!("Failed to parse position size for {}: {}", ticker, e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to parse position size: {}", e)),
-					)
-				})?;
+				let position_size: f64 = parse_as(&pos.position.szi, "position_size")?;
 
 				info!("Closing position for {}: size={}", ticker, position_size);
 
 				// Get perp market data
 				let (perp_meta, perp_mark_price, perp_mid_price) =
-					hypercore_client.get_perp_market_prices(ticker).await.map_err(|e| {
-						error!("Failed to get perp market prices for {}: {}", ticker, e);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!("Failed to get perp market prices: {}", e)),
-						)
-					})?;
-
-				let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
-					error!("Failed to get perp asset ID: {}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-					)
-				})?;
-
-				let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
-					error!("Perp asset {} not found in meta", perp_asset_id);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Perp asset {} not found", perp_asset_id)),
-					)
-				})?;
-
+					hypercore_client.get_perp_market_prices(ticker).await.map_err_internal("Failed to get perp market prices")?;
+				let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err_internal("Failed to get perp asset id")?;
+				let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_internal("Perp asset not found in meta")?;
 				let perp_sz_decimals = perp_asset.sz_decimals;
 
 				// For closing long position (selling), we want to sell at the highest buy price (bid)
@@ -158,20 +112,8 @@ pub fn register_close_position_test<
 					ticker, perp_mark_price, perp_mid_price, perp_bid_price, PERP_CLOSE_PRICE_RATIO, target_close_price, clamped_close_price
 				);
 
-				let clamped_close_size_f64 = clamped_close_size.parse::<f64>().map_err(|e| {
-					error!("Failed to parse clamped close size: {}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to parse clamped close size: {}", e)),
-					)
-				})?;
-				let clamped_close_price_f64 = clamped_close_price.parse::<f64>().map_err(|e| {
-					error!("Failed to parse clamped close price: {}", e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to parse clamped close price: {}", e)),
-					)
-				})?;
+				let clamped_close_size_f64: f64 = parse_as(&clamped_close_size, "clamped_close_size")?;
+				let clamped_close_price_f64: f64 = parse_as(&clamped_close_price, "clamped_close_price")?;
 
 				let close_size_units = to_price_units(clamped_close_size_f64);
 				let close_price_units = to_price_units(clamped_close_price_f64);
@@ -190,7 +132,7 @@ pub fn register_close_position_test<
 					encode_send_raw_action(close_action),
 				);
 
-				let close_tx_hash = submit_corewriter_userop(
+				let close_tx_hash = submit_corewriter_user_ops(
 					ctx.clone(),
 					&omni_account,
 					&generate_userop(smart_wallet, current_nonce),
@@ -214,21 +156,13 @@ pub fn register_close_position_test<
 						30,
 						OrderWaitCondition::Filled,
 					)
-					.await
-					.map_err(|e| {
-						error!("Close order did not complete for {}: {}", ticker, e);
-						PumpxRpcError::from(
-							DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-								.with_reason(format!("Close order failed: {}", e)),
-						)
-					})?;
+					.await.map_err_internal("Close order did not complete")?;
 
 				if !order_filled {
-					error!("Close order was rejected or canceled for {}", ticker);
-					return Err(PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Close order was rejected or canceled for {}", ticker)),
-					));
+					let msg = format!("Close order was rejected or canceled for {}", ticker);
+					error!(msg);
+					return Err(DetailedError::internal_error(&msg).to_rpc_error()
+					);
 				}
 
 				info!("Position closed successfully for {}", ticker);
