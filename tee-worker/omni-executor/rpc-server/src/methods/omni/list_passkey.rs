@@ -1,10 +1,7 @@
-use crate::{
-	detailed_error::DetailedError, server::RpcContext, verify_auth::verify_auth, Deserialize,
-	ErrorCode, Serialize,
-};
+use crate::{detailed_error::DetailedError, server::RpcContext, Deserialize, ErrorCode, Serialize};
 
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{to_omni_auth, UserAuth, UserId};
+use executor_primitives::UserId;
 use executor_storage::PasskeyStorage;
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -13,7 +10,6 @@ use tracing::error;
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ListPasskeyParams {
 	pub user_id: UserId,
-	pub user_auth: UserAuth,
 	pub client_id: String,
 }
 
@@ -41,17 +37,6 @@ pub fn register_list_passkey<CrossChainIntentExecutor: IntentExecutor + Send + S
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 				error!("Invalid user ID format");
 				ErrorCode::ParseError
-			})?;
-
-			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
-				.map_err(|e| {
-					error!("Failed to convert to OmniAuth: {:?}", e);
-					ErrorCode::ParseError
-				})?;
-
-			verify_auth(ctx.clone(), &auth).await.map_err(|e| {
-				error!("Failed to verify user authentication: {:?}", e);
-				e.to_detailed_error().to_error_object()
 			})?;
 
 			let omni_account = identity.to_omni_account(&params.client_id);
