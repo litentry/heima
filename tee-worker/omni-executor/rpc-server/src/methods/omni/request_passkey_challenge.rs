@@ -1,9 +1,8 @@
 use crate::{
-	detailed_error::DetailedError, error_code::*, server::RpcContext, verify_auth::verify_auth,
-	Deserialize, Serialize,
+	detailed_error::DetailedError, error_code::*, server::RpcContext, Deserialize, Serialize,
 };
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{to_omni_auth, UserAuth, UserId};
+use executor_primitives::UserId;
 use executor_storage::PasskeyChallengeStorage;
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
@@ -14,7 +13,6 @@ const CHALLENGE_TIMEOUT_SECONDS: u64 = 300; // 5 minutes
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RequestPasskeyChallengeParams {
 	pub user_id: UserId,
-	pub user_auth: UserAuth,
 	pub client_id: String,
 }
 
@@ -49,27 +47,6 @@ pub fn register_request_passkey_challenge<
 						"Ensure user_id follows the correct format for the specified type",
 					)
 					.to_error_object()
-			})?;
-
-			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
-				.map_err(|e| {
-					error!("Failed to convert to OmniAuth: {:?}", e);
-					DetailedError::new(PARSE_ERROR_CODE, "Failed to convert authentication data")
-						.with_field("user_auth")
-						.with_reason(format!("Authentication conversion failed: {}", e))
-						.with_suggestion("Ensure user_auth matches the user_id type")
-						.to_error_object()
-				})?;
-
-			verify_auth(ctx.clone(), &auth).await.map_err(|_| {
-				error!("Failed to verify user authentication");
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed",
-				)
-				.with_reason("User authentication could not be verified")
-				.with_suggestion("Check your authentication credentials and try again")
-				.to_error_object()
 			})?;
 
 			// Generate a random 32-byte challenge
