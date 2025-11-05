@@ -3,11 +3,11 @@ pragma solidity ^0.8.28;
 
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-import "../src/core/Create2Factory.sol";
+import "../src/core/Create2FactoryV1.sol";
 
 /**
  * @title DeployCreate2Factory
- * @notice Deployment script for the Create2Factory contract
+ * @notice Deployment script for the Create2FactoryV1 contract
  * @dev This script should be run with a FRESH EOA that has not deployed contracts before
  *      The factory address will be deterministic based on the deployer's address and nonce
  *
@@ -35,7 +35,7 @@ contract DeployCreate2Factory is Script {
         NetworkConfig memory networkConfig = getNetworkConfig();
 
         // Log deployment info
-        console.log("=== Create2Factory Deployment ===");
+        console.log("=== Create2FactoryV1 Deployment ===");
         console.log("Network:", networkConfig.name);
         console.log("Chain ID:", networkConfig.chainId);
         console.log("Deployer address:", deployer);
@@ -46,9 +46,7 @@ contract DeployCreate2Factory is Script {
         // Warning about fresh EOA requirement
         if (vm.getNonce(deployer) > 0) {
             console.log("WARNING: Deployer has non-zero nonce!");
-            console.log(
-                "For consistent factory addresses across chains, it's recommended to use a fresh EOA (nonce 0)"
-            );
+            console.log("For consistent factory addresses across chains, it's recommended to use a fresh EOA (nonce 0)");
             console.log("Current nonce:", vm.getNonce(deployer));
             console.log("");
         }
@@ -59,16 +57,16 @@ contract DeployCreate2Factory is Script {
         console.log("");
 
         // Deploy factory
-        console.log("Deploying Create2Factory...");
+        console.log("Deploying Create2FactoryV1...");
         vm.startBroadcast(deployerPrivateKey);
 
-        Create2Factory factory = new Create2Factory();
+        Create2FactoryV1 factory = new Create2FactoryV1();
 
         vm.stopBroadcast();
 
         // Verify deployment
         require(address(factory) == predictedFactory, "Factory address mismatch!");
-        console.log("Create2Factory deployed at:", address(factory));
+        console.log("Create2FactoryV1 deployed at:", address(factory));
         console.log("");
 
         // Print summary

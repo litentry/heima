@@ -7,33 +7,29 @@ import "../src/core/EntryPointV1.sol";
 import "../src/accounts/OmniAccountFactoryV1.sol";
 import "../src/core/SimplePaymaster.sol";
 import "../src/core/ERC20PaymasterV1.sol";
-import "../src/core/Create2Factory.sol";
+import "../src/core/Create2FactoryV1.sol";
 import "./DeploymentHelper.sol";
 
 /**
  * @title DeployWithCreate2
  * @notice Deployment script for AA contracts using CREATE2 for deterministic addresses
- * @dev This script uses a pre-deployed Create2Factory to deploy contracts with deterministic addresses
- *      across multiple EVM chains. All deployments maintain the same addresses when using the same
- *      deployer EOA and contract versions.
+ * @dev This script uses a pre-deployed Create2FactoryV1 to deploy contracts with deterministic addresses
+ *      across multiple EVM chains. All deployments maintain the same addresses regardless of deployer.
  *
  * Prerequisites:
- *   1. Create2Factory must be deployed on the target network
+ *   1. Create2FactoryV1 must be deployed on the target network
  *   2. Factory address must be provided via CREATE2_FACTORY_ADDRESS environment variable
- *   3. Same deployer EOA should be used across all chains for address consistency
  *
  * Usage:
  *   forge script script/DeployWithCreate2.s.sol:DeployWithCreate2 --rpc-url <RPC_URL> --broadcast --verify
  *
  * Environment Variables:
- *   CREATE2_FACTORY_ADDRESS - Address of the deployed Create2Factory (required)
- *   CONTRACT_VERSION - Version string for salt generation (default: "v1.0.0")
+ *   CREATE2_FACTORY_ADDRESS - Address of the deployed Create2FactoryV1 (required)
  *   All other environment variables from Deploy.s.sol are supported
  */
 contract DeployWithCreate2 is Script {
     // CREATE2 configuration
-    Create2Factory public factory;
-    string public contractVersion;
+    Create2FactoryV1 public factory;
 
     // Configuration - can be overridden via environment variables
     uint256 public paymasterInitialDeposit;
@@ -67,10 +63,7 @@ contract DeployWithCreate2 is Script {
         address factoryAddr = vm.envAddress("CREATE2_FACTORY_ADDRESS");
         require(factoryAddr != address(0), "CREATE2_FACTORY_ADDRESS not set");
         require(factoryAddr.code.length > 0, "CREATE2_FACTORY_ADDRESS is not a contract");
-        factory = Create2Factory(factoryAddr);
-
-        // Load contract version
-        contractVersion = vm.envOr("CONTRACT_VERSION", string("v1.0.0"));
+        factory = Create2FactoryV1(factoryAddr);
 
         // Load configuration
         loadConfiguration();
@@ -85,8 +78,7 @@ contract DeployWithCreate2 is Script {
         console.log("Deployer address:", deployer);
         console.log("Deployer balance:", deployer.balance / 1e18, "ETH");
         console.log("Block number:", block.number);
-        console.log("Create2Factory:", address(factory));
-        console.log("Contract version:", contractVersion);
+        console.log("Create2FactoryV1:", address(factory));
         console.log("");
 
         // Check minimum deployment balance
@@ -107,39 +99,35 @@ contract DeployWithCreate2 is Script {
         // Predict all addresses before deployment
         console.log("=== Predicted Addresses ===");
         if (shouldDeployEntryPoint) {
-            bytes32 entryPointSalt = factory.generateSalt("EntryPointV1", contractVersion, deployer);
+            bytes32 entryPointSalt = factory.generateSalt("EntryPointV1");
             address predictedEntryPoint =
                 factory.computeAddress(entryPointSalt, abi.encodePacked(type(EntryPointV1).creationCode));
             console.log("EntryPointV1 (predicted):", predictedEntryPoint);
         }
         if (shouldDeployFactory) {
-            bytes32 factorySalt = factory.generateSalt("OmniAccountFactoryV1", contractVersion, deployer);
+            bytes32 factorySalt = factory.generateSalt("OmniAccountFactoryV1");
             address predictedFactory = factory.computeAddress(
                 factorySalt,
-                abi.encodePacked(
-                    type(OmniAccountFactoryV1).creationCode, abi.encode(IEntryPoint(entryPointAddress))
-                )
+                abi.encodePacked(type(OmniAccountFactoryV1).creationCode, abi.encode(IEntryPoint(entryPointAddress)))
             );
             console.log("OmniAccountFactoryV1 (predicted):", predictedFactory);
         }
         if (shouldDeploySimplePaymaster) {
-            bytes32 paymasterSalt = factory.generateSalt("SimplePaymaster", contractVersion, deployer);
+            bytes32 paymasterSalt = factory.generateSalt("SimplePaymaster");
             address predictedPaymaster = factory.computeAddress(
                 paymasterSalt,
                 abi.encodePacked(
-                    type(SimplePaymaster).creationCode,
-                    abi.encode(IEntryPoint(entryPointAddress), initialBundler)
+                    type(SimplePaymaster).creationCode, abi.encode(IEntryPoint(entryPointAddress), initialBundler)
                 )
             );
             console.log("SimplePaymaster (predicted):", predictedPaymaster);
         }
         if (shouldDeployERC20Paymaster) {
-            bytes32 erc20PaymasterSalt = factory.generateSalt("ERC20PaymasterV1", contractVersion, deployer);
+            bytes32 erc20PaymasterSalt = factory.generateSalt("ERC20PaymasterV1");
             address predictedERC20Paymaster = factory.computeAddress(
                 erc20PaymasterSalt,
                 abi.encodePacked(
-                    type(ERC20PaymasterV1).creationCode,
-                    abi.encode(IEntryPoint(entryPointAddress), initialBundler)
+                    type(ERC20PaymasterV1).creationCode, abi.encode(IEntryPoint(entryPointAddress), initialBundler)
                 )
             );
             console.log("ERC20PaymasterV1 (predicted):", predictedERC20Paymaster);
@@ -294,7 +282,7 @@ contract DeployWithCreate2 is Script {
     function deployEntryPoint(address deployer) internal {
         console.log("Deploying EntryPointV1 via CREATE2...");
 
-        bytes32 salt = factory.generateSalt("EntryPointV1", contractVersion, deployer);
+        bytes32 salt = factory.generateSalt("EntryPointV1");
         bytes memory bytecode = abi.encodePacked(type(EntryPointV1).creationCode);
 
         address deployed = factory.deploy(salt, bytecode);
@@ -307,7 +295,7 @@ contract DeployWithCreate2 is Script {
     function deployAccountFactory(address deployer) internal {
         console.log("Deploying OmniAccountFactoryV1 via CREATE2...");
 
-        bytes32 salt = factory.generateSalt("OmniAccountFactoryV1", contractVersion, deployer);
+        bytes32 salt = factory.generateSalt("OmniAccountFactoryV1");
         bytes memory bytecode =
             abi.encodePacked(type(OmniAccountFactoryV1).creationCode, abi.encode(IEntryPoint(entryPointAddress)));
 
@@ -322,7 +310,7 @@ contract DeployWithCreate2 is Script {
     function deployPaymaster(address deployer) internal {
         console.log("Deploying SimplePaymaster via CREATE2...");
 
-        bytes32 salt = factory.generateSalt("SimplePaymaster", contractVersion, deployer);
+        bytes32 salt = factory.generateSalt("SimplePaymaster");
         bytes memory bytecode = abi.encodePacked(
             type(SimplePaymaster).creationCode, abi.encode(IEntryPoint(entryPointAddress), initialBundler)
         );
@@ -339,7 +327,7 @@ contract DeployWithCreate2 is Script {
     function deployERC20Paymaster(address deployer) internal {
         console.log("Deploying ERC20PaymasterV1 via CREATE2...");
 
-        bytes32 salt = factory.generateSalt("ERC20PaymasterV1", contractVersion, deployer);
+        bytes32 salt = factory.generateSalt("ERC20PaymasterV1");
         bytes memory bytecode = abi.encodePacked(
             type(ERC20PaymasterV1).creationCode, abi.encode(IEntryPoint(entryPointAddress), initialBundler)
         );
@@ -419,11 +407,10 @@ contract DeployWithCreate2 is Script {
         console.log("Network:", networkConfig.name);
         console.log("Chain ID:", networkConfig.chainId);
         console.log("Deployment Date:", block.timestamp);
-        console.log("Create2Factory:", address(factory));
-        console.log("Contract Version:", contractVersion);
+        console.log("Create2FactoryV1:", address(factory));
         console.log("");
         console.log("IMPORTANT: These addresses are deterministic across all chains!");
-        console.log("Using the same deployer EOA and version will yield the same addresses.");
+        console.log("The same contract names will always yield the same addresses.");
         console.log("");
     }
 
@@ -447,10 +434,7 @@ contract DeployWithCreate2 is Script {
 
         if (shouldDeployEntryPoint) {
             deployments[currentIndex] = DeploymentHelper.createContractDeployment(
-                vm,
-                "EntryPointV1",
-                entryPointAddress,
-                string(abi.encodePacked('{"deploymentMethod": "CREATE2", "version": "', contractVersion, '"}'))
+                vm, "EntryPointV1", entryPointAddress, '{"deploymentMethod": "CREATE2"}'
             );
             currentIndex++;
         }
@@ -462,11 +446,7 @@ contract DeployWithCreate2 is Script {
                 factoryAddress,
                 string(
                     abi.encodePacked(
-                        '{"entryPoint": "',
-                        vm.toString(entryPointAddress),
-                        '", "deploymentMethod": "CREATE2", "version": "',
-                        contractVersion,
-                        '"}'
+                        '{"entryPoint": "', vm.toString(entryPointAddress), '", "deploymentMethod": "CREATE2"}'
                     )
                 )
             );
@@ -484,9 +464,7 @@ contract DeployWithCreate2 is Script {
                         vm.toString(initialBundler),
                         '", "entryPoint": "',
                         vm.toString(entryPointAddress),
-                        '", "deploymentMethod": "CREATE2", "version": "',
-                        contractVersion,
-                        '"}'
+                        '", "deploymentMethod": "CREATE2"}'
                     )
                 )
             );
@@ -504,9 +482,7 @@ contract DeployWithCreate2 is Script {
                         vm.toString(initialBundler),
                         '", "entryPoint": "',
                         vm.toString(entryPointAddress),
-                        '", "deploymentMethod": "CREATE2", "version": "',
-                        contractVersion,
-                        '"}'
+                        '", "deploymentMethod": "CREATE2"}'
                     )
                 )
             );
