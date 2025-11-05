@@ -387,9 +387,11 @@ pub fn verify_passkey_authentication<
 	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
 	use executor_storage::PasskeyStorage;
 
-	let passkey_identity =
-		Identity::from_web2_account(&passkey_data.user_id, Web2IdentityType::Passkey);
-	let omni_account = passkey_identity.to_omni_account(&passkey_data.client_id);
+	let identity = Identity::try_from(passkey_data.user_id.clone()).map_err(|_| {
+		AuthenticationError::PasskeyError("Invalid user ID format".to_string())
+	})?;
+	let omni_account = identity.to_omni_account(&passkey_data.client_id);
+
 	let client_data: ClientData =
 		PasskeyVerifier::parse_client_data_json(&passkey_data.client_data_json).map_err(|e| {
 			AuthenticationError::PasskeyError(format!("Failed to parse client data: {}", e))

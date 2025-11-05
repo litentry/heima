@@ -130,8 +130,9 @@ pub fn register_get_hyperliquid_signature_data<
 ) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
-			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
 			let params = parse_rpc_params::<GetHyperliquidSignatureDataParams>(params)?;
+
+			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
 
 			// Make sure `user_id` is non-evm type
 			if matches!(params.user_id, UserId::Evm(_)) {

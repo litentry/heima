@@ -189,7 +189,7 @@ pub struct OAuth2Data {
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PasskeyData {
-	pub user_id: String,
+	pub user_id: UserId, // Only support `UserId::Email` now
 	pub client_id: String,
 	pub credential_id: String,
 	pub signature: String, // raw 64 byte, or DER encoded - have to figure out what authenticator sends
