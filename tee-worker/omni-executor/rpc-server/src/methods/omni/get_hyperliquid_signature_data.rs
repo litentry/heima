@@ -1,10 +1,12 @@
 use crate::{
-	auth_utils::{verify_payload_timestamp, verify_wildmeta_signature},
 	detailed_error::DetailedError,
 	error_code::*,
 	server::RpcContext,
-	validation_helpers::validate_ethereum_address,
+	utils::auth::{verify_payload_timestamp, verify_wildmeta_signature},
+	utils::types::RpcResultExt,
+	utils::validation::{parse_rpc_params, validate_evm_address},
 	verify_auth::verify_auth,
+	RpcResult,
 };
 use chrono::Utc;
 use executor_core::intent_executor::IntentExecutor;
@@ -14,7 +16,7 @@ use executor_primitives::{
 use hyperliquid_rust_sdk::{
 	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
 };
-use jsonrpsee::{types::ErrorObject, RpcModule};
+use jsonrpsee::RpcModule;
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
@@ -113,74 +115,51 @@ pub fn register_get_hyperliquid_signature_data<
 ) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
-			let params = params.parse::<GetHyperliquidSignatureDataParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
-					.with_reason(format!("Invalid JSON structure: {}", e))
-					.to_error_object()
-			})?;
-
 			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
+			let params = parse_rpc_params::<GetHyperliquidSignatureDataParams>(params)?;
 
 			// Make sure `user_id` is non-evm type
 			if matches!(params.user_id, UserId::Evm(_)) {
-				error!("Invalid user_id type, expected non-Evm");
-				return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid user ID type")
-					.with_field("user_id")
-					.with_expected("Non-EVM user ID (Email, Twitter, Discord, etc.)")
-					.with_received("EVM type")
-					.with_suggestion("Use a non-EVM user ID type for this operation")
-					.to_error_object());
+				error!("Invalid user_id type, expected non-evm");
+				return Err(
+					DetailedError::invalid_params("user_id", "expect non-evm").to_rpc_error()
+				);
 			}
 
 			// Unified authentication logic
 			let main_address = if let Some(user_auth) = &params.user_auth {
 				// User authentication provided
-				let auth =
-					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
-						error!("Failed to convert to OmniAuth: {:?}", e);
-						DetailedError::new(PARSE_ERROR_CODE, "Failed to convert authentication data")
-							.with_field("user_auth")
-							.with_reason(format!("OmniAuth conversion error: {:?}", e))
-							.to_error_object()
-					})?;
+				let auth = to_omni_auth(user_auth, &params.user_id, &params.client_id)
+					.map_err_parse("Failed to convert to OmniAuth")?;
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 					error!("Failed to verify user authentication: {:?}", e);
-					DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-						.with_field("user_auth")
-						.with_reason(format!("Verification error: {:?}", e))
-						.with_suggestion("Please check your authentication credentials")
-						.to_error_object()
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_field("user_auth")
+					.with_reason(format!("Verification error: {:?}", e))
+					.with_suggestion("Please check your authentication credentials")
+					.to_rpc_error()
 				})?;
 
 				// Get main address from derived wallet
-				let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-					error!("Failed to convert user ID to identity: {}", e);
-					DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
-						.with_field("user_id")
-						.with_reason(format!("Identity conversion error: {}", e))
-						.to_error_object()
-				})?;
+				let identity = Identity::try_from(params.user_id.clone())
+					.map_err_parse("Failed to convert user ID to identity")?;
 				let omni_account = identity.to_omni_account(&params.client_id);
 
-				let derived_pubkey = ctx
-					.signer_client
+				ctx.signer_client
 					.request_wallet(ChainType::Evm, 0, *omni_account.as_ref())
 					.await
 					.map_err(|_| {
 						error!("Failed to derive EVM address");
-						DetailedError::new(INTERNAL_ERROR_CODE, "Failed to derive wallet address")
-							.with_reason("Signer service failed to derive EVM address")
-							.with_suggestion("Please try again later")
-							.to_error_object()
-					})?;
-				pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|_| {
-					error!("Failed to convert derived pubkey to address");
-					DetailedError::new(INTERNAL_ERROR_CODE, "Failed to convert public key")
-						.with_reason("Public key to address conversion failed")
-						.to_error_object()
-				})?
+						DetailedError::signer_service_error().to_rpc_error()
+					})
+					.and_then(|pk| {
+						pubkey_to_address(ChainType::Evm, &pk)
+							.map_err_internal("Failed to convert pubkey to address")
+					})?
 			} else if let Some(client_auth) = &params.client_auth {
 				// Client authentication provided (WildMeta)
 				match client_auth {
@@ -194,24 +173,15 @@ pub fn register_get_hyperliquid_signature_data<
 						verify_wildmeta_signature(agent_address, business_json, signature)?;
 
 						let business_data: serde_json::Value = serde_json::from_str(business_json)
-							.map_err(|e| {
-								error!("Failed to parse business_json: {:?}", e);
-								DetailedError::new(PARSE_ERROR_CODE, "Failed to parse business JSON")
-									.with_field("business_json")
-									.with_reason(format!("JSON parse error: {:?}", e))
-									.to_error_object()
-							})?;
+							.map_err_parse("Failed to parse business_json")?;
 
 						let timestamp = business_data
 							.get("timestamp")
 							.and_then(|v| v.as_u64())
 							.ok_or_else(|| {
 								error!("Missing timestamp in business_json");
-								DetailedError::new(MISSING_REQUIRED_FIELD_CODE, "Missing required field in business JSON")
-									.with_field("timestamp")
-									.with_expected("Unix timestamp as number")
-									.with_reason("Business JSON must contain a 'timestamp' field")
-									.to_error_object()
+								DetailedError::invalid_params("business_json", "missing timestamp")
+									.to_rpc_error()
 							})?;
 
 						verify_payload_timestamp(
@@ -225,50 +195,41 @@ pub fn register_get_hyperliquid_signature_data<
 							.verify_hyperliquid_link(agent_address, main_address, *login_type)
 							.await
 							.map_err(|_| {
-								error!("Failed to verify hyperliquid link");
-								DetailedError::new(INTERNAL_ERROR_CODE, "Failed to verify account linkage")
-									.with_reason("Hyperliquid link verification service error")
-									.with_suggestion("Please try again later")
-									.to_error_object()
+								let msg = "Failed to verify hyperliquid link";
+								error!(msg);
+								DetailedError::wildmeta_service_error("verify_hyperliquid_link")
+									.to_rpc_error()
 							})?;
 
 						if !linked {
-							error!("Agent and main addresses are not linked");
-							return Err(DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Account linkage verification failed")
-								.with_field("agent_address")
-								.with_expected("Linked to main address")
-								.with_received("Not linked")
-								.with_suggestion("Ensure the agent address is linked to your main address in Hyperliquid")
-								.to_error_object());
+							let msg = "Agent and main addresses are not linked";
+							error!(msg);
+							return Err(DetailedError::internal_error(msg).to_rpc_error());
 						}
 
 						main_address.clone()
 					},
 					_ => {
 						error!("Invalid client auth type");
-						return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid client authentication type")
-							.with_field("client_auth")
-							.with_expected("WildmetaHl")
-							.with_suggestion("Use a supported authentication method")
-							.to_error_object());
+						return Err(DetailedError::invalid_params(
+							"client_auth",
+							"expect wildmeta_hl",
+						)
+						.to_rpc_error());
 					},
 				}
 			} else {
 				error!("Either user_auth or client_auth must be provided");
-				return Err(DetailedError::new(MISSING_REQUIRED_FIELD_CODE, "Missing authentication data")
-					.with_expected("Either user_auth or client_auth")
-					.with_suggestion("Provide either user_auth or client_auth for authentication")
-					.to_error_object());
+				return Err(DetailedError::invalid_params(
+					"auth",
+					"expect either user_auth or client_auth",
+				)
+				.to_rpc_error());
 			};
 
 			// Derive omni_account for signing (works for both auth methods)
-			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-				error!("Failed to convert user ID to identity: {}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse user identity")
-					.with_field("user_id")
-					.with_reason(format!("Identity conversion error: {}", e))
-					.to_error_object()
-			})?;
+			let identity = Identity::try_from(params.user_id.clone())
+				.map_err_parse("Failed to convert user_id to identity")?;
 			let omni_account = identity.to_omni_account(&params.client_id);
 
 			let nonce = Utc::now().timestamp_millis() as u64;
@@ -284,8 +245,7 @@ pub fn register_get_hyperliquid_signature_data<
 					let action = ApproveAgent {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
-						agent_address: validate_ethereum_address(&agent_address, "agent_address")
-							.map_err(|e| e.to_error_object())?,
+						agent_address: validate_evm_address(&agent_address, "agent_address")?,
 						agent_name,
 						nonce,
 					};
@@ -294,8 +254,7 @@ pub fn register_get_hyperliquid_signature_data<
 					(HyperliquidAction::ApproveAgent(action), signature)
 				},
 				HyperliquidActionType::Withdraw3 { amount, destination } => {
-                    let _ = validate_ethereum_address(&destination, "destination")
-							.map_err(|e| e.to_error_object())?;
+					let _ = validate_evm_address(&destination, "destination")?;
 					let action = Withdraw3 {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
@@ -312,8 +271,7 @@ pub fn register_get_hyperliquid_signature_data<
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						max_fee_rate,
-						builder: validate_ethereum_address(&builder, "builder")
-							.map_err(|e| e.to_error_object())?,
+						builder: validate_evm_address(&builder, "builder")?,
 						nonce,
 					};
 					let signature =
@@ -328,12 +286,10 @@ pub fn register_get_hyperliquid_signature_data<
 					amount,
 					from_sub_account,
 				} => {
-					let _ = validate_ethereum_address(&destination, "destination")
-						.map_err(|e| e.to_error_object())?;
+					let _ = validate_evm_address(&destination, "destination")?;
 					// Validate from_sub_account if it's not empty
 					if !from_sub_account.is_empty() {
-						let _ = validate_ethereum_address(&from_sub_account, "from_sub_account")
-							.map_err(|e| e.to_error_object())?;
+						let _ = validate_evm_address(&from_sub_account, "from_sub_account")?;
 					}
 					let action = SendAsset {
 						signature_chain_id: params.chain_id,
@@ -354,8 +310,7 @@ pub fn register_get_hyperliquid_signature_data<
 					let action = UserDexAbstraction {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
-						user: validate_ethereum_address(&user, "user")
-							.map_err(|e| e.to_error_object())?,
+						user: validate_evm_address(&user, "user")?,
 						enabled,
 						nonce,
 					};
@@ -380,7 +335,7 @@ async fn generate_eip712_signature<
 	ctx: &RpcContext<CrossChainIntentExecutor>,
 	action: &T,
 	omni_account: &[u8; 32],
-) -> Result<String, ErrorObject<'static>> {
+) -> RpcResult<String> {
 	let message_hash = action.eip712_signing_hash();
 
 	let signature_bytes = ctx
@@ -388,11 +343,9 @@ async fn generate_eip712_signature<
 		.request_signature(ChainType::Evm, 0, *omni_account, message_hash.to_vec())
 		.await
 		.map_err(|_| {
-			error!("Failed to sign message");
-			DetailedError::new(INTERNAL_ERROR_CODE, "Failed to generate signature")
-				.with_reason("Signer service failed to sign EIP-712 message")
-				.with_suggestion("Please try again later")
-				.to_error_object()
+			let msg = "Failed to sign message";
+			error!(msg);
+			DetailedError::signer_service_error().to_rpc_error()
 		})?;
 
 	Ok(hex_encode(&signature_bytes))

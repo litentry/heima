@@ -21,7 +21,7 @@ use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
 use wildmeta_api::WildmetaApi;
 
-pub(crate) struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static> {
+pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static> {
 	pub shielding_key: ShieldingKey,
 	pub storage_db: Arc<StorageDB>,
 	pub mailer_factory: Arc<MailerFactory>,

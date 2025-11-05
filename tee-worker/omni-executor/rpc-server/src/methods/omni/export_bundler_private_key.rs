@@ -1,12 +1,6 @@
 use crate::{
-	detailed_error::DetailedError,
-	error_code::{
-		AES_KEY_CONVERT_FAILED_CODE, AUTH_VERIFICATION_FAILED_CODE, DECRYPT_REQUEST_FAILED_CODE,
-		PARSE_ERROR_CODE,
-	},
-	methods::omni::PumpxRpcError,
-	server::RpcContext,
-	Deserialize,
+	detailed_error::DetailedError, error_code::AUTH_VERIFICATION_FAILED_CODE, server::RpcContext,
+	utils::types::RpcResultExt, utils::validation::parse_rpc_params, Deserialize, RpcResult,
 };
 use alloy::primitives::keccak256;
 use executor_core::intent_executor::IntentExecutor;
@@ -16,7 +10,7 @@ use executor_crypto::{
 };
 use executor_primitives::utils::hex::decode_hex;
 use executor_storage::{Storage, WildmetaTimestampStorage};
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use rsa::Oaep;
 use sha2::Sha256;
 use std::sync::Arc;
@@ -39,94 +33,73 @@ fn verify_signature(
 	signature: &str,
 	expected_pubkey: &[u8; 33],
 	storage: &Arc<WildmetaTimestampStorage>,
-) -> Result<(), PumpxRpcError> {
+) -> RpcResult<()> {
 	let current_time = SystemTime::now()
 		.duration_since(UNIX_EPOCH)
 		.map_err(|e| {
 			error!("Failed to get current time: {:?}", e);
-			PumpxRpcError::from(
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed",
-				)
-				.with_reason("System time error"),
-			)
+			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
+				.with_reason("System time error")
+				.to_rpc_error()
 		})?
 		.as_millis() as u64;
 
 	if timestamp < current_time.saturating_sub(TIMESTAMP_VALIDITY_WINDOW_MS) {
 		error!("Timestamp too old: {} vs current {}", timestamp, current_time);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-				.with_field("timestamp")
-				.with_reason(format!(
-					"Timestamp is too old (must be within last {} minutes)",
-					TIMESTAMP_VALIDITY_WINDOW_MS / 60000
-				))
-				.with_suggestion("Use a recent timestamp"),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Authentication verification failed",
+		)
+		.with_field("timestamp")
+		.with_reason(format!(
+			"Timestamp is too old (must be within last {} minutes)",
+			TIMESTAMP_VALIDITY_WINDOW_MS / 60000
+		))
+		.with_suggestion("Use a recent timestamp")
+		.to_rpc_error());
 	}
 
 	if timestamp > current_time + TIMESTAMP_FUTURE_TOLERANCE_MS {
 		error!("Timestamp too far in future: {} vs current {}", timestamp, current_time);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-				.with_field("timestamp")
-				.with_reason("Timestamp is too far in the future")
-				.with_suggestion("Ensure system clock is synchronized"),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Authentication verification failed",
+		)
+		.with_field("timestamp")
+		.with_reason("Timestamp is too far in the future")
+		.with_suggestion("Ensure system clock is synchronized")
+		.to_rpc_error());
 	}
 
 	let last_timestamp = storage
 		.get(&BUNDLER_KEY_EXPORT_STORAGE_KEY.to_string())
 		.map_err(|e| {
 			error!("Failed to get last timestamp from storage: {:?}", e);
-			PumpxRpcError::from(
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed",
-				)
-				.with_reason("Failed to retrieve last timestamp from storage"),
-			)
+			DetailedError::storage_service_error("get timestamp").to_rpc_error()
 		})?
 		.unwrap_or(0);
 
 	if timestamp <= last_timestamp {
 		error!("Timestamp not greater than last used: {} <= {}", timestamp, last_timestamp);
-		return Err(PumpxRpcError::from(
-			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-				.with_field("timestamp")
-				.with_reason("Timestamp must be greater than previously used timestamp")
-				.with_suggestion("This may be a replay attack. Use a fresh timestamp."),
-		));
-	}
-	let signature_bytes = decode_hex(signature).map_err(|e| {
-		error!("Failed to decode signature: {:?}", e);
-		PumpxRpcError::from(
-			DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-				.with_field("signature")
-				.with_reason("The signature could not be decoded from hex"),
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Authentication verification failed",
 		)
-	})?;
-
+		.with_field("timestamp")
+		.with_reason("Timestamp must be greater than previously used timestamp")
+		.with_suggestion("This may be a replay attack. Use a fresh timestamp.")
+		.to_rpc_error());
+	}
+	let signature_bytes = decode_hex(signature).map_err_parse("Failed to decode signature")?;
 	if signature_bytes.len() != 65 {
-		error!("Invalid signature length: expected 65 bytes, got {}", signature_bytes.len());
-		return Err(PumpxRpcError::from(
-			DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-				.with_field("signature")
-				.with_reason(format!(
-					"Invalid signature length: expected 65 bytes, got {}",
-					signature_bytes.len()
-				)),
-		));
+		let msg = format!("Invalid signature length, expected 65, got {}", signature_bytes.len());
+		error!(msg);
+		return Err(DetailedError::parse_error(&msg).to_rpc_error());
 	}
 
-	let signature_array: [u8; 65] = signature_bytes.try_into().map_err(|_| {
-		error!("Failed to convert signature bytes to array");
-		PumpxRpcError::from(
-			DetailedError::new(PARSE_ERROR_CODE, "Parse error").with_field("signature"),
-		)
-	})?;
+	let signature_array: [u8; 65] = signature_bytes
+		.try_into()
+		.map_err_parse("Failed to convert signature bytes to array")?;
 
 	let timestamp_bytes = timestamp.to_string();
 	let challenge_hash = keccak256(timestamp_bytes.as_bytes());
@@ -137,25 +110,21 @@ fn verify_signature(
 
 	if !ecdsa::Pair::verify_prehashed(&signature, &challenge_hash_array, &public_key) {
 		error!("Signature verification failed for bundler key export");
-		return Err(PumpxRpcError::from(
-			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-				.with_field("signature")
-				.with_reason("The signature does not match the challenge")
-				.with_suggestion("Ensure you are using the correct private key"),
-		));
+		return Err(DetailedError::new(
+			AUTH_VERIFICATION_FAILED_CODE,
+			"Authentication verification failed",
+		)
+		.with_field("signature")
+		.with_reason("The signature does not match the challenge")
+		.with_suggestion("Ensure you are using the correct private key")
+		.to_rpc_error());
 	}
 
 	storage
 		.insert(&BUNDLER_KEY_EXPORT_STORAGE_KEY.to_string(), timestamp)
 		.map_err(|e| {
 			error!("Failed to store new timestamp: {:?}", e);
-			PumpxRpcError::from(
-				DetailedError::new(
-					AUTH_VERIFICATION_FAILED_CODE,
-					"Authentication verification failed",
-				)
-				.with_reason("Failed to store timestamp in storage"),
-			)
+			DetailedError::storage_service_error("insert timestamp").to_rpc_error()
 		})?;
 
 	debug!("Timestamp {} validated and stored successfully", timestamp);
@@ -170,54 +139,23 @@ pub fn register_export_bundler_private_key<
 ) {
 	module
 		.register_method("omni_exportBundlerPrivateKey", |params, ctx, _ext| {
-			let params = params.parse::<ExportBundlerPrivateKeyParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
-			})?;
+			let params = parse_rpc_params::<ExportBundlerPrivateKeyParams>(params)?;
 
 			debug!(
 				"Received omni_exportBundlerPrivateKey request with timestamp: {}",
 				params.timestamp
 			);
 
-			let key_bytes = decode_hex(&params.key).map_err(|e| {
-				error!("Failed to decode key hex: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_field("key")
-						.with_reason("The key could not be decoded from hex"),
-				)
-			})?;
+			let key_bytes = decode_hex(&params.key).map_err_parse("Failed to decode key hex")?;
 
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &key_bytes)
-				.map_err(|e| {
-					error!("Failed to decrypt shielded value: {:?}", e);
-					PumpxRpcError::from(
-						DetailedError::new(
-							DECRYPT_REQUEST_FAILED_CODE,
-							"Shielded value decryption failed",
-						)
-						.with_field("key")
-						.with_reason("The provided RSA-encrypted AES key could not be decrypted")
-						.with_suggestion("Ensure the RSA public key matches the encryption key"),
-					)
-				})?;
+				.map_err_internal("Failed to decrypt shielded value")?;
 
-			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				error!("Failed to convert AesKey");
-				PumpxRpcError::from(
-					DetailedError::new(AES_KEY_CONVERT_FAILED_CODE, "AesKey convert failed")
-						.with_field("key")
-						.with_reason("The decrypted key is not a valid 256-bit AES key")
-						.with_suggestion("Ensure the AES key is exactly 32 bytes (256 bits)"),
-				)
-			})?;
+			let aes_key: Aes256Key =
+				aes_key.try_into().map_err_internal("Failed to convert AesKey")?;
 
 			verify_signature(
 				params.timestamp,
@@ -230,7 +168,7 @@ pub fn register_export_bundler_private_key<
 
 			let encrypted_key: SerdeAesOutput =
 				aes_encrypt_default(&aes_key, &ctx.bundler_private_key).into();
-			Ok::<SerdeAesOutput, PumpxRpcError>(encrypted_key)
+			Ok::<SerdeAesOutput, ErrorObjectOwned>(encrypted_key)
 		})
 		.expect("Failed to register omni_exportBundlerPrivateKey method");
 }

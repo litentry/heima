@@ -1,8 +1,10 @@
+use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
+use crate::RpcResult;
 use jsonrpsee::RpcModule;
-
-mod common;
-pub use common::PumpxRpcError;
+use parity_scale_codec::Codec;
+use pumpx::methods::common::ApiResponse;
+use tracing::error;
 
 mod get_health;
 use get_health::*;
@@ -52,9 +54,6 @@ use get_omni_account::*;
 
 mod get_smart_wallet_root_signer;
 use get_smart_wallet_root_signer::*;
-
-mod submit_user_op;
-use submit_user_op::*;
 
 mod estimate_user_op_gas;
 use estimate_user_op_gas::*;
@@ -131,7 +130,6 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_notify_limit_order_result(module);
 	register_get_omni_account(module);
 	register_get_smart_wallet_root_signer(module);
-	register_submit_user_op(module);
 	register_estimate_user_op_gas(module);
 	register_submit_user_op_with_auth(module);
 	register_get_hyperliquid_signature_data(module);
@@ -159,4 +157,12 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 
 	#[cfg(feature = "test-endpoints")]
 	register_close_position_test(module);
+}
+
+pub fn check_backend_response<T: Codec>(response: &ApiResponse<T>, op: &str) -> RpcResult<()> {
+	if response.code != 10000 {
+		error!("{} failed: code={}, message={}", op, response.code, response.message);
+		return Err(DetailedError::invalid_backend_response(response, op).to_rpc_error());
+	}
+	Ok(())
 }
