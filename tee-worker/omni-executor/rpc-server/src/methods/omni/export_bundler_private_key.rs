@@ -75,9 +75,7 @@ fn verify_signature(
 		.get(&BUNDLER_KEY_EXPORT_STORAGE_KEY.to_string())
 		.map_err(|e| {
 			error!("Failed to get last timestamp from storage: {:?}", e);
-			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-				.with_reason("Failed to retrieve last timestamp from storage")
-				.to_rpc_error()
+			DetailedError::storage_service_error("get timestamp").to_rpc_error()
 		})?
 		.unwrap_or(0);
 
@@ -126,9 +124,7 @@ fn verify_signature(
 		.insert(&BUNDLER_KEY_EXPORT_STORAGE_KEY.to_string(), timestamp)
 		.map_err(|e| {
 			error!("Failed to store new timestamp: {:?}", e);
-			DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
-				.with_reason("Failed to store timestamp in storage")
-				.to_rpc_error()
+			DetailedError::storage_service_error("insert timestamp").to_rpc_error()
 		})?;
 
 	debug!("Timestamp {} validated and stored successfully", timestamp);

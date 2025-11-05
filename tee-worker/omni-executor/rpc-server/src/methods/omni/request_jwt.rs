@@ -155,8 +155,8 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			};
 
 			if let Err(e) = storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()) {
-				error!("Failed to id token into storage: {:?}", e);
-				return Err(DetailedError::storage_service_error("insert ID token").to_rpc_error());
+				error!("Failed to insert id token into storage: {:?}", e);
+				return Err(DetailedError::storage_service_error("insert id token").to_rpc_error());
 			};
 
 			Ok(RequestJwtResponse { access_token, id_token, backend_response })
