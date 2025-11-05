@@ -1,7 +1,6 @@
 use crate::{
 	detailed_error::DetailedError, error_code::AUTH_VERIFICATION_FAILED_CODE, server::RpcContext,
-	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, RpcResult,
-	Serialize,
+	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, Serialize,
 };
 
 use executor_core::intent_executor::IntentExecutor;
@@ -11,7 +10,7 @@ use executor_storage::{
 	PasskeyChallengeError, PasskeyChallengeStorage, PasskeyError, PasskeyStorage,
 };
 use heima_primitives::Identity;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObject, RpcModule};
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -158,7 +157,7 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 					.to_rpc_error()
 				})?;
 
-			Ok::<AttachPasskeyResponse, _>(AttachPasskeyResponse {
+			Ok::<AttachPasskeyResponse, ErrorObject>(AttachPasskeyResponse {
 				success: true,
 				message: format!(
 					"Passkey ({}) successfully attached to account {}",

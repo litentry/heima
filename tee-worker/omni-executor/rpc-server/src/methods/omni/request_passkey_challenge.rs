@@ -6,7 +6,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::UserId;
 use executor_storage::PasskeyChallengeStorage;
 use heima_primitives::Identity;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObject, RpcModule};
 use tracing::*;
 
 const CHALLENGE_TIMEOUT_SECONDS: u64 = 300; // 5 minutes
@@ -70,7 +70,10 @@ pub fn register_request_passkey_challenge<
 				},
 			)?;
 
-			Ok(RequestPasskeyChallengeResponse { challenge, timeout })
+			Ok::<RequestPasskeyChallengeResponse, ErrorObject>(RequestPasskeyChallengeResponse {
+				challenge,
+				timeout,
+			})
 		})
 		.expect("Failed to register omni_requestPasskeyChallenge method");
 }

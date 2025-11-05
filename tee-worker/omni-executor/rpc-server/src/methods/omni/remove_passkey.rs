@@ -7,7 +7,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{to_omni_auth, UserAuth, UserId};
 use executor_storage::{PasskeyError, PasskeyStorage};
 use heima_primitives::Identity;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObject, RpcModule};
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -70,7 +70,7 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 					},
 				})?;
 
-			Ok(RemovePasskeyResponse {
+			Ok::<RemovePasskeyResponse, ErrorObject>(RemovePasskeyResponse {
 				success: true,
 				message: format!("Passkey {} successfully removed", params.credential_id),
 			})

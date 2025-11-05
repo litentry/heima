@@ -7,7 +7,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::UserId;
 use executor_storage::PasskeyStorage;
 use heima_primitives::Identity;
-use jsonrpsee::RpcModule;
+use jsonrpsee::{types::ErrorObject, RpcModule};
 use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -52,7 +52,7 @@ pub fn register_list_passkey<CrossChainIntentExecutor: IntentExecutor + Send + S
 				.map(|(credential_id, created_at)| PasskeyInfo { credential_id, created_at })
 				.collect();
 
-			Ok(ListPasskeyResponse { passkeys: passkey_infos })
+			Ok::<ListPasskeyResponse, ErrorObject>(ListPasskeyResponse { passkeys: passkey_infos })
 		})
 		.expect("Failed to register omni_listPasskey method");
 }
