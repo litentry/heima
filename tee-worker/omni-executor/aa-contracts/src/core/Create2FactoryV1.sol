@@ -2,12 +2,12 @@
 pragma solidity ^0.8.28;
 
 /**
- * @title Create2Factory
+ * @title Create2FactoryV1
  * @notice Factory contract for deterministic contract deployments using CREATE2
  * @dev Provides deterministic address generation across multiple EVM chains
  *      This contract should be deployed using a fresh EOA on each network
  */
-contract Create2Factory {
+contract Create2FactoryV1 {
     /// @notice Emitted when a contract is successfully deployed
     /// @param deployed The address of the newly deployed contract
     /// @param salt The salt used for deployment
@@ -69,9 +69,8 @@ contract Create2Factory {
      */
     function computeAddress(bytes32 salt, bytes memory bytecode) public view returns (address predicted) {
         bytes32 bytecodeHash = keccak256(bytecode);
-        predicted = address(
-            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, bytecodeHash))))
-        );
+        predicted =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, bytecodeHash)))));
     }
 
     /**
@@ -81,9 +80,8 @@ contract Create2Factory {
      * @return predicted The predicted address of the contract
      */
     function computeAddressWithHash(bytes32 salt, bytes32 bytecodeHash) public view returns (address predicted) {
-        predicted = address(
-            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, bytecodeHash))))
-        );
+        predicted =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, bytecodeHash)))));
     }
 
     /**
@@ -96,35 +94,14 @@ contract Create2Factory {
     }
 
     /**
-     * @notice Generates a sender-protected salt for deployment
+     * @notice Generates a deterministic salt for deployment
      * @param contractName The name/identifier of the contract
-     * @param version The version string
-     * @param sender The address of the deployer (typically msg.sender)
      * @return salt The generated salt
-     * @dev Sender-protected salts prevent frontrunning by including the deployer address
-     *      This ensures only the specified sender can deploy to the computed address
+     * @dev This generates a purely deterministic salt based only on contract name.
+     *      The same contract name will always produce the same address across all chains.
+     *      This means addresses are predictable and consistent for all deployers.
      */
-    function generateSalt(string memory contractName, string memory version, address sender)
-        external
-        pure
-        returns (bytes32 salt)
-    {
-        salt = keccak256(abi.encode(contractName, version, sender));
-    }
-
-    /**
-     * @notice Generates a simple salt for deployment (less secure, vulnerable to frontrunning)
-     * @param contractName The name/identifier of the contract
-     * @param version The version string
-     * @return salt The generated salt
-     * @dev Simple salts allow anyone to deploy to the computed address (frontrunning risk)
-     *      Only use this if you don't care about frontrunning protection
-     */
-    function generateSimpleSalt(string memory contractName, string memory version)
-        external
-        pure
-        returns (bytes32 salt)
-    {
-        salt = keccak256(abi.encode(contractName, version));
+    function generateSalt(string memory contractName) external pure returns (bytes32 salt) {
+        salt = keccak256(abi.encode(contractName));
     }
 }
