@@ -70,6 +70,12 @@ use login_with_oauth2::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
+mod verify_user_op;
+use verify_user_op::*;
+
+mod settle_user_op;
+use settle_user_op::*;
+
 #[cfg(test)]
 mod test_protected_method;
 
@@ -133,6 +139,8 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_estimate_user_op_gas(module);
 	register_submit_user_op_with_auth(module);
 	register_get_hyperliquid_signature_data(module);
+	register_verify_user_op(module);
+	register_settle_user_op(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);
