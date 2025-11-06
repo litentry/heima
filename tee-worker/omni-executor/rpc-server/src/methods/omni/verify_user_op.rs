@@ -129,7 +129,7 @@ pub fn register_verify_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 					match recover_evm_address(&user_op_hash, &sig_arr) {
 						Ok(recovered) => {
 							let recovered_addr = alloy::primitives::Address::from_slice(&recovered);
-							info!("Recovered signature address off-chain: {}", recovered_addr);
+							info!("Recovered signer address off-chain: {}", recovered_addr);
 						}
 						Err(_) => {
 							error!("Failed to recover EVM address from signature");

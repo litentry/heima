@@ -27,6 +27,7 @@ use alloy::primitives::{hex, Address, Bytes, FixedBytes, U256};
 use binance_api::BinancePaymasterApi;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
+use executor_primitives::signature::recover_evm_address;
 use executor_primitives::utils::hex::decode_hex;
 use executor_primitives::{AccountId, ChainId};
 use hyperliquid::*;
@@ -343,6 +344,16 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 			let signature = substrate_to_ethereum_signature(&sig)
 				.map_err_internal("Failed to convert signature")?
 				.to_vec();
+
+			match recover_evm_address(&message_to_sign, &sig) {
+				Ok(recovered) => {
+					let recovered_addr = Address::from_slice(&recovered);
+					info!("Recovered signer address off-chain: {}", recovered_addr);
+				},
+				Err(_) => {
+					error!("Failed to recover EVM address from signature");
+				},
+			}
 
 			// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
 			let mut signature_with_prefix: Vec<u8> = vec![0x01];
