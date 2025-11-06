@@ -18,8 +18,10 @@ use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::user_op::convert_to_packed_user_op;
 use crate::utils::validation::parse_rpc_params;
+use aa_contracts_client::calculate_user_operation_hash;
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
+use executor_primitives::signature::recover_evm_address;
 use executor_primitives::ChainId;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
@@ -79,7 +81,7 @@ pub fn register_verify_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 			);
 
 			// Convert to aa_contracts_client::PackedUserOperation
-			let aa_user_op = aa_contracts_client::PackedUserOperation {
+			let user_op = aa_contracts_client::PackedUserOperation {
 				sender: packed_user_op.sender,
 				nonce: packed_user_op.nonce,
 				initCode: packed_user_op.initCode.clone(),
@@ -90,6 +92,57 @@ pub fn register_verify_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 				paymasterAndData: packed_user_op.paymasterAndData.clone(),
 				signature: packed_user_op.signature.clone(),
 			};
+
+			// Compute and log the userOp hash for debugging parity with frontend
+			let entry_point_address = entry_point_client.entry_point_address();
+			let user_op_hash = calculate_user_operation_hash(&user_op, entry_point_address, params.chain_id);
+			info!("Computed userOpHash: 0x{}", hex::encode(user_op_hash));
+
+			// If signature present, attempt an off-chain verification first (strip leading UserOpSigner byte)
+			if !user_op.signature.is_empty() {
+				let sig_bytes = user_op.signature.as_ref();
+				if sig_bytes.len() < 1 {
+					error!("Signature too short for UserOp");
+					return Ok::<VerifyUserOpResponse, ErrorObjectOwned>(VerifyUserOpResponse {
+						valid: false,
+						message: "Signature too short".to_string(),
+					});
+				}
+
+				let signer_type = sig_bytes[0];
+				let sig_payload = &sig_bytes[1..];
+
+				// Only implement Owner (0x00) and RootKey (0x01) pre-verification here
+				if signer_type == 0x00 || signer_type == 0x01 {
+					// Expect 65-byte ECDSA signature
+					if sig_payload.len() != 65 {
+						error!("Invalid ECDSA signature length: {}", sig_payload.len());
+						return Ok::<VerifyUserOpResponse, ErrorObjectOwned>(VerifyUserOpResponse {
+							valid: false,
+							message: format!("Invalid ECDSA signature length: {}", sig_payload.len()),
+						});
+					}
+
+					let mut sig_arr = [0u8; 65];
+					sig_arr.copy_from_slice(&sig_payload[0..65]);
+					// recover_evm_address expects msg (32 bytes) and signature (65 bytes)
+					match recover_evm_address(&user_op_hash, &sig_arr) {
+						Ok(recovered) => {
+							let recovered_addr = alloy::primitives::Address::from_slice(&recovered);
+							info!("Recovered signature address off-chain: {}", recovered_addr);
+						}
+						Err(_) => {
+							error!("Failed to recover EVM address from signature");
+							return Ok::<VerifyUserOpResponse, ErrorObjectOwned>(VerifyUserOpResponse {
+								valid: false,
+								message: "Failed to recover EVM address from signature".to_string(),
+							});
+						}
+					}
+				} else {
+					info!("Signature type {} pre-verification not implemented, skipping off-chain check", signer_type);
+				}
+			}
 
 			// Get beneficiary address
 			let beneficiary = entry_point_client
@@ -103,7 +156,7 @@ pub fn register_verify_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			// Run simulation only (no actual submission)
 			info!("Running simulation for UserOp verification");
-			match entry_point_client.simulate_handle_ops(&[aa_user_op], beneficiary).await {
+			match entry_point_client.simulate_handle_ops(&[user_op], beneficiary).await {
 				Ok(simulation_results) => {
 					if let Some(result) = simulation_results.first() {
 						info!(
