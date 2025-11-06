@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X402 + 4337 Demo</title>
+    <!-- Load viem from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/viem@2.7.0/dist/index.browser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-sha256@0.11.0/build/sha256.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .info label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info .value {
+            color: #333;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .tx-hash {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>X402 + ERC-4337 Demo</h1>
+        <p class="subtitle">Pay for content using your smart wallet</p>
+
+        <!-- Step 1: Connect Wallet -->
+        <div id="connectSection" class="section">
+            <h2>Step 1: Connect Your Wallet</h2>
+            <button id="connectBtn" onclick="connectWallet()">Connect MetaMask</button>
+        </div>
+
+        <!-- Step 2: Show Account Info -->
+        <div id="accountSection" class="section hidden">
+            <h2>Step 2: Your Account</h2>
+            <div class="info">
+                <label>Wallet Address (EOA)</label>
+                <div class="value" id="walletAddress">-</div>
+            </div>
+            <div class="info">
+                <label>Smart Wallet Address (Counterfactual)</label>
+                <div class="value" id="smartWalletAddress">-</div>
+            </div>
+        </div>
+
+        <!-- Step 3: Request Protected Content -->
+        <div id="requestSection" class="section hidden">
+            <h2>Step 3: Request Protected Content</h2>
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                This will create a UserOperation to pay 0.00001 ETH from your smart wallet.
+            </p>
+            <button id="requestBtn" onclick="requestProtectedContent()">
+                Request X402-Protected Content
+            </button>
+            <div id="status" class="status hidden"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
