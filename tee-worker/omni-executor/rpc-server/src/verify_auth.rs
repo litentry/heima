@@ -1,4 +1,5 @@
 use crate::{detailed_error::DetailedError, server::RpcContext};
+use base64::Engine;
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
@@ -453,9 +454,12 @@ pub fn verify_passkey_authentication<
 	})?;
 
 	// Parse auth_data bytes for validation
-	let auth_data_bytes = hex::decode(&passkey_data.auth_data).map_err(|_| {
-		AuthenticationError::PasskeyError("Invalid auth data hex format".to_string())
-	})?;
+	// auth_data is base64url-encoded as per WebAuthn spec
+	let auth_data_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+		.decode(&passkey_data.auth_data)
+		.map_err(|_| {
+			AuthenticationError::PasskeyError("Invalid auth data base64 format".to_string())
+		})?;
 
 	if auth_data_bytes.len() < 37 {
 		return Err(AuthenticationError::PasskeyError("Auth data too short".to_string()));

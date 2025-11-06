@@ -368,7 +368,7 @@ impl PasskeyVerifier {
 	}
 
 	pub fn verify_passkey_signature_only(
-		auth_data_hex: &str,
+		auth_data: &str,
 		client_data_json: &str,
 		signature_hex: &str,
 		public_key: &PasskeyPublicKey,
@@ -387,7 +387,9 @@ impl PasskeyVerifier {
 			.decode(client_data_json)
 			.map_err(|e| PasskeyError::ParseError(format!("Client data decode error: {}", e)))?;
 
-		let auth_data_bytes = hex::decode(auth_data_hex)
+		// auth_data is base64url-encoded as per WebAuthn spec
+		let auth_data_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+			.decode(auth_data)
 			.map_err(|e| PasskeyError::ParseError(format!("Auth data decode error: {}", e)))?;
 		let client_data_hash = Sha256::digest(&client_data_bytes);
 		// Per WebAuthn spec: signature = sign(authenticatorData || SHA256(clientDataJSON))
