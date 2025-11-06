@@ -18,7 +18,6 @@ use crate::{Storage, StorageDB};
 use executor_primitives::AccountId;
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
-use tracing::debug;
 
 const STORAGE_NAME: &str = "passkey_challenge_storage";
 
@@ -80,7 +79,6 @@ impl PasskeyChallengeStorage {
 			.map_err(|_| PasskeyChallengeError::StorageError)?
 			.ok_or(PasskeyChallengeError::ChallengeNotFound)?;
 
-		debug!("TEST, input omni: {:?}, record: {:?}", omni_account, record);
 		if record.omni_account != *omni_account {
 			return Err(PasskeyChallengeError::InvalidChallenge);
 		}
