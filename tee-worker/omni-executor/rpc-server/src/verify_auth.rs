@@ -387,9 +387,8 @@ pub fn verify_passkey_authentication<
 	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
 	use executor_storage::PasskeyStorage;
 
-	let identity = Identity::try_from(passkey_data.user_id.clone()).map_err(|_| {
-		AuthenticationError::PasskeyError("Invalid user ID format".to_string())
-	})?;
+	let identity = Identity::try_from(passkey_data.user_id.clone())
+		.map_err(|_| AuthenticationError::PasskeyError("Invalid user ID format".to_string()))?;
 	let omni_account = identity.to_omni_account(&passkey_data.client_id);
 
 	let client_data: ClientData =
