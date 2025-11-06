@@ -20,6 +20,7 @@ dependencies = [
  "ciborium",
  "ethereum-rpc",
  "heima-primitives",
+ "hex",
  "mockall",
  "rand 0.8.5",
  "regex",

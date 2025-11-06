@@ -224,6 +224,7 @@ fn calculate_eip712_hash(
 	domain_separator: FixedBytes<32>,
 	struct_hash: FixedBytes<32>,
 ) -> FixedBytes<32> {
+	tracing::info!("the struct_hash: 0x{}", hex::encode(struct_hash.as_slice()));
 	let mut data = Vec::new();
 	data.extend_from_slice(b"\x19\x01"); // EIP-712 prefix
 	data.extend_from_slice(domain_separator.as_slice());
