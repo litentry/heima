@@ -370,12 +370,13 @@ impl PasskeyVerifier {
 	pub fn verify_passkey_signature_only(
 		auth_data: &str,
 		client_data_json: &str,
-		signature_hex: &str,
+		signature: &str,
 		public_key: &PasskeyPublicKey,
 	) -> Result<bool, PasskeyError> {
-		// Decode signature from hex
-		let signature_bytes =
-			hex::decode(signature_hex).map_err(|_| PasskeyError::InvalidSignatureFormat)?;
+		// Decode signature from base64url as per WebAuthn spec
+		let signature_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+			.decode(signature)
+			.map_err(|_| PasskeyError::InvalidSignatureFormat)?;
 		// Validate signature length (64 bytes for P-256: 32 bytes r + 32 bytes s)
 		if signature_bytes.len() != 64 {
 			return Err(PasskeyError::InvalidSignatureFormat);

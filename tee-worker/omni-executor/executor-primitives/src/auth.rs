@@ -192,7 +192,7 @@ pub struct PasskeyData {
 	pub user_id: UserId, // Only support `UserId::Email` now
 	pub client_id: String,
 	pub credential_id: String,
-	pub signature: String, // hex-encoded (raw 64 bytes for P-256: 32 bytes r + 32 bytes s)
+	pub signature: String, // base64url-encoded signature (raw 64 bytes for P-256: 32 bytes r + 32 bytes s) as per WebAuthn spec
 	pub auth_data: String, // base64url-encoded authenticatorData as per WebAuthn spec
 	pub client_data_json: String, // base64url-encoded client data JSON as per WebAuthn spec
 }
