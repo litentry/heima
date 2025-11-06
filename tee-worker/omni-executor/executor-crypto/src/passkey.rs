@@ -377,12 +377,21 @@ impl PasskeyVerifier {
 		let signature_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
 			.decode(signature)
 			.map_err(|_| PasskeyError::InvalidSignatureFormat)?;
-		// Validate signature length (64 bytes for P-256: 32 bytes r + 32 bytes s)
-		if signature_bytes.len() != 64 {
+
+		// WebAuthn signatures can be in two formats:
+		// 1. Raw r||s format: exactly 64 bytes (32 bytes r + 32 bytes s)
+		// 2. DER format: variable length (typically 70-72 bytes)
+		let ecdsa_signature = if signature_bytes.len() == 64 {
+			// Raw format: use directly
+			Signature::from_slice(&signature_bytes)
+				.map_err(|_| PasskeyError::InvalidSignatureFormat)?
+		} else if signature_bytes.len() > 64 && signature_bytes[0] == 0x30 {
+			// DER format: parse and convert to raw
+			Signature::from_der(&signature_bytes)
+				.map_err(|_| PasskeyError::InvalidSignatureFormat)?
+		} else {
 			return Err(PasskeyError::InvalidSignatureFormat);
-		}
-		let ecdsa_signature = Signature::from_slice(&signature_bytes)
-			.map_err(|_| PasskeyError::InvalidSignatureFormat)?;
+		};
 
 		let client_data_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
 			.decode(client_data_json)
