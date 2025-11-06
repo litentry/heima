@@ -336,7 +336,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 					ChainType::Evm,
 					wallet_index,
 					omni_account.clone().into(),
-					message_to_sign,
+					message_to_sign.clone(),
 				)
 				.await
 				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
@@ -345,7 +345,10 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 				.map_err_internal("Failed to convert signature")?
 				.to_vec();
 
-			match recover_evm_address(&message_to_sign, &sig) {
+			match recover_evm_address(
+				message_to_sign.as_slice().try_into().unwrap(),
+				&sig.try_into().unwrap(),
+			) {
 				Ok(recovered) => {
 					let recovered_addr = Address::from_slice(&recovered);
 					info!("Recovered signer address off-chain: {}", recovered_addr);
