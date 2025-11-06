@@ -137,14 +137,14 @@ contract DeployWithCreate2 is Script {
         // Deploy contracts in dependency order with confirmation between each
         if (shouldDeployEntryPoint) {
             vm.startBroadcast(deployerPrivateKey);
-            deployEntryPoint(deployer);
+            deployEntryPoint();
             vm.stopBroadcast();
             console.log("Waiting for EntryPoint deployment confirmation...");
         }
 
         if (shouldDeployFactory) {
             vm.startBroadcast(deployerPrivateKey);
-            deployAccountFactory(deployer);
+            deployAccountFactory();
             vm.stopBroadcast();
             console.log("Waiting for Factory deployment confirmation...");
         }
@@ -152,7 +152,7 @@ contract DeployWithCreate2 is Script {
         // Deploy Simple paymaster if configured
         if (shouldDeploySimplePaymaster) {
             vm.startBroadcast(deployerPrivateKey);
-            deployPaymaster(deployer);
+            deployPaymaster();
             vm.stopBroadcast();
             console.log("Waiting for SimplePaymaster deployment confirmation...");
 
@@ -168,7 +168,7 @@ contract DeployWithCreate2 is Script {
         // Deploy ERC20 paymaster if configured
         if (shouldDeployERC20Paymaster) {
             vm.startBroadcast(deployerPrivateKey);
-            deployERC20Paymaster(deployer);
+            deployERC20Paymaster();
             vm.stopBroadcast();
             console.log("Waiting for ERC20Paymaster deployment confirmation...");
 
@@ -279,7 +279,7 @@ contract DeployWithCreate2 is Script {
         }
     }
 
-    function deployEntryPoint(address deployer) internal {
+    function deployEntryPoint() internal {
         console.log("Deploying EntryPointV1 via CREATE2...");
 
         bytes32 salt = factory.generateSalt("EntryPointV1");
@@ -292,7 +292,7 @@ contract DeployWithCreate2 is Script {
         console.log("");
     }
 
-    function deployAccountFactory(address deployer) internal {
+    function deployAccountFactory() internal {
         console.log("Deploying OmniAccountFactoryV1 via CREATE2...");
 
         bytes32 salt = factory.generateSalt("OmniAccountFactoryV1");
@@ -307,7 +307,7 @@ contract DeployWithCreate2 is Script {
         console.log("");
     }
 
-    function deployPaymaster(address deployer) internal {
+    function deployPaymaster() internal {
         console.log("Deploying SimplePaymaster via CREATE2...");
 
         bytes32 salt = factory.generateSalt("SimplePaymaster");
@@ -324,7 +324,7 @@ contract DeployWithCreate2 is Script {
         console.log("");
     }
 
-    function deployERC20Paymaster(address deployer) internal {
+    function deployERC20Paymaster() internal {
         console.log("Deploying ERC20PaymasterV1 via CREATE2...");
 
         bytes32 salt = factory.generateSalt("ERC20PaymasterV1");
