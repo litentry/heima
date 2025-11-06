@@ -37,6 +37,18 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			debug!("Received omni_attachPasskey, params: {:?}", params);
 
+			// Reject UserId::Passkey type - passkeys cannot be attached to passkey identities
+			if matches!(params.user_id, UserId::Passkey(_)) {
+				error!("Cannot attach passkey to a Passkey user_id type");
+				return Err(DetailedError::invalid_params(
+					"user_id",
+					"UserId::Passkey type is not allowed for passkey attachment",
+				)
+				.with_reason("Passkeys can only be attached to non-passkey identity types")
+				.with_suggestion("Use a different identity type (e.g. Email) as user_id")
+				.to_rpc_error());
+			}
+
 			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
 				error!("Invalid existing user ID format");
 				DetailedError::parse_error("Invalid user ID format").to_rpc_error()

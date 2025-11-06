@@ -143,6 +143,18 @@ pub fn register_get_hyperliquid_signature_data<
 			}
 
 			if let Some(attach_passkey_data) = &params.attach_passkey {
+				// Reject UserId::Passkey type - passkeys cannot be attached to passkey identities
+				if matches!(params.user_id, UserId::Passkey(_)) {
+					error!("Cannot attach passkey to a Passkey user_id type");
+					return Err(DetailedError::invalid_params(
+						"user_id",
+						"UserId::Passkey type is not allowed for passkey attachment",
+					)
+					.with_reason("Passkeys can only be attached to non-passkey identity types")
+					.with_suggestion("Use a different identity type (e.g. Email) as user_id")
+					.to_rpc_error());
+				}
+
 				let user_auth = params.user_auth.as_ref().ok_or_else(|| {
 					error!("user_auth is required when attach_passkey is provided");
 					DetailedError::new(
