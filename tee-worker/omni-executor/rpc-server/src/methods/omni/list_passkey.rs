@@ -17,8 +17,9 @@ pub struct ListPasskeyParams {
 
 #[derive(Serialize, Clone)]
 pub struct PasskeyInfo {
-	pub credential_id: String,
+	pub alias_name: String,
 	pub created_at: u64,
+	pub last_used: u64,
 }
 
 #[derive(Serialize, Clone)]
@@ -45,7 +46,11 @@ pub fn register_list_passkey<CrossChainIntentExecutor: IntentExecutor + Send + S
 
 			let passkey_infos = passkeys
 				.into_iter()
-				.map(|(credential_id, created_at)| PasskeyInfo { credential_id, created_at })
+				.map(|(alias_name, created_at, last_used)| PasskeyInfo {
+					alias_name,
+					created_at,
+					last_used,
+				})
 				.collect();
 
 			Ok::<ListPasskeyResponse, ErrorObject>(ListPasskeyResponse { passkeys: passkey_infos })

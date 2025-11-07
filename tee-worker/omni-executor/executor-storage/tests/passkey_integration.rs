@@ -51,7 +51,7 @@ fn test_complete_passkey_registration_flow() {
 	let pubkey = b"test_pubkey_bytes_for_registration";
 
 	passkey_storage
-		.add_passkey(&omni_account, credential_id, pubkey)
+		.add_passkey(&omni_account, credential_id, pubkey, None)
 		.expect("Failed to add passkey");
 
 	// Step 3: Verify the passkey was stored correctly
@@ -82,7 +82,7 @@ fn test_complete_passkey_authentication_flow() {
 	let pubkey = b"test_pubkey_bytes_for_auth";
 
 	passkey_storage
-		.add_passkey(&omni_account, credential_id, pubkey)
+		.add_passkey(&omni_account, credential_id, pubkey, None)
 		.expect("Failed to add passkey");
 
 	// Step 2: Generate authentication challenge
@@ -140,11 +140,11 @@ fn test_multiple_passkeys_per_account() {
 	let laptop_pubkey = b"laptop_pubkey_bytes";
 
 	passkey_storage
-		.add_passkey(&omni_account, phone_credential, phone_pubkey)
+		.add_passkey(&omni_account, phone_credential, phone_pubkey, None)
 		.expect("Failed to add phone passkey");
 
 	passkey_storage
-		.add_passkey(&omni_account, laptop_credential, laptop_pubkey)
+		.add_passkey(&omni_account, laptop_credential, laptop_pubkey, None)
 		.expect("Failed to add laptop passkey");
 
 	// Verify both passkeys exist independently
@@ -176,7 +176,7 @@ fn test_passkey_removal_flow() {
 	let pubkey = b"test_pubkey_remove";
 
 	passkey_storage
-		.add_passkey(&omni_account, credential_id, pubkey)
+		.add_passkey(&omni_account, credential_id, pubkey, None)
 		.expect("Failed to add passkey");
 
 	// Verify passkey exists
@@ -238,11 +238,11 @@ fn test_passkey_duplicate_prevention() {
 
 	// Add passkey first time (should succeed)
 	passkey_storage
-		.add_passkey(&omni_account, credential_id, pubkey)
+		.add_passkey(&omni_account, credential_id, pubkey, None)
 		.expect("Failed to add passkey");
 
 	// Try to add the same passkey again (should fail)
-	let duplicate_result = passkey_storage.add_passkey(&omni_account, credential_id, pubkey);
+	let duplicate_result = passkey_storage.add_passkey(&omni_account, credential_id, pubkey, None);
 
 	assert!(matches!(duplicate_result, Err(PasskeyError::DuplicatePasskey)));
 }
@@ -260,11 +260,11 @@ fn test_concurrent_authentication_sessions() {
 
 	// Register passkeys for both accounts
 	passkey_storage
-		.add_passkey(&account1, "cred1", b"pubkey1")
+		.add_passkey(&account1, "cred1", b"pubkey1", None)
 		.expect("Failed to add passkey for account1");
 
 	passkey_storage
-		.add_passkey(&account2, "cred2", b"pubkey2")
+		.add_passkey(&account2, "cred2", b"pubkey2", None)
 		.expect("Failed to add passkey for account2");
 
 	// Create challenges for both accounts

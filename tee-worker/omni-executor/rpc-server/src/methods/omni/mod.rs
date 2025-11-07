@@ -82,6 +82,9 @@ use list_passkey::*;
 mod request_passkey_challenge;
 use request_passkey_challenge::*;
 
+mod rename_passkey_alias;
+use rename_passkey_alias::*;
+
 #[cfg(test)]
 mod test_protected_method;
 
@@ -134,6 +137,7 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_attach_passkey(module);
 	register_remove_passkey(module);
 	register_list_passkey(module);
+	register_rename_passkey_alias(module);
 	register_login_with_oauth2(module);
 
 	register_request_jwt(module);

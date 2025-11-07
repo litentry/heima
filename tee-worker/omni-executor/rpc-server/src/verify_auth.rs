@@ -376,7 +376,8 @@ pub fn verify_passkey_authentication<
 		})?;
 
 	// Look up the stored passkey record using omni_account + credential_id
-	let passkey_record = PasskeyStorage::new(ctx.storage_db.clone())
+	let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
+	let passkey_record = passkey_storage
 		.get_passkey(&omni_account, &passkey_data.credential_id)
 		.map_err(|_| AuthenticationError::PasskeyError("Storage error".to_string()))?
 		.ok_or_else(|| {
@@ -441,6 +442,18 @@ pub fn verify_passkey_authentication<
 	if !is_valid {
 		return Err(AuthenticationError::Web3InvalidSignature);
 	}
+
+	// Update the last_used timestamp for this passkey
+	passkey_storage
+		.update_last_used(&omni_account, &passkey_data.credential_id)
+		.map_err(|_| {
+			// Log the error but don't fail authentication if timestamp update fails
+			tracing::warn!(
+				"Failed to update last_used timestamp for passkey {}",
+				passkey_data.credential_id
+			);
+		})
+		.ok();
 
 	Ok(())
 }

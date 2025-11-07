@@ -31,6 +31,9 @@ pub struct PasskeyRecord {
 	pub credential_id: String,
 	pub pubkey: Vec<u8>, // Store SEC1 bytes directly
 	pub created_at: u64,
+	pub omni_account: AccountId,
+	pub alias_name: String,
+	pub last_used: u64,
 }
 
 /// Errors that can occur during passkey operations
@@ -83,16 +86,22 @@ impl PasskeyStorage {
 		omni_account: &AccountId,
 		credential_id: &str,
 		pubkey: &[u8], // Accept SEC1 bytes directly
+		alias_name: Option<String>,
 	) -> Result<(), PasskeyError> {
 		let current_time = std::time::SystemTime::now()
 			.duration_since(std::time::UNIX_EPOCH)
 			.unwrap()
 			.as_secs();
 
+		let alias = alias_name.unwrap_or_else(|| credential_id.to_string());
+
 		let record = PasskeyRecord {
 			credential_id: credential_id.to_string(),
 			pubkey: pubkey.to_vec(),
 			created_at: current_time,
+			omni_account: omni_account.clone(),
+			alias_name: alias,
+			last_used: current_time,
 		};
 
 		let key = Self::make_key(omni_account, credential_id);
@@ -103,11 +112,11 @@ impl PasskeyStorage {
 	}
 
 	/// List all passkeys for a given omni_account
-	/// Returns a vector of tuples (credential_id, created_at)
+	/// Returns a vector of tuples (alias_name, created_at, last_used)
 	pub fn list_passkeys(
 		&self,
 		omni_account: &AccountId,
-	) -> Result<Vec<(String, u64)>, PasskeyError> {
+	) -> Result<Vec<(String, u64, u64)>, PasskeyError> {
 		let mut passkeys = Vec::new();
 
 		// The storage key structure is:
@@ -158,7 +167,11 @@ impl PasskeyStorage {
 						// This key belongs to our account, decode the record
 						match PasskeyRecord::decode(&mut &value[..]) {
 							Ok(record) => {
-								passkeys.push((record.credential_id.clone(), record.created_at));
+								passkeys.push((
+									record.alias_name.clone(),
+									record.created_at,
+									record.last_used,
+								));
 							},
 							Err(e) => {
 								tracing::warn!(
@@ -179,6 +192,53 @@ impl PasskeyStorage {
 		}
 
 		Ok(passkeys)
+	}
+
+	/// Rename the alias name of a passkey
+	pub fn rename_passkey_alias(
+		&self,
+		omni_account: &AccountId,
+		credential_id: &str,
+		new_alias_name: String,
+	) -> Result<(), PasskeyError> {
+		let key = Self::make_key(omni_account, credential_id);
+
+		// Get the existing record
+		let mut record = self
+			.get(&key)
+			.map_err(|_| PasskeyError::StorageError)?
+			.ok_or(PasskeyError::ValidationError)?;
+
+		// Update the alias name
+		record.alias_name = new_alias_name;
+
+		// Save the updated record
+		self.insert(&key, record).map_err(|_| PasskeyError::StorageError)
+	}
+
+	/// Update the last_used timestamp for a passkey
+	pub fn update_last_used(
+		&self,
+		omni_account: &AccountId,
+		credential_id: &str,
+	) -> Result<(), PasskeyError> {
+		let key = Self::make_key(omni_account, credential_id);
+
+		// Get the existing record
+		let mut record = self
+			.get(&key)
+			.map_err(|_| PasskeyError::StorageError)?
+			.ok_or(PasskeyError::ValidationError)?;
+
+		// Update the last_used timestamp
+		let current_time = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.unwrap()
+			.as_secs();
+		record.last_used = current_time;
+
+		// Save the updated record
+		self.insert(&key, record).map_err(|_| PasskeyError::StorageError)
 	}
 }
 
@@ -216,7 +276,7 @@ mod tests {
 
 		// Add a passkey
 		let test_pubkey = b"test_pubkey_123";
-		storage.add_passkey(&omni_account, "cred123", test_pubkey).unwrap();
+		storage.add_passkey(&omni_account, "cred123", test_pubkey, None).unwrap();
 
 		// Test retrieval
 		let retrieved = storage.get_passkey(&omni_account, "cred123").unwrap().unwrap();
@@ -235,7 +295,7 @@ mod tests {
 
 		// Add a passkey
 		let test_pubkey = b"test_pubkey_456";
-		storage.add_passkey(&omni_account, "cred456", test_pubkey).unwrap();
+		storage.add_passkey(&omni_account, "cred456", test_pubkey, None).unwrap();
 
 		// Verify it exists
 		assert!(storage.exists_passkey(&omni_account, "cred456"));
@@ -255,11 +315,11 @@ mod tests {
 
 		// Add first passkey
 		let test_pubkey1 = b"test_pubkey_789";
-		storage.add_passkey(&omni_account, "cred789", test_pubkey1).unwrap();
+		storage.add_passkey(&omni_account, "cred789", test_pubkey1, None).unwrap();
 
 		// Try to add with same omni_account + credential_id
 		let test_pubkey2 = b"test_pubkey_789_new";
-		let result = storage.add_passkey(&omni_account, "cred789", test_pubkey2);
+		let result = storage.add_passkey(&omni_account, "cred789", test_pubkey2, None);
 		assert_eq!(result, Err(PasskeyError::DuplicatePasskey));
 	}
 
@@ -271,8 +331,8 @@ mod tests {
 		// Add multiple passkeys for the same omni account
 		let test_pubkey1 = b"test_pubkey_1";
 		let test_pubkey2 = b"test_pubkey_2";
-		storage.add_passkey(&omni_account, "cred1", test_pubkey1).unwrap();
-		storage.add_passkey(&omni_account, "cred2", test_pubkey2).unwrap();
+		storage.add_passkey(&omni_account, "cred1", test_pubkey1, None).unwrap();
+		storage.add_passkey(&omni_account, "cred2", test_pubkey2, None).unwrap();
 
 		// Both should exist independently
 		assert!(storage.exists_passkey(&omni_account, "cred1"));
@@ -295,23 +355,26 @@ mod tests {
 		let test_pubkey1 = b"test_pubkey_1";
 		let test_pubkey2 = b"test_pubkey_2";
 		let test_pubkey3 = b"test_pubkey_3";
-		storage.add_passkey(&omni_account1, "cred1", test_pubkey1).unwrap();
-		storage.add_passkey(&omni_account1, "cred2", test_pubkey2).unwrap();
-		storage.add_passkey(&omni_account1, "cred3", test_pubkey3).unwrap();
+		storage.add_passkey(&omni_account1, "cred1", test_pubkey1, None).unwrap();
+		storage.add_passkey(&omni_account1, "cred2", test_pubkey2, None).unwrap();
+		storage
+			.add_passkey(&omni_account1, "cred3", test_pubkey3, Some("My Passkey".to_string()))
+			.unwrap();
 
 		// Add a passkey for account2
 		let test_pubkey4 = b"test_pubkey_4";
-		storage.add_passkey(&omni_account2, "cred4", test_pubkey4).unwrap();
+		storage.add_passkey(&omni_account2, "cred4", test_pubkey4, None).unwrap();
 
 		// List passkeys for account1
 		let passkeys1 = storage.list_passkeys(&omni_account1).unwrap();
 		assert_eq!(passkeys1.len(), 3);
 
-		// Verify all three passkeys are present
-		let cred_ids: Vec<String> = passkeys1.iter().map(|(cid, _)| cid.clone()).collect();
-		assert!(cred_ids.contains(&"cred1".to_string()));
-		assert!(cred_ids.contains(&"cred2".to_string()));
-		assert!(cred_ids.contains(&"cred3".to_string()));
+		// Verify all three passkeys are present (now returns alias_name instead of credential_id)
+		let alias_names: Vec<String> =
+			passkeys1.iter().map(|(alias, _, _)| alias.clone()).collect();
+		assert!(alias_names.contains(&"cred1".to_string()));
+		assert!(alias_names.contains(&"cred2".to_string()));
+		assert!(alias_names.contains(&"My Passkey".to_string()));
 
 		// List passkeys for account2
 		let passkeys2 = storage.list_passkeys(&omni_account2).unwrap();
