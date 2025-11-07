@@ -140,15 +140,26 @@ pub fn calculate_user_operation_hash(
 	// Calculate domain separator (EIP-712)
 	let domain_separator =
 		calculate_domain_separator(DOMAIN_NAME, DOMAIN_VERSION, chain_id, entry_point_address);
+	tracing::info!(
+		"EIP-712 Domain Separator: 0x{} (name={}, version={}, chainId={}, verifyingContract={})",
+		hex::encode(domain_separator.as_slice()),
+		DOMAIN_NAME,
+		DOMAIN_VERSION,
+		chain_id,
+		entry_point_address
+	);
 
 	// Encode user operation (equivalent to UserOperationLib.encode)
 	let encoded_user_op = encode_user_operation(user_op);
 
 	// Hash the encoded user operation (equivalent to UserOperationLib.hash)
 	let user_op_struct_hash = keccak256(&encoded_user_op);
+	tracing::info!("UserOp Struct Hash: 0x{}", hex::encode(user_op_struct_hash.as_slice()));
 
 	// Final EIP-712 hash (equivalent to MessageHashUtils.toTypedDataHash)
-	calculate_eip712_hash(domain_separator, user_op_struct_hash)
+	let final_hash = calculate_eip712_hash(domain_separator, user_op_struct_hash);
+	tracing::info!("Final EIP-712 Hash (userOpHash): 0x{}", hex::encode(final_hash.as_slice()));
+	final_hash
 }
 
 /// Calculate EIP-712 domain separator
@@ -164,6 +175,7 @@ fn calculate_domain_separator(
 		"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
 			.as_bytes(),
 	);
+	tracing::debug!("EIP712Domain TypeHash: 0x{}", hex::encode(eip712_domain_typehash.as_slice()));
 
 	// We need to manually encode since the domain struct should include the typehash
 	// Manual encoding to match Solidity's exact behavior
@@ -174,33 +186,80 @@ fn calculate_domain_separator(
 
 	// name hash (32 bytes)
 	let name_hash = keccak256(name.as_bytes());
+	tracing::debug!("Name Hash (keccak256(\"{}\")): 0x{}", name, hex::encode(name_hash.as_slice()));
 	encoded.extend_from_slice(name_hash.as_slice());
 
 	// version hash (32 bytes)
 	let version_hash = keccak256(version.as_bytes());
+	tracing::debug!(
+		"Version Hash (keccak256(\"{}\")): 0x{}",
+		version,
+		hex::encode(version_hash.as_slice())
+	);
 	encoded.extend_from_slice(version_hash.as_slice());
 
 	// chain ID (32 bytes, big-endian)
 	let chain_id_bytes = U256::from(chain_id).to_be_bytes::<32>();
+	tracing::debug!("Chain ID: {} (0x{})", chain_id, hex::encode(&chain_id_bytes));
 	encoded.extend_from_slice(&chain_id_bytes);
 
 	// verifying contract (32 bytes, left-padded)
 	let mut contract_bytes = [0u8; 32];
 	contract_bytes[12..].copy_from_slice(verifying_contract.as_slice());
+	tracing::debug!(
+		"Verifying Contract: {} (padded: 0x{})",
+		verifying_contract,
+		hex::encode(&contract_bytes)
+	);
 	encoded.extend_from_slice(&contract_bytes);
 
-	keccak256(&encoded)
+	let domain_separator = keccak256(&encoded);
+	tracing::debug!(
+		"Domain Separator (encoded {} bytes): 0x{}",
+		encoded.len(),
+		hex::encode(domain_separator.as_slice())
+	);
+	domain_separator
 }
 
 /// Encode PackedUserOperation for hashing (equivalent to UserOperationLib.encode)
 fn encode_user_operation(user_op: &PackedUserOperation) -> Vec<u8> {
 	// PackedUserOperation TypeHash - calculated at runtime
 	let packed_userop_typehash = keccak256("PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)".as_bytes());
+	tracing::debug!("PACKED_USEROP_TYPEHASH: 0x{}", hex::encode(packed_userop_typehash.as_slice()));
 
 	// Hash dynamic fields (bytes data)
 	let init_code_hash = keccak256(&user_op.initCode);
 	let call_data_hash = keccak256(&user_op.callData);
 	let paymaster_and_data_hash = keccak256(&user_op.paymasterAndData);
+
+	tracing::debug!("UserOp Field Hashes:");
+	tracing::debug!("  sender: {}", user_op.sender);
+	tracing::debug!("  nonce: {}", user_op.nonce);
+	tracing::debug!(
+		"  initCode (len={}): 0x{}",
+		user_op.initCode.len(),
+		hex::encode(&user_op.initCode)
+	);
+	tracing::debug!("  initCodeHash: 0x{}", hex::encode(init_code_hash.as_slice()));
+	tracing::debug!(
+		"  callData (len={}): 0x{}",
+		user_op.callData.len(),
+		hex::encode(&user_op.callData)
+	);
+	tracing::debug!("  callDataHash: 0x{}", hex::encode(call_data_hash.as_slice()));
+	tracing::debug!("  accountGasLimits: 0x{}", hex::encode(user_op.accountGasLimits.as_slice()));
+	tracing::debug!("  preVerificationGas: {}", user_op.preVerificationGas);
+	tracing::debug!("  gasFees: 0x{}", hex::encode(user_op.gasFees.as_slice()));
+	tracing::debug!(
+		"  paymasterAndData (len={}): 0x{}",
+		user_op.paymasterAndData.len(),
+		hex::encode(&user_op.paymasterAndData)
+	);
+	tracing::debug!(
+		"  paymasterAndDataHash: 0x{}",
+		hex::encode(paymaster_and_data_hash.as_slice())
+	);
 
 	let user_op_for_hashing = PackedUserOperationForHashing {
 		typeHash: packed_userop_typehash,
@@ -224,13 +283,20 @@ fn calculate_eip712_hash(
 	domain_separator: FixedBytes<32>,
 	struct_hash: FixedBytes<32>,
 ) -> FixedBytes<32> {
-	tracing::info!("the struct_hash: 0x{}", hex::encode(struct_hash.as_slice()));
+	tracing::debug!("Calculating EIP-712 hash:");
+	tracing::debug!("  Domain Separator: 0x{}", hex::encode(domain_separator.as_slice()));
+	tracing::debug!("  Struct Hash: 0x{}", hex::encode(struct_hash.as_slice()));
+
 	let mut data = Vec::new();
 	data.extend_from_slice(b"\x19\x01"); // EIP-712 prefix
 	data.extend_from_slice(domain_separator.as_slice());
 	data.extend_from_slice(struct_hash.as_slice());
 
-	keccak256(&data)
+	tracing::debug!("  Combined data ({} bytes): 0x{}", data.len(), hex::encode(&data));
+
+	let final_hash = keccak256(&data);
+	tracing::debug!("  Final EIP-712 Hash: 0x{}", hex::encode(final_hash.as_slice()));
+	final_hash
 }
 
 #[cfg(test)]
