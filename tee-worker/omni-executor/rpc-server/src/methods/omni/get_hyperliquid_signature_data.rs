@@ -1,6 +1,5 @@
 use crate::{
 	detailed_error::DetailedError,
-	error_code::*,
 	server::RpcContext,
 	utils::auth::{verify_payload_timestamp, verify_wildmeta_signature},
 	utils::types::RpcResultExt,
@@ -14,9 +13,7 @@ use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
 };
-use executor_storage::{
-	PasskeyChallengeError, PasskeyChallengeStorage, PasskeyError, PasskeyStorage,
-};
+use executor_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
 use hyperliquid_rust_sdk::{
 	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
 };
@@ -157,44 +154,19 @@ pub fn register_get_hyperliquid_signature_data<
 
 				let user_auth = params.user_auth.as_ref().ok_or_else(|| {
 					error!("user_auth is required when attach_passkey is provided");
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Missing required authentication",
-					)
-					.with_field("user_auth")
-					.with_expected("User authentication data")
-					.with_reason("user_auth must be provided when attaching a passkey")
-					.with_suggestion("Provide user_auth to authenticate before attaching a passkey")
-					.to_rpc_error()
-				})?;
-				let auth =
-					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
-						error!("Failed to convert to OmniAuth: {:?}", e);
-						DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"Failed to convert authentication data",
-						)
-						.with_field("user_auth")
-						.with_reason(format!("OmniAuth conversion error: {:?}", e))
+					DetailedError::invalid_params("user_auth", "required when attaching a passkey")
 						.to_rpc_error()
-					})?;
+				})?;
+				let auth = to_omni_auth(user_auth, &params.user_id, &params.client_id)
+					.map_err_parse("Failed to convert to OmniAuth")?;
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 					error!("Failed to verify user authentication: {:?}", e);
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Authentication verification failed",
-					)
-					.with_field("user_auth")
-					.with_reason(format!("Verification error: {:?}", e))
-					.with_suggestion("Please check your authentication credentials")
-					.to_rpc_error()
+					e.to_detailed_error().to_rpc_error()
 				})?;
 
-				let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
-					error!("Invalid existing user ID format");
-					DetailedError::parse_error("Invalid user ID format").to_rpc_error()
-				})?;
+				let identity = Identity::try_from(params.user_id.clone())
+					.map_err_parse("Invalid user ID format")?;
 				let omni_account = identity.to_omni_account(&params.client_id);
 
 				// Determine expected origin based on client_id
@@ -229,52 +201,12 @@ pub fn register_get_hyperliquid_signature_data<
 							})
 					},
 				)
-				.map_err(|e| {
-					error!("Client data verification failed during passkey attachment: {:?}", e);
-					match e {
-						executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed => {
-							DetailedError::passkey_invalid_challenge(
-								"Challenge mismatch, expired, or not found",
-							)
-							.with_field("attach_passkey.client_data_json")
-						},
-						executor_crypto::passkey::PasskeyError::OriginVerificationFailed => {
-							DetailedError::passkey_origin_verification_failed(expected_origin)
-								.with_field("attach_passkey.client_data_json")
-						},
-						executor_crypto::passkey::PasskeyError::AttestationParseError(err) => {
-							DetailedError::passkey_client_data_parse_error(&err)
-								.with_field("attach_passkey.client_data_json")
-						},
-						_ => DetailedError::new(
-							AUTH_VERIFICATION_FAILED_CODE,
-							"Client data verification failed",
-						)
-						.with_field("attach_passkey.client_data_json")
-						.with_reason(format!("Verification error: {:?}", e)),
-					}
-					.to_rpc_error()
-				})?;
+				.map_err_internal("Client data verification failed")?;
 
 				// Verify attestation and extract credential_id and public_key
 				let AttestationResult { credential_id, public_key } =
 					PasskeyVerifier::verify_attestation(&attach_passkey_data.attestation_object)
-						.map_err(|e| {
-							error!("WebAuthn attestation verification failed during passkey attachment: {:?}", e);
-							match e {
-								executor_crypto::passkey::PasskeyError::AttestationParseError(
-									err,
-								) => DetailedError::passkey_attestation_parse_error(&err)
-									.with_field("attach_passkey.attestation_object"),
-								_ => DetailedError::new(
-									AUTH_VERIFICATION_FAILED_CODE,
-									"Attestation verification failed",
-								)
-								.with_field("attach_passkey.attestation_object")
-								.with_reason(format!("Verification error: {:?}", e)),
-							}
-							.to_rpc_error()
-						})?;
+						.map_err_parse("Attestation verification failed")?;
 
 				// Store public key as direct SEC1 bytes for direct usage without parsing
 				let public_key_sec1_bytes = public_key.verifying_key.to_sec1_bytes();
@@ -283,28 +215,7 @@ pub fn register_get_hyperliquid_signature_data<
 				let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 				passkey_storage
 					.add_passkey(&omni_account, &credential_id, &public_key_sec1_bytes)
-					.map_err(|e| {
-						error!(
-							"Failed to attach passkey to omni_account {}: {:?}",
-							hex_encode(omni_account.as_ref()),
-							e
-						);
-						let detailed_error = match e {
-							PasskeyError::DuplicatePasskey => {
-								DetailedError::passkey_already_exists(&credential_id)
-									.with_field("attach_passkey")
-							},
-							PasskeyError::StorageError => {
-								DetailedError::storage_service_error("passkey attachment")
-									.with_field("attach_passkey")
-							},
-							_ => DetailedError::internal_error("Failed to attach passkey")
-								.with_field("attach_passkey")
-								.with_reason(format!("Storage error: {:?}", e))
-								.with_suggestion("Please try again later"),
-						};
-						detailed_error.to_rpc_error()
-					})?;
+					.map_err_internal("Failed to attach passkey")?;
 			}
 
 			// Unified authentication logic
@@ -315,14 +226,7 @@ pub fn register_get_hyperliquid_signature_data<
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 					error!("Failed to verify user authentication: {:?}", e);
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Authentication verification failed",
-					)
-					.with_field("user_auth")
-					.with_reason(format!("Verification error: {:?}", e))
-					.with_suggestion("Please check your authentication credentials")
-					.to_rpc_error()
+					e.to_detailed_error().to_rpc_error()
 				})?;
 
 				// Get main address from derived wallet
@@ -750,11 +654,11 @@ mod tests {
 				from_sub_account
 			}
 			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
-				&& source_dex == ""
+				&& source_dex.is_empty()
 				&& destination_dex == "spot"
 				&& token == "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2"
 				&& amount == "50.5"
-				&& from_sub_account == ""
+				&& from_sub_account.is_empty()
 		));
 		assert_eq!(params.chain_id, 998);
 	}
@@ -791,7 +695,7 @@ mod tests {
 			}
 			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
 				&& source_dex == "hyperliquid"
-				&& destination_dex == ""
+				&& destination_dex.is_empty()
 				&& token == "USDC:0x0"
 				&& amount == "1000.0"
 				&& from_sub_account == "0x9876543210987654321098765432109876543210"
@@ -842,7 +746,7 @@ mod tests {
 		assert!(matches!(
 			params.action_type,
 			HyperliquidActionType::UserDexAbstraction { user, enabled }
-			if user == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10" && enabled == true
+			if user == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10" && enabled
 		));
 		assert_eq!(params.chain_id, 42161);
 	}

@@ -1,11 +1,11 @@
 use crate::{
-	detailed_error::DetailedError, server::RpcContext, utils::validation::parse_rpc_params,
-	verify_auth::verify_auth, Deserialize, Serialize,
+	detailed_error::DetailedError, server::RpcContext, utils::types::RpcResultExt,
+	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, Serialize,
 };
 
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::{to_omni_auth, UserAuth, UserId};
-use executor_storage::{PasskeyError, PasskeyStorage};
+use executor_storage::PasskeyStorage;
 use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use tracing::*;
@@ -33,16 +33,11 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			debug!("Received omni_removePasskey, params: {:?}", params);
 
-			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
-				error!("Invalid user ID format");
-				DetailedError::parse_error("Invalid user ID format").to_rpc_error()
-			})?;
+			let identity = Identity::try_from(params.user_id.clone())
+				.map_err_parse("Invalid user ID format")?;
 
 			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
-				.map_err(|e| {
-					error!("Failed to convert to OmniAuth: {:?}", e);
-					DetailedError::parse_error("Failed to convert to OmniAuth").to_rpc_error()
-				})?;
+				.map_err_parse("Failed to convert to OmniAuth")?;
 
 			verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 				error!("Failed to verify user authentication: {:?}", e);
@@ -54,21 +49,12 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			if !passkey_storage.exists_passkey(&omni_account, &params.credential_id) {
 				error!("Passkey not found for this account and credential");
-				return Err(DetailedError::passkey_not_found(&params.credential_id).to_rpc_error());
+				return Err(DetailedError::internal_error("Passkey not found").to_rpc_error());
 			}
 
 			passkey_storage
 				.remove_passkey(&omni_account, &params.credential_id)
-				.map_err(|e| match e {
-					PasskeyError::StorageError => {
-						error!("Failed to remove passkey: storage error");
-						DetailedError::storage_service_error("passkey removal").to_rpc_error()
-					},
-					_ => {
-						error!("Failed to remove passkey: {:?}", e);
-						DetailedError::storage_service_error("passkey removal").to_rpc_error()
-					},
-				})?;
+				.map_err_internal("Failed to remove passkey")?;
 
 			Ok::<RemovePasskeyResponse, ErrorObject>(RemovePasskeyResponse {
 				success: true,
