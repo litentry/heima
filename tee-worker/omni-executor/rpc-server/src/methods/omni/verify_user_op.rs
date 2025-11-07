@@ -125,6 +125,14 @@ pub fn register_verify_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 
 					let mut sig_arr = [0u8; 65];
 					sig_arr.copy_from_slice(&sig_payload[0..65]);
+
+					// Debug: Log signature components
+					let v = sig_arr[64];
+					info!("Signature debug: r={}, s={}, v={} (0x{:02x})",
+						hex::encode(&sig_arr[0..32]),
+						hex::encode(&sig_arr[32..64]),
+						v, v);
+
 					// recover_evm_address expects msg (32 bytes) and signature (65 bytes)
 					match recover_evm_address(&user_op_hash, &sig_arr) {
 						Ok(recovered) => {
