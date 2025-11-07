@@ -448,9 +448,7 @@ pub fn verify_passkey_authentication<
 		.update_last_used(&omni_account, &passkey_data.credential_id)
 		.map_err(|_| {
 			// Log the error but don't fail authentication if timestamp update fails
-			tracing::warn!(
-				"Failed to update last_used timestamp for passkey"
-			);
+			tracing::warn!("Failed to update last_used timestamp for passkey");
 		})
 		.ok();
 

@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{Storage, StorageDB};
-use executor_crypto::hashing::{blake2_256, twox_128};
+use executor_crypto::hashing::blake2_256;
 use executor_primitives::AccountId;
 use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
@@ -206,7 +206,10 @@ impl PasskeyStorage {
 					// Continue despite missing record
 				},
 				Err(_) => {
-					tracing::error!("Error retrieving passkey record for credential: {}", credential_id);
+					tracing::error!(
+						"Error retrieving passkey record for credential: {}",
+						credential_id
+					);
 					return Err(PasskeyError::StorageError);
 				},
 			}

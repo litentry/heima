@@ -1,6 +1,6 @@
 use crate::{
-	detailed_error::DetailedError, server::RpcContext, utils::types::RpcResultExt,
-	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, Serialize,
+	server::RpcContext, utils::types::RpcResultExt, utils::validation::parse_rpc_params,
+	verify_auth::verify_auth, Deserialize, Serialize,
 };
 
 use executor_core::intent_executor::IntentExecutor;
