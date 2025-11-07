@@ -50,11 +50,6 @@ pub fn register_rename_passkey_alias<
 			let omni_account = identity.to_omni_account(&params.client_id);
 			let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 
-			if !passkey_storage.exists_passkey(&omni_account, &params.credential_id) {
-				error!("Passkey not found for this account and credential");
-				return Err(DetailedError::internal_error("Passkey not found").to_rpc_error());
-			}
-
 			passkey_storage
 				.rename_passkey_alias(
 					&omni_account,

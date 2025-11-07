@@ -21,9 +21,15 @@ use parity_scale_codec::{Decode, Encode};
 use std::sync::Arc;
 
 const STORAGE_NAME: &str = "passkey_storage";
+const INDEX_STORAGE_NAME: &str = "passkey_account_index";
 
 /// Storage key type: (AccountId, Hash(credential_id))
 pub type PasskeyStorageKey = (AccountId, [u8; 32]);
+
+/// Index storage: Maps AccountId -> Vec<String> (credential_ids)
+/// This enables O(1) lookup of all credential IDs for a given account
+pub type PasskeyAccountIndexKey = AccountId;
+pub type PasskeyAccountIndexValue = Vec<String>;
 
 /// Passkey data structure
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -44,14 +50,62 @@ pub enum PasskeyError {
 	ValidationError,
 }
 
+/// Index storage that maps AccountId to list of credential IDs
+pub struct PasskeyAccountIndex {
+	db: Arc<StorageDB>,
+}
+
+impl PasskeyAccountIndex {
+	pub fn new(db: Arc<StorageDB>) -> Self {
+		Self { db }
+	}
+
+	fn add_credential(&self, omni_account: &AccountId, credential_id: &str) -> Result<(), ()> {
+		let mut credentials = self.get(omni_account)?.unwrap_or_default();
+		if !credentials.contains(&credential_id.to_string()) {
+			credentials.push(credential_id.to_string());
+			self.insert(omni_account, credentials)?;
+		}
+		Ok(())
+	}
+
+	fn remove_credential(&self, omni_account: &AccountId, credential_id: &str) -> Result<(), ()> {
+		if let Some(mut credentials) = self.get(omni_account)? {
+			credentials.retain(|cid| cid != credential_id);
+			if credentials.is_empty() {
+				self.remove(omni_account)?;
+			} else {
+				self.insert(omni_account, credentials)?;
+			}
+		}
+		Ok(())
+	}
+
+	fn get_credentials(&self, omni_account: &AccountId) -> Result<Vec<String>, ()> {
+		Ok(self.get(omni_account)?.unwrap_or_default())
+	}
+}
+
+impl Storage<PasskeyAccountIndexKey, PasskeyAccountIndexValue> for PasskeyAccountIndex {
+	fn db(&self) -> Arc<StorageDB> {
+		self.db.clone()
+	}
+
+	fn name(&self) -> &'static str {
+		INDEX_STORAGE_NAME
+	}
+}
+
 /// Passkey storage using composite key of (omni_account, Hash(credential_id))
 pub struct PasskeyStorage {
 	db: Arc<StorageDB>,
+	index: PasskeyAccountIndex,
 }
 
 impl PasskeyStorage {
 	pub fn new(db: Arc<StorageDB>) -> Self {
-		Self { db }
+		let index = PasskeyAccountIndex::new(db.clone());
+		Self { db, index }
 	}
 
 	fn make_key(omni_account: &AccountId, credential_id: &str) -> PasskeyStorageKey {
@@ -73,7 +127,14 @@ impl PasskeyStorage {
 		credential_id: &str,
 	) -> Result<(), PasskeyError> {
 		let key = Self::make_key(omni_account, credential_id);
-		self.remove(&key).map_err(|_| PasskeyError::StorageError)
+
+		self.remove(&key).map_err(|_| PasskeyError::StorageError)?;
+
+		self.index
+			.remove_credential(omni_account, credential_id)
+			.map_err(|_| PasskeyError::StorageError)?;
+
+		Ok(())
 	}
 
 	pub fn exists_passkey(&self, omni_account: &AccountId, credential_id: &str) -> bool {
@@ -108,7 +169,14 @@ impl PasskeyStorage {
 		if self.contains_key(&key) {
 			return Err(PasskeyError::DuplicatePasskey);
 		}
-		self.insert(&key, record).map_err(|_| PasskeyError::StorageError)
+
+		self.insert(&key, record).map_err(|_| PasskeyError::StorageError)?;
+
+		self.index
+			.add_credential(omni_account, credential_id)
+			.map_err(|_| PasskeyError::StorageError)?;
+
+		Ok(())
 	}
 
 	/// List all passkeys for a given omni_account
@@ -119,73 +187,26 @@ impl PasskeyStorage {
 	) -> Result<Vec<(String, u64, u64)>, PasskeyError> {
 		let mut passkeys = Vec::new();
 
-		// The storage key structure is:
-		// storage_key = twox_128(storage_name) + blake2_128_concat(encoded_tuple_key)
-		// where blake2_128_concat(x) = blake2_128(x) + x
-		//
-		// For a tuple key (AccountId, [u8; 32]), the encoded form is:
-		// AccountId.encode() + [u8; 32].encode()
-		// = AccountId bytes + credential_id_hash bytes
-		//
-		// We want to match all keys for a given AccountId, so we need to construct
-		// a prefix that covers:
-		// twox_128(storage_name) + blake2_128(full_key) + AccountId.encode() + ...
-		//
-		// However, blake2_128 hashes the ENTIRE encoded key, so we can't just match
-		// on the AccountId portion. Instead, we iterate through ALL keys in this storage
-		// and filter by AccountId.
+		let credential_ids = self
+			.index
+			.get_credentials(omni_account)
+			.map_err(|_| PasskeyError::StorageError)?;
 
-		let storage_prefix = twox_128(STORAGE_NAME.as_bytes());
-		let db = self.db();
-		let iter = db.prefix_iterator(storage_prefix);
-
-		for item in iter {
-			match item {
-				Ok((key, value)) => {
-					// Verify the key belongs to our storage namespace
-					if !key.starts_with(&storage_prefix) {
-						// We've moved past our namespace, stop iteration
-						break;
-					}
-
-					// The key structure after storage_prefix is:
-					// blake2_128(encoded_tuple) + encoded_tuple
-					// where encoded_tuple = AccountId + [u8; 32]
-					//
-					// Skip the blake2_128 hash (16 bytes) to get to the encoded tuple
-					let encoded_tuple_start = storage_prefix.len() + 16;
-					if key.len() < encoded_tuple_start + 32 {
-						// Invalid key structure, skip
-						continue;
-					}
-
-					// Extract the AccountId from the key (32 bytes after the hash)
-					let key_account_bytes = &key[encoded_tuple_start..encoded_tuple_start + 32];
-
-					// Compare with our target omni_account
-					if key_account_bytes == <AccountId as AsRef<[u8]>>::as_ref(omni_account) {
-						// This key belongs to our account, decode the record
-						match PasskeyRecord::decode(&mut &value[..]) {
-							Ok(record) => {
-								passkeys.push((
-									record.alias_name.clone(),
-									record.created_at,
-									record.last_used,
-								));
-							},
-							Err(e) => {
-								tracing::warn!(
-									"Failed to decode passkey record for account {:?}: {:?}",
-									omni_account,
-									e
-								);
-								// Continue iteration despite decode error
-							},
-						}
-					}
+		for credential_id in credential_ids {
+			match self.get_passkey(omni_account, &credential_id) {
+				Ok(Some(record)) => {
+					passkeys.push((record.alias_name.clone(), record.created_at, record.last_used));
 				},
-				Err(e) => {
-					tracing::error!("Error iterating through passkeys: {:?}", e);
+				Ok(None) => {
+					tracing::warn!(
+						"Passkey index references non-existent credential: {} for account {:?}",
+						credential_id,
+						omni_account
+					);
+					// Continue despite missing record
+				},
+				Err(_) => {
+					tracing::error!("Error retrieving passkey record for credential: {}", credential_id);
 					return Err(PasskeyError::StorageError);
 				},
 			}

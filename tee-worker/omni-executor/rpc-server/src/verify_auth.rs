@@ -449,8 +449,7 @@ pub fn verify_passkey_authentication<
 		.map_err(|_| {
 			// Log the error but don't fail authentication if timestamp update fails
 			tracing::warn!(
-				"Failed to update last_used timestamp for passkey {}",
-				passkey_data.credential_id
+				"Failed to update last_used timestamp for passkey"
 			);
 		})
 		.ok();
