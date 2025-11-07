@@ -9,46 +9,45 @@ const { keccak256, encodeAbiParameters, parseAbiParameters, toHex, hashTypedData
  * Based on: sha256(clientId + "evm" + address)
  */
 export async function calculateOmniAccount(address, clientId = CONFIG.CLIENT_ID) {
-    const encoder = new TextEncoder();
+    try {
+        const encoder = new TextEncoder();
 
-    // Prepare inputs in order: clientId, "evm", address
-    const clientIdBytes = encoder.encode(clientId);
-    const identityTypeBytes = encoder.encode('evm');
+        // Prepare inputs in order: clientId, "evm", address
+        const clientIdBytes = encoder.encode(clientId);
+        const identityTypeBytes = encoder.encode('evm');
 
-    // Convert address hex to bytes (remove 0x prefix)
-    const addressHex = address.slice(2).toLowerCase();
-    const addressBytes = new Uint8Array(20);
-    for (let i = 0; i < addressHex.length; i += 2) {
-        addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
+        // Convert address hex to bytes (remove 0x prefix)
+        const addressHex = address.slice(2).toLowerCase();
+        const addressBytes = new Uint8Array(20);
+        for (let i = 0; i < addressHex.length; i += 2) {
+            addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
+        }
+
+        // Combine all bytes
+        const combined = new Uint8Array(
+            clientIdBytes.length + identityTypeBytes.length + addressBytes.length
+        );
+        combined.set(clientIdBytes, 0);
+        combined.set(identityTypeBytes, clientIdBytes.length);
+        combined.set(addressBytes, clientIdBytes.length + identityTypeBytes.length);
+
+        // Calculate SHA256 hash
+        const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        console.log('  ✓ OmniAccount hash:', hashHex);
+        return hashHex;
+    } catch (error) {
+        console.error('❌ Failed to calculate OmniAccount:', error);
+        throw error;
     }
-
-    // Combine all bytes
-    const combined = new Uint8Array(
-        clientIdBytes.length + identityTypeBytes.length + addressBytes.length
-    );
-    combined.set(clientIdBytes, 0);
-    combined.set(identityTypeBytes, clientIdBytes.length);
-    combined.set(addressBytes, clientIdBytes.length + identityTypeBytes.length);
-
-    // Calculate SHA256 hash
-    const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-    console.log('OmniAccount calculation:', { address, clientId, hashHex });
-    return hashHex;
 }
 
 /**
  * Get root signer from TEE worker
  */
 export async function getRootSignerFromTEE(teeWorkerUrl, omniAccountHash, chainType = 'evm', signerIndex = 0) {
-    console.log('=== Getting Root Signer from TEE Worker ===');
-    console.log('TEE Worker URL:', teeWorkerUrl);
-    console.log('OmniAccount hash:', omniAccountHash);
-    console.log('Chain type:', chainType);
-    console.log('Signer index:', signerIndex);
-
     try {
         const response = await fetch(teeWorkerUrl, {
             method: 'POST',
@@ -68,20 +67,22 @@ export async function getRootSignerFromTEE(teeWorkerUrl, omniAccountHash, chainT
         });
 
         if (!response.ok) {
+            console.error(`❌ TEE worker request failed: HTTP ${response.status}`);
             throw new Error(`TEE worker request failed: HTTP ${response.status}`);
         }
 
         const result = await response.json();
 
         if (result.error) {
+            console.error('❌ TEE worker returned error:', result.error);
             throw new Error(`TEE worker error: ${JSON.stringify(result.error)}`);
         }
 
         const rootSigner = result.result;
-        console.log('Root signer from TEE:', rootSigner);
+        console.log('  ✓ Root signer:', rootSigner);
         return rootSigner;
     } catch (error) {
-        console.error('Error getting root signer from TEE:', error);
+        console.error('❌ Failed to get root signer from TEE:', error);
         throw new Error('Failed to get root signer from TEE worker: ' + error.message);
     }
 }
@@ -90,22 +91,11 @@ export async function getRootSignerFromTEE(teeWorkerUrl, omniAccountHash, chainT
  * Get counterfactual smart wallet address using viem
  */
 export async function getCounterfactualAddress(publicClient, factoryAddress, factoryAbi, omniAccountHash, ownerType, clientIdBytes, rootSigner) {
-    console.log('=== Getting Counterfactual Address ===');
-    console.log('Factory address:', factoryAddress);
-
     try {
         // Validate inputs
         if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000' || factoryAddress === '') {
             throw new Error('Factory address not configured. Please set FACTORY_ADDRESS in .env');
         }
-
-        // Step 3: Call factory.getAddress() using viem
-        console.log('Calling factory.getAddress with params:', {
-            oa: omniAccountHash,
-            oaType: ownerType,
-            clientId: clientIdBytes,
-            root: rootSigner
-        });
 
         const address = await publicClient.readContract({
             address: factoryAddress,
@@ -114,10 +104,10 @@ export async function getCounterfactualAddress(publicClient, factoryAddress, fac
             args: [omniAccountHash, ownerType, clientIdBytes, rootSigner]
         });
 
-        console.log('Counterfactual address from factory:', address);
+        console.log('  ✓ Counterfactual address:', address);
         return address;
     } catch (error) {
-        console.error('Error getting counterfactual address:', error);
+        console.error('❌ Failed to get counterfactual address:', error);
         throw new Error('Failed to get counterfactual address: ' + error.message);
     }
 }
@@ -271,23 +261,25 @@ async function getUserOpHash(publicClient, entrypointAddress, userOp) {
 
 
 /**
- * Sign UserOperation with MetaMask
- * This function now gets the userOpHash from the EntryPoint contract and signs the raw hash
+ * Sign UserOperation with MetaMask using EIP-712
+ *
+ * IMPORTANT: Uses viem's walletClient.signTypedData() instead of calling MetaMask's RPC directly.
+ * This ensures proper type serialization and consistency between hash calculation and signing.
+ *
+ * @param publicClient - viem public client
+ * @param entrypointAddress - EntryPoint contract address
+ * @param userOpSigner - UserOpSigner enum (Owner, RootKey, etc.)
+ * @param userOp - User operation to sign
+ * @param walletAddress - Wallet address for signing
+ * @returns Signature with UserOpSigner prefix (0x00 for Owner)
  */
-export async function signUserOperation(publicClient, entrypointAddress, entrypointAbi, userOpSigner, userOp, walletAddress) {
+export async function signUserOperation(publicClient, entrypointAddress, userOpSigner, userOp, walletAddress) {
     if (!window.ethereum) {
         throw new Error('MetaMask not found');
     }
 
-    // Get the user operation struct hash (for ERC-4337 hash calculation)
-    const userOpStructHash = await getUserOpHash(publicClient, entrypointAddress, userOp);
-    console.log('UserOp struct hash (for ERC-4337 hash calculation):', userOpStructHash);
-
-    const initCodeHash = keccak256(userOp.init_code);
-    const callDataHash = keccak256(userOp.call_data);
-    const paymasterAndDataHash = keccak256(userOp.paymaster_and_data);
-
-    // Define the EIP-712 typed data for UserOperation
+    // EIP-712 typed data for PackedUserOperation (ERC-4337 v0.7)
+    // Must match the EntryPoint contract's PACKED_USEROP_TYPEHASH
     const typedData = {
         domain: {
             name: 'ERC4337',
@@ -296,46 +288,69 @@ export async function signUserOperation(publicClient, entrypointAddress, entrypo
             verifyingContract: entrypointAddress,
         },
         types: {
-            UserOperation: [
+            PackedUserOperation: [
                 { name: 'sender', type: 'address' },
                 { name: 'nonce', type: 'uint256' },
-                { name: 'initCode', type: 'bytes32' },
-                { name: 'callData', type: 'bytes32' },
+                { name: 'initCode', type: 'bytes' },
+                { name: 'callData', type: 'bytes' },
                 { name: 'accountGasLimits', type: 'bytes32' },
                 { name: 'preVerificationGas', type: 'uint256' },
                 { name: 'gasFees', type: 'bytes32' },
-                { name: 'paymasterAndData', type: 'bytes32' },
+                { name: 'paymasterAndData', type: 'bytes' },
             ],
         },
-        primaryType: 'UserOperation',
+        primaryType: 'PackedUserOperation',
         message: {
             sender: userOp.sender,
             nonce: userOp.nonce,
-            initCode: initCodeHash,
-            callData: callDataHash,
+            initCode: userOp.init_code,
+            callData: userOp.call_data,
             accountGasLimits: userOp.account_gas_limits,
             preVerificationGas: userOp.pre_verification_gas,
             gasFees: userOp.gas_fees,
-            paymasterAndData: paymasterAndDataHash,
+            paymasterAndData: userOp.paymaster_and_data,
         }
     };
 
-    // Calculate the EIP-712 digest using viem's hashTypedData
+    // Calculate the EIP-712 digest for debugging
     const eip712Digest = hashTypedData(typedData);
-    console.log('EIP-712 digest (what MetaMask signs):', eip712Digest);
+    console.log('=== EIP-712 Signing ===');
+    console.log('UserOp hash (EIP-712):', eip712Digest);
+    console.log('Domain:', { name: typedData.domain.name, version: typedData.domain.version, chainId: typedData.domain.chainId });
+    console.log('Sender:', typedData.message.sender);
+    console.log('Nonce:', typedData.message.nonce);
+    console.log('======================');
 
     try {
-        // Request signature for the raw hash
-        const signature = await window.ethereum.request({
-            method: 'eth_signTypedData_v4',
-            params: [walletAddress, JSON.stringify(typedData)],
+        // Use viem's walletClient.signTypedData for proper EIP-712 signing
+        // This ensures type serialization consistency between hash calculation and signing
+        const { createWalletClient, custom } = window.viem;
+
+        const walletClient = createWalletClient({
+            account: walletAddress,
+            chain: publicClient.chain,
+            transport: custom(window.ethereum),
         });
 
-        // Add UserOpSigner.Owner prefix (0x00)
+        console.log('  📝 Requesting signature from MetaMask...');
+        const signature = await walletClient.signTypedData({
+            account: walletAddress,
+            domain: typedData.domain,
+            types: typedData.types,
+            primaryType: typedData.primaryType,
+            message: typedData.message,
+        });
+        console.log('  ✓ Signature received');
+
+        // Add UserOpSigner prefix (0x00 for Owner, 0x01 for RootKey, etc.)
         const prefixedSignature = `0x${userOpSigner.Owner.toString(16).padStart(2, '0')}${signature.slice(2)}`;
+        console.log('  ✓ Added UserOpSigner.Owner prefix (0x00)');
         return prefixedSignature;
     } catch (error) {
-        console.error('Signing failed:', error);
+        console.error('❌ Signing failed:', error);
+        if (error.code === 4001) {
+            throw new Error('User rejected signature request in MetaMask');
+        }
         throw error;
     }
 } 
