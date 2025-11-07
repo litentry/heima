@@ -65,67 +65,7 @@ impl AuthenticationError {
 	/// Convert AuthenticationError to DetailedError with proper error codes and context
 	pub fn to_detailed_error(&self) -> DetailedError {
 		use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
-		match self {
-			AuthenticationError::PasskeyError(msg) => {
-				// Try to match specific passkey error types for better error messages
-				if msg.contains("Challenge not found")
-					|| msg.contains("Challenge") && msg.contains("not found")
-				{
-					DetailedError::passkey_challenge_not_found()
-				} else if msg.contains("Challenge expired") {
-					DetailedError::passkey_challenge_expired()
-				} else if msg.contains("Invalid challenge") {
-					DetailedError::passkey_invalid_challenge(msg)
-				} else if msg.contains("Passkey not found") {
-					// Extract credential_id if present in message
-					DetailedError::passkey_not_found("")
-				} else if msg.contains("signature verification failed")
-					|| msg.contains("Invalid signature")
-				{
-					DetailedError::passkey_signature_invalid(msg)
-				} else if msg.contains("Failed to parse") {
-					DetailedError::passkey_parse_error("", msg)
-				} else if msg.contains("RP ID") {
-					// Try to extract RP ID info from message
-					let client_id = msg
-						.split("client_id: '")
-						.nth(1)
-						.and_then(|s| s.split('\'').next())
-						.unwrap_or("");
-					let expected_rp_id = msg
-						.split("Expected RP ID: '")
-						.nth(1)
-						.and_then(|s| s.split('\'').next())
-						.unwrap_or("");
-					DetailedError::passkey_rp_id_mismatch(expected_rp_id, client_id)
-				} else if msg.contains("Replay attack detected") {
-					// Extract counter if present
-					let counter = msg
-						.split("counter (")
-						.nth(1)
-						.and_then(|s| s.split(')').next())
-						.and_then(|s| s.parse::<u32>().ok())
-						.unwrap_or(0);
-					DetailedError::passkey_replay_attack(counter)
-				} else if msg.contains("Counter validation failed")
-					|| msg.contains("cloned or downgraded")
-				{
-					DetailedError::passkey_counter_validation_failed()
-				} else if msg.contains("User presence flag") {
-					DetailedError::passkey_user_verification_failed("user_presence")
-				} else if msg.contains("User verification flag") {
-					DetailedError::passkey_user_verification_failed("user_verification")
-				} else {
-					// Generic passkey error
-					DetailedError::new(
-						AUTH_VERIFICATION_FAILED_CODE,
-						"Passkey authentication failed",
-					)
-					.with_reason(msg)
-				}
-			},
-			_ => DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, self.to_string()),
-		}
+		DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, self.to_string())
 	}
 }
 
