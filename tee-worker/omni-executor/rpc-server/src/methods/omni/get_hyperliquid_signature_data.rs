@@ -10,8 +10,12 @@ use crate::{
 };
 use chrono::Utc;
 use executor_core::intent_executor::IntentExecutor;
+use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
 use executor_primitives::{
 	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
+};
+use executor_storage::{
+	PasskeyChallengeError, PasskeyChallengeStorage, PasskeyError, PasskeyStorage,
 };
 use hyperliquid_rust_sdk::{
 	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
@@ -31,6 +35,17 @@ pub struct GetHyperliquidSignatureDataParams {
 	pub client_auth: Option<ClientAuth>,
 	pub action_type: HyperliquidActionType,
 	pub chain_id: ChainId,
+	pub attach_passkey: Option<AttachPasskeyData>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AttachPasskeyData {
+	/// The attestation object from the WebAuthn registration ceremony (base64url encoded)
+	/// This contains the credential public key, credential ID, and attestation statement
+	pub attestation_object: String,
+	/// The client data JSON from the WebAuthn registration ceremony (base64url encoded)
+	/// This contains the challenge, origin, and other client-side data
+	pub client_data_json: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -115,8 +130,9 @@ pub fn register_get_hyperliquid_signature_data<
 ) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
-			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
 			let params = parse_rpc_params::<GetHyperliquidSignatureDataParams>(params)?;
+
+			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
 
 			// Make sure `user_id` is non-evm type
 			if matches!(params.user_id, UserId::Evm(_)) {
@@ -124,6 +140,171 @@ pub fn register_get_hyperliquid_signature_data<
 				return Err(
 					DetailedError::invalid_params("user_id", "expect non-evm").to_rpc_error()
 				);
+			}
+
+			if let Some(attach_passkey_data) = &params.attach_passkey {
+				// Reject UserId::Passkey type - passkeys cannot be attached to passkey identities
+				if matches!(params.user_id, UserId::Passkey(_)) {
+					error!("Cannot attach passkey to a Passkey user_id type");
+					return Err(DetailedError::invalid_params(
+						"user_id",
+						"UserId::Passkey type is not allowed for passkey attachment",
+					)
+					.with_reason("Passkeys can only be attached to non-passkey identity types")
+					.with_suggestion("Use a different identity type (e.g. Email) as user_id")
+					.to_rpc_error());
+				}
+
+				let user_auth = params.user_auth.as_ref().ok_or_else(|| {
+					error!("user_auth is required when attach_passkey is provided");
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Missing required authentication",
+					)
+					.with_field("user_auth")
+					.with_expected("User authentication data")
+					.with_reason("user_auth must be provided when attaching a passkey")
+					.with_suggestion("Provide user_auth to authenticate before attaching a passkey")
+					.to_rpc_error()
+				})?;
+				let auth =
+					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
+						error!("Failed to convert to OmniAuth: {:?}", e);
+						DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Failed to convert authentication data",
+						)
+						.with_field("user_auth")
+						.with_reason(format!("OmniAuth conversion error: {:?}", e))
+						.to_rpc_error()
+					})?;
+
+				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
+					error!("Failed to verify user authentication: {:?}", e);
+					DetailedError::new(
+						AUTH_VERIFICATION_FAILED_CODE,
+						"Authentication verification failed",
+					)
+					.with_field("user_auth")
+					.with_reason(format!("Verification error: {:?}", e))
+					.with_suggestion("Please check your authentication credentials")
+					.to_rpc_error()
+				})?;
+
+				let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
+					error!("Invalid existing user ID format");
+					DetailedError::parse_error("Invalid user ID format").to_rpc_error()
+				})?;
+				let omni_account = identity.to_omni_account(&params.client_id);
+
+				// Determine expected origin based on client_id
+				let expected_origin = super::get_origin_for_client(&params.client_id);
+
+				// Verify client data JSON and consume challenge
+				let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
+				PasskeyVerifier::verify_client_data_json(
+					&attach_passkey_data.client_data_json,
+					omni_account.as_ref(),
+					expected_origin,
+					"webauthn.create", // For passkey registration/attachment
+					|challenge, omni_account| {
+						challenge_storage
+							.verify_and_consume_challenge(challenge, &(*omni_account).into())
+							.map_err(|e| {
+								match e {
+									PasskeyChallengeError::ChallengeNotFound => {
+										error!("Challenge not found for passkey attachment");
+									},
+									PasskeyChallengeError::ChallengeExpired => {
+										error!("Challenge expired for passkey attachment");
+									},
+									PasskeyChallengeError::InvalidChallenge => {
+										error!("Invalid challenge for passkey attachment");
+									},
+									_ => {
+										error!("Challenge verification failed during passkey attachment: {:?}", e);
+									},
+								}
+								executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed
+							})
+					},
+				)
+				.map_err(|e| {
+					error!("Client data verification failed during passkey attachment: {:?}", e);
+					match e {
+						executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed => {
+							DetailedError::passkey_invalid_challenge(
+								"Challenge mismatch, expired, or not found",
+							)
+							.with_field("attach_passkey.client_data_json")
+						},
+						executor_crypto::passkey::PasskeyError::OriginVerificationFailed => {
+							DetailedError::passkey_origin_verification_failed(expected_origin)
+								.with_field("attach_passkey.client_data_json")
+						},
+						executor_crypto::passkey::PasskeyError::AttestationParseError(err) => {
+							DetailedError::passkey_client_data_parse_error(&err)
+								.with_field("attach_passkey.client_data_json")
+						},
+						_ => DetailedError::new(
+							AUTH_VERIFICATION_FAILED_CODE,
+							"Client data verification failed",
+						)
+						.with_field("attach_passkey.client_data_json")
+						.with_reason(format!("Verification error: {:?}", e)),
+					}
+					.to_rpc_error()
+				})?;
+
+				// Verify attestation and extract credential_id and public_key
+				let AttestationResult { credential_id, public_key } =
+					PasskeyVerifier::verify_attestation(&attach_passkey_data.attestation_object)
+						.map_err(|e| {
+							error!("WebAuthn attestation verification failed during passkey attachment: {:?}", e);
+							match e {
+								executor_crypto::passkey::PasskeyError::AttestationParseError(
+									err,
+								) => DetailedError::passkey_attestation_parse_error(&err)
+									.with_field("attach_passkey.attestation_object"),
+								_ => DetailedError::new(
+									AUTH_VERIFICATION_FAILED_CODE,
+									"Attestation verification failed",
+								)
+								.with_field("attach_passkey.attestation_object")
+								.with_reason(format!("Verification error: {:?}", e)),
+							}
+							.to_rpc_error()
+						})?;
+
+				// Store public key as direct SEC1 bytes for direct usage without parsing
+				let public_key_sec1_bytes = public_key.verifying_key.to_sec1_bytes();
+
+				// Store the new passkey to the authenticated user's account
+				let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
+				passkey_storage
+					.add_passkey(&omni_account, &credential_id, &public_key_sec1_bytes)
+					.map_err(|e| {
+						error!(
+							"Failed to attach passkey to omni_account {}: {:?}",
+							hex_encode(omni_account.as_ref()),
+							e
+						);
+						let detailed_error = match e {
+							PasskeyError::DuplicatePasskey => {
+								DetailedError::passkey_already_exists(&credential_id)
+									.with_field("attach_passkey")
+							},
+							PasskeyError::StorageError => {
+								DetailedError::storage_service_error("passkey attachment")
+									.with_field("attach_passkey")
+							},
+							_ => DetailedError::internal_error("Failed to attach passkey")
+								.with_field("attach_passkey")
+								.with_reason(format!("Storage error: {:?}", e))
+								.with_suggestion("Please try again later"),
+						};
+						detailed_error.to_rpc_error()
+					})?;
 			}
 
 			// Unified authentication logic

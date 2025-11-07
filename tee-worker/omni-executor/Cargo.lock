@@ -3295,6 +3295,7 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
+ "pem-rfc7468",
  "pkcs8",
  "rand_core 0.6.4",
  "sec1",
@@ -3957,16 +3958,22 @@ dependencies = [
 name = "executor-crypto"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
+ "ciborium",
  "ethers",
+ "hex",
  "jsonwebtoken 9.3.1",
+ "p256",
  "parity-scale-codec",
  "rand 0.8.5",
  "ring 0.17.14",
  "rsa",
  "secp256k1 0.29.1",
  "serde",
+ "serde_json",
  "serde_with",
+ "sha2 0.10.9",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing",
 ]
@@ -8297,6 +8304,7 @@ dependencies = [
  "alloy-signer-local",
  "async-trait",
  "base58",
+ "base64 0.22.1",
  "binance-api",
  "chrono",
  "config-loader",

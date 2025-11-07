@@ -544,6 +544,8 @@ impl Identity {
 					return Ok(Identity::Google(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "pumpx" {
 					return Ok(Identity::Pumpx(IdentityString::new(v[1].as_bytes().to_vec())));
+				} else if v[0] == "passkey" {
+					return Ok(Identity::Passkey(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else {
 					return Err("Unknown did type");
 				}
@@ -628,6 +630,9 @@ impl Identity {
 			Web2IdentityType::Pumpx => {
 				Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
 			},
+			Web2IdentityType::Passkey => {
+				Identity::Passkey(IdentityString::new(handle.as_bytes().to_vec()))
+			},
 		}
 	}
 }
@@ -640,6 +645,7 @@ pub enum Web2IdentityType {
 	Email,
 	Google,
 	Pumpx,
+	Passkey,
 }
 
 impl From<ed25519::Public> for Identity {

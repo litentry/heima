@@ -65,6 +65,7 @@ log = "0.4.22"
 metrics = "0.24.1"
 metrics-exporter-prometheus = "0.16.2"
 mockall = "0.13.1"
+p256 = { version = "0.13", features = ["ecdsa"] }
 parity-scale-codec = "3.6.12"
 rand = "0.8.5"
 regex = "1.7"
