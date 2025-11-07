@@ -70,6 +70,18 @@ use login_with_oauth2::*;
 mod get_hyperliquid_signature_data;
 use get_hyperliquid_signature_data::*;
 
+mod attach_passkey;
+use attach_passkey::*;
+
+mod remove_passkey;
+use remove_passkey::*;
+
+mod list_passkey;
+use list_passkey::*;
+
+mod request_passkey_challenge;
+use request_passkey_challenge::*;
+
 mod verify_user_op;
 use verify_user_op::*;
 
@@ -124,6 +136,10 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_get_oauth2_authorization_data(module);
 	register_get_web3_sign_in_message(module);
 	register_user_login(module);
+	register_request_passkey_challenge(module);
+	register_attach_passkey(module);
+	register_remove_passkey(module);
+	register_list_passkey(module);
 	register_login_with_oauth2(module);
 
 	register_request_jwt(module);
@@ -173,4 +189,19 @@ pub fn check_backend_response<T: Codec>(response: &ApiResponse<T>, op: &str) -> 
 		return Err(DetailedError::invalid_backend_response(response, op).to_rpc_error());
 	}
 	Ok(())
+}
+
+// Passkey helper functions
+pub fn get_rp_id_for_client(client_id: &str) -> &str {
+	match client_id {
+		"wildmeta" => "app.wildmeta.ai",
+		_ => "localhost", // Development/testing
+	}
+}
+
+pub fn get_origin_for_client(client_id: &str) -> &str {
+	match client_id {
+		"wildmeta" => "https://app.wildmeta.ai",
+		_ => "http://localhost:3000", // Development/testing
+	}
 }

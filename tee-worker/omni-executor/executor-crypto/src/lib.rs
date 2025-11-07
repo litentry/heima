@@ -1,5 +1,6 @@
 pub mod aes256;
 pub mod jwt;
+pub mod passkey;
 pub mod secp256k1;
 pub mod shielding_key;
 pub mod traits;
