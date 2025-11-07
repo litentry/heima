@@ -258,7 +258,7 @@ mod tests {
 	use std::fs;
 	use std::path::Path;
 
-	fn create_test_storage() -> PasskeyStorage {
+	fn create_test_storage() -> (PasskeyStorage, String) {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 		static COUNTER: AtomicUsize = AtomicUsize::new(0);
 		let db_path = format!("test_passkey_storage_{}", COUNTER.fetch_add(1, Ordering::SeqCst));
@@ -266,12 +266,18 @@ mod tests {
 			fs::remove_dir_all(&db_path).unwrap();
 		}
 		let db = Arc::new(StorageDB::open_default(&db_path).unwrap());
-		PasskeyStorage::new(db)
+		(PasskeyStorage::new(db), db_path)
+	}
+
+	fn remove_test_storage(db_path: &str) {
+		if Path::new(db_path).exists() {
+			fs::remove_dir_all(db_path).unwrap();
+		}
 	}
 
 	#[test]
 	fn test_passkey_add_and_get() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([1u8; 32]);
 
 		// Add a passkey
@@ -286,11 +292,14 @@ mod tests {
 		// Test existence check
 		assert!(storage.exists_passkey(&omni_account, "cred123"));
 		assert!(!storage.exists_passkey(&omni_account, "nonexistent"));
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_passkey_removal() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([2u8; 32]);
 
 		// Add a passkey
@@ -306,11 +315,14 @@ mod tests {
 		// Verify it's gone
 		assert!(!storage.exists_passkey(&omni_account, "cred456"));
 		assert!(storage.get_passkey(&omni_account, "cred456").unwrap().is_none());
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_duplicate_detection() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([3u8; 32]);
 
 		// Add first passkey
@@ -321,11 +333,14 @@ mod tests {
 		let test_pubkey2 = b"test_pubkey_789_new";
 		let result = storage.add_passkey(&omni_account, "cred789", test_pubkey2, None);
 		assert_eq!(result, Err(PasskeyError::DuplicatePasskey));
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_multiple_passkeys_per_omni_account() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([4u8; 32]);
 
 		// Add multiple passkeys for the same omni account
@@ -343,11 +358,14 @@ mod tests {
 
 		assert_eq!(record1.pubkey, test_pubkey1.to_vec());
 		assert_eq!(record2.pubkey, test_pubkey2.to_vec());
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_list_passkeys() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account1 = AccountId::from([5u8; 32]);
 		let omni_account2 = AccountId::from([6u8; 32]);
 
@@ -385,5 +403,8 @@ mod tests {
 		let omni_account3 = AccountId::from([7u8; 32]);
 		let passkeys3 = storage.list_passkeys(&omni_account3).unwrap();
 		assert_eq!(passkeys3.len(), 0);
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 }
