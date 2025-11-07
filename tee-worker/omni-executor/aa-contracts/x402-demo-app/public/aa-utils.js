@@ -1,89 +1,14 @@
 // Account Abstraction utilities for browser using viem
 // Properly calls TEE worker for root signer and uses viem for contract interactions
 
-// Configuration - will be loaded from server
-let CONFIG = {
-    CLIENT_ID: 'wildmeta',
-    CHAIN_ID: 421614,
-    ENTRYPOINT_ADDRESS: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
-    FACTORY_ADDRESS: '',
-    RPC_URL: 'https://sepolia-rollup.arbitrum.io/rpc',
-    TEE_WORKER_URL: 'https://staging-dex-worker.heima.network'
-};
+const { keccak256, encodeAbiParameters, parseAbiParameters, toHex, hashTypedData } = window.viem;
 
-// ABIs
-let FACTORY_ABI = null;
-let ACCOUNT_ABI = null;
-
-// Viem clients
-let publicClient = null;
-
-// UserOpSigner enum - matches the contract enum
-const UserOpSigner = {
-    Owner: 0x00,
-    RootKey: 0x01,
-    SessionKey: 0x02,
-    Passkey: 0x03,
-};
-
-// OwnerType enum - matches the contract enum
-const OwnerType = {
-    Evm: 6,  // 0x06 for EVM addresses
-};
-
-/**
- * Load configuration from server
- */
-async function loadConfig() {
-    try {
-        const response = await fetch('/config');
-        const config = await response.json();
-        CONFIG = {
-            CLIENT_ID: config.clientId,
-            CHAIN_ID: config.chainId,
-            ENTRYPOINT_ADDRESS: config.entrypointAddress,
-            FACTORY_ADDRESS: config.factoryAddress,
-            RPC_URL: config.rpcUrl,
-            TEE_WORKER_URL: config.teeWorkerUrl || 'https://staging-dex-worker.heima.network'
-        };
-        console.log('Loaded config from server:', CONFIG);
-
-        // Load ABIs
-        const factoryAbiResponse = await fetch('/abis/OmniAccountFactory.json');
-        const factoryAbiData = await factoryAbiResponse.json();
-        FACTORY_ABI = factoryAbiData.abi;
-
-        const accountAbiResponse = await fetch('/abis/OmniAccount.json');
-        const accountAbiData = await accountAbiResponse.json();
-        ACCOUNT_ABI = accountAbiData.abi;
-
-        // Initialize viem public client
-        const { createPublicClient, http } = window.viem;
-        publicClient = createPublicClient({
-            chain: {
-                id: CONFIG.CHAIN_ID,
-                name: 'Arbitrum Sepolia',
-                network: 'arbitrum-sepolia',
-                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                rpcUrls: {
-                    default: { http: [CONFIG.RPC_URL] },
-                    public: { http: [CONFIG.RPC_URL] },
-                }
-            },
-            transport: http(CONFIG.RPC_URL)
-        });
-
-        console.log('Initialized viem client');
-    } catch (error) {
-        console.warn('Failed to load config from server, using defaults:', error);
-    }
-}
 
 /**
  * Calculate OmniAccount hash from EVM address
  * Based on: sha256(clientId + "evm" + address)
  */
-async function calculateOmniAccount(address, clientId = CONFIG.CLIENT_ID) {
+export async function calculateOmniAccount(address, clientId = CONFIG.CLIENT_ID) {
     const encoder = new TextEncoder();
 
     // Prepare inputs in order: clientId, "evm", address
@@ -117,15 +42,15 @@ async function calculateOmniAccount(address, clientId = CONFIG.CLIENT_ID) {
 /**
  * Get root signer from TEE worker
  */
-async function getRootSignerFromTEE(omniAccountHash, chainType = 'evm', signerIndex = 0) {
+export async function getRootSignerFromTEE(teeWorkerUrl, omniAccountHash, chainType = 'evm', signerIndex = 0) {
     console.log('=== Getting Root Signer from TEE Worker ===');
-    console.log('TEE Worker URL:', CONFIG.TEE_WORKER_URL);
+    console.log('TEE Worker URL:', teeWorkerUrl);
     console.log('OmniAccount hash:', omniAccountHash);
     console.log('Chain type:', chainType);
     console.log('Signer index:', signerIndex);
 
     try {
-        const response = await fetch(CONFIG.TEE_WORKER_URL, {
+        const response = await fetch(teeWorkerUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -164,39 +89,29 @@ async function getRootSignerFromTEE(omniAccountHash, chainType = 'evm', signerIn
 /**
  * Get counterfactual smart wallet address using viem
  */
-async function getCounterfactualAddress(omniAccountHash, walletAddress) {
+export async function getCounterfactualAddress(publicClient, factoryAddress, factoryAbi, omniAccountHash, ownerType, clientIdBytes, rootSigner) {
     console.log('=== Getting Counterfactual Address ===');
-    console.log('Factory address:', CONFIG.FACTORY_ADDRESS);
-    console.log('Wallet address:', walletAddress);
-    console.log('OmniAccount hash:', omniAccountHash);
-    console.log('Client ID:', CONFIG.CLIENT_ID);
+    console.log('Factory address:', factoryAddress);
 
     try {
         // Validate inputs
-        if (!CONFIG.FACTORY_ADDRESS || CONFIG.FACTORY_ADDRESS === '0x0000000000000000000000000000000000000000' || CONFIG.FACTORY_ADDRESS === '') {
+        if (!factoryAddress || factoryAddress === '0x0000000000000000000000000000000000000000' || factoryAddress === '') {
             throw new Error('Factory address not configured. Please set FACTORY_ADDRESS in .env');
         }
-
-        // Step 1: Get root signer from TEE worker
-        const rootSigner = await getRootSignerFromTEE(omniAccountHash, 'evm', 0);
-
-        // Step 2: Convert clientId to bytes
-        const { stringToHex } = window.viem;
-        const clientIdBytes = stringToHex(CONFIG.CLIENT_ID);
 
         // Step 3: Call factory.getAddress() using viem
         console.log('Calling factory.getAddress with params:', {
             oa: omniAccountHash,
-            oaType: OwnerType.Evm,
+            oaType: ownerType,
             clientId: clientIdBytes,
             root: rootSigner
         });
 
         const address = await publicClient.readContract({
-            address: CONFIG.FACTORY_ADDRESS,
-            abi: FACTORY_ABI,
+            address: factoryAddress,
+            abi: factoryAbi,
             functionName: 'getAddress',
-            args: [omniAccountHash, OwnerType.Evm, clientIdBytes, rootSigner]
+            args: [omniAccountHash, ownerType, clientIdBytes, rootSigner]
         });
 
         console.log('Counterfactual address from factory:', address);
@@ -210,7 +125,7 @@ async function getCounterfactualAddress(omniAccountHash, walletAddress) {
 /**
  * Get nonce from smart wallet contract
  */
-async function getNonce(smartWalletAddress) {
+async function getNonce(publicClient, accountAbi, smartWalletAddress) {
     try {
         // Check if the smart wallet is deployed by checking code
         const code = await publicClient.getBytecode({
@@ -226,7 +141,7 @@ async function getNonce(smartWalletAddress) {
         // Call getNonce() using viem
         const nonce = await publicClient.readContract({
             address: smartWalletAddress,
-            abi: ACCOUNT_ABI,
+            abi: accountAbi,
             functionName: 'getNonce'
         });
 
@@ -243,24 +158,17 @@ async function getNonce(smartWalletAddress) {
 /**
  * Generate initCode for deploying the smart wallet (if not yet deployed)
  */
-async function generateInitCode(omniAccountHash, walletAddress) {
+async function generateInitCode(factoryAddress, factoryAbi, omniAccountHash, ownerType, clientIdBytes, rootSigner) {
     try {
-        // Get root signer from TEE
-        const rootSigner = await getRootSignerFromTEE(omniAccountHash, 'evm', 0);
-
-        // Convert clientId to bytes
-        const { stringToHex, encodeFunctionData, concat } = window.viem;
-        const clientIdBytes = stringToHex(CONFIG.CLIENT_ID);
-
         // Encode createAccount function call
         const createAccountCalldata = encodeFunctionData({
-            abi: FACTORY_ABI,
+            abi: factoryAbi,
             functionName: 'createAccount',
-            args: [omniAccountHash, OwnerType.Evm, clientIdBytes, rootSigner]
+            args: [omniAccountHash, ownerType, clientIdBytes, rootSigner]
         });
 
         // Combine factory address + createAccount calldata
-        const initCode = concat([CONFIG.FACTORY_ADDRESS, createAccountCalldata]);
+        const initCode = concat([factoryAddress, createAccountCalldata]);
 
         console.log('Generated initCode:', initCode);
         return initCode;
@@ -288,105 +196,11 @@ function packGasFees(maxFeePerGas, maxPriorityFeePerGas) {
     return '0x' + packed.toString(16).padStart(64, '0');
 }
 
-/**
- * Build a UserOperation for native ETH transfer
- */
-async function buildPaymentUserOp(params) {
-    const {
-        smartWalletAddress,
-        recipient,
-        amount, // in wei
-        nonce = 0n,
-        omniAccountHash,
-        walletAddress,
-    } = params;
 
-    // Check if smart wallet is deployed
-    const code = await publicClient.getBytecode({
-        address: smartWalletAddress
-    });
-    const isDeployed = code && code !== '0x' && code !== '0x0';
 
-    // Build callData for execute(recipient, amount, "0x")
-    const { encodeFunctionData } = window.viem;
-    const callData = encodeFunctionData({
-        abi: ACCOUNT_ABI,
-        functionName: 'execute',
-        args: [recipient, amount, '0x']
-    });
-
-    // Generate initCode if not deployed
-    let initCode = '0x';
-    if (!isDeployed) {
-        console.log('Smart wallet not deployed, generating initCode...');
-        initCode = await generateInitCode(omniAccountHash, walletAddress);
-    }
-
-    // Use reasonable gas values for Arbitrum Sepolia
-    // Higher limits for deployment, lower for regular operations
-    const callGasLimit = 800000n;
-    const verificationGasLimit = isDeployed ? 500000n : 1000000n;
-    const preVerificationGas = isDeployed ? 50000n : 100000n;
-    const maxFeePerGas = 100000000n; // 0.1 gwei
-    const maxPriorityFeePerGas = 100000000n; // 0.1 gwei
-
-    console.log('Gas parameters:', {
-        callGasLimit: callGasLimit.toString(),
-        verificationGasLimit: verificationGasLimit.toString(),
-        preVerificationGas: preVerificationGas.toString(),
-        maxFeePerGas: maxFeePerGas.toString(),
-        maxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
-        isDeployed
-    });
-
-    const userOp = {
-        sender: smartWalletAddress,
-        nonce: Number(nonce),
-        init_code: initCode,
-        call_data: callData,
-        account_gas_limits: packAccountGasLimits(callGasLimit, verificationGasLimit),
-        pre_verification_gas: Number(preVerificationGas),
-        gas_fees: packGasFees(maxFeePerGas, maxPriorityFeePerGas),
-        paymaster_and_data: '0x',
-        signature: undefined, // Will be filled after signing
-    };
-
-    console.log('Built UserOp:', userOp);
-    return userOp;
-}
-
-/**
- * Sign UserOperation with MetaMask using EIP-712
- */
-async function signUserOperation(userOp, walletAddress, chainId) {
-    if (!window.ethereum) {
-        throw new Error('MetaMask not found');
-    }
-
-    // EIP-712 domain
-    const domain = {
-        name: 'ERC4337',
-        version: '1',
-        chainId: chainId,
-        verifyingContract: CONFIG.ENTRYPOINT_ADDRESS,
-    };
-
-    // EIP-712 types for PackedUserOperation
-    const types = {
-        PackedUserOperation: [
-            { name: 'sender', type: 'address' },
-            { name: 'nonce', type: 'uint256' },
-            { name: 'initCode', type: 'bytes' },
-            { name: 'callData', type: 'bytes' },
-            { name: 'accountGasLimits', type: 'bytes32' },
-            { name: 'preVerificationGas', type: 'uint256' },
-            { name: 'gasFees', type: 'bytes32' },
-            { name: 'paymasterAndData', type: 'bytes' },
-        ],
-    };
-
-    // Message to sign
-    const message = {
+async function getUserOpHash(publicClient, entrypointAddress, userOp) {
+    // Convert userOp fields to camelCase for consistency with the Rust example and ABI encoding
+    const transformedUserOp = {
         sender: userOp.sender,
         nonce: userOp.nonce,
         initCode: userOp.init_code,
@@ -397,18 +211,131 @@ async function signUserOperation(userOp, walletAddress, chainId) {
         paymasterAndData: userOp.paymaster_and_data,
     };
 
+    // 1. Define the PackedUserOperation TypeHash
+    const packedUserOpTypeHash = keccak256(
+        toHex(
+            new TextEncoder().encode(
+                "PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)"
+            )
+        )
+    );
+
+    // 2. Hash dynamic fields
+    const initCodeHash = keccak256(transformedUserOp.initCode);
+    const callDataHash = keccak256(transformedUserOp.callData);
+    const paymasterAndDataHash = keccak256(transformedUserOp.paymasterAndData);
+
+    // 3. Create a struct for hashing
+    const userOpForHashing = {
+        typeHash: packedUserOpTypeHash,
+        sender: transformedUserOp.sender,
+        nonce: transformedUserOp.nonce,
+        initCode: initCodeHash,
+        callData: callDataHash,
+        accountGasLimits: transformedUserOp.accountGasLimits,
+        preVerificationGas: transformedUserOp.preVerificationGas,
+        gasFees: transformedUserOp.gasFees,
+        paymasterAndData: paymasterAndDataHash,
+    };
+
+    // 4. ABI-encode the struct (hash(userOp))
+    const encodedUserOp = encodeAbiParameters(
+        parseAbiParameters([
+            'bytes32 typeHash',
+            'address sender',
+            'uint256 nonce',
+            'bytes32 initCode',
+            'bytes32 callData',
+            'bytes32 accountGasLimits',
+            'uint256 preVerificationGas',
+            'bytes32 gasFees',
+            'bytes32 paymasterAndData',
+        ]),
+        [
+            userOpForHashing.typeHash,
+            userOpForHashing.sender,
+            userOpForHashing.nonce,
+            userOpForHashing.initCode,
+            userOpForHashing.callData,
+            userOpForHashing.accountGasLimits,
+            userOpForHashing.preVerificationGas,
+            userOpForHashing.gasFees,
+            userOpForHashing.paymasterAndData,
+        ]
+    );
+
+    const userOpStructHash = keccak256(encodedUserOp);
+
+    return userOpStructHash;
+}
+
+
+/**
+ * Sign UserOperation with MetaMask
+ * This function now gets the userOpHash from the EntryPoint contract and signs the raw hash
+ */
+export async function signUserOperation(publicClient, entrypointAddress, entrypointAbi, userOpSigner, userOp, walletAddress) {
+    if (!window.ethereum) {
+        throw new Error('MetaMask not found');
+    }
+
+    // Get the user operation struct hash (for ERC-4337 hash calculation)
+    const userOpStructHash = await getUserOpHash(publicClient, entrypointAddress, userOp);
+    console.log('UserOp struct hash (for ERC-4337 hash calculation):', userOpStructHash);
+
+    const initCodeHash = keccak256(userOp.init_code);
+    const callDataHash = keccak256(userOp.call_data);
+    const paymasterAndDataHash = keccak256(userOp.paymaster_and_data);
+
+    // Define the EIP-712 typed data for UserOperation
+    const typedData = {
+        domain: {
+            name: 'ERC4337',
+            version: '1',
+            chainId: publicClient.chain.id,
+            verifyingContract: entrypointAddress,
+        },
+        types: {
+            UserOperation: [
+                { name: 'sender', type: 'address' },
+                { name: 'nonce', type: 'uint256' },
+                { name: 'initCode', type: 'bytes32' },
+                { name: 'callData', type: 'bytes32' },
+                { name: 'accountGasLimits', type: 'bytes32' },
+                { name: 'preVerificationGas', type: 'uint256' },
+                { name: 'gasFees', type: 'bytes32' },
+                { name: 'paymasterAndData', type: 'bytes32' },
+            ],
+        },
+        primaryType: 'UserOperation',
+        message: {
+            sender: userOp.sender,
+            nonce: userOp.nonce,
+            initCode: initCodeHash,
+            callData: callDataHash,
+            accountGasLimits: userOp.account_gas_limits,
+            preVerificationGas: userOp.pre_verification_gas,
+            gasFees: userOp.gas_fees,
+            paymasterAndData: paymasterAndDataHash,
+        }
+    };
+
+    // Calculate the EIP-712 digest using viem's hashTypedData
+    const eip712Digest = hashTypedData(typedData);
+    console.log('EIP-712 digest (what MetaMask signs):', eip712Digest);
+
     try {
-        // Request signature via MetaMask EIP-712
+        // Request signature for the raw hash
         const signature = await window.ethereum.request({
             method: 'eth_signTypedData_v4',
-            params: [walletAddress, JSON.stringify({ domain, types, primaryType: 'PackedUserOperation', message })],
+            params: [walletAddress, JSON.stringify(typedData)],
         });
 
         // Add UserOpSigner.Owner prefix (0x00)
-        const prefixedSignature = '0x00' + signature.slice(2);
+        const prefixedSignature = `0x${userOpSigner.Owner.toString(16).padStart(2, '0')}${signature.slice(2)}`;
         return prefixedSignature;
     } catch (error) {
         console.error('Signing failed:', error);
         throw error;
     }
-}
+} 

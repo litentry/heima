@@ -1,49 +1,73 @@
-// Main application logic
+import { calculateOmniAccount, getRootSignerFromTEE, getCounterfactualAddress, signUserOperation } from './aa-utils.js';
 let walletAddress = null;
 let smartWalletAddress = null;
 let omniAccountHash = null;
 let CONFIG = {};
+let publicClient = null;
+let FACTORY_ABI = null;
+let ACCOUNT_ABI = null;
+let ENTRYPOINT_ABI = null;
+
+const UserOpSigner = {
+    Owner: 0x00,
+    RootKey: 0x01,
+    SessionKey: 0x02,
+    Passkey: 0x03,
+};
+
+const OwnerType = {
+    Evm: 6,  // 0x06 for EVM addresses
+};
+
+
+
+async function init() {
+    try {
+        const response = await fetch('/config');
+        CONFIG = await response.json();
+        console.log('Loaded config:', CONFIG);
+
+        const factoryAbiResponse = await fetch('/abis/OmniAccountFactory.json');
+        const factoryAbiData = await factoryAbiResponse.json();
+        FACTORY_ABI = factoryAbiData.abi;
+
+        const accountAbiResponse = await fetch('/abis/OmniAccount.json');
+        const accountAbiData = await accountAbiResponse.json();
+        ACCOUNT_ABI = accountAbiData.abi;
+
+        const entrypointAbiResponse = await fetch('/EntryPoint.json');
+        const entrypointAbiData = await entrypointAbiResponse.json();
+        ENTRYPOINT_ABI = entrypointAbiData.abi;
+
+        const { createPublicClient, http } = window.viem;
+        publicClient = createPublicClient({
+            chain: {
+                id: CONFIG.chainId,
+                name: 'Arbitrum Sepolia',
+                network: 'arbitrum-sepolia',
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                rpcUrls: {
+                    default: { http: [CONFIG.rpcUrl] },
+                    public: { http: [CONFIG.rpcUrl] },
+                }
+            },
+            transport: http(CONFIG.rpcUrl)
+        });
+
+        console.log('Initialized viem client');
+    } catch (error) {
+        console.error('Initialization failed:', error);
+        alert('Failed to initialize the application. Please check the console for errors.');
+    }
+}
 
 // Load configuration when page loads
-window.addEventListener('DOMContentLoaded', async () => {
-    const response = await fetch('/config');
-    CONFIG = await response.json();
-    console.log('Loaded config:', CONFIG);
-});
-
-/**
- * Calculate OmniAccount hash from EVM address
- */
-async function calculateOmniAccount(address) {
-    const encoder = new TextEncoder();
-    const clientIdBytes = encoder.encode(CONFIG.clientId || 'wildmeta');
-    const identityTypeBytes = encoder.encode('evm');
-
-    // Convert address hex to bytes
-    const addressHex = address.slice(2).toLowerCase();
-    const addressBytes = new Uint8Array(20);
-    for (let i = 0; i < addressHex.length; i += 2) {
-        addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
-    }
-
-    // Combine all bytes
-    const combined = new Uint8Array(
-        clientIdBytes.length + identityTypeBytes.length + addressBytes.length
-    );
-    combined.set(clientIdBytes, 0);
-    combined.set(identityTypeBytes, clientIdBytes.length);
-    combined.set(addressBytes, clientIdBytes.length + identityTypeBytes.length);
-
-    // Calculate SHA256 hash
-    const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+window.addEventListener('load', init);
 
 /**
  * Connect to MetaMask wallet
  */
-async function connectWallet() {
+window.connectWallet = async function connectWallet() {
     try {
         if (!window.ethereum) {
             alert('Please install MetaMask to use this demo');
@@ -71,23 +95,14 @@ async function connectWallet() {
 
         // Get counterfactual address
         try {
-            omniAccountHash = await calculateOmniAccount(walletAddress);
+            omniAccountHash = await calculateOmniAccount(walletAddress, CONFIG.clientId);
             console.log('OmniAccount hash:', omniAccountHash);
 
-            // Call server to get counterfactual address
-            const response = await fetch('/api/getCounterfactualAddress', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ omniAccountHash, walletAddress })
-            });
+            const rootSigner = await getRootSignerFromTEE(CONFIG.teeWorkerUrl, omniAccountHash);
+            const { stringToHex } = window.viem;
+            const clientIdBytes = stringToHex(CONFIG.clientId);
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to get counterfactual address');
-            }
-
-            const result = await response.json();
-            smartWalletAddress = result.address;
+            smartWalletAddress = await getCounterfactualAddress(publicClient, CONFIG.factoryAddress, FACTORY_ABI, omniAccountHash, OwnerType.Evm, clientIdBytes, rootSigner);
 
             document.getElementById('smartWalletAddress').textContent = smartWalletAddress;
             document.getElementById('requestSection').classList.remove('hidden');
@@ -134,54 +149,13 @@ async function switchToArbitrumSepolia() {
     }
 }
 
-/**
- * Sign UserOperation with MetaMask using EIP-712
- */
-async function signUserOperation(userOp) {
-    const domain = {
-        name: 'ERC4337',
-        version: '1',
-        chainId: CONFIG.chainId,
-        verifyingContract: CONFIG.entrypointAddress,
-    };
 
-    const types = {
-        PackedUserOperation: [
-            { name: 'sender', type: 'address' },
-            { name: 'nonce', type: 'uint256' },
-            { name: 'initCode', type: 'bytes' },
-            { name: 'callData', type: 'bytes' },
-            { name: 'accountGasLimits', type: 'bytes32' },
-            { name: 'preVerificationGas', type: 'uint256' },
-            { name: 'gasFees', type: 'bytes32' },
-            { name: 'paymasterAndData', type: 'bytes' },
-        ],
-    };
 
-    const message = {
-        sender: userOp.sender,
-        nonce: userOp.nonce,
-        initCode: userOp.init_code,
-        callData: userOp.call_data,
-        accountGasLimits: userOp.account_gas_limits,
-        preVerificationGas: userOp.pre_verification_gas,
-        gasFees: userOp.gas_fees,
-        paymasterAndData: userOp.paymaster_and_data,
-    };
-
-    const signature = await window.ethereum.request({
-        method: 'eth_signTypedData_v4',
-        params: [walletAddress, JSON.stringify({ domain, types, primaryType: 'PackedUserOperation', message })],
-    });
-
-    // Add UserOpSigner.Owner prefix (0x00)
-    return '0x00' + signature.slice(2);
-}
 
 /**
  * Request protected content from x402 endpoint
  */
-async function requestProtectedContent() {
+window.requestProtectedContent = async function requestProtectedContent() {
     const statusEl = document.getElementById('status');
     const requestBtn = document.getElementById('requestBtn');
 
@@ -227,7 +201,7 @@ async function requestProtectedContent() {
 
         // Step 3: Sign the UserOperation
         statusEl.innerHTML = 'Step 4/5: Please sign in MetaMask...';
-        const signature = await signUserOperation(userOp);
+        const signature = await signUserOperation(publicClient, CONFIG.entrypointAddress, ENTRYPOINT_ABI, UserOpSigner, userOp, walletAddress);
         userOp.signature = signature;
         console.log('Signed UserOp');
 

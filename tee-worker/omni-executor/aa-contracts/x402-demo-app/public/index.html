@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>X402 + 4337 Demo</title>
-    <!-- Load viem from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/viem@2.7.0/dist/index.browser.js"></script>
+    <script type="module">
+        import * as viem from 'https://esm.sh/viem';
+        window.viem = viem;
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/js-sha256@0.11.0/build/sha256.min.js"></script>
     <style>
         * {
@@ -178,6 +180,7 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="aa-utils.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
