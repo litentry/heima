@@ -65,7 +65,8 @@ impl AuthenticationError {
 	/// Convert AuthenticationError to DetailedError with proper error codes and context
 	pub fn to_detailed_error(&self) -> DetailedError {
 		use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
-		DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, self.to_string())
+		DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
+			.with_reason(self.to_string())
 	}
 }
 

@@ -654,11 +654,11 @@ mod tests {
 				from_sub_account
 			}
 			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
-				&& source_dex == ""
+				&& source_dex.is_empty()
 				&& destination_dex == "spot"
 				&& token == "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2"
 				&& amount == "50.5"
-				&& from_sub_account == ""
+				&& from_sub_account.is_empty()
 		));
 		assert_eq!(params.chain_id, 998);
 	}
@@ -695,7 +695,7 @@ mod tests {
 			}
 			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
 				&& source_dex == "hyperliquid"
-				&& destination_dex == ""
+				&& destination_dex.is_empty()
 				&& token == "USDC:0x0"
 				&& amount == "1000.0"
 				&& from_sub_account == "0x9876543210987654321098765432109876543210"
@@ -746,7 +746,7 @@ mod tests {
 		assert!(matches!(
 			params.action_type,
 			HyperliquidActionType::UserDexAbstraction { user, enabled }
-			if user == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10" && enabled == true
+			if user == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10" && enabled
 		));
 		assert_eq!(params.chain_id, 42161);
 	}
