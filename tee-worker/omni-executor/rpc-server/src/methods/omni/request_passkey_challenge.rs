@@ -1,5 +1,5 @@
 use crate::{
-	detailed_error::DetailedError, server::RpcContext, utils::validation::parse_rpc_params,
+	server::RpcContext, utils::types::RpcResultExt, utils::validation::parse_rpc_params,
 	Deserialize, Serialize,
 };
 use executor_core::intent_executor::IntentExecutor;
@@ -34,10 +34,8 @@ pub fn register_request_passkey_challenge<
 
 			debug!("Received omni_requestPasskeyChallenge, params: {:?}", params);
 
-			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
-				error!("Invalid existing user ID format");
-				DetailedError::parse_error("Invalid user ID format").to_rpc_error()
-			})?;
+			let identity = Identity::try_from(params.user_id.clone())
+				.map_err_parse("Invalid user ID format")?;
 
 			// Generate a random 32-byte challenge
 			use rand::RngCore;
@@ -54,16 +52,9 @@ pub fn register_request_passkey_challenge<
 			let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
 			let omni_account = identity.to_omni_account(&params.client_id);
 
-			challenge_storage.store_challenge(&omni_account, &challenge, timeout).map_err(
-				|_| {
-					error!("Failed to store challenge");
-					DetailedError::storage_service_error("passkey challenge storage")
-						.with_suggestion(
-							"Please try again later or contact support if the issue persists",
-						)
-						.to_rpc_error()
-				},
-			)?;
+			challenge_storage
+				.store_challenge(&omni_account, &challenge, timeout)
+				.map_err_internal("Failed to store challenge")?;
 
 			Ok::<RequestPasskeyChallengeResponse, ErrorObject>(RequestPasskeyChallengeResponse {
 				challenge,
