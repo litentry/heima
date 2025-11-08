@@ -18,6 +18,7 @@ pub struct AttachPasskeyParams {
 	pub client_id: String,
 	pub attestation_object: String, // Base64 encoded WebAuthn attestation object
 	pub client_data_json: String,   // Base64 encoded WebAuthn client data JSON
+	pub alias_name: Option<String>, // Optional alias name for the passkey
 }
 
 #[derive(Serialize, Clone)]
@@ -103,7 +104,12 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 			let public_key_sec1_bytes = public_key.verifying_key.to_sec1_bytes();
 			let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 			passkey_storage
-				.add_passkey(&omni_account, &credential_id, &public_key_sec1_bytes)
+				.add_passkey(
+					&omni_account,
+					&credential_id,
+					&public_key_sec1_bytes,
+					params.alias_name,
+				)
 				.map_err_internal("Failed to attach passkey")?;
 
 			Ok::<AttachPasskeyResponse, ErrorObject>(AttachPasskeyResponse {
