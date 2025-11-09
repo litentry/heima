@@ -467,7 +467,12 @@ impl Identity {
 			},
 			Identity::Apple(handle) => {
 				hasher.update(b"apple");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 			Identity::Email(handle) => {
 				hasher.update(b"email");
@@ -480,7 +485,12 @@ impl Identity {
 			},
 			Identity::Google(handle) => {
 				hasher.update(b"google");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 			Identity::Pumpx(handle) => {
 				// TODO: this type will be removed.
@@ -489,7 +499,12 @@ impl Identity {
 			},
 			Identity::Passkey(handle) => {
 				hasher.update(b"passkey");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 		}
 
