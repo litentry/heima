@@ -9,8 +9,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{ChainId, Web2IdentityType};
-use heima_primitives::Identity;
+use executor_primitives::ChainId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
@@ -334,15 +333,6 @@ enum Commands {
 
 		#[arg(long, default_value = "50000")]
 		post_op_gas_limit: u64,
-	},
-
-	/// Get OmniAccount identifier from email/identity and client_id
-	GetOmniAccount {
-		#[arg(long)]
-		email: String,
-
-		#[arg(long, default_value = "wildmeta")]
-		client_id: String,
 	},
 
 	/// Pack two gas limits into accountGasLimits format for PackedUserOperation
@@ -862,27 +852,6 @@ fn handle_generate_paymaster_data(
 	Ok(())
 }
 
-fn handle_get_omni_account(email: String, client_id: String) -> Result<()> {
-	// Create Identity from email
-	let identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
-
-	// Generate OmniAccount
-	let omni_account = identity.to_omni_account(&client_id);
-	let oa_bytes: [u8; 32] = omni_account.into();
-
-	// Convert to hex string
-	let omni_account_hex = hex::encode(oa_bytes);
-
-	info!(
-		"Generated OmniAccount for email '{}' with client_id '{}': 0x{}",
-		email, client_id, omni_account_hex
-	);
-
-	println!("OmniAccount: 0x{}", omni_account_hex);
-
-	Ok(())
-}
-
 fn handle_pack_gas_limits(verification_gas: u64, call_gas: u64) -> Result<()> {
 	// Pack the gas limits into a 32-byte (256-bit) value
 	// Higher 128 bits = verification_gas, lower 128 bits = call_gas
@@ -1047,9 +1016,6 @@ async fn main() -> Result<()> {
 				verification_gas_limit,
 				post_op_gas_limit,
 			)?;
-		},
-		Commands::GetOmniAccount { email, client_id } => {
-			handle_get_omni_account(email, client_id)?;
 		},
 		Commands::PackGasLimits { verification_gas, call_gas } => {
 			handle_pack_gas_limits(verification_gas, call_gas)?;

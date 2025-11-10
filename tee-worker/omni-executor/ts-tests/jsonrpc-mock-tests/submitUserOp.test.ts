@@ -13,8 +13,7 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { anvil } from 'viem/chains';
-import { ClientId, omniApi, randomEvmWallet, calculateOmniAccount, UserLoginResponse } from './utils';
-import { signMessage } from 'viem/accounts';
+import { omniApi, randomEvmWallet, calculateOmniAccount, UserLoginResponse } from './utils';
 import { TEST_CONFIG, validateTestEnvironment } from './config';
 import { promises as fs } from 'fs';
 import {
@@ -26,11 +25,8 @@ import {
     generateInitCode,
     stringToBytes,
     createExecuteCalldata,
-    createAddSignerCalldata,
     createTokenTransferCalldata,
     toSerializablePackedUserOperation,
-    type UserOperation,
-    type SerializablePackedUserOperation,
 } from './utils/aa-utils';
 
 // Function to wait for and load deployed contract addresses
@@ -49,7 +45,7 @@ async function waitForContractDeployment(): Promise<void> {
     const startTime = Date.now();
 
     // Check if addresses are already set in environment variables
-    if (process.env.TEST_ENTRY_POINT_ADDRESS && 
+    if (process.env.TEST_ENTRY_POINT_ADDRESS &&
         process.env.TEST_FACTORY_ADDRESS &&
         process.env.TEST_ENTRY_POINT_ADDRESS !== TEST_CONFIG.CONTRACTS.ENTRY_POINT &&
         process.env.TEST_FACTORY_ADDRESS !== TEST_CONFIG.CONTRACTS.OMNI_ACCOUNT_FACTORY) {
@@ -243,7 +239,7 @@ describe('OmniAccount Integration Tests', function () {
 
     it('Step 2: Should fund test wallet with ETH from deployer account', async function () {
         // Fund the test wallet for gas fees
-        
+
         const fundingAmount = parseEther('0.5'); // 0.5 ETH for gas
         const hash = await deployerWalletClient.sendTransaction({
             to: testWallet.address,
@@ -368,7 +364,7 @@ describe('OmniAccount Integration Tests', function () {
 
     it('Step 5: Should add TEE Worker as authorized root signer', async function () {
         // Getting TEE Worker address
-        
+
         // Try to get TEE Worker address (following aa-demo-app pattern)
         try {
             const workerAddress = await omniApi.getSmartWalletRootSigner(
@@ -440,7 +436,7 @@ describe('OmniAccount Integration Tests', function () {
         });
 
         // Wait for transaction
-        const receipt = await publicClient.waitForTransactionReceipt({ 
+        const receipt = await publicClient.waitForTransactionReceipt({
             hash,
             timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
         });
@@ -479,7 +475,7 @@ describe('OmniAccount Integration Tests', function () {
                 functionName: 'mint',
                 args: [omniAccountAddress, mintAmount],
             });
-            
+
             await publicClient.waitForTransactionReceipt({
                 hash: mintHash,
                 timeout: TEST_CONFIG.TIMEOUTS.TRANSACTION,
@@ -495,7 +491,7 @@ describe('OmniAccount Integration Tests', function () {
 
             expect(balance).to.equal(mintAmount);
             // Step 6 completed
-            
+
         } catch (error) {
             console.log('⚠️ Token minting failed, continuing with test');
             console.log(`   Error: ${error}`);

@@ -16,6 +16,7 @@ ethereum-rpc = { workspace = true }
 
 [dev-dependencies]
 heima-primitives = { workspace = true }
+executor-primitives = { workspace = true }
 test-log = { workspace = true }
 ethereum-rpc = { workspace = true, features = ["mocks"] }
 mockall = { workspace = true }

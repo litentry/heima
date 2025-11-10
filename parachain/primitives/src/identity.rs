@@ -81,6 +81,12 @@ impl IdentityString {
 	}
 }
 
+impl From<&str> for IdentityString {
+	fn from(value: &str) -> Self {
+		IdentityString::new(value.as_bytes().to_vec())
+	}
+}
+
 impl Debug for IdentityString {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
 		if_development_or!(
@@ -624,43 +630,6 @@ impl Identity {
 	pub fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()
 	}
-
-	pub fn from_web2_account(handle: &str, identity_type: Web2IdentityType) -> Self {
-		match identity_type {
-			Web2IdentityType::Twitter => {
-				Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Discord => {
-				Identity::Discord(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Apple => {
-				Identity::Apple(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Email => {
-				Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Google => {
-				Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Pumpx => {
-				Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Passkey => {
-				Identity::Passkey(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-		}
-	}
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Web2IdentityType {
-	Twitter,
-	Discord,
-	Apple,
-	Email,
-	Google,
-	Pumpx,
-	Passkey,
 }
 
 impl From<ed25519::Public> for Identity {
