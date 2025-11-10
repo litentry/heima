@@ -49,9 +49,6 @@ use submit_swap_order::*;
 mod transfer_widthdraw;
 use transfer_widthdraw::*;
 
-mod get_omni_account;
-use get_omni_account::*;
-
 mod get_smart_wallet_root_signer;
 use get_smart_wallet_root_signer::*;
 
@@ -148,7 +145,6 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_submit_swap_order(module);
 	register_sign_limit_order_params(module);
 	register_notify_limit_order_result(module);
-	register_get_omni_account(module);
 	register_get_smart_wallet_root_signer(module);
 	register_estimate_user_op_gas(module);
 	register_submit_user_op_with_auth(module);

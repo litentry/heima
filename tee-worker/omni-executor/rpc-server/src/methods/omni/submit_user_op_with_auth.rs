@@ -296,14 +296,14 @@ fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Addre
 		// Handle executeBatch call
 		parse_execute_batch(&call_bytes)
 	} else {
-		return Err(DetailedError::new(
+		Err(DetailedError::new(
 			AUTH_VERIFICATION_FAILED_CODE,
 			"Call data is not an OmniAccount execute or executeBatch function call",
 		)
 		.with_field("method_signature")
 		.with_received(format!("0x{}", hex::encode(method_sig)))
 		.with_expected("0xb61d27f6 (execute) or 0x18dfeb3c (executeBatch)")
-		.to_rpc_error());
+		.to_rpc_error())
 	}
 }
 
