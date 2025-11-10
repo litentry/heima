@@ -167,16 +167,6 @@ pub async fn verify_oauth2_authentication<
 	client_id: &str,
 	payload: &OAuth2Data,
 ) -> Result<Identity, AuthenticationError> {
-	verify_oauth2_provider(ctx, client_id, payload).await
-}
-
-async fn verify_oauth2_provider<
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
-	client_id: &str,
-	payload: &OAuth2Data,
-) -> Result<Identity, AuthenticationError> {
 	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
 	let key: Hash = blake2_256((client_id, &payload.uid).encode().as_slice()).into();
 	let Ok(Some(verification_data)) = state_verifier_storage.get(&key) else {
