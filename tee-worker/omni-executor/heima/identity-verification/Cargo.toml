@@ -10,7 +10,7 @@ base64 = { workspace = true }
 parity-scale-codec = { workspace = true }
 rand = { workspace = true }
 regex = { workspace = true }
-sendgrid = "0.23.0"
+sendgrid = "0.24.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
