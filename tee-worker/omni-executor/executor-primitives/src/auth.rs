@@ -10,7 +10,6 @@ use base58::{FromBase58, ToBase58};
 use heima_primitives::{AccountId, Address20, Address32, Address33, Identity, IdentityString};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 
 pub type VerificationCode = String;
 type Email = String;
@@ -144,64 +143,8 @@ impl UserId {
 	/// derive an `OmniAccount` from `UserId` using SHA256 hash of client_id + user_id_type + user_id_value
 	/// This follows the same implementation as Identity::to_omni_account
 	pub fn to_omni_account(&self, client_id: &str) -> Result<AccountId, &'static str> {
-		let mut hasher = Sha256::new();
-
-		hasher.update(client_id.as_bytes());
-
-		match self {
-			UserId::Substrate(hex_address) => {
-				hasher.update(b"substrate");
-				let bytes = decode_hex(hex_address).map_err(|_| "Invalid hex encoding")?;
-				hasher.update(&bytes);
-			},
-			UserId::Evm(hex_address) => {
-				hasher.update(b"evm");
-				let bytes = decode_hex(hex_address).map_err(|_| "Invalid hex encoding")?;
-				hasher.update(&bytes);
-			},
-			UserId::Bitcoin(hex_address) => {
-				hasher.update(b"bitcoin");
-				let bytes = decode_hex(hex_address).map_err(|_| "Invalid hex encoding")?;
-				hasher.update(&bytes);
-			},
-			UserId::Solana(base58_address) => {
-				hasher.update(b"solana");
-				let bytes = base58_address.from_base58().map_err(|_| "Invalid base58 encoding")?;
-				hasher.update(&bytes);
-			},
-			UserId::Twitter(handle) => {
-				hasher.update(b"twitter");
-				hasher.update(handle.as_bytes());
-			},
-			UserId::Discord(handle) => {
-				hasher.update(b"discord");
-				hasher.update(handle.as_bytes());
-			},
-			UserId::Apple(handle) => {
-				hasher.update(b"apple");
-				hasher.update(handle.to_lowercase().as_bytes());
-			},
-			UserId::Email(email) => {
-				hasher.update(b"email");
-				// Convert email to lowercase before hashing to ensure consistent accounts
-				hasher.update(email.to_lowercase().as_bytes());
-			},
-			UserId::Google(handle) => {
-				hasher.update(b"google");
-				hasher.update(handle.to_lowercase().as_bytes());
-			},
-			UserId::Pumpx(handle) => {
-				hasher.update(b"pumpx");
-				hasher.update(handle.as_bytes());
-			},
-			UserId::Passkey(handle) => {
-				hasher.update(b"passkey");
-				hasher.update(handle.to_lowercase().as_bytes());
-			},
-		}
-
-		let result = hasher.finalize();
-		Ok(AccountId::from(<[u8; 32]>::from(result)))
+		let identity = Identity::try_from(self.clone())?;
+		Ok(identity.to_omni_account(client_id))
 	}
 }
 

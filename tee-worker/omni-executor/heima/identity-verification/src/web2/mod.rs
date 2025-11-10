@@ -27,7 +27,7 @@ pub fn verify_identity(
 			let email = vec_to_string(email_validation_data.email.to_vec())?;
 			let verification_code =
 				vec_to_string(email_validation_data.verification_code.to_vec())?;
-			let email_identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
+			let email_identity = Identity::Email(email.as_str().into());
 			let verification_code_storage = VerificationCodeStorage::new(storage_db);
 			let Ok(Some(code)) = verification_code_storage.get(&email_identity.hash()) else {
 				return Err(());

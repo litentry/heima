@@ -138,8 +138,7 @@ mod tests {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 
-		let uid = Identity::from_web2_account("012345", Web2IdentityType::Pumpx);
-		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
+		let omni_account = Identity::Pumpx("012345".into()).to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
 			hex_encode(omni_account.as_ref()),
@@ -162,8 +161,7 @@ mod tests {
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
 
-		let uid = Identity::from_web2_account("012345", Web2IdentityType::Pumpx);
-		let omni_account = uid.to_omni_account(CLIENT_ID_HEIMA);
+		let omni_account = Identity::Pumpx("012345".into())(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
 			hex_encode(omni_account.as_ref()),
@@ -238,8 +236,7 @@ mod tests {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 
-		let email_identity = Identity::from_web2_account("test@test.com", Web2IdentityType::Email);
-		let omni_account = email_identity.to_omni_account(CLIENT_ID_HEIMA);
+		let omni_account = Identity::Email("test@test.com".into()).to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
 			hex_encode(omni_account.as_ref()),

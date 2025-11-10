@@ -134,8 +134,7 @@ pub fn verify_email_authentication<
 	email: &str,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	let email_identity = Identity::from_web2_account(email, Web2IdentityType::Email);
-	let omni_account = email_identity.to_omni_account(client_id);
+	let omni_account = Identity::Email(email.into()).to_omni_account(client_id);
 	let storage_key = omni_account.hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {

@@ -17,7 +17,7 @@ use heima_authentication::{
 	auth_token::*,
 	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
-use heima_primitives::{Identity, Web2IdentityType};
+use heima_primitives::Identity;
 use jsonrpsee::RpcModule;
 use pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
@@ -93,8 +93,8 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			let user_id = res.data.user_id.ok_or_internal("Empty data.user_id")?;
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", params.user_email, user_id);
-			let omni_account = Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx)
-				.to_omni_account(&params.client_id);
+			let omni_account =
+				Identity::Pumpx(user_id.as_str().into()).to_omni_account(&params.client_id);
 
 			let access_token_claims: AuthTokenClaims = AuthTokenClaims::new(
 				hex_encode(omni_account.as_ref()),

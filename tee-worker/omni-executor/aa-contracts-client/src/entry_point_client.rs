@@ -1131,7 +1131,7 @@ pub mod test {
 	use alloy::sol_types::SolCall;
 	use ethereum_rpc::mocks::MockRpcProvider;
 	use ethereum_rpc::{AlloyRpcProvider, RpcProvider};
-	use heima_primitives::{AccountId, Identity, Web2IdentityType};
+	use executor_primitives::UserId;
 	use std::str::FromStr;
 	use std::sync::Arc;
 	use test_log::test;
@@ -1157,8 +1157,7 @@ pub mod test {
 
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, Arc::new(rpc_client));
 
-		let oa: AccountId =
-			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+		let oa = UserId::Evm(user_address.to_string()).to_omni_account(client_id).unwrap();
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
@@ -1214,8 +1213,7 @@ pub mod test {
 		let rpc_client = Arc::new(AlloyRpcProvider::new("http://localhost:8545"));
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 		// first 20 bytes factory address, then call data which should be oa + client_id + root_address encode packed
-		let oa: AccountId =
-			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+		let oa = UserId::Evm(user_address.to_string()).to_omni_account(client_id).unwrap();
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
@@ -1251,8 +1249,7 @@ pub mod test {
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 
 		// Create two user operations for batch simulation
-		let oa: AccountId =
-			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+		let oa = UserId::Evm(user_address.to_string()).to_omni_account(client_id).unwrap();
 		let client_id_bytes = client_id.as_bytes();
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
 
@@ -1339,9 +1336,7 @@ pub mod test {
 			Arc::new(AlloyRpcProvider::new_with_wallet("http://localhost:8545", wallet));
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 		// first 20 bytes factory address, then call data which should be oa + client_id + root_address encode packed
-		let oa: AccountId =
-			Identity::from_web2_account("user@example.com", Web2IdentityType::Email)
-				.to_omni_account(client_id);
+		let oa = UserId::Email("user@example.com".into()).to_omni_account(client_id).unwrap();
 		let client_id_bytes = client_id.as_bytes();
 		let client_id_fixed_bytes = Bytes::from(client_id_bytes);
 
@@ -1427,8 +1422,7 @@ pub mod test {
 		let entrypoint_client = EntryPointClient::new(entrypoint_address, rpc_client);
 
 		// Create test parameters
-		let oa: AccountId =
-			Identity::Evm(user_address.0.as_slice().try_into().unwrap()).to_omni_account(client_id);
+		let oa = UserId::Evm(user_address.to_string()).to_omni_account(client_id).unwrap();
 		let client_id_bytes = client_id.as_bytes();
 		let oa_bytes: FixedBytes<32> = FixedBytes::from_slice(oa.as_ref());
 

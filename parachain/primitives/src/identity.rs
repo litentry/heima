@@ -81,6 +81,12 @@ impl IdentityString {
 	}
 }
 
+impl From<&str> for IdentityString {
+	fn from(value: &str) -> Self {
+		IdentityString::new(value.as_bytes().to_vec())
+	}
+}
+
 impl Debug for IdentityString {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
 		if_development_or!(
