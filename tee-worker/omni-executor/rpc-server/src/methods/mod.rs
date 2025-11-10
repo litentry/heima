@@ -2,7 +2,7 @@ use crate::server::RpcContext;
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::RpcModule;
 
-mod omni;
+pub mod omni;
 use omni::*;
 
 pub const PROTECTED_METHODS: [&str; 8] = [

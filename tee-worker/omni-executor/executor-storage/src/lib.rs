@@ -12,6 +12,12 @@ pub use heima_jwt::HeimaJwtStorage;
 mod intent_id;
 pub use intent_id::IntentIdStorage;
 mod asset_lock;
+mod passkey;
+pub use passkey::{PasskeyError, PasskeyRecord, PasskeyStorage, PasskeyStorageKey};
+mod passkey_challenge;
+pub use passkey_challenge::{
+	PasskeyChallengeError, PasskeyChallengeRecord, PasskeyChallengeStorage,
+};
 mod pumpx_account_profile;
 pub use pumpx_account_profile::PumpxProfileStorage;
 mod wildmeta_timestamp;

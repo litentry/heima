@@ -467,7 +467,12 @@ impl Identity {
 			},
 			Identity::Apple(handle) => {
 				hasher.update(b"apple");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 			Identity::Email(handle) => {
 				hasher.update(b"email");
@@ -480,7 +485,12 @@ impl Identity {
 			},
 			Identity::Google(handle) => {
 				hasher.update(b"google");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 			Identity::Pumpx(handle) => {
 				// TODO: this type will be removed.
@@ -489,7 +499,12 @@ impl Identity {
 			},
 			Identity::Passkey(handle) => {
 				hasher.update(b"passkey");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 		}
 
@@ -544,6 +559,8 @@ impl Identity {
 					return Ok(Identity::Google(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "pumpx" {
 					return Ok(Identity::Pumpx(IdentityString::new(v[1].as_bytes().to_vec())));
+				} else if v[0] == "passkey" {
+					return Ok(Identity::Passkey(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else {
 					return Err("Unknown did type");
 				}
@@ -628,6 +645,9 @@ impl Identity {
 			Web2IdentityType::Pumpx => {
 				Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
 			},
+			Web2IdentityType::Passkey => {
+				Identity::Passkey(IdentityString::new(handle.as_bytes().to_vec()))
+			},
 		}
 	}
 }
@@ -640,6 +660,7 @@ pub enum Web2IdentityType {
 	Email,
 	Google,
 	Pumpx,
+	Passkey,
 }
 
 impl From<ed25519::Public> for Identity {
