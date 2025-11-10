@@ -13,7 +13,7 @@ use crate::RpcResult;
 use alloy::primitives::{hex, Address};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
+use executor_primitives::{ChainId, ClientAuth, UserAuth, UserId};
 use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
 use pumpx::pubkey_to_address;
@@ -681,57 +681,57 @@ pub fn register_submit_user_op_with_auth<
 				},
 			};
 
-			let identity = Identity::try_from(params.user_id.clone()).map_err_parse("Failed to convert user_id to identity")?;
-
 			// Only validate main_address if it's provided (not None)
 			if let Some(main_addr) = &main_address {
-				match &identity {
-					Identity::Evm(_) => {
-						if let UserId::Evm(user_address) = &params.user_id {
-							if user_address.to_lowercase() != main_addr.to_lowercase() {
-								error!("Main address does not match user_id for EVM identity");
-								return Err(DetailedError::new(
-										AUTH_VERIFICATION_FAILED_CODE,
-										"User address does not match authenticated main address for EVM identity",
-									)
-									.with_field("user_address")
-									.with_received(user_address.to_string())
-									.with_expected(main_addr.to_string())
-									.with_suggestion("For EVM identity, the user_id must match the authenticated main address").to_rpc_error());
-							}
-						}
-					},
-					_ => {
-						let omni_account = identity.to_omni_account(&params.client_id);
-						let derived_address = ctx
-							.signer_client
-							.request_wallet(
-								ChainType::Evm,
-								params.wallet_index,
-								*omni_account.as_ref(),
+				if let UserId::Evm(user_address) = &params.user_id {
+					if user_address.to_lowercase() != main_addr.to_lowercase() {
+						error!("Main address does not match user_id for EVM identity");
+						return Err(DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"User address does not match authenticated main address for EVM identity",
 							)
-							.await
-							.map_err(|_| {
-								DetailedError::signer_service_error().to_rpc_error()
-							})
-							.and_then(|pk| pubkey_to_address(ChainType::Evm, &pk).map_err_internal("Failed to convert pubkey to address"))?;
+							.with_field("user_address")
+							.with_received(user_address.to_string())
+							.with_expected(main_addr.to_string())
+							.with_suggestion("For EVM identity, the user_id must match the authenticated main address").to_rpc_error());
+					}
+				} else {
+					let omni_account = params
+						.user_id
+						.to_omni_account(&params.client_id)
+						.map_err_parse("Failed to convert to omni_account")?;
 
-						if derived_address.to_lowercase() != main_addr.to_lowercase() {
-							error!("Main address does not match derived EVM address");
-							return Err(DetailedError::new(
-									AUTH_VERIFICATION_FAILED_CODE,
-									"Derived address does not match authenticated address",
-								)
-								.with_field("derived_address")
-								.with_received(derived_address.to_string())
-								.with_expected(main_addr.to_string())
-								.with_suggestion("The derived EVM address must match the authenticated main address").to_rpc_error());
-						}
-					},
+					let derived_address = ctx
+						.signer_client
+						.request_wallet(
+							ChainType::Evm,
+							params.wallet_index,
+							*omni_account.as_ref(),
+						)
+						.await
+						.map_err(|_| {
+							DetailedError::signer_service_error().to_rpc_error()
+						})
+						.and_then(|pk| pubkey_to_address(ChainType::Evm, &pk).map_err_internal("Failed to convert pubkey to address"))?;
+
+					if derived_address.to_lowercase() != main_addr.to_lowercase() {
+						error!("Main address does not match derived EVM address");
+						return Err(DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"Derived address does not match authenticated address",
+							)
+							.with_field("derived_address")
+							.with_received(derived_address.to_string())
+							.with_expected(main_addr.to_string())
+							.with_suggestion("The derived EVM address must match the authenticated main address").to_rpc_error());
+					}
 				}
 			}
 
-			let account_id = identity.to_omni_account(&params.client_id);
+			let account_id = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
 
 			// Call the common submission logic
 			let transaction_hash = submit_user_ops(
