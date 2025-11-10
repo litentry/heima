@@ -180,11 +180,11 @@ impl PasskeyStorage {
 	}
 
 	/// List all passkeys for a given omni_account
-	/// Returns a vector of tuples (alias_name, created_at, last_used)
+	/// Returns a vector of tuples (credential_id, alias_name, created_at, last_used)
 	pub fn list_passkeys(
 		&self,
 		omni_account: &AccountId,
-	) -> Result<Vec<(String, u64, u64)>, PasskeyError> {
+	) -> Result<Vec<(String, String, u64, u64)>, PasskeyError> {
 		let mut passkeys = Vec::new();
 
 		let credential_ids = self
@@ -195,7 +195,12 @@ impl PasskeyStorage {
 		for credential_id in credential_ids {
 			match self.get_passkey(omni_account, &credential_id) {
 				Ok(Some(record)) => {
-					passkeys.push((record.alias_name.clone(), record.created_at, record.last_used));
+					passkeys.push((
+						record.credential_id.clone(),
+						record.alias_name.clone(),
+						record.created_at,
+						record.last_used,
+					));
 				},
 				Ok(None) => {
 					tracing::warn!(
@@ -411,9 +416,15 @@ mod tests {
 		let passkeys1 = storage.list_passkeys(&omni_account1).unwrap();
 		assert_eq!(passkeys1.len(), 3);
 
-		// Verify all three passkeys are present (now returns alias_name instead of credential_id)
+		// Verify all three passkeys are present (now returns credential_id, alias_name, created_at, last_used)
+		let credential_ids: Vec<String> =
+			passkeys1.iter().map(|(cred_id, _, _, _)| cred_id.clone()).collect();
+		assert!(credential_ids.contains(&"cred1".to_string()));
+		assert!(credential_ids.contains(&"cred2".to_string()));
+		assert!(credential_ids.contains(&"cred3".to_string()));
+
 		let alias_names: Vec<String> =
-			passkeys1.iter().map(|(alias, _, _)| alias.clone()).collect();
+			passkeys1.iter().map(|(_, alias, _, _)| alias.clone()).collect();
 		assert!(alias_names.contains(&"cred1".to_string()));
 		assert!(alias_names.contains(&"cred2".to_string()));
 		assert!(alias_names.contains(&"My Passkey".to_string()));
@@ -422,6 +433,7 @@ mod tests {
 		let passkeys2 = storage.list_passkeys(&omni_account2).unwrap();
 		assert_eq!(passkeys2.len(), 1);
 		assert_eq!(passkeys2[0].0, "cred4");
+		assert_eq!(passkeys2[0].1, "cred4");
 
 		// List passkeys for non-existent account
 		let omni_account3 = AccountId::from([7u8; 32]);
