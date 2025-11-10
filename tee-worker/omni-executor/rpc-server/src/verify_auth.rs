@@ -4,7 +4,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
+	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode,
 };
 use executor_storage::{
 	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
@@ -287,12 +287,10 @@ async fn verify_oauth2_provider<
 		return Err(AuthenticationError::OAuth2SubClaimMismatch);
 	}
 
-	let identity_type = match payload.provider {
-		OAuth2Provider::Google => Web2IdentityType::Google,
-		OAuth2Provider::Apple => Web2IdentityType::Apple,
+	let identity = match payload.provider {
+		OAuth2Provider::Google => Identity::Google(provider_sub.as_str().into()),
+		OAuth2Provider::Apple => Identity::Apple(provider_sub.as_str().into()),
 	};
-
-	let identity = Identity::from_web2_account(&provider_sub, identity_type);
 
 	Ok(identity)
 }

@@ -111,7 +111,7 @@ mod tests {
 
 	use super::*;
 	use chrono::{Days, Utc};
-	use executor_primitives::{utils::hex::hex_encode, Identity, Web2IdentityType};
+	use executor_primitives::{utils::hex::hex_encode, Identity};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 
 	#[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -161,7 +161,7 @@ mod tests {
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
 
-		let omni_account = Identity::Pumpx("012345".into())(CLIENT_ID_HEIMA);
+		let omni_account = Identity::Pumpx("012345".into()).to_omni_account(CLIENT_ID_HEIMA);
 
 		let claims = AuthTokenClaims::new(
 			hex_encode(omni_account.as_ref()),
