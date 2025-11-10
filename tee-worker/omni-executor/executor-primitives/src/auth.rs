@@ -179,7 +179,7 @@ impl UserId {
 			},
 			UserId::Apple(handle) => {
 				hasher.update(b"apple");
-				hasher.update(handle.as_bytes());
+				hasher.update(handle.to_lowercase().as_bytes());
 			},
 			UserId::Email(email) => {
 				hasher.update(b"email");
@@ -188,7 +188,7 @@ impl UserId {
 			},
 			UserId::Google(handle) => {
 				hasher.update(b"google");
-				hasher.update(handle.as_bytes());
+				hasher.update(handle.to_lowercase().as_bytes());
 			},
 			UserId::Pumpx(handle) => {
 				hasher.update(b"pumpx");
@@ -196,7 +196,7 @@ impl UserId {
 			},
 			UserId::Passkey(handle) => {
 				hasher.update(b"passkey");
-				hasher.update(handle.as_bytes());
+				hasher.update(handle.to_lowercase().as_bytes());
 			},
 		}
 
