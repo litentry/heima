@@ -42,6 +42,7 @@ pub struct AttachPasskeyData {
 	/// The client data JSON from the WebAuthn registration ceremony (base64url encoded)
 	/// This contains the challenge, origin, and other client-side data
 	pub client_data_json: String,
+	pub alias_name: Option<String>, // Optional alias name for the passkey
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -214,7 +215,12 @@ pub fn register_get_hyperliquid_signature_data<
 				// Store the new passkey to the authenticated user's account
 				let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 				passkey_storage
-					.add_passkey(&omni_account, &credential_id, &public_key_sec1_bytes)
+					.add_passkey(
+						&omni_account,
+						&credential_id,
+						&public_key_sec1_bytes,
+						attach_passkey_data.alias_name.clone(),
+					)
 					.map_err_internal("Failed to attach passkey")?;
 			}
 
