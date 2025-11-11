@@ -14,4 +14,7 @@ fs_permissions = [
 gas_reports = ["*"]
 gas_reports_ignore = []
 
+[profile.default.lint]
+ignore = ["../forge-libs/**"]
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
