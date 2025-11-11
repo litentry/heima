@@ -17,7 +17,7 @@ pub struct SpotTradingApi<'a, BinanceClient: BinanceApi> {
 }
 
 impl<'a, BinanceClient: BinanceApi> SpotTradingApi<'a, BinanceClient> {
-	pub fn new(binance_api: &BinanceClient) -> SpotTradingApi<BinanceClient> {
+	pub fn new(binance_api: &BinanceClient) -> SpotTradingApi<'_, BinanceClient> {
 		SpotTradingApi { base_api: binance_api }
 	}
 

@@ -14,7 +14,7 @@ pub struct WalletApi<'a, BinanceClient: BinanceApi> {
 }
 
 impl<'a, BinanceClient: BinanceApi> WalletApi<'a, BinanceClient> {
-	pub fn new(binance_api: &BinanceClient) -> WalletApi<BinanceClient> {
+	pub fn new(binance_api: &BinanceClient) -> WalletApi<'_, BinanceClient> {
 		WalletApi { base_api: binance_api }
 	}
 

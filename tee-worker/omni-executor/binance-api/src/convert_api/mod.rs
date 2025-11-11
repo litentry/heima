@@ -19,7 +19,7 @@ pub struct ConvertApi<'a, BinanceClient: BinanceApi> {
 }
 
 impl<'a, BinanceClient: BinanceApi> ConvertApi<'a, BinanceClient> {
-	pub fn new(binance_api: &BinanceClient) -> ConvertApi<BinanceClient> {
+	pub fn new(binance_api: &BinanceClient) -> ConvertApi<'_, BinanceClient> {
 		ConvertApi { base_api: binance_api }
 	}
 

@@ -11,7 +11,7 @@ use chrono::Utc;
 use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
 use executor_primitives::{
-	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
+	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, UserAuth, UserId,
 };
 use executor_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
 use hyperliquid_rust_sdk::{
@@ -21,7 +21,6 @@ use jsonrpsee::RpcModule;
 use pumpx::pubkey_to_address;
 use serde::{Deserialize, Serialize};
 use signer_client::ChainType;
-use std::convert::TryFrom;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -140,6 +139,11 @@ pub fn register_get_hyperliquid_signature_data<
 				);
 			}
 
+			let omni_account = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
+
 			if let Some(attach_passkey_data) = &params.attach_passkey {
 				// Reject UserId::Passkey type - passkeys cannot be attached to passkey identities
 				if matches!(params.user_id, UserId::Passkey(_)) {
@@ -165,10 +169,6 @@ pub fn register_get_hyperliquid_signature_data<
 					error!("Failed to verify user authentication: {:?}", e);
 					e.to_detailed_error().to_rpc_error()
 				})?;
-
-				let identity = Identity::try_from(params.user_id.clone())
-					.map_err_parse("Invalid user ID format")?;
-				let omni_account = identity.to_omni_account(&params.client_id);
 
 				// Determine expected origin based on client_id
 				let expected_origin = super::get_origin_for_client(&params.client_id);
@@ -236,10 +236,6 @@ pub fn register_get_hyperliquid_signature_data<
 				})?;
 
 				// Get main address from derived wallet
-				let identity = Identity::try_from(params.user_id.clone())
-					.map_err_parse("Failed to convert user ID to identity")?;
-				let omni_account = identity.to_omni_account(&params.client_id);
-
 				ctx.signer_client
 					.request_wallet(ChainType::Evm, 0, *omni_account.as_ref())
 					.await
@@ -317,11 +313,6 @@ pub fn register_get_hyperliquid_signature_data<
 				)
 				.to_rpc_error());
 			};
-
-			// Derive omni_account for signing (works for both auth methods)
-			let identity = Identity::try_from(params.user_id.clone())
-				.map_err_parse("Failed to convert user_id to identity")?;
-			let omni_account = identity.to_omni_account(&params.client_id);
 
 			let nonce = Utc::now().timestamp_millis() as u64;
 
