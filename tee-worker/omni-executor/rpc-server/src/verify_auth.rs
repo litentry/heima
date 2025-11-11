@@ -311,7 +311,7 @@ pub fn verify_passkey_authentication<
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	passkey_data: &PasskeyData,
 ) -> Result<(), AuthenticationError> {
-	use crate::methods::omni::{get_origin_for_client, get_rp_id_for_client};
+	use crate::methods::omni::{get_allowed_origins_for_client, get_rp_id_for_client};
 	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
 	use executor_storage::PasskeyStorage;
 
@@ -324,13 +324,11 @@ pub fn verify_passkey_authentication<
 			AuthenticationError::PasskeyError(format!("Failed to parse client data: {}", e))
 		})?;
 
-	let expected_origin = get_origin_for_client(&passkey_data.client_id);
-	if client_data.origin != expected_origin {
-		return Err(AuthenticationError::PasskeyError(format!(
-			"Client data origin mismatch: expected '{}', got '{}'",
-			expected_origin,
-			client_data.origin.as_str()
-		)));
+	let allowed_origins = get_allowed_origins_for_client(&passkey_data.client_id);
+	if !allowed_origins.iter().any(|&origin| origin == client_data.origin) {
+		return Err(AuthenticationError::PasskeyError(
+			executor_crypto::passkey::PasskeyError::OriginVerificationFailed.to_string(),
+		));
 	}
 
 	const EXPECTED_PASSKEY_TYPE: &str = "webauthn.get";
