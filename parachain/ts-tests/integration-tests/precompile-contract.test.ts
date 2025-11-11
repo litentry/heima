@@ -18,7 +18,6 @@ import { encodeAddress, evmToAddress } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { HexString } from '@polkadot/util/types';
 import { ethers } from 'ethers';
-import { destResourceId } from '../common/utils/consts';
 
 const toBigInt = (int: number) => BigInt(int) * BigInt(1e18);
 const bn1e18 = new BN(10).pow(new BN(18));

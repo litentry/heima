@@ -13,7 +13,6 @@
         "wait-finalized-block": "pnpm exec ts-node common/setup/wait-finalized-block.ts",
         "setup-enclave": "pnpm exec ts-node common/setup/setup-enclave.ts",
         "test-filter": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/base-filter.test.ts'",
-        "test-bridge": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/bridge.test.ts'",
         "test-evm-contract": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/evm-contract.test.ts'",
         "test-runtime-upgrade": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/runtime-upgrade.test.ts'",
         "test-all": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/**/*.test.ts'",
