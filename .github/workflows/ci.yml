@@ -606,6 +606,10 @@ jobs:
       - name: Install foundry
         uses: foundry-rs/foundry-toolchain@v1
 
+      - name: Show Forge version
+        working-directory: ./tee-worker/omni-executor/aa-contracts
+        run: forge --version
+
       - name: Check AA contracts
         working-directory: ./tee-worker/omni-executor/aa-contracts
         run: |
