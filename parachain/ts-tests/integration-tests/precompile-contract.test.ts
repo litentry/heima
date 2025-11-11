@@ -68,12 +68,13 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
     const executeTransaction = async (delegateTransaction: any, contractAddress: HexString, label = '') => {
         console.log(`=== Executing ${label} ===`);
+        const feeData = await provider.getFeeData();
         const tx = await wallet.sendTransaction({
             to: contractAddress,
             data: delegateTransaction,
             gasLimit: 1000000,
-            nonce: await wallet.getTransactionCount(),
-            gasPrice: await provider.getGasPrice(),
+            nonce: await wallet.getNonce(),
+            gasPrice: feeData.gasPrice,
         });
         await tx.wait();
         return tx;
@@ -135,19 +136,20 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     });
 
     step('Address with insufficient amount of tokens', async function () {
-        const randomEvmWallet = ethers.Wallet.createRandom();
+        const randomEvmWallet = ethers.Wallet.createRandom().connect(provider);
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
             'delegateWithAutoCompound',
             [collatorPublicKey, ethers.parseUnits('60', 18), 1]
         );
 
         try {
+            const feeData = await provider.getFeeData();
             const tx = await randomEvmWallet.sendTransaction({
                 to: precompileStakingContractAddress,
                 data: delegateWithAutoCompound,
                 gasLimit: 1000000,
-                nonce: await randomEvmWallet.getTransactionCount(),
-                gasPrice: await provider.getGasPrice(),
+                nonce: await randomEvmWallet.getNonce(),
+                gasPrice: feeData.gasPrice,
             });
             await tx.wait();
 
