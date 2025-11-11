@@ -606,22 +606,6 @@ jobs:
       - name: Install foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Install solana sdk
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-
-      - name: Install system dependencies for anchor
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libudev-dev
-
-      - name: Install anchor
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
-          anchor -V
-          solana -V
-
       - name: Check AA contracts
         working-directory: ./tee-worker/omni-executor/aa-contracts
         run: |
@@ -638,6 +622,22 @@ jobs:
           sortOrders: desc,asc # and directions
           ignore: test-foundry/**/* # filter out gas reports from specific paths (test/ is included by default)
         id: gas_diff
+
+      - name: Install solana sdk
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install system dependencies for anchor
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev
+
+      - name: Install anchor
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+          anchor -V
+          solana -V
 
       - name: Check bsc accounting contracts
         working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
