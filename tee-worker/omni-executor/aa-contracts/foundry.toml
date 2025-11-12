@@ -14,4 +14,9 @@ fs_permissions = [
 gas_reports = ["*"]
 gas_reports_ignore = []
 
+[lint]
+lint_on_build = false
+# Note: Disabled due to Forge 1.4.4+ linting transitive imports in third-party libs
+# Linting can be re-enabled once Forge properly supports ignore patterns for dependencies
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
