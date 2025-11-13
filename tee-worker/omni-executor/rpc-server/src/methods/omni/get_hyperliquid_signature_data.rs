@@ -171,14 +171,17 @@ pub fn register_get_hyperliquid_signature_data<
 				})?;
 
 				// Get allowed origins for the client (supports web, iOS, and Android)
-				let allowed_origins = super::get_allowed_origins_for_client(&params.client_id);
+				let allowed_origins =
+					ctx.config_loader.get_passkey_config(&params.client_id).allowed_origins;
+				let allowed_origins_refs: Vec<&str> =
+					allowed_origins.iter().map(|s| s.as_str()).collect();
 
 				// Verify client data JSON and consume challenge
 				let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
 				PasskeyVerifier::verify_client_data_json(
 					&attach_passkey_data.client_data_json,
 					omni_account.as_ref(),
-					&allowed_origins,
+					&allowed_origins_refs,
 					"webauthn.create", // For passkey registration/attachment
 					|challenge, omni_account| {
 						challenge_storage

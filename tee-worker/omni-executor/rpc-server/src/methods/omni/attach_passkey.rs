@@ -54,14 +54,17 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 				.user_id
 				.to_omni_account(&params.client_id)
 				.map_err_parse("Failed to convert to omni_account")?;
-			let allowed_origins = super::get_allowed_origins_for_client(&params.client_id);
+			let allowed_origins =
+				ctx.config_loader.get_passkey_config(&params.client_id).allowed_origins;
+			let allowed_origins_refs: Vec<&str> =
+				allowed_origins.iter().map(|s| s.as_str()).collect();
 
 			// Verify client data JSON and consume challenge
 			let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
 			PasskeyVerifier::verify_client_data_json(
 				&params.client_data_json,
 				omni_account.as_ref(),
-				&allowed_origins,
+				&allowed_origins_refs,
 				"webauthn.create", // For passkey registration/attachment
 				|challenge, omni_account| {
 					challenge_storage

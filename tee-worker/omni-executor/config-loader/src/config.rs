@@ -91,9 +91,16 @@ pub struct OAuth2Config {
 }
 
 #[derive(Debug, Clone)]
+pub struct PasskeyConfig {
+	pub rp_id: String,
+	pub allowed_origins: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
 pub struct ConfigLoader {
 	pub mailer_configs: HashMap<String, MailerConfig>,
 	pub oauth2_configs: HashMap<String, HashMap<String, OAuth2Config>>, // client -> provider -> config
+	pub passkey_configs: HashMap<String, PasskeyConfig>,                // client -> passkey config
 	pub ethereum_url: String,
 	pub solana_url: String,
 	pub bsc_url: String,
@@ -336,10 +343,12 @@ impl ConfigLoader {
 
 		let mailer_configs = Self::load_mailer_configs();
 		let oauth2_configs = Self::load_oauth2_configs();
+		let passkey_configs = Self::load_passkey_configs();
 
 		ConfigLoader {
 			mailer_configs,
 			oauth2_configs,
+			passkey_configs,
 			ethereum_url: append_key(&get("ethereum_url")),
 			solana_url: append_key(&get("solana_url")),
 			bsc_url: append_key(&get("bsc_url")),
@@ -529,5 +538,92 @@ impl ConfigLoader {
 		let client_key = client_id.to_lowercase();
 		let provider_key = provider.to_lowercase();
 		self.oauth2_configs.get(&client_key)?.get(&provider_key).cloned()
+	}
+
+	/// Load passkey configurations for all clients from environment variables
+	/// Format: OE_PASSKEY_RP_ID_{CLIENT}, OE_PASSKEY_ALLOWED_ORIGINS_{CLIENT}
+	/// ALLOWED_ORIGINS should be comma-separated list
+	fn load_passkey_configs() -> HashMap<String, PasskeyConfig> {
+		let mut configs = HashMap::new();
+
+		let env_vars: HashMap<String, String> = std::env::vars().collect();
+		let mut clients = std::collections::HashSet::new();
+
+		// Find all unique client suffixes
+		for key in env_vars.keys() {
+			if key.starts_with("OE_PASSKEY_RP_ID_") {
+				if let Some(client) = key.strip_prefix("OE_PASSKEY_RP_ID_") {
+					info!("Found passkey configuration for client: {}", client);
+					clients.insert(client.to_lowercase());
+				}
+			}
+		}
+
+		info!("Total discovered passkey clients: {:?}", clients);
+
+		// If no clients configured, provide default localhost config
+		if clients.is_empty() {
+			warn!("No passkey configurations found in environment variables. Adding default localhost config.");
+			let default_config = PasskeyConfig {
+				rp_id: "localhost".to_string(),
+				allowed_origins: vec![
+					"http://localhost:3000".to_string(),
+					"https://localhost:3000".to_string(),
+				],
+			};
+			configs.insert("default".to_string(), default_config);
+			return configs;
+		}
+
+		// Load configuration for each client
+		for client in clients {
+			let client_upper = client.to_uppercase();
+
+			let rp_id = std::env::var(format!("OE_PASSKEY_RP_ID_{}", client_upper))
+				.unwrap_or_else(|_| "localhost".to_string());
+
+			let allowed_origins_str =
+				std::env::var(format!("OE_PASSKEY_ALLOWED_ORIGINS_{}", client_upper))
+					.unwrap_or_else(|_| "http://localhost:3000,https://localhost:3000".to_string());
+
+			let allowed_origins: Vec<String> = allowed_origins_str
+				.split(',')
+				.map(|s| s.trim().to_string())
+				.filter(|s| !s.is_empty())
+				.collect();
+
+			if allowed_origins.is_empty() {
+				warn!("No allowed origins configured for client '{}', skipping.", client);
+				continue;
+			}
+
+			let config = PasskeyConfig { rp_id, allowed_origins };
+
+			info!(
+				"Loaded passkey config for client '{}': rp_id={}, origins={:?}",
+				client, config.rp_id, config.allowed_origins
+			);
+
+			configs.insert(client.clone(), config);
+		}
+
+		configs
+	}
+
+	/// Get passkey configuration for a specific client
+	/// Falls back to "default" if client not found
+	pub fn get_passkey_config(&self, client_id: &str) -> PasskeyConfig {
+		let client_key = client_id.to_lowercase();
+		self.passkey_configs
+			.get(&client_key)
+			.cloned()
+			.or_else(|| self.passkey_configs.get("default").cloned())
+			.unwrap_or_else(|| PasskeyConfig {
+				rp_id: "localhost".to_string(),
+				allowed_origins: vec![
+					"http://localhost:3000".to_string(),
+					"https://localhost:3000".to_string(),
+				],
+			})
 	}
 }

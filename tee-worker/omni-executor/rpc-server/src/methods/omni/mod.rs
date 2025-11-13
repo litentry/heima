@@ -182,35 +182,3 @@ pub fn check_backend_response<T: Codec>(response: &ApiResponse<T>, op: &str) -> 
 	}
 	Ok(())
 }
-
-// Passkey helper functions
-pub fn get_rp_id_for_client(client_id: &str) -> &str {
-	match client_id {
-		"wildmeta" => "app.wildmeta.ai",
-		_ => "localhost", // Development/testing
-	}
-}
-
-/// Returns a list of allowed origins for a given client.
-/// This supports multiple platforms: Web (HTTPS), iOS (HTTPS + RPID), and Android (apk-key-hash).
-///
-/// For production clients:
-/// - Web and iOS use the same HTTPS origin format
-/// - Android uses the apk-key-hash format derived from the app's signing certificate
-///
-/// To compute the Android apk-key-hash:
-/// 1. Get SHA-256 fingerprint: `keytool -list -v -keystore your-release-key.keystore`
-/// 2. Remove colons from the fingerprint
-/// 3. Hex decode and base64url encode (no padding)
-/// 4. Format as: android:apk-key-hash:<encoded-hash>
-pub fn get_allowed_origins_for_client(client_id: &str) -> Vec<&str> {
-	match client_id {
-		"wildmeta" => vec![
-			// Web and iOS origin (both use HTTPS format)
-			"https://app.wildmeta.ai",
-			// Android origin (apk-key-hash format)
-			"android:apk-key-hash:JFBzaEkXsWLOfuRK5TApIS-cJ_Vf2KYs9YBBd9-VmCw",
-		],
-		_ => vec!["http://localhost:3000", "https://localhost:3000"],
-	}
-}

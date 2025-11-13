@@ -24,6 +24,7 @@ use wildmeta_api::WildmetaApi;
 pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static> {
 	pub shielding_key: ShieldingKey,
 	pub storage_db: Arc<StorageDB>,
+	pub config_loader: Arc<ConfigLoader>,
 	pub mailer_factory: Arc<MailerFactory>,
 	pub oauth2_factory: Arc<OAuth2ConfigFactory>,
 	pub jwt_rsa_private_key: Vec<u8>,
@@ -51,6 +52,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 	pub fn new(
 		shielding_key: ShieldingKey,
 		storage_db: Arc<StorageDB>,
+		config_loader: Arc<ConfigLoader>,
 		mailer_factory: Arc<MailerFactory>,
 		oauth2_factory: Arc<OAuth2ConfigFactory>,
 		jwt_rsa_private_key: Vec<u8>,
@@ -69,6 +71,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 	) -> Self {
 		Self {
 			shielding_key,
+			config_loader,
 			storage_db,
 			mailer_factory,
 			oauth2_factory,
@@ -111,11 +114,12 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let config_loader_arc = Arc::new(config_loader.clone());
 	let mailer_factory = Arc::new(MailerFactory::new(config_loader_arc.clone()));
-	let oauth2_factory = Arc::new(OAuth2ConfigFactory::new(config_loader_arc));
+	let oauth2_factory = Arc::new(OAuth2ConfigFactory::new(config_loader_arc.clone()));
 
 	let ctx = RpcContext::new(
 		shielding_key,
 		storage_db,
+		config_loader_arc,
 		mailer_factory,
 		oauth2_factory,
 		jwt_rsa_private_key.clone(),
