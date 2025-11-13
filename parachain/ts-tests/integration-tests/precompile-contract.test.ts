@@ -18,7 +18,6 @@ import { encodeAddress, evmToAddress } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { HexString } from '@polkadot/util/types';
 import { ethers } from 'ethers';
-import { destResourceId } from '../common/utils/consts';
 
 const toBigInt = (int: number) => BigInt(int) * BigInt(1e18);
 const bn1e18 = new BN(10).pow(new BN(18));
@@ -43,7 +42,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     // transform to bytes32(public key) reference:https://polkadot.subscan.io/tools/format_transform?input=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY&type=All
     const collatorPublicKey = '0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d';
 
-    const provider = new ethers.providers.WebSocketProvider(config.parachain_ws);
+    const provider = new ethers.WebSocketProvider(config.parachain_ws);
     const wallet = new ethers.Wallet(evmAccountRaw.privateKey, provider);
 
     const precompileStakingContract = new ethers.Contract(
@@ -69,12 +68,13 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
     const executeTransaction = async (delegateTransaction: any, contractAddress: HexString, label = '') => {
         console.log(`=== Executing ${label} ===`);
+        const feeData = await provider.getFeeData();
         const tx = await wallet.sendTransaction({
             to: contractAddress,
             data: delegateTransaction,
             gasLimit: 1000000,
-            nonce: await wallet.getTransactionCount(),
-            gasPrice: await provider.getGasPrice(),
+            nonce: await wallet.getNonce(),
+            gasPrice: feeData.gasPrice,
         });
         await tx.wait();
         return tx;
@@ -136,19 +136,20 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     });
 
     step('Address with insufficient amount of tokens', async function () {
-        const randomEvmWallet = ethers.Wallet.createRandom();
+        const randomEvmWallet = ethers.Wallet.createRandom().connect(provider);
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
             'delegateWithAutoCompound',
-            [collatorPublicKey, ethers.utils.parseUnits('60', 18), 1]
+            [collatorPublicKey, ethers.parseUnits('60', 18), 1]
         );
 
         try {
+            const feeData = await provider.getFeeData();
             const tx = await randomEvmWallet.sendTransaction({
                 to: precompileStakingContractAddress,
                 data: delegateWithAutoCompound,
                 gasLimit: 1000000,
-                nonce: await randomEvmWallet.getTransactionCount(),
-                gasPrice: await provider.getGasPrice(),
+                nonce: await randomEvmWallet.getNonce(),
+                gasPrice: feeData.gasPrice,
             });
             await tx.wait();
 
@@ -190,7 +191,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         // The above two steps are necessary, otherwise the contract transaction will be reverted.
         // transfer native token
         const payInTx = precompileOmniBridgeContract.interface.encodeFunctionData('payIn', [
-            ethers.utils.parseUnits('0.01', 18).toString(),
+            ethers.parseUnits('0.01', 18).toString(),
             0,
             true,
             0x0000000000000000000000000000000000000000000000000000000000000000, // Does not matter since native = true, but make sure it does not overflow u128
@@ -258,7 +259,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             console.log('Alice not candidate? Try joining');
             // 5001 will be big enough for both Litentry and Rococo
             let join_extrinsic = context.api.tx.parachainStaking.joinCandidates(
-                ethers.utils.parseUnits('5001', 18).toString()
+                ethers.parseUnits('5001', 18).toString()
             );
             await signAndSend(join_extrinsic, context.alice);
         }
@@ -267,7 +268,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         // delegateWithAutoCompound(collator, amount, percent)
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
             'delegateWithAutoCompound',
-            [collatorPublicKey, ethers.utils.parseUnits('60', 18).toString(), autoCompoundPercent]
+            [collatorPublicKey, ethers.parseUnits('60', 18).toString(), autoCompoundPercent]
         );
 
         let afterDelegateBalance = balance;
@@ -289,7 +290,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         // delegatorBondMore(collator, amount)
         const delegatorBondMore = precompileStakingContract.interface.encodeFunctionData('delegatorBondMore', [
             collatorPublicKey,
-            ethers.utils.parseUnits('1', 18).toString(),
+            ethers.parseUnits('1', 18).toString(),
         ]);
         await executeTransaction(delegatorBondMore, precompileStakingContractAddress, 'delegatorBondMore');
 
@@ -311,7 +312,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         const scheduleDelegatorBondLess = precompileStakingContract.interface.encodeFunctionData(
             'scheduleDelegatorBondLess',
-            [collatorPublicKey, ethers.utils.parseUnits('5', 18).toString()]
+            [collatorPublicKey, ethers.parseUnits('5', 18).toString()]
         );
         await executeTransaction(
             scheduleDelegatorBondLess,
