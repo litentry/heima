@@ -34,7 +34,6 @@ use executor_storage::StorageDB;
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::BoundedVec;
-use heima_primitives::IdentityString;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use intent_asset_lock::AmountType;
@@ -56,8 +55,7 @@ use tempfile::tempdir;
 async fn simple_single_chain_swap() {
 	let tmp_dir = tempdir().unwrap();
 
-	let account_id: AccountId = Identity::Pumpx(IdentityString::new("1".as_bytes().to_vec()))
-		.to_omni_account(CLIENT_ID_PUMPX);
+	let account_id = Identity::Pumpx("1".into()).to_omni_account(CLIENT_ID_PUMPX);
 	let intent_id = 0;
 	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
 	let solana_wallet_pub_key: [u8; 32] =

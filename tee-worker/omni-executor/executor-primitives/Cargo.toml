@@ -13,6 +13,7 @@ parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 tracing = { workspace = true }
 
 executor-crypto = { workspace = true }

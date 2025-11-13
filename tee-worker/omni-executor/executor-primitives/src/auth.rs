@@ -7,7 +7,7 @@ use crate::{
 	OmniAccountAuthType,
 };
 use base58::{FromBase58, ToBase58};
-use heima_primitives::{Address20, Address32, Address33, Identity, IdentityString};
+use heima_primitives::{AccountId, Address20, Address32, Address33, Identity, IdentityString};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
@@ -136,6 +136,15 @@ impl TryFrom<Identity> for UserId {
 				Ok(UserId::Passkey(String::from_utf8(handle.inner.to_vec()).map_err(|_| ())?))
 			},
 		}
+	}
+}
+
+impl UserId {
+	/// derive an `OmniAccount` from `UserId` using SHA256 hash of client_id + user_id_type + user_id_value
+	/// This follows the same implementation as Identity::to_omni_account
+	pub fn to_omni_account(&self, client_id: &str) -> Result<AccountId, &'static str> {
+		let identity = Identity::try_from(self.clone())?;
+		Ok(identity.to_omni_account(client_id))
 	}
 }
 
@@ -319,5 +328,59 @@ mod tests {
 			},
 			_ => panic!("Expected Email auth"),
 		}
+	}
+
+	#[test]
+	fn test_user_id_to_omni_account_evm() {
+		let user_id = UserId::Evm("0x0000000000000000000000000000000000000000".to_string());
+		let client_id = "test_client";
+
+		// Get the result from UserId::to_omni_account
+		let omni_account = user_id.to_omni_account(client_id).unwrap();
+
+		// Convert to Identity and get the result from Identity::to_omni_account
+		let identity = Identity::try_from(user_id).unwrap();
+		let expected = identity.to_omni_account(client_id);
+
+		assert_eq!(omni_account, expected);
+	}
+
+	#[test]
+	fn test_user_id_to_omni_account_email() {
+		// Test with different case variations
+		let user_id1 = UserId::Email("test@test.com".to_string());
+		let user_id2 = UserId::Email("TEST@TEST.COM".to_string());
+		let user_id3 = UserId::Email("TeSt@TeSt.CoM".to_string());
+		let client_id = "wildmeta";
+
+		// Get results from UserId::to_omni_account
+		let omni_account1 = user_id1.to_omni_account(client_id).unwrap();
+		let omni_account2 = user_id2.to_omni_account(client_id).unwrap();
+		let omni_account3 = user_id3.to_omni_account(client_id).unwrap();
+
+		// All should produce the same result
+		assert_eq!(omni_account1, omni_account2);
+		assert_eq!(omni_account1, omni_account3);
+
+		// Convert to Identity and verify it matches
+		let identity1 = Identity::try_from(user_id1).unwrap();
+		let expected = identity1.to_omni_account(client_id);
+
+		assert_eq!(omni_account1, expected);
+	}
+
+	#[test]
+	fn test_user_id_to_omni_account_apple() {
+		let user_id = UserId::Apple("apple.user.id".to_string());
+		let client_id = "test_client";
+
+		// Get the result from UserId::to_omni_account
+		let omni_account = user_id.to_omni_account(client_id).unwrap();
+
+		// Convert to Identity and get the result from Identity::to_omni_account
+		let identity = Identity::try_from(user_id).unwrap();
+		let expected = identity.to_omni_account(client_id);
+
+		assert_eq!(omni_account, expected);
 	}
 }

@@ -235,7 +235,7 @@ mod tests {
 	use std::fs;
 	use std::path::Path;
 
-	fn create_test_storage() -> PasskeyChallengeStorage {
+	fn create_test_storage() -> (PasskeyChallengeStorage, String) {
 		use std::sync::atomic::{AtomicUsize, Ordering};
 		static COUNTER: AtomicUsize = AtomicUsize::new(0);
 		let db_path =
@@ -244,12 +244,18 @@ mod tests {
 			fs::remove_dir_all(&db_path).unwrap();
 		}
 		let db = Arc::new(StorageDB::open_default(&db_path).unwrap());
-		PasskeyChallengeStorage::new(db)
+		(PasskeyChallengeStorage::new(db), db_path)
+	}
+
+	fn remove_test_storage(db_path: &str) {
+		if Path::new(db_path).exists() {
+			fs::remove_dir_all(db_path).unwrap();
+		}
 	}
 
 	#[test]
 	fn test_store_and_verify_challenge() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([1u8; 32]);
 		let challenge = "test_challenge_123";
 
@@ -264,11 +270,14 @@ mod tests {
 
 		// Challenge should be consumed (no longer valid)
 		assert!(!storage.is_challenge_valid(challenge, &omni_account).unwrap());
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_challenge_expiration() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([2u8; 32]);
 		let challenge = "expired_challenge";
 
@@ -282,11 +291,14 @@ mod tests {
 		// only removes challenges expired >24h ago
 		let result = storage.verify_and_consume_challenge(challenge, &omni_account);
 		assert_eq!(result, Err(PasskeyChallengeError::ChallengeExpired));
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_invalid_account() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account1 = AccountId::from([3u8; 32]);
 		let omni_account2 = AccountId::from([4u8; 32]);
 		let challenge = "account_mismatch_challenge";
@@ -300,21 +312,27 @@ mod tests {
 
 		// Original challenge should still exist for account1
 		assert!(storage.is_challenge_valid(challenge, &omni_account1).unwrap());
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_challenge_not_found() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([5u8; 32]);
 
 		// Try to verify non-existent challenge
 		let result = storage.verify_and_consume_challenge("nonexistent", &omni_account);
 		assert_eq!(result, Err(PasskeyChallengeError::ChallengeNotFound));
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_cleanup_no_expired_challenges() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([6u8; 32]);
 
 		// Store some valid challenges (not expired)
@@ -330,11 +348,14 @@ mod tests {
 		assert!(storage.is_challenge_valid("challenge1", &omni_account).unwrap());
 		assert!(storage.is_challenge_valid("challenge2", &omni_account).unwrap());
 		assert!(storage.is_challenge_valid("challenge3", &omni_account).unwrap());
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_cleanup_all_expired_challenges() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([7u8; 32]);
 
 		// Store challenges with 0 second timeout (immediately expired)
@@ -353,11 +374,14 @@ mod tests {
 		// They will return ChallengeExpired when verified, not ChallengeNotFound
 		let result1 = storage.verify_and_consume_challenge("expired1", &omni_account);
 		assert_eq!(result1, Err(PasskeyChallengeError::ChallengeExpired));
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_cleanup_mixed_expired_and_valid() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([8u8; 32]);
 
 		// Store mix of expired and valid challenges
@@ -380,11 +404,14 @@ mod tests {
 		// Expired challenges still exist (in grace period) but return ChallengeExpired
 		let result1 = storage.verify_and_consume_challenge("expired1", &omni_account);
 		assert_eq!(result1, Err(PasskeyChallengeError::ChallengeExpired));
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_cleanup_multiple_accounts() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let account1 = AccountId::from([9u8; 32]);
 		let account2 = AccountId::from([10u8; 32]);
 
@@ -406,11 +433,14 @@ mod tests {
 		// Expired challenges return ChallengeExpired (not removed yet)
 		let result1 = storage.verify_and_consume_challenge("account1_expired", &account1);
 		assert_eq!(result1, Err(PasskeyChallengeError::ChallengeExpired));
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_cleanup_idempotent() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 		let omni_account = AccountId::from([11u8; 32]);
 
 		// Store expired challenge
@@ -429,14 +459,20 @@ mod tests {
 		// Idempotent - still nothing
 		let cleaned3 = storage.cleanup_expired24h_challenges().unwrap();
 		assert_eq!(cleaned3, 0);
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 
 	#[test]
 	fn test_cleanup_empty_storage() {
-		let storage = create_test_storage();
+		let (storage, db_path) = create_test_storage();
 
 		// Cleanup on empty storage should work fine
 		let cleaned = storage.cleanup_expired24h_challenges().unwrap();
 		assert_eq!(cleaned, 0);
+
+		// Cleanup
+		remove_test_storage(&db_path);
 	}
 }

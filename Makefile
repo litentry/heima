@@ -103,21 +103,17 @@ fmt: fmt-cargo fmt-taplo fmt-ts
 .PHONY: fmt-cargo ## cargo fmt
 fmt-cargo:
 	@cd parachain && cargo fmt
-	@cd tee-worker/identity && cargo fmt
-	@cd tee-worker/identity/enclave-runtime && cargo fmt
 	@cd tee-worker/omni-executor && cargo fmt
 	@cd tee-worker/omni-executor/accounting-contract/solana && cargo fmt
 
 .PHONY: fmt-taplo ## taplo fmt
 fmt-taplo:
 	@cd parachain && RUST_LOG=error taplo fmt
-	@cd tee-worker/identity && RUST_LOG=error taplo fmt
 	@cd tee-worker/omni-executor && RUST_LOG=error taplo fmt
 
 .PHONY: fmt-ts ## ts fmt
 fmt-ts:
 	@cd parachain/ts-tests && pnpm install && pnpm run format
-	@cd tee-worker/identity/ts-tests && pnpm install && pnpm run format
 
 .PHONY: githooks ## install the githooks
 githooks:
@@ -140,9 +136,6 @@ cargofix:
 clean-all-build:
 	@echo "Cleaning parachain..."
 	@cd parachain && cargo clean
-
-	@echo "Clean tee-worker/identity..."
-	@cd tee-worker/identity && make clean
 
 	@echo "Clean tee-worker/omni-executor..."
 	@cd tee-worker/omni-executor && make distclean

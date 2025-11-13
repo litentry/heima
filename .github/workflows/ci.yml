@@ -21,7 +21,6 @@ name: General CI
 # - fmt
 # - set-condition
 # - parachain-build
-# - identity-worker-build
 #
 # [4] please note that job-level if `env` is not supported:
 # https://github.com/actions/runner/issues/1189
@@ -183,17 +182,6 @@ jobs:
           cargo fmt -- --check
           taplo fmt --check
 
-      - name: identity-worker fmt check
-        working-directory: ./tee-worker/identity
-        run: |
-          cargo fmt -- --check
-          taplo fmt --check
-
-      - name: identity-worker enclave-runtime fmt check
-        working-directory: ./tee-worker/identity/enclave-runtime
-        run: |
-          cargo fmt -- --check
-
       - name: omni-executor fmt check
         working-directory: ./tee-worker/omni-executor
         run: |
@@ -212,15 +200,6 @@ jobs:
           corepack enable && corepack enable pnpm
           pnpm --version
 
-      - name: identity-worker ts-tests install npm deps
-        working-directory: ./tee-worker/identity/ts-tests
-        # We can't update the lockfile here because the client-api hasn't been generated yet.
-        run: pnpm install --frozen-lockfile
-
-      - name: identity-worker check ts code format
-        working-directory: ./tee-worker/identity/ts-tests
-        run: pnpm run check-format
-
       - name: Fail early
         if: failure()
         uses: andymckay/cancel-action@0.5
@@ -237,89 +216,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           interval: 300
           branch: dev
-
-  identity-worker-check:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    if: needs.set-condition.outputs.rebuild_identity == 'true'
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Install dependencies
-        run: |
-          echo 'deb [signed-by=/etc/apt/keyrings/intel-sgx-keyring.asc arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
-          wget https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key && cat intel-sgx-deb.key | sudo tee /etc/apt/keyrings/intel-sgx-keyring.asc > /dev/null
-          sudo apt-get update
-          sudo apt-get install -yq \
-            openssl clang libclang-dev cmake protobuf-compiler \
-            libsgx-dcap-quote-verify-dev \
-            libsgx-enclave-common-dev libsgx-dcap-ql-dev libsgx-dcap-default-qpl-dev
-
-      - name: Install intel sgx libs
-        run: |
-          wget https://download.01.org/intel-sgx/sgx-linux/2.19/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.19.100.3.bin
-          chmod +x ./sgx_linux_x64_sdk_2.19.100.3.bin
-          ./sgx_linux_x64_sdk_2.19.100.3.bin --prefix /opt/
-
-      - name: Set env
-        run: |
-          echo "LD_LIBRARY_PATH=/opt/sgxsdk/sdk_libs:/opt/sgxsdk/lib64:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          echo "SGX_SDK=/opt/sgxsdk" >> $GITHUB_ENV
-          echo "/opt/sgxsdk/bin" >> $GITHUB_PATH
-          echo "/opt/sgxsdk/bin/x64" >> $GITHUB_PATH
-
-      - name: Cargo test
-        working-directory: ./tee-worker/identity
-        run: |
-          cargo test
-
-      - name: Check clippy
-        working-directory: ./tee-worker/identity
-        shell: bash
-        run: |
-          for d in . enclave-runtime; do
-            pushd "$d"
-            echo "::group::cargo clippy all"
-            cargo clippy -- -D warnings
-            echo "::endgroup::"
-            echo "::group::cargo clippy development"
-            cargo clippy --features development -- -D warnings
-            echo "::endgroup::"
-            echo "::group::cargo clippy offchain-worker"
-            cargo clippy --features offchain-worker -- -D warnings
-            echo "::group::cargo clippy offchain-worker,development"
-            cargo clippy --features offchain-worker,development -- -D warnings
-            echo "::endgroup::"
-            popd
-          done
-
-      - name: Identity-worker specific clippy
-        working-directory: ./tee-worker/identity/enclave-runtime
-        shell: bash
-        run: |
-          echo "::group::cargo clippy sidechain"
-          cargo clippy --features sidechain -- -D warnings
-          echo "::endgroup::"
-          echo "::group::cargo clippy evm"
-          cargo clippy --features evm -- -D warnings
-          echo "::endgroup::"
-          echo "::group::cargo clippy sidechain development"
-          cargo clippy --features sidechain,development -- -D warnings
-          echo "::endgroup::"
-          echo "::group::cargo clippy evm development"
-          cargo clippy --features evm,development -- -D warnings
-          echo "::endgroup::"
-
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
 
   omni-executor-check:
     runs-on: ubuntu-22.04
@@ -388,147 +284,6 @@ jobs:
           path: heima.tar.gz
           if-no-files-found: error
 
-      - name: Fail early
-        if: failure()
-        uses: andymckay/cancel-action@0.5
-
-  identity-worker-build:
-    runs-on: ubuntu-22.04
-    needs:
-      - fmt
-      - set-condition
-      - sequentialise
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Free up disk space
-        if: startsWith(runner.name, 'GitHub Actions')
-        uses: ./.github/actions/disk-cleanup
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          # use the docker driver to access the local image
-          # we don't need external caches or multi platforms here
-          # see https://docs.docker.com/build/drivers/
-          driver: docker
-
-      - name: Cache worker-cache
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: actions/cache@v4
-        with:
-          path: |
-            worker-cache
-          key: worker-cache-${{ env.REF_VERSION }}-${{ hashFiles('tee-worker/identity/**/Cargo.lock', 'tee-worker/identity/**/Cargo.toml') }}
-          restore-keys: |
-            worker-cache-${{ env.REF_VERSION }}-
-            worker-cache-
-
-      - name: Create cache folder if not exist
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        run: |
-          for i in 'git/db' 'registry/cache' 'registry/index' 'sccache'; do
-            [ ! -d "worker-cache/$i" ] && mkdir -p "worker-cache/$i" || true
-            echo "hello" > worker-cache/$i/nix
-          done
-          echo "::group::List worker-cache size"
-          du -sh worker-cache/*
-          echo "::endgroup::"
-          echo "::group::Show disk usage"
-          df -h .
-          echo "::endgroup::"
-
-      # cache mount in buildkit won't be exported as image layers, so it doesn't work well with GHA cache, see
-      # https://github.com/moby/buildkit/issues/1512
-      # https://www.reddit.com/r/rust/comments/126xeyx/exploring_the_problem_of_faster_cargo_docker/
-      # https://hackmd.io/@kobzol/S17NS71bh (a great summary)
-      #
-      # the `reproducible-containers/buildkit-cache-dance` seems to be unstable too in my test
-      # sometimes it works, sometimes it results in empty cache, root cause unclear
-      #
-      # thus the persistence of rust cache (w/ sccache) is maintained manually
-      #
-      # there's no cache-from/to as the docker image layer is too large and it takes too long to sync
-      # moreoever, we are not so eager to have layer caches, as the most critical operation(cargo build)
-      # is "atomic" and can't be broken into layers.
-      - name: Build local builder
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/identity/build.Dockerfile
-          tags: local-builder:latest
-          target: builder
-          build-args: |
-            WORKER_MODE_ARG=sidechain
-            WORKER_ENV_DATA_PROVIDERS_CONFIG=1
-            WORKER_MOCK_SERVER=1
-            ADDITIONAL_FEATURES_ARG=
-
-      - name: Copy caches from the built image
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        run: |
-          echo "::group::Show disk usage"
-          df -h .
-          echo "::endgroup::"
-          echo "::group::docker images"
-          docker images --all
-          echo "::endgroup::"
-          echo "::group::copy cache out"
-          for i in 'git/db' 'registry/cache' 'registry/index'; do
-            b="${i%/*}"
-            rm -rf worker-cache/$i
-            docker cp "$(docker create --rm local-builder:latest):/opt/rust/$i" worker-cache/$b
-          done
-          rm -rf worker-cache/sccache
-          docker cp "$(docker create --rm local-builder:latest):/opt/rust/sccache" worker-cache
-          du -sh worker-cache/*
-          echo "::endgroup::"
-          echo "::group::df -h ."
-          df -h .
-          echo "::endgroup::"
-
-      - name: Build worker
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/identity/build.Dockerfile
-          tags: litentry/identity-worker:latest
-          target: deployed-worker
-
-      - name: Build cli
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: tee-worker/identity/build.Dockerfile
-          tags: litentry/identity-cli:latest
-          target: deployed-client
-
-      - name: Pull and tag worker and cli image optionally
-        if: needs.set-condition.outputs.rebuild_identity == 'false'
-        run: |
-          docker pull litentry/identity-worker:latest
-          docker pull litentry/identity-cli:latest
-
-      - run: docker images --all
-
-      - name: Test enclave
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        # cargo test is not supported in the enclave
-        # see https://github.com/apache/incubator-teaclave-sgx-sdk/issues/232
-        run: docker run litentry/identity-worker:latest test --all
-
-      - name: Save docker images
-        run: docker save litentry/identity-worker:latest litentry/identity-cli:latest | gzip > litentry-identity.tar.gz
-
-      - name: Upload docker images
-        uses: actions/upload-artifact@v5
-        with:
-          name: litentry-identity
-          path: litentry-identity.tar.gz
-          if-no-files-found: error
       - name: Fail early
         if: failure()
         uses: andymckay/cancel-action@0.5
@@ -606,21 +361,9 @@ jobs:
       - name: Install foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Install solana sdk
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-
-      - name: Install system dependencies for anchor
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libudev-dev
-
-      - name: Install anchor
-        run: |
-          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
-          anchor -V
-          solana -V
+      - name: Show Forge version
+        working-directory: ./tee-worker/omni-executor/aa-contracts
+        run: forge --version
 
       - name: Check AA contracts
         working-directory: ./tee-worker/omni-executor/aa-contracts
@@ -638,6 +381,22 @@ jobs:
           sortOrders: desc,asc # and directions
           ignore: test-foundry/**/* # filter out gas reports from specific paths (test/ is included by default)
         id: gas_diff
+
+      - name: Install solana sdk
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install system dependencies for anchor
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev
+
+      - name: Install anchor
+        run: |
+          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+          anchor -V
+          solana -V
 
       - name: Check bsc accounting contracts
         working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
@@ -775,102 +534,6 @@ jobs:
         if: failure()
         uses: andymckay/cancel-action@0.5
 
-  identity-worker-test:
-    runs-on: ubuntu-22.04
-    needs:
-      - set-condition
-      - parachain-build
-      - identity-worker-build
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - test_name: lit-dr-vc-test
-          # disabled, as identity-worker isn't actively maintained
-          #
-          # - test_name: lit-di-identity-test
-          # - test_name: lit-parentchain-nonce
-          # - test_name: lit-test-failed-parentchain-extrinsic
-          # - test_name: lit-native-request-vc-test
-    name: ${{ matrix.test_name }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/download-artifact@v6
-        with:
-          name: heima
-
-      - uses: actions/download-artifact@v6
-        with:
-          name: litentry-identity
-
-      - name: Load docker image
-        run: |
-          docker load < heima.tar.gz
-          docker load < litentry-identity.tar.gz
-          docker images
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20.x'
-
-      - name: Use Latest Corepack
-        run: |
-          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
-          npm install -g corepack@latest
-          echo "After : corepack version => $(corepack --version)"
-          corepack enable && corepack enable pnpm
-          pnpm --version
-
-      - name: Launch parachain network
-        run: |
-          make launch-network-heima
-
-      - name: Integration single worker test ${{ matrix.test_name }}
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        timeout-minutes: 40
-        run: |
-          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml up --no-build --exit-code-from ${{ matrix.test_name }} ${{ matrix.test_name }}
-
-      - name: Stop integration single worker docker containers
-        working-directory: ./tee-worker/identity/docker
-        if: needs.set-condition.outputs.run_identity_test == 'true'
-        run: |
-          docker compose -f docker-compose.yml -f ${{ matrix.test_name }}.yml stop
-
-      - name: Upload zombienet logs if test fails
-        continue-on-error: true
-        uses: actions/upload-artifact@v5
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-zombienet-logs
-          path: |
-            /tmp/parachain_dev
-            !/tmp/parachain_dev/polkadot*
-            !/tmp/parachain_dev/zombienet*
-            !/tmp/parachain_dev/heima-node
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Collect docker logs if test fails
-        continue-on-error: true
-        uses: jwalton/gh-docker-logs@v2
-        if: failure()
-        with:
-          tail: all
-          dest: docker-logs
-
-      - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v5
-        if: failure()
-        with:
-          name: ${{ matrix.test_name }}-docker-logs
-          path: docker-logs
-          if-no-files-found: ignore
-          retention-days: 3
-
   omni-executor-test:
     runs-on: ubuntu-22.04
     needs:
@@ -931,7 +594,7 @@ jobs:
   #
   # Only try to push docker image when
   #   - parachain-ts-test passes
-  #   - identity-worker-test passes
+  #   - omni-executor-test passes
   #   - set-condition.outputs.push_docker is `true`
   # Whether the parachain or tee-worker image will actually be pushed still depends on if a new image was built/rebuilt.
   # This is important not to overwrite any other jobs where a rebuild **was** triggered.
@@ -945,17 +608,12 @@ jobs:
     needs:
       - set-condition
       - parachain-ts-test
-      - identity-worker-test
       - omni-executor-test
     if: ${{ !failure() && needs.set-condition.outputs.push_docker == 'true' }}
     steps:
       - uses: actions/download-artifact@v6
         with:
           name: heima
-
-      - uses: actions/download-artifact@v6
-        with:
-          name: litentry-identity
 
       - uses: actions/download-artifact@v6
         with:
@@ -972,13 +630,6 @@ jobs:
         run: |
           docker load < heima.tar.gz
           docker push litentry/heima
-
-      - name: Push tee-worker image
-        if: needs.set-condition.outputs.rebuild_identity == 'true'
-        run: |
-          docker load < litentry-identity.tar.gz
-          docker push litentry/identity-worker
-          docker push litentry/identity-cli
 
       - name: Push omni-executor image
         if: needs.set-condition.outputs.rebuild_omni_executor == 'true'

@@ -5,7 +5,6 @@ use crate::{
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::UserId;
 use executor_storage::PasskeyChallengeStorage;
-use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
 use tracing::*;
 
@@ -34,9 +33,6 @@ pub fn register_request_passkey_challenge<
 
 			debug!("Received omni_requestPasskeyChallenge, params: {:?}", params);
 
-			let identity = Identity::try_from(params.user_id.clone())
-				.map_err_parse("Invalid user ID format")?;
-
 			// Generate a random 32-byte challenge
 			use rand::RngCore;
 			let mut challenge_bytes = [0u8; 32];
@@ -50,7 +46,10 @@ pub fn register_request_passkey_challenge<
 			// Store challenge with expiration
 			let timeout = CHALLENGE_TIMEOUT_SECONDS;
 			let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
-			let omni_account = identity.to_omni_account(&params.client_id);
+			let omni_account = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
 
 			challenge_storage
 				.store_challenge(&omni_account, &challenge, timeout)

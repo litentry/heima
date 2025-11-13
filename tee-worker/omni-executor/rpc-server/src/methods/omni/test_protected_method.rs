@@ -29,13 +29,12 @@ mod test {
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_crypto::jwt;
-	use executor_primitives::utils::hex::hex_encode;
+	use executor_primitives::{utils::hex::hex_encode, UserId};
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use heima_authentication::{
 		auth_token::{AuthOptions, AuthTokenClaims},
 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
 	};
-	use heima_primitives::{Identity, Web2IdentityType};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -102,8 +101,8 @@ mod test {
 			.expect("Failed to calculate expiration")
 			.timestamp();
 		let auth_options = AuthOptions { expires_at };
-		let omni_account = Identity::from_web2_account("test@test.com", Web2IdentityType::Email)
-			.to_omni_account(CLIENT_ID_HEIMA);
+		let omni_account =
+			UserId::Email("test@test.com".into()).to_omni_account(CLIENT_ID_HEIMA).unwrap();
 
 		let access_token_claims = AuthTokenClaims::new(
 			hex_encode(omni_account.as_ref()),

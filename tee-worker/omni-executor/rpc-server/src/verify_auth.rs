@@ -4,7 +4,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_crypto::hashing::blake2_256;
 use executor_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
+	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode,
 };
 use executor_storage::{
 	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
@@ -134,8 +134,7 @@ pub fn verify_email_authentication<
 	email: &str,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	let email_identity = Identity::from_web2_account(email, Web2IdentityType::Email);
-	let omni_account = email_identity.to_omni_account(client_id);
+	let omni_account = Identity::Email(email.into()).to_omni_account(client_id);
 	let storage_key = omni_account.hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
@@ -162,16 +161,6 @@ pub fn verify_auth_token_authentication(
 }
 
 pub async fn verify_oauth2_authentication<
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
-	client_id: &str,
-	payload: &OAuth2Data,
-) -> Result<Identity, AuthenticationError> {
-	verify_oauth2_provider(ctx, client_id, payload).await
-}
-
-async fn verify_oauth2_provider<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
@@ -288,12 +277,10 @@ async fn verify_oauth2_provider<
 		return Err(AuthenticationError::OAuth2SubClaimMismatch);
 	}
 
-	let identity_type = match payload.provider {
-		OAuth2Provider::Google => Web2IdentityType::Google,
-		OAuth2Provider::Apple => Web2IdentityType::Apple,
+	let identity = match payload.provider {
+		OAuth2Provider::Google => Identity::Google(provider_sub.as_str().into()),
+		OAuth2Provider::Apple => Identity::Apple(provider_sub.as_str().into()),
 	};
-
-	let identity = Identity::from_web2_account(&provider_sub, identity_type);
 
 	Ok(identity)
 }
@@ -376,7 +363,8 @@ pub fn verify_passkey_authentication<
 		})?;
 
 	// Look up the stored passkey record using omni_account + credential_id
-	let passkey_record = PasskeyStorage::new(ctx.storage_db.clone())
+	let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
+	let passkey_record = passkey_storage
 		.get_passkey(&omni_account, &passkey_data.credential_id)
 		.map_err(|_| AuthenticationError::PasskeyError("Storage error".to_string()))?
 		.ok_or_else(|| {
@@ -441,6 +429,15 @@ pub fn verify_passkey_authentication<
 	if !is_valid {
 		return Err(AuthenticationError::Web3InvalidSignature);
 	}
+
+	// Update the last_used timestamp for this passkey
+	passkey_storage
+		.update_last_used(&omni_account, &passkey_data.credential_id)
+		.map_err(|_| {
+			// Log the error but don't fail authentication if timestamp update fails
+			tracing::warn!("Failed to update last_used timestamp for passkey");
+		})
+		.ok();
 
 	Ok(())
 }
