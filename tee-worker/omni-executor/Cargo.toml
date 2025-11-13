@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "aa-contracts-client",
-    "accounting-contract/solana/programs/accounting-contract",
+    "contracts/accounting/solana/programs/accounting-contract",
     "accounting-contract-client",
     "binance-api",
     "config-loader",
@@ -101,7 +101,7 @@ uuid = "1.16.0"
 
 # Local dependencies
 aa-contracts-client = { path = "aa-contracts-client" }
-accounting-contract = { path = "accounting-contract/solana/programs/accounting-contract", features = ["no-entrypoint"] }
+accounting-contract = { path = "contracts/accounting/solana/programs/accounting-contract", features = ["no-entrypoint"] }
 accounting-contract-client = { path = "accounting-contract-client" }
 binance-api = { path = "binance-api" }
 config-loader = { path = "config-loader" }

@@ -362,11 +362,11 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge version
-        working-directory: ./tee-worker/omni-executor/aa-contracts
+        working-directory: ./tee-worker/omni-executor/contracts/aa
         run: forge --version
 
       - name: Check AA contracts
-        working-directory: ./tee-worker/omni-executor/aa-contracts
+        working-directory: ./tee-worker/omni-executor/contracts/aa
         run: |
           forge b
           forge t --gas-report > ./../../../gasreport.ansi
@@ -399,13 +399,13 @@ jobs:
           solana -V
 
       - name: Check bsc accounting contracts
-        working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
+        working-directory: ./tee-worker/omni-executor/contracts/accounting/bsc
         run: |
           forge b
           forge t
 
       - name: Check solana accounting contracts
-        working-directory: ./tee-worker/omni-executor/accounting-contract/solana
+        working-directory: ./tee-worker/omni-executor/contracts/accounting/solana
         run: |
           anchor b
           # TODO: P-1575 tests fail randomly in CI
