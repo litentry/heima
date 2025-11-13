@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Copy only the necessary files for aa-contracts build
 COPY contracts/aa/ /app/aa-contracts/
-COPY contracts/lib/forge-libs/ /app/forge-libs/
+COPY contracts/lib/forge-libs/ /app/lib/forge-libs/
 
 # Set working directory to aa-contracts
 WORKDIR /app/aa-contracts
