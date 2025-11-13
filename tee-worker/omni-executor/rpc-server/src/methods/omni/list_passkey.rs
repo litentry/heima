@@ -34,6 +34,8 @@ pub fn register_list_passkey<CrossChainIntentExecutor: IntentExecutor + Send + S
 		.register_async_method("omni_listPasskey", |params, ctx, _| async move {
 			let params = parse_rpc_params::<ListPasskeyParams>(params)?;
 
+			debug!("Received omni_listPasskey, params: {:?}", params);
+
 			let omni_account = params
 				.user_id
 				.to_omni_account(&params.client_id)
