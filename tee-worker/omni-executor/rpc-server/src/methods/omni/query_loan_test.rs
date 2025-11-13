@@ -53,7 +53,9 @@ mod test {
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_primitives::utils::hex::hex_encode;
 	use executor_primitives::AccountId;
-	use executor_storage::{LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage};
+	use executor_storage::{
+		loan_record::LoanState, LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage,
+	};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -84,8 +86,14 @@ mod test {
 			collateral_size: "0.5".to_string(),
 			usdc_sold: "25000.00".to_string(),
 			usdc_loaned: "20000.00".to_string(),
-			spot_sell_cloid: "spot123".to_string(),
-			hedge_open_cloid: "hedge456".to_string(),
+			usdc_for_perp: "20000.00".to_string(),
+			txs: Vec::new(),
+			cloids: vec![
+				("spot_sell".to_string(), "spot123".to_string()),
+				("hedge_open".to_string(), "hedge456".to_string()),
+			],
+			position_size: "0.5".to_string(),
+			state: LoanState::HedgeOpened,
 		};
 
 		let storage_key =
@@ -150,8 +158,18 @@ mod test {
 		assert_eq!(returned_record.collateral_size, "0.5");
 		assert_eq!(returned_record.usdc_sold, "25000.00");
 		assert_eq!(returned_record.usdc_loaned, "20000.00");
-		assert_eq!(returned_record.spot_sell_cloid, "spot123");
-		assert_eq!(returned_record.hedge_open_cloid, "hedge456");
+		let spot_sell_cloid = returned_record
+			.cloids
+			.iter()
+			.find(|(name, _)| name == "spot_sell")
+			.map(|(_, cloid)| cloid.as_str());
+		assert_eq!(spot_sell_cloid, Some("spot123"));
+		let hedge_open_cloid = returned_record
+			.cloids
+			.iter()
+			.find(|(name, _)| name == "hedge_open")
+			.map(|(_, cloid)| cloid.as_str());
+		assert_eq!(hedge_open_cloid, Some("hedge456"));
 	}
 
 	#[tokio::test]
@@ -175,8 +193,14 @@ mod test {
 					collateral_size: "1.0".to_string(),
 					usdc_sold: "50000.00".to_string(),
 					usdc_loaned: "40000.00".to_string(),
-					spot_sell_cloid: "spot100".to_string(),
-					hedge_open_cloid: "hedge100".to_string(),
+					usdc_for_perp: "40000.00".to_string(),
+					txs: Vec::new(),
+					cloids: vec![
+						("spot_sell".to_string(), "spot100".to_string()),
+						("hedge_open".to_string(), "hedge100".to_string()),
+					],
+					position_size: "1.0".to_string(),
+					state: LoanState::HedgeOpened,
 				},
 			),
 			(
@@ -186,8 +210,14 @@ mod test {
 					collateral_size: "10.0".to_string(),
 					usdc_sold: "25000.00".to_string(),
 					usdc_loaned: "20000.00".to_string(),
-					spot_sell_cloid: "spot200".to_string(),
-					hedge_open_cloid: "hedge200".to_string(),
+					usdc_for_perp: "20000.00".to_string(),
+					txs: Vec::new(),
+					cloids: vec![
+						("spot_sell".to_string(), "spot200".to_string()),
+						("hedge_open".to_string(), "hedge200".to_string()),
+					],
+					position_size: "10.0".to_string(),
+					state: LoanState::HedgeOpened,
 				},
 			),
 			(
@@ -197,8 +227,14 @@ mod test {
 					collateral_size: "100.0".to_string(),
 					usdc_sold: "15000.00".to_string(),
 					usdc_loaned: "12000.00".to_string(),
-					spot_sell_cloid: "spot300".to_string(),
-					hedge_open_cloid: "hedge300".to_string(),
+					usdc_for_perp: "12000.00".to_string(),
+					txs: Vec::new(),
+					cloids: vec![
+						("spot_sell".to_string(), "spot300".to_string()),
+						("hedge_open".to_string(), "hedge300".to_string()),
+					],
+					position_size: "100.0".to_string(),
+					state: LoanState::HedgeOpened,
 				},
 			),
 		];
@@ -271,8 +307,7 @@ mod test {
 			assert_eq!(returned_record.collateral_size, expected_record.collateral_size);
 			assert_eq!(returned_record.usdc_sold, expected_record.usdc_sold);
 			assert_eq!(returned_record.usdc_loaned, expected_record.usdc_loaned);
-			assert_eq!(returned_record.spot_sell_cloid, expected_record.spot_sell_cloid);
-			assert_eq!(returned_record.hedge_open_cloid, expected_record.hedge_open_cloid);
+			assert_eq!(returned_record.cloids, expected_record.cloids);
 		}
 	}
 
@@ -294,8 +329,14 @@ mod test {
 			collateral_size: "1.0".to_string(),
 			usdc_sold: "50000.00".to_string(),
 			usdc_loaned: "40000.00".to_string(),
-			spot_sell_cloid: "spot100".to_string(),
-			hedge_open_cloid: "hedge100".to_string(),
+			usdc_for_perp: "40000.00".to_string(),
+			txs: Vec::new(),
+			cloids: vec![
+				("spot_sell".to_string(), "spot100".to_string()),
+				("hedge_open".to_string(), "hedge100".to_string()),
+			],
+			position_size: "1.0".to_string(),
+			state: LoanState::HedgeOpened,
 		};
 		loan_record_storage.insert(&storage_key, test_record).unwrap();
 
@@ -372,8 +413,14 @@ mod test {
 			collateral_size: "1.0".to_string(),
 			usdc_sold: "50000.00".to_string(),
 			usdc_loaned: "40000.00".to_string(),
-			spot_sell_cloid: "spot100".to_string(),
-			hedge_open_cloid: "hedge100".to_string(),
+			usdc_for_perp: "40000.00".to_string(),
+			txs: Vec::new(),
+			cloids: vec![
+				("spot_sell".to_string(), "spot100".to_string()),
+				("hedge_open".to_string(), "hedge100".to_string()),
+			],
+			position_size: "1.0".to_string(),
+			state: LoanState::HedgeOpened,
 		};
 		loan_record_storage.insert(&storage_key, test_record).unwrap();
 
