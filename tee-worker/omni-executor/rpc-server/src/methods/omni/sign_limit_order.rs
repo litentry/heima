@@ -23,10 +23,10 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_core::native_task::{PumpxChainId, PumxWalletIndex};
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
-use pumpx::signer_client::PumpxChainId as _;
+use oe_client_pumpx::signer_client::PumpxChainId as _;
+use oe_client_signer::ChainType;
 use serde::Deserialize;
 use serde::Serialize;
-use signer_client::ChainType;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]

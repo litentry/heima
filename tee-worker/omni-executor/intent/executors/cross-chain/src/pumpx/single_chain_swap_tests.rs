@@ -16,11 +16,9 @@
 
 use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
-use accounting_contract_client::AccountingContractApi;
 use alloy::primitives::Address;
 use alloy::primitives::U256;
 use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::AccountId;
 use executor_primitives::ChainAsset;
 use executor_primitives::Identity;
 use executor_primitives::Intent;
@@ -38,14 +36,15 @@ use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use intent_asset_lock::AmountType;
 use intent_asset_lock::AssetId;
-use pumpx::methods::common::GasType;
-use pumpx::methods::common::OrderInfoResponse;
-use pumpx::methods::common::OrderInfoResponseData;
-use pumpx::methods::common::SwapType;
-use pumpx::methods::create_limit_order::CreateLimitOrderBody;
-use pumpx::PumpxApi;
+use oe_client_accounting::AccountingContractApi;
+use oe_client_pumpx::methods::common::GasType;
+use oe_client_pumpx::methods::common::OrderInfoResponse;
+use oe_client_pumpx::methods::common::OrderInfoResponseData;
+use oe_client_pumpx::methods::common::SwapType;
+use oe_client_pumpx::methods::create_limit_order::CreateLimitOrderBody;
+use oe_client_pumpx::PumpxApi;
+use oe_client_signer::{ChainType, SignerClient};
 use rust_decimal::Decimal;
-use signer_client::{ChainType, SignerClient};
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -95,7 +94,7 @@ async fn simple_single_chain_swap() {
 
 	let intent = Intent::Swap(order, None, single_chain_swap_provider.try_into().unwrap());
 
-	let mut pumpx_signer_client_mock = signer_client::mocks::MockSignerClient::new();
+	let mut pumpx_signer_client_mock = oe_client_signer::mocks::MockSignerClient::new();
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
@@ -107,7 +106,7 @@ async fn simple_single_chain_swap() {
 		.times(2)
 		.returning(move |_, _, _| Ok(solana_wallet_pub_key.to_vec()));
 
-	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
+	let mut pumpx_api_mock = oe_client_pumpx::mocks::MockPumpxApiClient::new();
 	pumpx_api_mock.expect_create_limit_order()
     .with(mockall::predicate::eq("test_token"),
     mockall::predicate::eq(CreateLimitOrderBody {
@@ -140,15 +139,14 @@ async fn simple_single_chain_swap() {
 		Arc::new(Box::new(pumpx_signer_client_mock));
 	let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(pumpx_api_mock));
 	let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-	let binance_api = Arc::new(binance_api::mocks::MockBinanceApiClient::new());
-	let bsc_client = Arc::new(ethereum_rpc::client::mocks::MockEthereumRpcClient::new());
-	let solana_client = Arc::new(solana::mocks::MockSolanaRpcClient::new());
-	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
-		Arc::new(Box::new(accounting_contract_client::mocks::MockAccountingContractClient::new()));
-	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
-		Arc::new(Box::new(
-			accounting_contract_client::solana::mocks::MockAccountingContractClient::new(),
-		));
+	let oe_client_binance = Arc::new(oe_client_binance::mocks::MockBinanceApiClient::new());
+	let bsc_client = Arc::new(oe_client_ethereum::client::mocks::MockEthereumRpcClient::new());
+	let solana_client = Arc::new(oe_client_solana::mocks::MockSolanaRpcClient::new());
+	let evm_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(oe_client_accounting::mocks::MockAccountingContractClient::new()));
+	let solana_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> = Arc::new(
+		Box::new(oe_client_accounting::solana::mocks::MockAccountingContractClient::new()),
+	);
 
 	let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
 		Arc::new(AccountAssetLocks::new(storage_db.clone()));
@@ -163,11 +161,11 @@ async fn simple_single_chain_swap() {
 		pumpx_signer_client.clone(),
 		pumpx_api,
 		storage_db.clone(),
-		binance_api,
+		oe_client_binance,
 		bsc_client,
 		solana_client,
-		evm_accounting_contract_client,
-		solana_accounting_contract_client,
+		evm_oe_client_accounting,
+		solana_oe_client_accounting,
 		Decimal::from_str("1").unwrap(),
 		factory_address,
 		implementation_address,

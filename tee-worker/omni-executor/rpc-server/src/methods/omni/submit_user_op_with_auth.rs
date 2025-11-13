@@ -16,9 +16,9 @@ use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::{ChainId, ClientAuth, UserAuth, UserId};
 use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
-use pumpx::pubkey_to_address;
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
 use serde::{Deserialize, Serialize};
-use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error};
 

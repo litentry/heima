@@ -21,8 +21,8 @@ use alloy::primitives::{Address, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::signers::local::PrivateKeySigner;
 use alloy::signers::Signer;
-use ethereum_rpc::RpcProvider;
-use ethereum_rpc::RpcProviderFactory;
+use oe_client_ethereum::RpcProvider;
+use oe_client_ethereum::RpcProviderFactory;
 use tracing::log::error;
 
 #[allow(dead_code)]
@@ -145,8 +145,8 @@ pub mod tests {
 	use mockall::predicate;
 
 	use crate::tx::Paymode;
-	use ethereum_rpc::mocks::{MockRpcProvider, MockedRpcProviderFactory};
-	use ethereum_rpc::AlloyRpcProviderFactory;
+	use oe_client_ethereum::mocks::{MockRpcProvider, MockedRpcProviderFactory};
+	use oe_client_ethereum::AlloyRpcProviderFactory;
 
 	use super::submit;
 

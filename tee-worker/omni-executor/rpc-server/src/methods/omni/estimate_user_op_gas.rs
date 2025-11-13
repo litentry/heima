@@ -124,7 +124,7 @@ pub fn register_estimate_user_op_gas<
 				entry_point_client.clone(),
 				packed_user_op,
 				params.chain_id,
-				ctx.binance_api_client.as_ref(),
+				ctx.oe_client_binance_client.as_ref(),
 			)
 			.await;
 

@@ -4,9 +4,9 @@ use crate::{
 };
 use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
-use pumpx::pubkey_to_address;
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
 use serde::Deserialize;
-use signer_client::ChainType;
 use tracing::debug;
 
 // used in rpc with backend only

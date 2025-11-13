@@ -18,9 +18,9 @@ use hyperliquid_rust_sdk::{
 	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
 };
 use jsonrpsee::RpcModule;
-use pumpx::pubkey_to_address;
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
 use serde::{Deserialize, Serialize};
-use signer_client::ChainType;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]

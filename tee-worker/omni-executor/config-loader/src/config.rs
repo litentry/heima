@@ -106,9 +106,9 @@ pub struct ConfigLoader {
 	pub pumpx_signer_url: String,
 	pub pumpx_api_base_url: String,
 	pub pumpx_worker_url: String,
-	pub binance_api_key: String,
-	pub binance_api_secret: String,
-	pub binance_api_base_url: String,
+	pub oe_client_binance_key: String,
+	pub oe_client_binance_secret: String,
+	pub oe_client_binance_base_url: String,
 	pub omni_factory_address: String,
 	pub entry_point_address: String,
 	pub wildmeta_api_url: String,
@@ -249,7 +249,7 @@ impl ConfigLoader {
 				},
 			),
 			(
-				"binance_api_key",
+				"oe_client_binance_key",
 				EnvVar {
 					env_key: "OE_BINANCE_API_KEY",
 					default: DEFAULT_BINANCE_API_KEY,
@@ -258,7 +258,7 @@ impl ConfigLoader {
 				},
 			),
 			(
-				"binance_api_secret",
+				"oe_client_binance_secret",
 				EnvVar {
 					env_key: "OE_BINANCE_API_SECRET",
 					default: DEFAULT_BINANCE_API_SECRET,
@@ -267,7 +267,7 @@ impl ConfigLoader {
 				},
 			),
 			(
-				"binance_api_base_url",
+				"oe_client_binance_base_url",
 				EnvVar {
 					env_key: "OE_BINANCE_API_BASE_URL",
 					default: DEFAULT_BINANCE_API_BASE_URL,
@@ -352,9 +352,9 @@ impl ConfigLoader {
 			pumpx_signer_url: get("pumpx_signer_url"),
 			pumpx_api_base_url: get("pumpx_api_base_url"),
 			pumpx_worker_url: get("pumpx_worker_url"),
-			binance_api_key: get("binance_api_key"),
-			binance_api_secret: get("binance_api_secret"),
-			binance_api_base_url: get("binance_api_base_url"),
+			oe_client_binance_key: get("oe_client_binance_key"),
+			oe_client_binance_secret: get("oe_client_binance_secret"),
+			oe_client_binance_base_url: get("oe_client_binance_base_url"),
 			omni_factory_address: get("omni_factory_address"),
 			entry_point_address: get("entry_point_address"),
 			wildmeta_api_url: get("wildmeta_api_url"),

@@ -7,8 +7,8 @@ use crate::utils::validation::{parse_as, parse_rpc_params};
 use executor_core::intent_executor::IntentExecutor;
 use executor_core::types::SerializablePackedUserOperation;
 use executor_primitives::ChainId;
-use hyperliquid::*;
 use jsonrpsee::RpcModule;
+use oe_client_hyperliquid::*;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 

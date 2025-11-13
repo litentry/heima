@@ -18,18 +18,15 @@ use crate::types::Chain;
 use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
 use crate::U256;
-use accounting_contract_client::AccountingContractApi;
 use alloy::primitives::Address;
-use binance_api::spot_trading_api::types::SymbolPrice;
-use binance_api::wallet_api::types::{CoinInfo, DepositAddress, NetworkInfo};
 use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::ChainAsset;
 use executor_primitives::Identity;
 use executor_primitives::Intent;
+use executor_primitives::PumpxAccountProfile;
 use executor_primitives::PumpxOrderType;
 use executor_primitives::SingleChainSwapProvider;
 use executor_primitives::SolanaToken;
-use executor_primitives::{AccountId, PumpxAccountProfile};
 use executor_primitives::{EthereumToken, PumpxConfig, SwapOrder};
 use executor_storage::Storage;
 use executor_storage::StorageDB;
@@ -40,24 +37,29 @@ use heima_primitives::BoundedVec;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use intent_asset_lock::AmountType;
-use pumpx::methods::common::GasType;
-use pumpx::methods::common::OrderInfoResponse;
-use pumpx::methods::common::OrderInfoResponseData;
-use pumpx::methods::common::SwapType;
-use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
-use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxResponse;
-use pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxResponseData;
-use pumpx::methods::get_gas_info::GasInfo;
-use pumpx::methods::get_gas_info::GetGasInfoResponse;
-use pumpx::methods::get_gas_info::GetGasInfoResponseData;
-use pumpx::methods::send_order_tx::SendOrderTxBody;
-use pumpx::methods::send_order_tx::SendOrderTxResponse;
-use pumpx::methods::send_order_tx::SendOrderTxResponseData;
-use pumpx::PumpxApi;
+use oe_client_accounting::mocks::MockAccountingContractClient;
+use oe_client_accounting::solana::mocks::MockAccountingContractClient as SolanaMockAccountingContractClient;
+use oe_client_accounting::AccountingContractApi;
+use oe_client_binance::spot_trading_api::types::SymbolPrice;
+use oe_client_binance::wallet_api::types::{CoinInfo, DepositAddress, NetworkInfo};
+use oe_client_pumpx::methods::common::GasType;
+use oe_client_pumpx::methods::common::OrderInfoResponse;
+use oe_client_pumpx::methods::common::OrderInfoResponseData;
+use oe_client_pumpx::methods::common::SwapType;
+use oe_client_pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
+use oe_client_pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxResponse;
+use oe_client_pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxResponseData;
+use oe_client_pumpx::methods::get_gas_info::GasInfo;
+use oe_client_pumpx::methods::get_gas_info::GetGasInfoResponse;
+use oe_client_pumpx::methods::get_gas_info::GetGasInfoResponseData;
+use oe_client_pumpx::methods::send_order_tx::SendOrderTxBody;
+use oe_client_pumpx::methods::send_order_tx::SendOrderTxResponse;
+use oe_client_pumpx::methods::send_order_tx::SendOrderTxResponseData;
+use oe_client_pumpx::PumpxApi;
+use oe_client_signer::mocks::MockSignerClient;
+use oe_client_signer::SignerClient;
 use reqwest::Method;
 use rust_decimal::Decimal;
-use signer_client::mocks::MockSignerClient;
-use signer_client::SignerClient;
 use solana_sdk::pubkey::Pubkey;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -72,7 +74,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	// ************************ MOCKS SETUP ************************
 	let tmp_dir = tempdir().unwrap();
 
-	let mut pumpx_signer_client_mock = signer_client::mocks::MockSignerClient::new();
+	let mut pumpx_signer_client_mock = oe_client_signer::mocks::MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
 	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
@@ -88,7 +90,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Solana),
+			mockall::predicate::eq(oe_client_signer::ChainType::Solana),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -102,7 +104,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Evm),
+			mockall::predicate::eq(oe_client_signer::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -122,7 +124,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 	pumpx_signer_client_mock
 		.expect_request_signatures()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Evm),
+			mockall::predicate::eq(oe_client_signer::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 			mockall::predicate::always(),
@@ -130,7 +132,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		.times(1)
 		.returning(move |_, _, _, _| Ok(vec![create_order_tx_signature.to_vec()]));
 
-	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
+	let mut pumpx_api_mock = oe_client_pumpx::mocks::MockPumpxApiClient::new();
 	pumpx_api_mock.expect_create_cross_order().times(1).returning(move |_, _| {
 		Ok(OrderInfoResponse {
 			code: 0,
@@ -216,9 +218,9 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 			})
 		});
 
-	let mut binance_api_mock = binance_api::mocks::MockBinanceApiClient::new();
+	let mut oe_client_binance_mock = oe_client_binance::mocks::MockBinanceApiClient::new();
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/config/getall"),
@@ -231,7 +233,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 			Ok(vec![prepare_coin_info(solana_coin_ticker, solana_coin_name, "SOL")])
 		});
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/deposit/address"),
@@ -251,7 +253,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 
 	let mut sol_usdt_price_params: HashMap<String, String> = HashMap::new();
 	sol_usdt_price_params.insert("symbol".to_string(), "SOLUSDT".to_string());
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_public_get_request()
 		.with(
 			mockall::predicate::eq("/api/v3/ticker/price"),
@@ -262,7 +264,7 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 
 	let mut sol_bnb_price_params: HashMap<String, String> = HashMap::new();
 	sol_bnb_price_params.insert("symbol".to_string(), "SOLBNB".to_string());
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_public_get_request()
 		.with(
 			mockall::predicate::eq("/api/v3/ticker/price"),
@@ -271,22 +273,20 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		.times(1)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
-	let mut evm_accounting_contract_client_mock =
-		accounting_contract_client::mocks::MockAccountingContractClient::new();
-	let solana_accounting_contract_client_mock =
-		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
+	let mut evm_oe_client_accounting_mock = MockAccountingContractClient::new();
+	let solana_oe_client_accounting_mock = SolanaMockAccountingContractClient::new();
 
-	evm_accounting_contract_client_mock
+	evm_oe_client_accounting_mock
 		.expect_get_balance()
 		.times(1)
 		.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
 
-	evm_accounting_contract_client_mock
+	evm_oe_client_accounting_mock
 		.expect_get_nonce()
 		.times(1)
 		.returning(|_| Ok(U256::from(1)));
 
-	evm_accounting_contract_client_mock
+	evm_oe_client_accounting_mock
 		.expect_execute_pay_out_request()
 		.with(
 			mockall::predicate::eq(Address::from_str(expected_payout_address).unwrap()),
@@ -296,8 +296,8 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		.times(1)
 		.returning(|_, _, _| Ok(()));
 
-	let bsc_client_mock = ethereum_rpc::client::mocks::MockEthereumRpcClient::new();
-	let mut solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
+	let bsc_client_mock = oe_client_ethereum::client::mocks::MockEthereumRpcClient::new();
+	let mut solana_client_mock = oe_client_solana::mocks::MockSolanaRpcClient::new();
 
 	solana_client_mock
 		.expect_transfer_sol()
@@ -310,13 +310,13 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		Arc::new(Box::new(pumpx_signer_client_mock));
 	let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(pumpx_api_mock));
 	let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-	let binance_api = Arc::new(binance_api_mock);
+	let oe_client_binance = Arc::new(oe_client_binance_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
-		Arc::new(Box::new(evm_accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
-		Arc::new(Box::new(solana_accounting_contract_client_mock));
+	let evm_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_oe_client_accounting_mock));
+	let solana_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
+		Arc::new(Box::new(solana_oe_client_accounting_mock));
 
 	let intent_id = 0;
 
@@ -348,11 +348,11 @@ async fn simple_cross_chain_swap_sol_to_bsc() {
 		pumpx_signer_client.clone(),
 		pumpx_api,
 		storage_db.clone(),
-		binance_api,
+		oe_client_binance,
 		bsc_client,
 		solana_client,
-		evm_accounting_contract_client,
-		solana_accounting_contract_client,
+		evm_oe_client_accounting,
+		solana_oe_client_accounting,
 		Decimal::from(1),
 		factory_address,
 		implementation_address,
@@ -375,7 +375,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	// ************************ MOCKS SETUP ************************
 	let tmp_dir = tempdir().unwrap();
 
-	let mut pumpx_signer_client_mock = signer_client::mocks::MockSignerClient::new();
+	let mut pumpx_signer_client_mock = oe_client_signer::mocks::MockSignerClient::new();
 
 	let pumpx_wallet_index = 1;
 	let pumpx_wallet_omni_account: [u8; 32] = account_id.clone().into();
@@ -390,7 +390,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Evm),
+			mockall::predicate::eq(oe_client_signer::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -406,7 +406,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Solana),
+			mockall::predicate::eq(oe_client_signer::ChainType::Solana),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -422,7 +422,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	pumpx_signer_client_mock
 		.expect_request_signatures()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Solana),
+			mockall::predicate::eq(oe_client_signer::ChainType::Solana),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 			mockall::predicate::always(),
@@ -437,7 +437,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 			]])
 		});
 
-	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
+	let mut pumpx_api_mock = oe_client_pumpx::mocks::MockPumpxApiClient::new();
 	pumpx_api_mock.expect_create_cross_order().times(1).returning(move |_, _| {
 		Ok(OrderInfoResponse {
 			code: 0,
@@ -524,9 +524,9 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 			})
 		});
 
-	let mut binance_api_mock = binance_api::mocks::MockBinanceApiClient::new();
+	let mut oe_client_binance_mock = oe_client_binance::mocks::MockBinanceApiClient::new();
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/config/getall"),
@@ -537,7 +537,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 		.times(1)
 		.returning(|_, _, _, _| Ok(vec![prepare_coin_info(bsc_coin_ticker, bsc_coin_name, "BSC")]));
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/deposit/address"),
@@ -555,29 +555,27 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 			})
 		});
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_public_get_request()
 		.with(mockall::predicate::eq("/api/v3/ticker/price"), mockall::predicate::always())
 		//todo why 2 times?
 		.times(2)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
-	let evm_accounting_contract_client_mock =
-		accounting_contract_client::mocks::MockAccountingContractClient::new();
-	let mut solana_accounting_contract_client_mock =
-		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
+	let evm_oe_client_accounting_mock = MockAccountingContractClient::new();
+	let mut solana_oe_client_accounting_mock = SolanaMockAccountingContractClient::new();
 
-	solana_accounting_contract_client_mock
+	solana_oe_client_accounting_mock
 		.expect_get_balance()
 		.times(1)
 		.returning(|| Ok(U256::from_str_radix("5000000000000", 10).unwrap()));
 
-	solana_accounting_contract_client_mock
+	solana_oe_client_accounting_mock
 		.expect_get_nonce()
 		.times(1)
 		.returning(|_| Ok(1u64));
 
-	solana_accounting_contract_client_mock
+	solana_oe_client_accounting_mock
 		.expect_execute_pay_out_request()
 		.with(
 			mockall::predicate::eq(Pubkey::from_str(expected_payout_address).unwrap()),
@@ -587,8 +585,8 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 		.times(1)
 		.returning(|_, _, _| Ok(()));
 
-	let mut bsc_client_mock = ethereum_rpc::client::mocks::MockEthereumRpcClient::new();
-	let solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
+	let mut bsc_client_mock = oe_client_ethereum::client::mocks::MockEthereumRpcClient::new();
+	let solana_client_mock = oe_client_solana::mocks::MockSolanaRpcClient::new();
 
 	bsc_client_mock
 		.expect_transfer()
@@ -604,13 +602,13 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 		Arc::new(Box::new(pumpx_signer_client_mock));
 	let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(pumpx_api_mock));
 	let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-	let binance_api = Arc::new(binance_api_mock);
+	let oe_client_binance = Arc::new(oe_client_binance_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
-		Arc::new(Box::new(evm_accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
-		Arc::new(Box::new(solana_accounting_contract_client_mock));
+	let evm_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_oe_client_accounting_mock));
+	let solana_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
+		Arc::new(Box::new(solana_oe_client_accounting_mock));
 
 	let intent_id = 0;
 
@@ -642,11 +640,11 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 		pumpx_signer_client.clone(),
 		pumpx_api,
 		storage_db.clone(),
-		binance_api,
+		oe_client_binance,
 		bsc_client,
 		solana_client,
-		evm_accounting_contract_client,
-		solana_accounting_contract_client,
+		evm_oe_client_accounting,
+		solana_oe_client_accounting,
 		Decimal::from_str("1").unwrap(),
 		factory_address,
 		implementation_address,
@@ -687,13 +685,13 @@ async fn instant_payout_cross_chain_swap() {
 	let binance_deposit_address = "binance_deposit_address";
 	let solana_coin_ticker = "SOL";
 	let solana_coin_name = "Solana";
-	let evm_accounting_contract_client_address = "0x7CE3464A6dc52001754b0b90878d9Ffd61B47c6C";
+	let evm_oe_client_accounting_address = "0x7CE3464A6dc52001754b0b90878d9Ffd61B47c6C";
 
 	// this is called twice, one for solana address and later for ethereum address
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Solana),
+			mockall::predicate::eq(oe_client_signer::ChainType::Solana),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -707,7 +705,7 @@ async fn instant_payout_cross_chain_swap() {
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Evm),
+			mockall::predicate::eq(oe_client_signer::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -727,7 +725,7 @@ async fn instant_payout_cross_chain_swap() {
 	pumpx_signer_client_mock
 		.expect_request_signatures()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Evm),
+			mockall::predicate::eq(oe_client_signer::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 			mockall::predicate::always(),
@@ -735,7 +733,7 @@ async fn instant_payout_cross_chain_swap() {
 		.times(1)
 		.returning(move |_, _, _, _| Ok(vec![create_order_tx_signature.to_vec()]));
 
-	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
+	let mut pumpx_api_mock = oe_client_pumpx::mocks::MockPumpxApiClient::new();
 	pumpx_api_mock.expect_create_cross_order().times(1).returning(move |_, _| {
 		Ok(OrderInfoResponse {
 			code: 0,
@@ -778,7 +776,7 @@ async fn instant_payout_cross_chain_swap() {
 				amount_in: "998.000000000000000000".to_string(),
 				double_out: false,
 				is_one_click: false,
-				address: evm_accounting_contract_client_address.to_string(),
+				address: evm_oe_client_accounting_address.to_string(),
 				is_anti_mev: false,
 				is_auto_slippage: false,
 				gas_type: GasType::Slow,
@@ -822,9 +820,9 @@ async fn instant_payout_cross_chain_swap() {
 			})
 		});
 
-	let mut binance_api_mock = binance_api::mocks::MockBinanceApiClient::new();
+	let mut oe_client_binance_mock = oe_client_binance::mocks::MockBinanceApiClient::new();
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/config/getall"),
@@ -838,7 +836,7 @@ async fn instant_payout_cross_chain_swap() {
 			Ok(vec![prepare_coin_info(solana_coin_ticker, solana_coin_name, "SOL")])
 		});
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/deposit/address"),
@@ -859,7 +857,7 @@ async fn instant_payout_cross_chain_swap() {
 
 	let mut sol_usdt_price_params: HashMap<String, String> = HashMap::new();
 	sol_usdt_price_params.insert("symbol".to_string(), "SOLUSDT".to_string());
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_public_get_request()
 		.with(
 			mockall::predicate::eq("/api/v3/ticker/price"),
@@ -870,7 +868,7 @@ async fn instant_payout_cross_chain_swap() {
 
 	let mut sol_bnb_price_params: HashMap<String, String> = HashMap::new();
 	sol_bnb_price_params.insert("symbol".to_string(), "SOLBNB".to_string());
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_public_get_request()
 		.with(
 			mockall::predicate::eq("/api/v3/ticker/price"),
@@ -880,20 +878,16 @@ async fn instant_payout_cross_chain_swap() {
 		.times(2)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
-	let solana_accounting_contract_client_mock =
-		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
+	let mut evm_oe_client_accounting_mock = MockAccountingContractClient::new();
+	let solana_oe_client_accounting_mock = SolanaMockAccountingContractClient::new();
 
-	let mut evm_accounting_contract_client_mock =
-		accounting_contract_client::mocks::MockAccountingContractClient::new();
-
-	evm_accounting_contract_client_mock
+	evm_oe_client_accounting_mock
 		.expect_get_signer_address()
 		.times(1)
-		.returning(|| Address::from_str(evm_accounting_contract_client_address).unwrap());
+		.returning(|| Address::from_str(evm_oe_client_accounting_address).unwrap());
 
-	let bsc_client_mock = ethereum_rpc::client::mocks::MockEthereumRpcClient::new();
-
-	let mut solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
+	let bsc_client_mock = oe_client_ethereum::client::mocks::MockEthereumRpcClient::new();
+	let mut solana_client_mock = oe_client_solana::mocks::MockSolanaRpcClient::new();
 
 	solana_client_mock
 		.expect_get_balance()
@@ -912,13 +906,13 @@ async fn instant_payout_cross_chain_swap() {
 		Arc::new(Box::new(pumpx_signer_client_mock));
 	let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(pumpx_api_mock));
 	let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-	let binance_api = Arc::new(binance_api_mock);
+	let oe_client_binance = Arc::new(oe_client_binance_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
-		Arc::new(Box::new(evm_accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
-		Arc::new(Box::new(solana_accounting_contract_client_mock));
+	let evm_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_oe_client_accounting_mock));
+	let solana_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
+		Arc::new(Box::new(solana_oe_client_accounting_mock));
 
 	let intent_id = 0;
 
@@ -950,11 +944,11 @@ async fn instant_payout_cross_chain_swap() {
 		pumpx_signer_client.clone(),
 		pumpx_api,
 		storage_db.clone(),
-		binance_api,
+		oe_client_binance,
 		bsc_client,
 		solana_client,
-		evm_accounting_contract_client,
-		solana_accounting_contract_client,
+		evm_oe_client_accounting,
+		solana_oe_client_accounting,
 		Decimal::from_str("100000").unwrap(),
 		factory_address,
 		implementation_address,
@@ -1001,7 +995,7 @@ async fn no_instant_payout_if_exported_wallet() {
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Solana),
+			mockall::predicate::eq(oe_client_signer::ChainType::Solana),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -1015,7 +1009,7 @@ async fn no_instant_payout_if_exported_wallet() {
 	pumpx_signer_client_mock
 		.expect_request_wallet()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Evm),
+			mockall::predicate::eq(oe_client_signer::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 		)
@@ -1026,7 +1020,7 @@ async fn no_instant_payout_if_exported_wallet() {
 				.to_vec())
 		});
 
-	let mut pumpx_api_mock = pumpx::mocks::MockPumpxApiClient::new();
+	let mut pumpx_api_mock = oe_client_pumpx::mocks::MockPumpxApiClient::new();
 	pumpx_api_mock.expect_create_cross_order().times(1).returning(move |_, _| {
 		Ok(OrderInfoResponse {
 			code: 0,
@@ -1069,7 +1063,7 @@ async fn no_instant_payout_if_exported_wallet() {
 	pumpx_signer_client_mock
 		.expect_request_signatures()
 		.with(
-			mockall::predicate::eq(signer_client::ChainType::Evm),
+			mockall::predicate::eq(oe_client_signer::ChainType::Evm),
 			mockall::predicate::eq(pumpx_wallet_index),
 			mockall::predicate::eq(pumpx_wallet_omni_account),
 			mockall::predicate::always(),
@@ -1130,9 +1124,9 @@ async fn no_instant_payout_if_exported_wallet() {
 			})
 		});
 
-	let mut binance_api_mock = binance_api::mocks::MockBinanceApiClient::new();
+	let mut oe_client_binance_mock = oe_client_binance::mocks::MockBinanceApiClient::new();
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/config/getall"),
@@ -1145,7 +1139,7 @@ async fn no_instant_payout_if_exported_wallet() {
 			Ok(vec![prepare_coin_info(solana_coin_ticker, solana_coin_name, "SOL")])
 		});
 
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_signed_request()
 		.with(
 			mockall::predicate::eq("/sapi/v1/capital/deposit/address"),
@@ -1165,7 +1159,7 @@ async fn no_instant_payout_if_exported_wallet() {
 
 	// let mut sol_usdt_price_params: HashMap<String, String> = HashMap::new();
 	// sol_usdt_price_params.insert("symbol".to_string(), "SOLUSDT".to_string());
-	// binance_api_mock
+	// oe_client_binance_mock
 	// 	.expect_make_public_get_request()
 	// 	.with(
 	// 		mockall::predicate::eq("/api/v3/ticker/price"),
@@ -1176,7 +1170,7 @@ async fn no_instant_payout_if_exported_wallet() {
 
 	let mut sol_bnb_price_params: HashMap<String, String> = HashMap::new();
 	sol_bnb_price_params.insert("symbol".to_string(), "SOLBNB".to_string());
-	binance_api_mock
+	oe_client_binance_mock
 		.expect_make_public_get_request()
 		.with(
 			mockall::predicate::eq("/api/v3/ticker/price"),
@@ -1185,23 +1179,20 @@ async fn no_instant_payout_if_exported_wallet() {
 		.times(1)
 		.returning(|_, _| Ok(SymbolPrice { price: "10".to_string() }));
 
-	let solana_accounting_contract_client_mock =
-		accounting_contract_client::solana::mocks::MockAccountingContractClient::new();
+	let mut evm_oe_client_accounting_mock = MockAccountingContractClient::new();
+	let solana_oe_client_accounting_mock = SolanaMockAccountingContractClient::new();
 
-	let mut evm_accounting_contract_client_mock =
-		accounting_contract_client::mocks::MockAccountingContractClient::new();
-
-	evm_accounting_contract_client_mock
+	evm_oe_client_accounting_mock
 		.expect_get_balance()
 		.times(1)
 		.returning(|| Ok(U256::from_str_radix("1000000000000000000000", 10).unwrap()));
 
-	evm_accounting_contract_client_mock
+	evm_oe_client_accounting_mock
 		.expect_get_nonce()
 		.times(1)
 		.returning(|_| Ok(U256::from(1)));
 
-	evm_accounting_contract_client_mock
+	evm_oe_client_accounting_mock
 		.expect_execute_pay_out_request()
 		.with(
 			mockall::predicate::eq(Address::from_str(expected_payout_address).unwrap()),
@@ -1211,9 +1202,9 @@ async fn no_instant_payout_if_exported_wallet() {
 		.times(1)
 		.returning(|_, _, _| Ok(()));
 
-	let bsc_client_mock = ethereum_rpc::client::mocks::MockEthereumRpcClient::new();
+	let bsc_client_mock = oe_client_ethereum::client::mocks::MockEthereumRpcClient::new();
 
-	let mut solana_client_mock = solana::mocks::MockSolanaRpcClient::new();
+	let mut solana_client_mock = oe_client_solana::mocks::MockSolanaRpcClient::new();
 
 	solana_client_mock
 		.expect_transfer_sol()
@@ -1227,13 +1218,13 @@ async fn no_instant_payout_if_exported_wallet() {
 		Arc::new(Box::new(pumpx_signer_client_mock));
 	let pumpx_api: Arc<Box<dyn PumpxApi>> = Arc::new(Box::new(pumpx_api_mock));
 	let storage_db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
-	let binance_api = Arc::new(binance_api_mock);
+	let oe_client_binance = Arc::new(oe_client_binance_mock);
 	let bsc_client = Arc::new(bsc_client_mock);
 	let solana_client = Arc::new(solana_client_mock);
-	let evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
-		Arc::new(Box::new(evm_accounting_contract_client_mock));
-	let solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
-		Arc::new(Box::new(solana_accounting_contract_client_mock));
+	let evm_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Address, U256>>> =
+		Arc::new(Box::new(evm_oe_client_accounting_mock));
+	let solana_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>> =
+		Arc::new(Box::new(solana_oe_client_accounting_mock));
 
 	let intent_id = 0;
 
@@ -1265,11 +1256,11 @@ async fn no_instant_payout_if_exported_wallet() {
 		pumpx_signer_client.clone(),
 		pumpx_api,
 		storage_db.clone(),
-		binance_api,
+		oe_client_binance,
 		bsc_client,
 		solana_client,
-		evm_accounting_contract_client,
-		solana_accounting_contract_client,
+		evm_oe_client_accounting,
+		solana_oe_client_accounting,
 		Decimal::from_str("100000").unwrap(),
 		factory_address,
 		implementation_address,

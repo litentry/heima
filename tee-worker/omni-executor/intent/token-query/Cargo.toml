@@ -6,9 +6,9 @@ edition.workspace = true
 
 [dependencies]
 alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
-ethereum-rpc = { workspace = true }
+oe-client-ethereum = { workspace = true }
+oe-client-solana = { workspace = true }
 serde_json = { workspace = true }
-solana = { workspace = true }
 solana-account-decoder-client-types = "2.1.5"
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
@@ -21,8 +21,8 @@ executor-primitives = { workspace = true }
 tokio = { workspace = true }
 hex-literal = { workspace = true }
 mockall = { workspace = true }
-ethereum-rpc = { workspace = true, features = ["mocks"] }
-solana = { workspace = true, features = ["mocks"] }
+oe-client-ethereum = { workspace = true, features = ["mocks"] }
+oe-client-solana = { workspace = true, features = ["mocks"] }
 base64 = { workspace = true }
 
 [lints]

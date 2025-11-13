@@ -6,7 +6,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use jsonrpsee::RpcModule;
-use pumpx::methods::add_wallet::AddWalletResponse;
+use oe_client_pumpx::methods::add_wallet::AddWalletResponse;
 use serde::Serialize;
 use tracing::{debug, error};
 

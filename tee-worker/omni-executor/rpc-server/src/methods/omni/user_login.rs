@@ -22,7 +22,7 @@ use heima_authentication::{
 	},
 };
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
+use oe_client_pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
 use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]

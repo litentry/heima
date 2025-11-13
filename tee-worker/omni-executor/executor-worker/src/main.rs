@@ -14,19 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use accounting_contract_client::{
-	solana::AccountingContractClient as SolanaAccountingContractClient,
-	AccountingContractClient as EthereumAccountingContractClient,
-};
 use alloy::network::EthereumWallet;
 use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
-use binance_api::BinanceApiClient;
 use clap::Parser;
 use cli::{Cli, Commands, ExportBundlerKeyArgs};
 use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
-use ethereum_rpc::client::EthereumRpcClient;
 use executor_core::ecdsa_key_store::EcdsaKeyStore;
 use executor_core::ed25519_key_store::Ed25519KeyStore;
 use executor_core::key_store::KeyStore;
@@ -41,11 +35,17 @@ use executor_storage::init_storage;
 use intent_asset_lock::precise::PreciseAssetsLock;
 use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
-use pumpx::{PumpxApi, PumpxApiClient};
+use oe_client_accounting::{
+	solana::AccountingContractClient as SolanaAccountingContractClient,
+	AccountingContractClient as EthereumAccountingContractClient,
+};
+use oe_client_binance::BinanceApiClient;
+use oe_client_ethereum::client::EthereumRpcClient;
+use oe_client_pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
+use oe_client_pumpx::{PumpxApi, PumpxApiClient};
+use oe_client_solana::SolanaRpcClient;
 use rpc_server::{start_server as start_rpc_server, AuthTokenKeyStore};
 use rust_decimal::Decimal;
-use solana::SolanaRpcClient;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::Path;
@@ -103,7 +103,7 @@ async fn main() -> Result<(), ()> {
 			);
 			let jwt_rsa_private_key = auth_token_key_store.read().expect("Could not read jwt key");
 
-			let pumpx_auth_key_store = pumpx::auth_key_store::AuthKeyStore::new(
+			let pumpx_auth_key_store = oe_client_pumpx::auth_key_store::AuthKeyStore::new(
 				Path::new(&args.local_directory_path)
 					.join("keystore/pumpx_auth_key.bin")
 					.into_os_string()
@@ -170,8 +170,8 @@ async fn main() -> Result<(), ()> {
 			);
 			let aes256_key = aes256_key_store.read().expect("Could not read aes256 key");
 
-			let pumpx_signer_client: Arc<Box<dyn signer_client::SignerClient>> =
-				Arc::new(Box::new(pumpx::signer_client::PumpxSignerClient::new(
+			let pumpx_signer_client: Arc<Box<dyn oe_client_signer::SignerClient>> =
+				Arc::new(Box::new(oe_client_pumpx::signer_client::PumpxSignerClient::new(
 					config_loader.pumpx_signer_url.clone(),
 					pumpx_signer_pair,
 				)));
@@ -188,10 +188,10 @@ async fn main() -> Result<(), ()> {
 				config_loader.pumpx_api_base_url.to_string(),
 			)));
 
-			let binance_api: Arc<BinanceApiClient> = Arc::new(BinanceApiClient::new(
-				config_loader.binance_api_key.clone(),
-				config_loader.binance_api_secret.clone(),
-				config_loader.binance_api_base_url.clone(),
+			let oe_client_binance: Arc<BinanceApiClient> = Arc::new(BinanceApiClient::new(
+				config_loader.oe_client_binance_key.clone(),
+				config_loader.oe_client_binance_secret.clone(),
+				config_loader.oe_client_binance_base_url.clone(),
 			));
 
 			let solana_client: Arc<SolanaRpcClient> =
@@ -202,15 +202,15 @@ async fn main() -> Result<(), ()> {
 					.expect("Could not create accounting contract signer");
 			let accounting_contract_wallet = EthereumWallet::from(accounting_contract_signer);
 
-			let bsc_rpc_provider = ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+			let bsc_rpc_provider = oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 				&config_loader.bsc_url,
 				accounting_contract_wallet.clone(),
 			);
-			let evm_accounting_contract_client = EthereumAccountingContractClient::new(
+			let evm_oe_client_accounting = EthereumAccountingContractClient::new(
 				bsc_rpc_provider,
 				args.accounting_contract_address.parse().unwrap(),
 			);
-			let solana_accounting_contract_client = SolanaAccountingContractClient::new(
+			let solana_oe_client_accounting = SolanaAccountingContractClient::new(
 				solana_accounting_ed25519_signer_key_pair,
 				config_loader.solana_url.clone(),
 				args.solana_accounting_contract_address.parse().unwrap(),
@@ -220,8 +220,9 @@ async fn main() -> Result<(), ()> {
 				Arc::new(EthereumRpcClient::new(&config_loader.bsc_url));
 
 			// wallet monitoring setup start
-			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
-				Arc::new(Box::new(ethereum_rpc::AlloyRpcProvider::new(&config_loader.bsc_url)));
+			let bsc_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> = Arc::new(
+				Box::new(oe_client_ethereum::AlloyRpcProvider::new(&config_loader.bsc_url)),
+			);
 
 			let solana_wallet_balance_fetcher: Arc<Box<dyn WalletBalanceFetcher>> =
 				Arc::new(Box::new(SolanaRpcClient::new(&config_loader.solana_url)));
@@ -259,11 +260,11 @@ async fn main() -> Result<(), ()> {
 				pumpx_signer_client.clone(),
 				pumpx_api.clone(),
 				storage_db.clone(),
-				binance_api.clone(),
+				oe_client_binance.clone(),
 				bsc_client,
 				solana_client,
-				Arc::new(Box::new(evm_accounting_contract_client)),
-				Arc::new(Box::new(solana_accounting_contract_client)),
+				Arc::new(Box::new(evm_oe_client_accounting)),
+				Arc::new(Box::new(solana_oe_client_accounting)),
 				Decimal::from_str(&args.instant_payout_threshold).unwrap(),
 				omni_account_factory_address,
 				omni_account_implementation_address,
@@ -272,36 +273,38 @@ async fn main() -> Result<(), ()> {
 			// Create EntryPoint clients registry
 			// Create RPC providers first
 			// Add BSC (BNB Chain)
-			let bsc_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+			let bsc_rpc = Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 				&config_loader.bsc_url,
 				accounting_contract_wallet.clone(),
 			));
 
 			// Add BSC Testnet if configured
 			let bsc_testnet_rpc = if let Some(ref bsc_testnet_url) = config_loader.bsc_testnet_url {
-				let bsc_testnet_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
-					bsc_testnet_url,
-					accounting_contract_wallet.clone(),
-				));
+				let bsc_testnet_rpc =
+					Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
+						bsc_testnet_url,
+						accounting_contract_wallet.clone(),
+					));
 				Some(bsc_testnet_rpc)
 			} else {
 				None
 			};
 
 			// Add Ethereum Mainnet
-			let ethereum_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
-				&config_loader.ethereum_url,
-				accounting_contract_wallet.clone(),
-			));
+			let oe_client_ethereum =
+				Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
+					&config_loader.ethereum_url,
+					accounting_contract_wallet.clone(),
+				));
 
 			// Add local development chain
-			let local_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+			let local_rpc = Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 				"http://ethereum-node:8545",
 				accounting_contract_wallet.clone(),
 			));
 
 			// Add Arbitrum One
-			let arbitrum_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+			let arbitrum_rpc = Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 				&config_loader.arbitrum_url,
 				accounting_contract_wallet.clone(),
 			));
@@ -310,7 +313,7 @@ async fn main() -> Result<(), ()> {
 			let arbitrum_testnet_rpc =
 				if let Some(ref arbitrum_testnet_url) = config_loader.arbitrum_testnet_url {
 					let arbitrum_testnet_rpc =
-						Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+						Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 							arbitrum_testnet_url,
 							accounting_contract_wallet.clone(),
 						));
@@ -320,7 +323,7 @@ async fn main() -> Result<(), ()> {
 				};
 
 			// Add HyperEVM
-			let hyperevm_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+			let hyperevm_rpc = Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 				&config_loader.hyperevm_url,
 				accounting_contract_wallet.clone(),
 			));
@@ -329,7 +332,7 @@ async fn main() -> Result<(), ()> {
 			let hyperevm_testnet_rpc =
 				if let Some(ref hyperevm_testnet_url) = config_loader.hyperevm_testnet_url {
 					let hyperevm_testnet_rpc =
-						Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+						Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 							hyperevm_testnet_url,
 							accounting_contract_wallet.clone(),
 						));
@@ -339,7 +342,7 @@ async fn main() -> Result<(), ()> {
 				};
 
 			// Add Base
-			let base_rpc = Arc::new(ethereum_rpc::AlloyRpcProvider::new_with_wallet(
+			let base_rpc = Arc::new(oe_client_ethereum::AlloyRpcProvider::new_with_wallet(
 				&config_loader.base_url,
 				accounting_contract_wallet.clone(),
 			));
@@ -354,98 +357,93 @@ async fn main() -> Result<(), ()> {
 				.expect("Invalid entry point address in configuration");
 
 			// Add BSC (BNB Chain)
-			let bsc_entry_point = Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+			let bsc_entry_point = Arc::new(oe_client_aa::EntryPointClient::new_with_config(
 				entry_point_address,
 				bsc_rpc,
-				aa_contracts_client::GasPriceConfig::bsc(),
-				aa_contracts_client::RetryConfig::bsc(),
+				oe_client_aa::GasPriceConfig::bsc(),
+				oe_client_aa::RetryConfig::bsc(),
 			));
 			entry_point_clients.insert(56, bsc_entry_point);
 
 			// Add BSC Testnet if configured
 			if let Some(bsc_testnet_rpc) = bsc_testnet_rpc {
 				let bsc_testnet_entry_point =
-					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					Arc::new(oe_client_aa::EntryPointClient::new_with_config(
 						entry_point_address,
 						bsc_testnet_rpc,
-						aa_contracts_client::GasPriceConfig::bsc(),
-						aa_contracts_client::RetryConfig::bsc(),
+						oe_client_aa::GasPriceConfig::bsc(),
+						oe_client_aa::RetryConfig::bsc(),
 					));
 				entry_point_clients.insert(97, bsc_testnet_entry_point);
 			}
 
 			// Add Ethereum Mainnet
-			let ethereum_entry_point =
-				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
-					entry_point_address,
-					ethereum_rpc,
-					aa_contracts_client::GasPriceConfig::mainnet(),
-					aa_contracts_client::RetryConfig::mainnet(),
-				));
+			let ethereum_entry_point = Arc::new(oe_client_aa::EntryPointClient::new_with_config(
+				entry_point_address,
+				oe_client_ethereum,
+				oe_client_aa::GasPriceConfig::mainnet(),
+				oe_client_aa::RetryConfig::mainnet(),
+			));
 			entry_point_clients.insert(1, ethereum_entry_point);
 
 			// Add local development chain
-			let local_entry_point =
-				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
-					entry_point_address,
-					local_rpc,
-					aa_contracts_client::GasPriceConfig::default(),
-					aa_contracts_client::RetryConfig::default(),
-				));
+			let local_entry_point = Arc::new(oe_client_aa::EntryPointClient::new_with_config(
+				entry_point_address,
+				local_rpc,
+				oe_client_aa::GasPriceConfig::default(),
+				oe_client_aa::RetryConfig::default(),
+			));
 			entry_point_clients.insert(31337, local_entry_point);
 
 			// Add Arbitrum One (Chain ID: 42161)
-			let arbitrum_entry_point =
-				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
-					entry_point_address,
-					arbitrum_rpc,
-					aa_contracts_client::GasPriceConfig::l2(),
-					aa_contracts_client::RetryConfig::l2(),
-				));
+			let arbitrum_entry_point = Arc::new(oe_client_aa::EntryPointClient::new_with_config(
+				entry_point_address,
+				arbitrum_rpc,
+				oe_client_aa::GasPriceConfig::l2(),
+				oe_client_aa::RetryConfig::l2(),
+			));
 			entry_point_clients.insert(42161, arbitrum_entry_point);
 
 			// Add Arbitrum Testnet if configured (Chain ID: 421614)
 			if let Some(arbitrum_testnet_rpc) = arbitrum_testnet_rpc {
 				let arbitrum_testnet_entry_point =
-					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					Arc::new(oe_client_aa::EntryPointClient::new_with_config(
 						entry_point_address,
 						arbitrum_testnet_rpc,
-						aa_contracts_client::GasPriceConfig::l2(),
-						aa_contracts_client::RetryConfig::l2(),
+						oe_client_aa::GasPriceConfig::l2(),
+						oe_client_aa::RetryConfig::l2(),
 					));
 				entry_point_clients.insert(421614, arbitrum_testnet_entry_point);
 			}
 
 			// Add HyperEVM (Chain ID: 999)
-			let hyperevm_entry_point =
-				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
-					entry_point_address,
-					hyperevm_rpc,
-					aa_contracts_client::GasPriceConfig::hyperevm(),
-					aa_contracts_client::RetryConfig::hyperevm(),
-				));
+			let hyperevm_entry_point = Arc::new(oe_client_aa::EntryPointClient::new_with_config(
+				entry_point_address,
+				hyperevm_rpc,
+				oe_client_aa::GasPriceConfig::hyperevm(),
+				oe_client_aa::RetryConfig::hyperevm(),
+			));
 			entry_point_clients.insert(999, hyperevm_entry_point);
 
 			// Add HyperEVM Testnet if configured (Chain ID: 998)
 			if let Some(hyperevm_testnet_rpc) = hyperevm_testnet_rpc {
 				let hyperevm_testnet_entry_point =
-					Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
+					Arc::new(oe_client_aa::EntryPointClient::new_with_config(
 						entry_point_address,
 						hyperevm_testnet_rpc,
-						aa_contracts_client::GasPriceConfig::hyperevm(),
-						aa_contracts_client::RetryConfig::hyperevm(),
+						oe_client_aa::GasPriceConfig::hyperevm(),
+						oe_client_aa::RetryConfig::hyperevm(),
 					));
 				entry_point_clients.insert(998, hyperevm_testnet_entry_point);
 			}
 
 			// Add Base (Chain ID: 8453)
-			let base_entry_point =
-				Arc::new(aa_contracts_client::EntryPointClient::new_with_config(
-					entry_point_address,
-					base_rpc,
-					aa_contracts_client::GasPriceConfig::l2(),
-					aa_contracts_client::RetryConfig::l2(),
-				));
+			let base_entry_point = Arc::new(oe_client_aa::EntryPointClient::new_with_config(
+				entry_point_address,
+				base_rpc,
+				oe_client_aa::GasPriceConfig::l2(),
+				oe_client_aa::RetryConfig::l2(),
+			));
 			entry_point_clients.insert(8453, base_entry_point);
 
 			let entry_point_clients = Arc::new(entry_point_clients);
@@ -464,8 +462,8 @@ async fn main() -> Result<(), ()> {
 			let shielding_key = shielding_key_store.read().expect("Could not read shielding key");
 
 			// Create wildmeta API client and timestamp storage
-			let wildmeta_api: Arc<Box<dyn wildmeta_api::WildmetaApi>> = Arc::new(Box::new(
-				wildmeta_api::WildmetaApiClient::new(config_loader.wildmeta_api_url.clone()),
+			let wildmeta_api: Arc<Box<dyn oe_client_wildmeta::WildmetaApi>> = Arc::new(Box::new(
+				oe_client_wildmeta::WildmetaApiClient::new(config_loader.wildmeta_api_url.clone()),
 			));
 			let wildmeta_timestamp_storage =
 				Arc::new(executor_storage::WildmetaTimestampStorage::new(storage_db.clone()));
@@ -521,7 +519,7 @@ async fn main() -> Result<(), ()> {
 				jwt_rsa_private_key,
 				&config_loader,
 				pumpx_signer_client,
-				binance_api,
+				oe_client_binance,
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				loan_record_storage,

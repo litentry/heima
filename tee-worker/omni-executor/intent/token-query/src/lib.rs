@@ -19,8 +19,8 @@ use alloy::primitives::{Address, U256};
 use alloy::rpc::types::TransactionRequest;
 use alloy::sol;
 use alloy::sol_types::SolCall;
-use ethereum_rpc::RpcProvider;
-use solana::SolanaClient;
+use oe_client_ethereum::RpcProvider;
+use oe_client_solana::SolanaClient;
 use solana_account_decoder_client_types::UiAccountData;
 use solana_client::rpc_request::TokenAccountsFilter;
 use solana_sdk::program_pack::Pack;
@@ -107,7 +107,7 @@ pub async fn query_ethereum<
 #[cfg(test)]
 pub mod tests {
 	use hex_literal::hex;
-	use solana::SolanaRpcClient;
+	use oe_client_solana::SolanaRpcClient;
 	use solana_sdk::pubkey::Pubkey;
 	use std::str::FromStr;
 
@@ -117,7 +117,7 @@ pub mod tests {
 	#[tokio::test]
 	pub async fn check_query_ethereum() {
 		let rpc_url = "http://127.0.0.1:8545";
-		let provider = ethereum_rpc::AlloyRpcProvider::new(rpc_url);
+		let provider = oe_client_ethereum::AlloyRpcProvider::new(rpc_url);
 		let account =
 			alloy::primitives::Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
 				.unwrap();
@@ -169,7 +169,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_solana_native_success() {
-			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let mut mock_client = oe_client_solana::mocks::MockSolanaRpcClient::new();
 			let pubkey = Pubkey::new_unique();
 			let expected_balance = 1000000000u64; // 1 SOL in lamports
 
@@ -186,7 +186,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_solana_native_error() {
-			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let mut mock_client = oe_client_solana::mocks::MockSolanaRpcClient::new();
 			let pubkey = Pubkey::new_unique();
 
 			mock_client
@@ -202,7 +202,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_solana_spl_success_json_format() {
-			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let mut mock_client = oe_client_solana::mocks::MockSolanaRpcClient::new();
 			let pubkey = Pubkey::new_unique();
 			let mint_pubkey = Pubkey::new_unique();
 			let token = SolanaToken::SPL(mint_pubkey.to_bytes().into());
@@ -251,7 +251,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_solana_spl_multiple_accounts() {
-			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let mut mock_client = oe_client_solana::mocks::MockSolanaRpcClient::new();
 			let pubkey = Pubkey::new_unique();
 			let mint_pubkey = Pubkey::new_unique();
 			let token = SolanaToken::SPL(mint_pubkey.to_bytes().into());
@@ -333,7 +333,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_solana_spl_error() {
-			let mut mock_client = solana::mocks::MockSolanaRpcClient::new();
+			let mut mock_client = oe_client_solana::mocks::MockSolanaRpcClient::new();
 			let pubkey = Pubkey::new_unique();
 			let mint_pubkey = Pubkey::new_unique();
 			let token = SolanaToken::SPL(mint_pubkey.to_bytes().into());
@@ -356,7 +356,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_ethereum_native_success() {
-			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let mut mock_provider = oe_client_ethereum::mocks::MockRpcProvider::new();
 			let address = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
 			let expected_balance = U256::from(1000000000000000000u64); // 1 ETH in wei
 
@@ -373,7 +373,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_ethereum_native_error() {
-			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let mut mock_provider = oe_client_ethereum::mocks::MockRpcProvider::new();
 			let address = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
 
 			mock_provider
@@ -381,7 +381,9 @@ pub mod tests {
 				.with(mockall::predicate::eq(address))
 				.times(1)
 				.returning(|_| {
-					Err(ethereum_rpc::error::RpcProviderError::Network("Test error".to_string()))
+					Err(oe_client_ethereum::error::RpcProviderError::Network(
+						"Test error".to_string(),
+					))
 				});
 
 			let result = query_ethereum(&mock_provider, address, &EthereumToken::Native).await;
@@ -391,7 +393,7 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_ethereum_erc20_success() {
-			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let mut mock_provider = oe_client_ethereum::mocks::MockRpcProvider::new();
 			let account = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
 			let token_address = hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707");
 			let token = EthereumToken::ERC20(token_address.try_into().unwrap());
@@ -411,13 +413,15 @@ pub mod tests {
 
 		#[tokio::test]
 		async fn test_query_ethereum_erc20_error() {
-			let mut mock_provider = ethereum_rpc::mocks::MockRpcProvider::new();
+			let mut mock_provider = oe_client_ethereum::mocks::MockRpcProvider::new();
 			let account = Address::from_str("0x70997970C51812dc3A010C7d01b50e0d17dc79C8").unwrap();
 			let token_address = hex!("5FC8d32690cc91D4c39d9d3abcBD16989F875707");
 			let token = EthereumToken::ERC20(token_address.try_into().unwrap());
 
 			mock_provider.expect_call().times(1).returning(|_| {
-				Err(ethereum_rpc::error::RpcProviderError::Transaction("Test error".to_string()))
+				Err(oe_client_ethereum::error::RpcProviderError::Transaction(
+					"Test error".to_string(),
+				))
 			});
 
 			let result = query_ethereum(&mock_provider, account, &token).await;

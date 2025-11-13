@@ -29,10 +29,7 @@ tower-http = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
-aa-contracts-client = { workspace = true }
-binance-api = { workspace = true }
 config-loader = { workspace = true }
-ethereum-rpc = { workspace = true }
 executor-core = { workspace = true }
 executor-crypto = { workspace = true }
 executor-primitives = { workspace = true }
@@ -41,18 +38,21 @@ heima-authentication = { workspace = true }
 heima-identity-verification = { workspace = true }
 heima-primitives = { workspace = true }
 heima-utils = { workspace = true }
-hyperliquid = { workspace = true }
 oauth-providers = { workspace = true }
-pumpx = { workspace = true }
-signer-client = { workspace = true }
-wildmeta-api = { workspace = true }
+oe-client-aa = { workspace = true }
+oe-client-binance = { workspace = true }
+oe-client-ethereum = { workspace = true }
+oe-client-hyperliquid = { workspace = true }
+oe-client-pumpx = { workspace = true }
+oe-client-signer = { workspace = true }
+oe-client-wildmeta = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-pumpx = { workspace = true, features = ["mocks"] }
-binance-api = { workspace = true, features = ["mocks"] }
-signer-client = { workspace = true, features = ["mocks"] }
-wildmeta-api = { workspace = true, features = ["mocks"] }
+oe-client-pumpx = { workspace = true, features = ["mocks"] }
+oe-client-binance = { workspace = true, features = ["mocks"] }
+oe-client-signer = { workspace = true, features = ["mocks"] }
+oe-client-wildmeta = { workspace = true, features = ["mocks"] }
 executor-storage = { workspace = true }
 chrono = { workspace = true }
 alloy-signer = { workspace = true }

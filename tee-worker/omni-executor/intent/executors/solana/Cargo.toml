@@ -14,7 +14,7 @@ tracing = { workspace = true }
 
 # Local dependencies
 executor-primitives = { workspace = true }
-pumpx = { workspace = true }
+oe-client-pumpx = { workspace = true }
 
 [lints]
 workspace = true

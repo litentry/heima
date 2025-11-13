@@ -19,7 +19,7 @@ use heima_authentication::{
 };
 use heima_primitives::Identity;
 use jsonrpsee::RpcModule;
-use pumpx::methods::user_connect::UserConnectResponse;
+use oe_client_pumpx::methods::user_connect::UserConnectResponse;
 use serde::Serialize;
 use tracing::{debug, error};
 

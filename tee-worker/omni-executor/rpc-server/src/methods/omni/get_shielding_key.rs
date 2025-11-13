@@ -24,20 +24,20 @@ pub fn register_get_shielding_key<
 mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
-	use binance_api::mocks::MockBinanceApiClient;
 	use config_loader::ConfigLoader;
 	use executor_core::intent_executor::MockedIntentExecutor;
 	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use pumpx::PumpxApiClient;
+	use oe_client_binance::mocks::MockBinanceApiClient;
+	use oe_client_pumpx::PumpxApiClient;
+	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
+	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-	use signer_client::{mocks::MockSignerClient, SignerClient};
 	use std::collections::HashMap;
 	use std::sync::Arc;
 	use tempfile::tempdir;
-	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
 	pub async fn get_shielding_key_works() {
@@ -52,7 +52,7 @@ mod test {
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
 			Arc::new(MockBinanceApiClient::new());
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
@@ -71,7 +71,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,

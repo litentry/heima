@@ -13,9 +13,9 @@ use heima_primitives::{
 };
 use heima_utils::decode_hex;
 use jsonrpsee::RpcModule;
-use pumpx::methods::common::{OrderInfoResponse, SwapType};
-use pumpx::methods::send_order_tx::SendOrderTxResponse;
-use pumpx::{constants::*, methods::get_user_trade_info::UserTradeInfoResponse};
+use oe_client_pumpx::methods::common::{OrderInfoResponse, SwapType};
+use oe_client_pumpx::methods::send_order_tx::SendOrderTxResponse;
+use oe_client_pumpx::{constants::*, methods::get_user_trade_info::UserTradeInfoResponse};
 use serde::Serialize;
 use tracing::{debug, error};
 

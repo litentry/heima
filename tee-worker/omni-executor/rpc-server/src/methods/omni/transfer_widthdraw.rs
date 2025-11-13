@@ -15,7 +15,9 @@ use executor_core::native_task::PumxWalletIndex;
 use executor_storage::{HeimaJwtStorage, Storage};
 use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use jsonrpsee::RpcModule;
-use pumpx::methods::create_transfer_tx::{CreateTransferTxBody, CreateTransferTxResponse};
+use oe_client_pumpx::methods::create_transfer_tx::{
+	CreateTransferTxBody, CreateTransferTxResponse,
+};
 use serde::Serialize;
 use tracing::{debug, error};
 

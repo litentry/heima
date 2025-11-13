@@ -13,47 +13,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "aa-contracts-client"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "ciborium",
- "ethereum-rpc",
- "executor-primitives",
- "heima-primitives",
- "mockall",
- "rand 0.8.5",
- "regex",
- "sha2 0.10.9",
- "test-log",
- "thiserror 2.0.17",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "accounting-contract"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "serde",
-]
-
-[[package]]
-name = "accounting-contract-client"
-version = "0.1.0"
-dependencies = [
- "accounting-contract",
- "alloy",
- "anchor-client",
- "async-trait",
- "bincode",
- "ethereum-rpc",
- "mock-server",
- "mockall",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -1654,23 +1618,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d965446196e3b7decd44aa7ee49e31d630118f90ef12f97900f262eb915c951d"
 
 [[package]]
-name = "binance-api"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "hex",
- "hmac 0.12.1",
- "mockall",
- "reqwest 0.12.24",
- "serde",
- "sha2 0.10.9",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
 name = "binary-merkle-tree"
 version = "16.0.0"
 source = "git+https://github.com/paritytech/polkadot-sdk?branch=stable2412#33663108c248b645ef106e4e9d07598d34ac89ac"
@@ -2627,15 +2574,11 @@ dependencies = [
 name = "cross-chain-intent-executor"
 version = "0.1.0"
 dependencies = [
- "aa-contracts-client",
- "accounting-contract-client",
  "alloy",
  "alloy-rlp",
  "async-trait",
  "base58",
- "binance-api",
  "bincode",
- "ethereum-rpc",
  "executor-core",
  "executor-primitives",
  "executor-storage",
@@ -2645,13 +2588,17 @@ dependencies = [
  "intent-asset-lock",
  "intent-token-query",
  "mockall",
+ "oe-client-aa",
+ "oe-client-accounting",
+ "oe-client-binance",
+ "oe-client-ethereum",
+ "oe-client-pumpx",
+ "oe-client-signer",
+ "oe-client-solana",
  "parity-scale-codec",
- "pumpx",
  "reqwest 0.12.24",
  "rust_decimal",
  "serde_json",
- "signer-client",
- "solana",
  "solana-sdk",
  "tempfile",
  "test-log",
@@ -3546,33 +3493,13 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "ethereum-rpc",
  "executor-core",
  "executor-primitives",
  "futures",
  "mockall",
+ "oe-client-ethereum",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "ethereum-rpc"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "async-trait",
- "executor-core",
- "hex-literal",
- "libsecp256k1 0.7.2",
- "mock-server",
- "mockall",
- "serde_json",
- "signer-client",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 2.0.17",
- "tokio",
- "tracing",
- "url",
 ]
 
 [[package]]
@@ -4016,14 +3943,10 @@ dependencies = [
 name = "executor-worker"
 version = "0.1.0"
 dependencies = [
- "aa-contracts-client",
- "accounting-contract-client",
  "alloy",
- "binance-api",
  "clap",
  "config-loader",
  "cross-chain-intent-executor",
- "ethereum-rpc",
  "ethers",
  "executor-core",
  "executor-crypto",
@@ -4035,7 +3958,14 @@ dependencies = [
  "jsonrpsee",
  "metrics-exporter-prometheus",
  "mock-server",
- "pumpx",
+ "oe-client-aa",
+ "oe-client-accounting",
+ "oe-client-binance",
+ "oe-client-ethereum",
+ "oe-client-pumpx",
+ "oe-client-signer",
+ "oe-client-solana",
+ "oe-client-wildmeta",
  "rand 0.8.5",
  "rpc-server",
  "rsa",
@@ -4044,13 +3974,10 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
- "signer-client",
- "solana",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "url",
- "wildmeta-api",
 ]
 
 [[package]]
@@ -5283,21 +5210,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyperliquid"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "ethabi",
- "executor-primitives",
- "hex",
- "reqwest 0.12.24",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "hyperliquid_rust_sdk"
 version = "0.6.0"
 source = "git+https://github.com/BillyWooo/hyperliquid-rust-sdk?branch=fork_new_feature#aa6887692561dce5bf2187d401d543c3c921add3"
@@ -5635,12 +5547,12 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "base64 0.22.1",
- "ethereum-rpc",
  "executor-primitives",
  "hex-literal",
  "mockall",
+ "oe-client-ethereum",
+ "oe-client-solana",
  "serde_json",
- "solana",
  "solana-account-decoder-client-types",
  "solana-client",
  "solana-sdk",
@@ -6867,6 +6779,166 @@ dependencies = [
 ]
 
 [[package]]
+name = "oe-client-aa"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "ciborium",
+ "executor-primitives",
+ "heima-primitives",
+ "mockall",
+ "oe-client-ethereum",
+ "rand 0.8.5",
+ "regex",
+ "sha2 0.10.9",
+ "test-log",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "oe-client-accounting"
+version = "0.1.0"
+dependencies = [
+ "accounting-contract",
+ "alloy",
+ "anchor-client",
+ "async-trait",
+ "bincode",
+ "mock-server",
+ "mockall",
+ "oe-client-ethereum",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "oe-client-binance"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "hex",
+ "hmac 0.12.1",
+ "mockall",
+ "reqwest 0.12.24",
+ "serde",
+ "sha2 0.10.9",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "oe-client-ethereum"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "async-trait",
+ "executor-core",
+ "hex-literal",
+ "libsecp256k1 0.7.2",
+ "mock-server",
+ "mockall",
+ "oe-client-signer",
+ "serde_json",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "oe-client-hyperliquid"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "ethabi",
+ "executor-primitives",
+ "hex",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "oe-client-pumpx"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "base58",
+ "ethers",
+ "executor-core",
+ "executor-crypto",
+ "executor-primitives",
+ "hex",
+ "jsonrpsee",
+ "libsecp256k1 0.7.2",
+ "mockall",
+ "oe-client-signer",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "reqwest 0.12.24",
+ "rsa",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "sha2 0.10.9",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "oe-client-signer"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "executor-crypto",
+ "mockall",
+ "serde",
+]
+
+[[package]]
+name = "oe-client-solana"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "executor-core",
+ "mock-server",
+ "mockall",
+ "oe-client-pumpx",
+ "oe-client-signer",
+ "solana-client",
+ "solana-sdk",
+ "spl-associated-token-account",
+ "spl-token",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "oe-client-wildmeta"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "mockall",
+ "parity-scale-codec",
+ "reqwest 0.12.24",
+ "serde",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "oid-registry"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6879,19 +6951,19 @@ dependencies = [
 name = "omni-cli"
 version = "0.1.0"
 dependencies = [
- "aa-contracts-client",
  "alloy",
  "anyhow",
  "clap",
- "ethereum-rpc",
  "executor-core",
  "executor-primitives",
  "heima-primitives",
  "hex",
+ "oe-client-aa",
+ "oe-client-ethereum",
+ "oe-client-signer",
  "reqwest 0.12.24",
  "serde",
  "serde_json",
- "signer-client",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -7663,35 +7735,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pumpx"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "base58",
- "ethers",
- "executor-core",
- "executor-crypto",
- "executor-primitives",
- "hex",
- "jsonrpsee",
- "libsecp256k1 0.7.2",
- "mockall",
- "parity-scale-codec",
- "rand 0.8.5",
- "reqwest 0.12.24",
- "rsa",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "sha2 0.10.9",
- "signer-client",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "qstring"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8299,18 +8342,15 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpc-server"
 version = "0.1.0"
 dependencies = [
- "aa-contracts-client",
  "alloy",
  "alloy-signer",
  "alloy-signer-local",
  "async-trait",
  "base58",
  "base64 0.22.1",
- "binance-api",
  "chrono",
  "config-loader",
  "email_address",
- "ethereum-rpc",
  "ethers",
  "executor-core",
  "executor-crypto",
@@ -8322,25 +8362,28 @@ dependencies = [
  "heima-utils",
  "hex",
  "http 1.3.1",
- "hyperliquid",
  "hyperliquid_rust_sdk",
  "jsonrpsee",
  "oauth-providers",
+ "oe-client-aa",
+ "oe-client-binance",
+ "oe-client-ethereum",
+ "oe-client-hyperliquid",
+ "oe-client-pumpx",
+ "oe-client-signer",
+ "oe-client-wildmeta",
  "parity-scale-codec",
- "pumpx",
  "rand 0.8.5",
  "rsa",
  "serde",
  "serde_json",
  "serde_with",
  "sha2 0.10.9",
- "signer-client",
  "tempfile",
  "tokio",
  "tower 0.4.13",
  "tower-http 0.5.2",
  "tracing",
- "wildmeta-api",
 ]
 
 [[package]]
@@ -9233,16 +9276,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "signer-client"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "executor-crypto",
- "mockall",
- "serde",
-]
-
-[[package]]
 name = "simba"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9352,24 +9385,6 @@ dependencies = [
  "log",
  "rand 0.8.5",
  "sha1",
-]
-
-[[package]]
-name = "solana"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "executor-core",
- "mock-server",
- "mockall",
- "pumpx",
- "signer-client",
- "solana-client",
- "solana-sdk",
- "spl-associated-token-account",
- "spl-token",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -10029,7 +10044,7 @@ dependencies = [
  "async-trait",
  "executor-core",
  "executor-primitives",
- "pumpx",
+ "oe-client-pumpx",
  "solana-client",
  "solana-sdk",
  "tokio",
@@ -13940,21 +13955,6 @@ checksum = "0ce5da8ecb62bcd8ec8b7ea19f69a51275e91299be594ea5cc6ef7819e16cd03"
 dependencies = [
  "bytemuck",
  "safe_arch",
-]
-
-[[package]]
-name = "wildmeta-api"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "mockall",
- "parity-scale-codec",
- "reqwest 0.12.24",
- "serde",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
 ]
 
 [[package]]

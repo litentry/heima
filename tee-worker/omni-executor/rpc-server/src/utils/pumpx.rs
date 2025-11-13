@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use pumpx::PumpxApi;
+use oe_client_pumpx::PumpxApi;
 use tracing::{debug, error};
 
 /// Verify a Google authentication code using the Pumpx API
