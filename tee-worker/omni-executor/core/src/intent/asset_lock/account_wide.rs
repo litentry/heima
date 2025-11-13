@@ -14,9 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use super::{AmountType, AssetsLock};
 use parity_scale_codec::{Decode, Encode};
-
-use crate::{AmountType, AssetsLock};
 
 // Manages whether any asset is locked for particular account or not.
 #[derive(Encode, Decode)]
@@ -63,11 +62,10 @@ impl AssetsLock for AccountWideAssetsLock {
 
 #[cfg(test)]
 pub mod tests {
-	use crate::AmountType;
-	use crate::AssetId;
-
 	use super::AccountWideAssetsLock;
-	use crate::AccountAssetLocks;
+	use super::AmountType;
+	use crate::intent::asset_lock::AccountAssetLocks;
+	use crate::intent::asset_lock::AssetId;
 	use heima_primitives::AccountId;
 	use heima_primitives::EthereumToken;
 	use oe_storage::AssetLockStorageKey;

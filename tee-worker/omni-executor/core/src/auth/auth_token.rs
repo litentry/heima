@@ -1,4 +1,4 @@
-use crate::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX, CLIENT_ID_WILDMETA};
+use super::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX, CLIENT_ID_WILDMETA};
 use oe_crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
 use rsa::{
@@ -107,9 +107,8 @@ impl AuthTokenValidator<AuthTokenClaims> for &str {
 
 #[cfg(test)]
 mod tests {
-	use crate::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA};
-
 	use super::*;
+	use crate::auth::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA};
 	use chrono::{Days, Utc};
 	use oe_primitives::{utils::hex::hex_encode, Identity};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};

@@ -1,12 +1,12 @@
 use crate::{
 	detailed_error::DetailedError, error_code::EXTERNAL_API_ERROR_CODE, server::RpcContext,
 };
-use heima_identity_verification::web2::oauth2_common;
 use jsonrpsee::{
 	types::{ErrorCode, ErrorObject},
 	RpcModule,
 };
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::verify::web2::oauth2_common;
 use oe_crypto::hashing::blake2_256;
 use oe_primitives::{Hash, OAuth2Provider, OAuth2VerificationData};
 use oe_storage::{OAuth2StateVerifierStorage, Storage};

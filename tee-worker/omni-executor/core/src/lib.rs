@@ -15,17 +15,21 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod aes256_key_store;
+pub mod auth;
+pub mod config;
 pub mod ecdsa_key_store;
 pub mod ed25519_key_store;
 pub mod event_handler;
 pub mod fetcher;
-pub mod intent_executor;
+pub mod intent;
 pub mod key_store;
 pub mod listener;
 pub mod native_task;
+pub mod oauth;
 pub mod shielding_key_store;
 pub mod sync_checkpoint_repository;
 pub mod types;
+pub mod verify;
 pub mod wallet_metrics;
 
 pub use aes256_key_store::Aes256KeyStore;

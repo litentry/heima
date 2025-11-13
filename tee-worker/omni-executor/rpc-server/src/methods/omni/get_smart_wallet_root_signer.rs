@@ -5,7 +5,7 @@ use crate::{
 use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
 use oe_client_pumpx::pubkey_to_address;
 use oe_client_signer::ChainType;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use serde::Deserialize;
 use tracing::debug;
 

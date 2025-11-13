@@ -16,10 +16,12 @@
 
 use crate::types::Chain;
 use crate::*;
-use intent_token_query::{query_ethereum, query_solana, EthereumAddress, SolanaPubkey};
+use alloy::primitives::Address as EthereumAddress;
 use oe_client_accounting::{AccountingContractApi, Plus};
-use oe_client_ethereum::AlloyRpcProvider;
+use oe_client_ethereum::{query_balance as query_ethereum, AlloyRpcProvider};
+use oe_client_solana::{query_balance as query_solana, SolanaClient as SolanaClientTrait};
 use rust_decimal::Decimal;
+use solana_sdk::pubkey::Pubkey as SolanaPubkey;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;

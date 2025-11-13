@@ -4,11 +4,11 @@ use crate::{
 	utils::validation::{parse_rpc_params, validate_email},
 	Deserialize,
 };
-use heima_identity_verification::web2::email::{
+use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::verify::web2::email::{
 	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
 };
-use jsonrpsee::{types::ErrorObject, RpcModule};
-use oe_core::intent_executor::IntentExecutor;
 use oe_primitives::{Hashable, Identity};
 use oe_storage::{Storage, VerificationCodeStorage};
 use tracing::{debug, error};

@@ -7,13 +7,13 @@ use crate::{
 	Deserialize, Serialize,
 };
 use chrono::{Days, Utc};
-use heima_authentication::{
+use heima_primitives::Identity;
+use jsonrpsee::{core::RpcResult, types::ErrorObject, RpcModule};
+use oe_core::auth::{
 	auth_token::{AuthOptions, AuthTokenClaims},
 	constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
-use heima_primitives::Identity;
-use jsonrpsee::{core::RpcResult, types::ErrorObject, RpcModule};
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::jwt;
 use oe_primitives::{utils::hex::hex_encode, OAuth2Data, OAuth2Provider};
 use tracing::error;

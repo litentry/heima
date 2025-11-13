@@ -11,6 +11,7 @@ hex-literal = { workspace = true }
 libsecp256k1 = { workspace = true }
 mockall = { workspace = true }
 oe-core = { workspace = true }
+oe-primitives = { workspace = true }
 sp-core = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }

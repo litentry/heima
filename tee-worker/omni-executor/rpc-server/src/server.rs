@@ -5,7 +5,6 @@ use crate::{
 	middlewares::{HttpMiddleware, RpcMiddleware},
 	ShieldingKey,
 };
-use config_loader::ConfigLoader;
 use jsonrpsee::{server::Server, RpcModule};
 use oe_client_aa::EntryPointClient;
 use oe_client_binance::BinancePaymasterApi;
@@ -13,7 +12,8 @@ use oe_client_ethereum::AlloyRpcProvider;
 use oe_client_pumpx::PumpxApi;
 use oe_client_signer::SignerClient;
 use oe_client_wildmeta::WildmetaApi;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::config::ConfigLoader;
+use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::aes256::Aes256Key;
 use oe_storage::{LoanRecordStorage, StorageDB, WildmetaTimestampStorage};
 use std::collections::HashMap;

@@ -23,7 +23,7 @@ use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
 use oe_client_pumpx::signer_client::PumpxChainId as _;
 use oe_client_signer::ChainType;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_core::native_task::{PumpxChainId, PumxWalletIndex};
 use serde::Deserialize;
 use serde::Serialize;

@@ -1,15 +1,15 @@
 use crate::{detailed_error::DetailedError, server::RpcContext};
 use base64::Engine;
-use heima_authentication::{
+use oe_core::auth::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,
 	web3::HeimaMessagePayload,
 };
-use heima_identity_verification::web2::{apple, google, oauth2_common};
-use oauth_providers::{
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::oauth::{
 	AppleProviderConfig, GoogleProviderConfig, OAuth2Client, OAuth2ProviderConfig,
 };
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::verify::web2::{apple, google, oauth2_common};
 use oe_crypto::hashing::blake2_256;
 use oe_primitives::{
 	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
@@ -447,7 +447,7 @@ mod tests {
 	use super::*;
 	use alloy_signer::SignerSync;
 	use alloy_signer_local::PrivateKeySigner;
-	use heima_identity_verification::helpers::generate_otp;
+	use oe_core::verify::helpers::generate_otp;
 	use oe_crypto::{ed25519, sr25519, PairTrait};
 	use oe_primitives::{signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity};
 	use tempfile::tempdir;

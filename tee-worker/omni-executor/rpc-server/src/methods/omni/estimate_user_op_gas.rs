@@ -22,7 +22,7 @@ use crate::utils::user_op::convert_to_packed_user_op;
 use crate::utils::validation::{parse_rpc_params, validate_evm_address};
 use alloy::primitives::utils::format_units;
 use jsonrpsee::RpcModule;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_core::types::SerializablePackedUserOperation;
 use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};

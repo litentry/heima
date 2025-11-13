@@ -19,20 +19,21 @@ pub mod error;
 pub mod signer;
 
 use alloy::hex;
-use alloy::network::Ethereum;
-use alloy::network::EthereumWallet;
-use alloy::network::NetworkWallet;
+use alloy::network::{Ethereum, EthereumWallet, NetworkWallet, TransactionBuilder};
 use alloy::primitives::{Address, U256};
-use alloy::providers::Provider;
-use alloy::providers::ProviderBuilder;
-use alloy::rpc::types::state::AccountOverride;
-use alloy::rpc::types::TransactionRequest;
+use alloy::providers::{Provider, ProviderBuilder};
+use alloy::rpc::types::{state::AccountOverride, TransactionRequest};
+use alloy::sol;
+use alloy::sol_types::SolCall;
 use alloy::transports::RpcError;
 use async_trait::async_trait;
 use oe_core::wallet_metrics::WalletBalanceFetcher;
+use oe_primitives::EthereumToken;
 use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::log::error;
+
+sol!("artifacts/IERC20.sol");
 
 pub use error::RpcProviderError;
 
@@ -325,6 +326,29 @@ impl RpcProvider for AlloyRpcProvider {
 		} else {
 			Err(RpcProviderError::NoWallet)
 		}
+	}
+}
+
+/// Query Ethereum balance for native ETH or ERC20 tokens
+pub async fn query_balance<
+	Provider: RpcProvider<Addr = Address, Transaction = TransactionRequest>,
+>(
+	provider: &Provider,
+	account: Address,
+	token: &EthereumToken,
+) -> Result<U256, ()> {
+	match token {
+		EthereumToken::Native => provider.get_balance(account).await.map_err(|_| ()),
+		EthereumToken::ERC20(address) => {
+			let address = address.as_ref().into();
+			let call = IERC20::balanceOfCall { account };
+			let tx = TransactionRequest::default().with_to(address).with_input(call.abi_encode());
+			provider
+				.call(tx)
+				.await
+				.map_err(|_| ())
+				.map(|balance| U256::from_be_slice(&balance))
+		},
 	}
 }
 

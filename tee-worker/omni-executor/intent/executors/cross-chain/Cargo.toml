@@ -17,10 +17,7 @@ tracing = { workspace = true }
 # Local dependencies
 alloy = { workspace = true }
 base58 = { workspace = true }
-heima-authentication = { workspace = true }
 heima-primitives = { workspace = true }
-intent-asset-lock = { workspace = true }
-intent-token-query = { workspace = true }
 oe-client-aa = { workspace = true }
 oe-client-accounting = { workspace = true }
 oe-client-binance = { workspace = true }

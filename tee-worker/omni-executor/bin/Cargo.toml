@@ -24,10 +24,7 @@ tracing-subscriber = { workspace = true }
 url = { workspace = true }
 
 # Local dependencies
-config-loader = { workspace = true }
 cross-chain-intent-executor = { workspace = true }
-heima-identity-verification = { workspace = true }
-intent-asset-lock = { workspace = true }
 mock-server = { workspace = true }
 oe-client-aa = { workspace = true }
 oe-client-accounting = { workspace = true }

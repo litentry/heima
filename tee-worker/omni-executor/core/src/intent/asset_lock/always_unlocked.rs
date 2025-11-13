@@ -16,9 +16,8 @@
 
 // Manages whether any asset is locked for particular account or not.
 
+use super::{AmountType, AssetsLock};
 use parity_scale_codec::{Decode, Encode};
-
-use crate::{AmountType, AssetsLock};
 
 #[derive(Encode, Decode)]
 pub struct AlwaysUnlockedAssetsLock {}

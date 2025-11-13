@@ -14,7 +14,7 @@ use alloy::primitives::{hex, Address};
 use jsonrpsee::RpcModule;
 use oe_client_pumpx::pubkey_to_address;
 use oe_client_signer::ChainType;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_core::types::SerializablePackedUserOperation;
 use oe_primitives::{ChainId, ClientAuth, UserAuth, UserId};
 use oe_storage::WildmetaTimestampStorage;

@@ -2,11 +2,13 @@ pub mod signer;
 
 use async_trait::async_trait;
 use oe_core::wallet_metrics::WalletBalanceFetcher;
+use oe_primitives::SolanaToken;
+use solana_account_decoder_client_types::UiAccountData;
 use solana_client::rpc_response::RpcKeyedAccount;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
 use solana_sdk::{
-	commitment_config::CommitmentConfig, pubkey::Pubkey, signer::Signer as SignerTrait,
-	system_instruction, transaction::Transaction,
+	commitment_config::CommitmentConfig, program_pack::Pack, pubkey::Pubkey,
+	signer::Signer as SignerTrait, system_instruction, transaction::Transaction,
 };
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
@@ -197,6 +199,55 @@ impl SolanaClient for SolanaRpcClient {
 			.get_token_accounts_by_owner(owner, token_account_filter)
 			.await
 			.map_err(|e| error!("Could not get token accounts by owner: {:?}", e))
+	}
+}
+
+/// Query Solana balance for native SOL or SPL tokens
+pub async fn query_balance<Client: SolanaClient>(
+	client: &Client,
+	key: &Pubkey,
+	token: &SolanaToken,
+) -> Result<u64, ()> {
+	match token {
+		SolanaToken::Native => client
+			.get_balance(key)
+			.await
+			.map_err(|e| error!("Could not get solana native balance: {:?}", e)),
+		SolanaToken::SPL(mint) => {
+			let mint: Pubkey = (*mint.as_ref()).into();
+			let accounts = client
+				.get_token_accounts_by_owner(key, TokenAccountsFilter::Mint(mint))
+				.await
+				.map_err(|e| error!("Could not get owner token accounts: {:?}", e))?;
+
+			let mut amount = 0;
+			for account in accounts {
+				match account.account.data {
+					UiAccountData::Json(ref parsed) => {
+						let acc_amount = parsed.parsed["info"]["tokenAmount"]["amount"]
+							.as_str()
+							.ok_or(error!("Could not find amount in token account"))?;
+						let amm = acc_amount
+							.parse::<u64>()
+							.map_err(|e| error!("Could not parse token amount: {:?}", e))?;
+						amount += amm;
+					},
+					UiAccountData::LegacyBinary(_) | UiAccountData::Binary(_, _) => {
+						let decoded = account
+							.account
+							.data
+							.decode()
+							.ok_or(error!("Could not decode binary account"))?;
+						let account = spl_token::state::Account::unpack(&decoded)
+							.map_err(|e| error!("Could not unpack binary account: {:?}", e))?;
+
+						amount += account.amount
+					},
+				}
+			}
+
+			Ok(amount)
+		},
 	}
 }
 

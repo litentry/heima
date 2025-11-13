@@ -29,12 +29,8 @@ tower-http = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
-config-loader = { workspace = true }
-heima-authentication = { workspace = true }
-heima-identity-verification = { workspace = true }
 heima-primitives = { workspace = true }
 heima-utils = { workspace = true }
-oauth-providers = { workspace = true }
 oe-client-aa = { workspace = true }
 oe-client-binance = { workspace = true }
 oe-client-ethereum = { workspace = true }

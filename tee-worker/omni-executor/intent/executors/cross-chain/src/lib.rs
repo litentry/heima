@@ -31,10 +31,6 @@ use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::ruint::ParseError;
 use alloy::primitives::{Address, Signature, U256};
 use async_trait::async_trait;
-use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, CLIENT_ID_HEIMA};
-use intent_asset_lock::precise::PreciseAssetsLock;
-use intent_asset_lock::AccountAssetLocks;
-use intent_asset_lock::AmountType;
 use oe_client_aa::{calculate_omni_account_address, OwnerType};
 use oe_client_accounting::AccountingContractApi;
 use oe_client_binance::spot_trading_api::types::{
@@ -51,7 +47,11 @@ use oe_client_signer::{ChainType, SignerClient};
 use oe_client_solana::{
 	signer::RemoteSigner as RemoteSolanaSigner, SolanaClient as SolanaClientTrait,
 };
-use oe_core::intent_executor::{IntentExecutionResult, IntentExecutor};
+use oe_core::auth::constants::{AUTH_TOKEN_ACCESS_TYPE, CLIENT_ID_HEIMA};
+use oe_core::intent::asset_lock::precise::PreciseAssetsLock;
+use oe_core::intent::asset_lock::AccountAssetLocks;
+use oe_core::intent::asset_lock::AmountType;
+use oe_core::intent::executor::{IntentExecutionResult, IntentExecutor};
 use oe_primitives::AccountId;
 use oe_primitives::ChainAsset;
 use oe_primitives::Intent;
@@ -80,8 +80,8 @@ use utils::{
 	determine_trade_symbol_and_order_side, estimate_payout_amount, get_binance_deposit_info,
 	str_to_u256,
 };
-// use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
-// use intent_asset_lock::AccountAssetLocks;
+// use oe_core::intent::asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
+// use oe_core::intent::asset_lock::AccountAssetLocks;
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<

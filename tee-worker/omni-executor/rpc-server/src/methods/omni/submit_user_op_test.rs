@@ -21,7 +21,7 @@ use crate::utils::validation::{parse_as, parse_rpc_params};
 use alloy::primitives::Address;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_core::types::SerializablePackedUserOperation;
 use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};

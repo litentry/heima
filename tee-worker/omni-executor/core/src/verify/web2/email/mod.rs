@@ -2,7 +2,7 @@ pub mod mailer;
 pub use mailer::{ConsoleMailer, Mailer};
 
 pub fn generate_verification_code() -> String {
-	crate::helpers::generate_otp(6)
+	crate::verify::helpers::generate_otp(6)
 }
 
 pub async fn send_verification_email(

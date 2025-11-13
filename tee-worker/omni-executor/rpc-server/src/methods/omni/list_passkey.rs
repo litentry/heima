@@ -4,7 +4,7 @@ use crate::{
 };
 
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_primitives::UserId;
 use oe_storage::PasskeyStorage;
 

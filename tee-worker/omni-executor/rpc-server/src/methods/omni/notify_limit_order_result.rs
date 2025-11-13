@@ -3,7 +3,7 @@ use crate::{
 	utils::validation::parse_rpc_params, Deserialize,
 };
 use jsonrpsee::RpcModule;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use tracing::{debug, error, info};
 
 #[derive(Debug, Deserialize)]

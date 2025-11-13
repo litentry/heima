@@ -3,7 +3,7 @@ use crate::utils::omni::to_omni_account;
 use crate::utils::validation::parse_rpc_params;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_storage::LoanRecord;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -49,7 +49,6 @@ pub fn register_query_loan_test<
 mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
-	use config_loader::ConfigLoader;
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -57,7 +56,8 @@ mod test {
 	use oe_client_pumpx::PumpxApiClient;
 	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
 	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
-	use oe_core::intent_executor::MockedIntentExecutor;
+	use oe_core::config::ConfigLoader;
+	use oe_core::intent::executor::MockedIntentExecutor;
 	use oe_primitives::utils::hex::hex_encode;
 	use oe_primitives::AccountId;
 	use oe_storage::{

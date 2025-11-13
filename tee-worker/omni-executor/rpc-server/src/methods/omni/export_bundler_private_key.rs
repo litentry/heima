@@ -4,7 +4,7 @@ use crate::{
 };
 use alloy::primitives::keccak256;
 use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::{
 	aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput},
 	ecdsa,
@@ -177,13 +177,13 @@ pub fn register_export_bundler_private_key<
 mod tests {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
-	use config_loader::ConfigLoader;
 	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
 	use oe_client_binance::mocks::MockBinanceApiClient;
 	use oe_client_pumpx::PumpxApiClient;
 	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
 	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
-	use oe_core::intent_executor::MockedIntentExecutor;
+	use oe_core::config::ConfigLoader;
+	use oe_core::intent::executor::MockedIntentExecutor;
 	use oe_crypto::{ecdsa, PairTrait};
 	use oe_primitives::utils::hex::hex_encode;
 	use oe_storage::{StorageDB, WildmetaTimestampStorage};

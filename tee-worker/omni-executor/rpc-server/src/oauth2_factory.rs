@@ -1,4 +1,4 @@
-use config_loader::{ConfigLoader, OAuth2Config};
+use oe_core::config::{ConfigLoader, OAuth2Config};
 use oe_primitives::OAuth2Provider;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -54,7 +54,7 @@ impl OAuth2ConfigFactory {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use config_loader::ConfigLoader;
+	use oe_core::config::ConfigLoader;
 	use oe_primitives::OAuth2Provider;
 
 	#[test]

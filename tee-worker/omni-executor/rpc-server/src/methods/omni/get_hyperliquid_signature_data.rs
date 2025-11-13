@@ -14,7 +14,7 @@ use hyperliquid_rust_sdk::{
 use jsonrpsee::RpcModule;
 use oe_client_pumpx::pubkey_to_address;
 use oe_client_signer::ChainType;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::passkey::{AttestationResult, PasskeyVerifier};
 use oe_primitives::{to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, UserAuth, UserId};
 use oe_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};

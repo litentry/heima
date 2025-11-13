@@ -19,7 +19,7 @@ use crate::server::RpcContext;
 use crate::utils::validation::parse_rpc_params;
 use crate::ErrorCode;
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_primitives::AccountId;
 use oe_storage::{IntentIdStorage, Storage};
 use serde::Deserialize;

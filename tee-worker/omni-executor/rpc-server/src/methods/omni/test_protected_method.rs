@@ -2,7 +2,7 @@ use crate::server::RpcContext;
 use crate::utils::omni::extract_omni_account;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_primitives::utils::hex::hex_encode;
 
 #[cfg(test)]
@@ -25,11 +25,6 @@ pub fn register_test_protected_method<
 mod test {
 	use crate::{start_server, ShieldingKey};
 	use chrono::{Days, Utc};
-	use config_loader::ConfigLoader;
-	use heima_authentication::{
-		auth_token::{AuthOptions, AuthTokenClaims},
-		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
-	};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -37,7 +32,12 @@ mod test {
 	use oe_client_pumpx::PumpxApiClient;
 	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
 	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
-	use oe_core::intent_executor::MockedIntentExecutor;
+	use oe_core::auth::{
+		auth_token::{AuthOptions, AuthTokenClaims},
+		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
+	};
+	use oe_core::config::ConfigLoader;
+	use oe_core::intent::executor::MockedIntentExecutor;
 	use oe_crypto::jwt;
 	use oe_primitives::{utils::hex::hex_encode, UserId};
 	use oe_storage::{StorageDB, WildmetaTimestampStorage};

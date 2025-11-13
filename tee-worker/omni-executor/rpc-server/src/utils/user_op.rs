@@ -28,7 +28,7 @@ use oe_client_aa::calculate_user_operation_hash;
 use oe_client_binance::BinancePaymasterApi;
 use oe_client_hyperliquid::*;
 use oe_client_signer::ChainType;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_core::types::SerializablePackedUserOperation;
 use oe_primitives::utils::hex::decode_hex;
 use oe_primitives::{AccountId, ChainId};

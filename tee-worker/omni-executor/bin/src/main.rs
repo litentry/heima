@@ -19,10 +19,7 @@ use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 use clap::Parser;
 use cli::{Cli, Commands, ExportBundlerKeyArgs};
-use config_loader::ConfigLoader;
 use cross_chain_intent_executor::{Chain, CrossChainIntentExecutor, RpcEndpointRegistry};
-use intent_asset_lock::precise::PreciseAssetsLock;
-use intent_asset_lock::AccountAssetLocks;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use oe_client_accounting::{
 	solana::AccountingContractClient as SolanaAccountingContractClient,
@@ -33,8 +30,11 @@ use oe_client_ethereum::client::EthereumRpcClient;
 use oe_client_pumpx::{pubkey_to_evm_address, pubkey_to_solana_address};
 use oe_client_pumpx::{PumpxApi, PumpxApiClient};
 use oe_client_solana::SolanaRpcClient;
+use oe_core::config::ConfigLoader;
 use oe_core::ecdsa_key_store::EcdsaKeyStore;
 use oe_core::ed25519_key_store::Ed25519KeyStore;
+use oe_core::intent::asset_lock::precise::PreciseAssetsLock;
+use oe_core::intent::asset_lock::AccountAssetLocks;
 use oe_core::key_store::KeyStore;
 use oe_core::shielding_key_store::ShieldingKeyStore;
 use oe_core::wallet_metrics::Wallet;

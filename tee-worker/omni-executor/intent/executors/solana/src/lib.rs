@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 use async_trait::async_trait;
-use oe_core::intent_executor::IntentExecutionResult;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutionResult;
+use oe_core::intent::executor::IntentExecutor;
 use oe_primitives::AccountId;
 use oe_primitives::Intent;
 use oe_primitives::IntentId;

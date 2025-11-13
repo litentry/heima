@@ -19,12 +19,7 @@ use crate::CrossChainIntentExecutor;
 use crate::RpcEndpointRegistry;
 use crate::U256;
 use alloy::primitives::Address;
-use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
-use heima_authentication::constants::CLIENT_ID_PUMPX;
 use heima_primitives::BoundedVec;
-use intent_asset_lock::precise::PreciseAssetsLock;
-use intent_asset_lock::AccountAssetLocks;
-use intent_asset_lock::AmountType;
 use oe_client_accounting::mocks::MockAccountingContractClient;
 use oe_client_accounting::solana::mocks::MockAccountingContractClient as SolanaMockAccountingContractClient;
 use oe_client_accounting::AccountingContractApi;
@@ -46,7 +41,12 @@ use oe_client_pumpx::methods::send_order_tx::SendOrderTxResponseData;
 use oe_client_pumpx::PumpxApi;
 use oe_client_signer::mocks::MockSignerClient;
 use oe_client_signer::SignerClient;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::auth::constants::AUTH_TOKEN_ACCESS_TYPE;
+use oe_core::auth::constants::CLIENT_ID_PUMPX;
+use oe_core::intent::asset_lock::precise::PreciseAssetsLock;
+use oe_core::intent::asset_lock::AccountAssetLocks;
+use oe_core::intent::asset_lock::AmountType;
+use oe_core::intent::executor::IntentExecutor;
 use oe_primitives::ChainAsset;
 use oe_primitives::Identity;
 use oe_primitives::Intent;
@@ -661,7 +661,7 @@ async fn simple_cross_chain_swap_bsc_to_sol() {
 	assert_eq!(
 		account_assets_lock.get_locked_amount(
 			&account_id,
-			intent_asset_lock::AssetId::Solana(SolanaToken::Native)
+			oe_core::intent::asset_lock::AssetId::Solana(SolanaToken::Native)
 		),
 		Ok(AmountType::from(0))
 	);
@@ -967,7 +967,7 @@ async fn instant_payout_cross_chain_swap() {
 	assert_eq!(
 		account_assets_lock.get_locked_amount(
 			&account_id,
-			intent_asset_lock::AssetId::Solana(SolanaToken::Native)
+			oe_core::intent::asset_lock::AssetId::Solana(SolanaToken::Native)
 		),
 		Ok(AmountType::from(0))
 	);
@@ -1285,7 +1285,7 @@ async fn no_instant_payout_if_exported_wallet() {
 	assert_eq!(
 		account_assets_lock.get_locked_amount(
 			&account_id,
-			intent_asset_lock::AssetId::Solana(SolanaToken::Native)
+			oe_core::intent::asset_lock::AssetId::Solana(SolanaToken::Native)
 		),
 		Ok(AmountType::from(0))
 	);

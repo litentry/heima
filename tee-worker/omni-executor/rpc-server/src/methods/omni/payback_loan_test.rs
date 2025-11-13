@@ -7,7 +7,7 @@ use crate::utils::validation::{parse_as, parse_rpc_params};
 use crate::RpcResult;
 use jsonrpsee::RpcModule;
 use oe_client_hyperliquid::*;
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 use oe_core::types::SerializablePackedUserOperation;
 use oe_primitives::AccountId;
 use oe_storage::{LoanState, Storage};

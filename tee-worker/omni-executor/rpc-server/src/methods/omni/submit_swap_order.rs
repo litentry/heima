@@ -3,7 +3,6 @@ use crate::{
 	utils::omni::extract_omni_account, utils::types::RpcResultExt,
 	utils::validation::parse_rpc_params, Decode, Deserialize, RpcResult,
 };
-use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use heima_primitives::{
 	Address20, Address32, BinanceConfig, BoundedVec, ChainAsset, CrossChainSwapProvider,
 	EthereumToken, Intent, PumpxConfig, PumpxOrderType, SingleChainSwapProvider, SolanaToken,
@@ -14,7 +13,8 @@ use jsonrpsee::RpcModule;
 use oe_client_pumpx::methods::common::{OrderInfoResponse, SwapType};
 use oe_client_pumpx::methods::send_order_tx::SendOrderTxResponse;
 use oe_client_pumpx::{constants::*, methods::get_user_trade_info::UserTradeInfoResponse};
-use oe_core::intent_executor::IntentExecutor;
+use oe_core::auth::constants::AUTH_TOKEN_ACCESS_TYPE;
+use oe_core::intent::executor::IntentExecutor;
 use oe_storage::{HeimaJwtStorage, IntentIdStorage, Storage};
 use serde::Serialize;
 use tracing::{debug, error};
