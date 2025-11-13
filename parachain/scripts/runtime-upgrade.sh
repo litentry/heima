@@ -21,7 +21,8 @@ function print_divider() {
 # Download runtime wasm
 print_divider
 echo "Download $1-runtime.compact.compressed.wasm from release tag $3 ..."
-gh release download "$3" -p "$1-runtime.compact.compressed.wasm" -O "$new_wasm" || true
+gh release download "$3" -p "$1-runtime.compact.compressed.wasm" || true
+mv "$1-runtime.compact.compressed.wasm" "$new_wasm"
 
 if [ -f "$new_wasm" ] && [ -s "$new_wasm" ]; then
   ls -l "$new_wasm"
@@ -49,13 +50,17 @@ if [ "$onchain_version" -ge "$release_version" ]; then
   exit 1
 fi
 
-# Start Chopsticks to fork the chain
+# Start Chopsticks to fork the parachain and relaychain in XCM mode
 print_divider
-echo "Forking parachain with Chopsticks ..."
-npx @acala-network/chopsticks@latest --config=$ROOTDIR/parachain/scripts/chopsticks/$1.yml &
+echo "Forking parachain and relaychain with Chopsticks in XCM mode ..."
+npx @acala-network/chopsticks@latest xcm \
+  -r $ROOTDIR/parachain/scripts/chopsticks/paseo-relaychain.yml \
+  -p $ROOTDIR/parachain/scripts/chopsticks/$1.yml &
 chopsticks_pid=$!
-echo "Chopsticks fork parachain PID: $chopsticks_pid"
-sleep 30 # Wait for Chopsticks to initialize
+echo "Chopsticks XCM mode PID: $chopsticks_pid"
+echo "Relay chain endpoint: ws://localhost:9945"
+echo "Parachain ($1) endpoint: ws://localhost:9944"
+sleep 25 # Wait for Chopsticks to initialize
 
 # Check if Chopsticks is running
 if ! ps -p $chopsticks_pid > /dev/null; then
@@ -69,6 +74,7 @@ echo "Performing runtime upgrade ..."
 
 cd "$ROOTDIR/parachain/ts-tests"
 echo "NODE_ENV=ci" > .env
+echo "PARACHAIN_NAME=$1" >> .env
 pnpm install && pnpm run test-runtime-upgrade 2>&1
 
 # Cleanup

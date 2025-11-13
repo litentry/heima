@@ -1,0 +1,22 @@
+endpoint: wss://paseo-rpc.n.dwellir.com
+port: 9945
+db: ./paseo-relaychain-db.sqlite
+runtime-log-level: 3
+mock-signature-host: true
+build-block-mode: Instant
+
+import-storage:
+  System:
+    Account:
+      -
+        -
+          - "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"  # Alice
+        - providers: 1
+          data:
+            free: "100000000000000000000"
+      -
+        -
+          - "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"  # Bob
+        - providers: 1
+          data:
+            free: "100000000000000000000"

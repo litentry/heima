@@ -1,6 +1,6 @@
 endpoint: wss://rpc.heima-parachain.heima.network
 port: 9944
-db: ./new-db.sqlite
+db: ./heima-db.sqlite
 runtime-log-level: 3
 allow-unresolved-imports: true
 mock-signature-host: true
@@ -10,17 +10,21 @@ import-storage:
     Account:
       -
         -
-          - "4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh"
+          - "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"  # Alice
         - providers: 1
           data:
             free: "100000000000000000000"
       -
         -
-          - "49dXob6fj4uh9SKNm4yCuxfnrvcmArxkoUTkNWQPdtoj3Xvn"
+          - "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"  # Bob
         - providers: 1
           data:
             free: "100000000000000000000"
   TechnicalCommittee:
-    Members: ["4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh"]
+    Members: ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]  # Alice
   Council:
-    Members: ["4BCh5fGornubJSotBzw9fJakxmdedQN6JJc5RsY4hsixpYQh", "49dXob6fj4uh9SKNm4yCuxfnrvcmArxkoUTkNWQPdtoj3Xvn"]
+    Members: ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY", "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"]  # Alice, Bob
+
+# Override block weights for testing - allow heavier proposals
+# This simulates what would happen on a relay chain upgrade or with async backing
+build-block-mode: Instant

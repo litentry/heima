@@ -44,27 +44,49 @@ async function waitForEventWithBlockProduction(
 }
 
 async function waitForRuntimeUpgradeWithBlockProduction(
-    api: ApiPromise,
+    parachainApi: ApiPromise,
     oldRuntimeVersion: number,
     maxBlocks = 100
 ): Promise<number> {
-    const header = await api.rpc.chain.getHeader();
-    console.log(`Current block number: ${header.number.toNumber()}`);
-    for (let i = 0; i < maxBlocks; i++) {
-        await api.rpc('dev_newBlock', { count: 1 });
+    // Try to connect to relaychain if available (XCM mode)
+    let relaychainApi: ApiPromise | null = null;
+    try {
+        const relayProvider = new WsProvider('ws://localhost:9945');
+        relaychainApi = await ApiPromise.create({ provider: relayProvider });
+        await relaychainApi.isReady;
+        console.log('Connected to relaychain ✅');
+    } catch (e) {
+        console.log('Relaychain not available, running in single-chain mode');
+    }
 
-        const runtimeVersion = await getRuntimeVersion(api);
+    const header = await parachainApi.rpc.chain.getHeader();
+    console.log(`Current parachain block number: ${header.number.toNumber()}`);
+
+    for (let i = 0; i < maxBlocks; i++) {
+        // Produce blocks on both chains if relaychain is available
+        if (relaychainApi) {
+            await relaychainApi.rpc('dev_newBlock', { count: 1 });
+        }
+        await parachainApi.rpc('dev_newBlock', { count: 1 });
+
+        const runtimeVersion = await getRuntimeVersion(parachainApi);
         console.log(`⏳ Block +${i + 1}: Runtime version = ${runtimeVersion}`);
 
         if (runtimeVersion > oldRuntimeVersion) {
-            const header = await api.rpc.chain.getHeader();
+            const header = await parachainApi.rpc.chain.getHeader();
             console.log(
                 `✅ Runtime upgraded to version ${runtimeVersion} after ${i + 1} blocks at: ${header.number.toNumber()}`
             );
+            if (relaychainApi) {
+                await relaychainApi.disconnect();
+            }
             return runtimeVersion;
         }
     }
 
+    if (relaychainApi) {
+        await relaychainApi.disconnect();
+    }
     throw new Error(`❌ Timeout: runtime not upgraded after ${maxBlocks} blocks`);
 }
 
@@ -117,7 +139,11 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     const old_runtime_version = await getRuntimeVersion(api);
     console.log(`Old runtime version = ${old_runtime_version}`);
 
-    const encoded = api.tx.parachainSystem.authorizeUpgrade(blake2AsHex(wasm), false).method.toHex();
+    // For parachain runtime upgrades, use system.authorizeUpgrade (two-step process)
+    const codeHash = blake2AsHex(wasm);
+    console.log(`Runtime code hash: ${codeHash}`);
+
+    const encoded = api.tx.system.authorizeUpgrade(codeHash).method.toHex();
     const encodedHash = blake2AsHex(encoded);
     console.log(`Preimage hash: ${encodedHash}`);
 
@@ -176,28 +202,94 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     console.log('Waiting for democracy to pass...');
     await waitForEventWithBlockProduction('democracy', 'Passed', api);
 
-    console.log('Waiting for parachainSystem upgrade authorize...');
+    console.log('Democracy passed ✅');
+    console.log('Waiting for system upgrade authorization...');
     await waitForEventWithBlockProduction('system', 'UpgradeAuthorized', api);
 
-    // enact the upgrade
-    const parachainSystemScheduleUpgradeTx = api.tx.parachainSystem.enactAuthorizedUpgrade(wasm);
-    await signAndSend(parachainSystemScheduleUpgradeTx, alice);
+    console.log('Upgrade authorized ✅');
+    console.log('Checking authorized upgrade storage...');
 
-    console.log('Waiting for runtime upgrade to be applied...');
-    await waitForEventWithBlockProduction('parachainSystem', 'ValidationFunctionApplied', api);
+    // Check what's in storage
+    const authorizedUpgrade = await api.query.system.authorizedUpgrade();
+    console.log('Authorized upgrade:', authorizedUpgrade.toHuman());
 
-    const newRuntimeVersion = await waitForRuntimeUpgradeWithBlockProduction(api, old_runtime_version);
+    console.log('Setting up ParachainSystem storage for upgrade...');
+
+    // ParachainSetCode::set_code() requires these storage items:
+    // 1. ValidationData must exist
+    // 2. UpgradeRestrictionSignal must NOT be present (or be Present to allow)
+    // 3. PendingValidationCode must NOT exist
+    // 4. HostConfiguration must exist
+
+    // Check current state
+    const validationData = await api.query.parachainSystem.validationData();
+    const hostConfig = await api.query.parachainSystem.hostConfiguration();
+    const pendingCode = await api.query.parachainSystem.pendingValidationCode();
+
+    console.log('Current ValidationData:', validationData.toHuman() ? 'Present' : 'None');
+    console.log('Current HostConfiguration:', hostConfig.toHuman() ? 'Present' : 'None');
+    console.log('Current PendingValidationCode:', pendingCode.isEmpty ? 'None' : 'Present');
+
+    // Ensure ValidationData and HostConfiguration exist in Chopsticks
+    // These should already be present from the fork, but if not we can't proceed
+    if (!validationData.toHuman()) {
+        console.log('WARNING: ValidationData is missing - upgrade will fail');
+    }
+    if (!hostConfig.toHuman()) {
+        console.log('WARNING: HostConfiguration is missing - upgrade will fail');
+    }
+
+    console.log('Applying authorized upgrade...');
+
+    // Step 2: Apply the authorized upgrade
+    const applyUpgradeTx = api.tx.system.applyAuthorizedUpgrade(wasm);
+
+    // Subscribe to ALL events to see what happens
+    console.log('Subscribing to events...');
+    const eventPromise = subscribeToEvents('system', 'ExtrinsicSuccess', api);
+
+    await signAndSend(applyUpgradeTx, alice);
+    console.log('Apply upgrade transaction sent ✅');
+
+    const events = await eventPromise;
+    console.log('Transaction events:', events.length);
+
+    // Check all system events in the block
+    const allEvents = await api.query.system.events();
+    for (const record of allEvents) {
+        const { event } = record;
+        if (event.section === 'system' || event.section === 'parachainSystem') {
+            console.log(`Event: ${event.section}.${event.method}`, event.data.toHuman());
+        }
+    }
+
+    // Check if code was actually updated
+    const codeAfter = await api.query.system.authorizedUpgrade();
+    console.log('AuthorizedUpgrade after apply:', codeAfter.toHuman());
+
+    console.log('Waiting for runtime upgrade to complete...');
+    // Increased maxBlocks to 200 for relaychain coordination
+    const newRuntimeVersion = await waitForRuntimeUpgradeWithBlockProduction(api, old_runtime_version, 200);
     return newRuntimeVersion;
 }
 describeLitentry('Runtime upgrade test', ``, (context) => {
     step('Running runtime ugprade test', async function () {
+        this.timeout(600000); // 10 minutes
+
         let runtimeVersion: number;
         const wasmPath = path.resolve('/tmp/runtime.wasm');
         const wasm = fs.readFileSync(wasmPath).toString('hex');
 
+        const parachainName = process.env.PARACHAIN_NAME || 'heima';
+        console.log(`Testing runtime upgrade for parachain: ${parachainName}`);
+
         const wsProvider = new WsProvider('ws://localhost:9944');
         const api = await ApiPromise.create({ provider: wsProvider });
         await api.isReady;
+
+        // Set block build mode to Instant for faster testing
+        await api.rpc('dev_setBlockBuildMode', 'Instant');
+        console.log('Block build mode set to Instant ✅');
 
         runtimeVersion = await runtimeupgradeViaGovernance(api, `0x${wasm}`);
         expect(runtimeVersion === (await getRuntimeVersion(api)));
