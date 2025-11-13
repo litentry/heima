@@ -26,7 +26,7 @@ use get_web3_sign_in_message::*;
 
 mod add_wallet;
 use add_wallet::*;
-use executor_core::intent_executor::IntentExecutor;
+use oe_core::intent_executor::IntentExecutor;
 
 mod export_wallet;
 use export_wallet::*;

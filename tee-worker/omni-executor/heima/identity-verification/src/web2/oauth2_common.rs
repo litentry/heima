@@ -1,6 +1,6 @@
 use crate::helpers;
 use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
-use executor_primitives::OAuth2Provider;
+use oe_primitives::OAuth2Provider;
 use serde::de::DeserializeOwned;
 use url::Url;
 

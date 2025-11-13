@@ -1,0 +1,27 @@
+[package]
+name = "oe-core"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+metrics = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"] }
+rand = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true, features = ["sync", "rt"] }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+
+# Local dependencies
+heima-authentication = { workspace = true }
+oe-crypto = { workspace = true }
+oe-primitives = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

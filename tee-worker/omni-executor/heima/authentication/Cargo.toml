@@ -11,8 +11,8 @@ serde = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
-executor-crypto = { workspace = true }
-executor-primitives = { workspace = true }
+oe-crypto = { workspace = true }
+oe-primitives = { workspace = true }
 
 [dev-dependencies]
 chrono = { workspace = true }

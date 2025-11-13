@@ -29,7 +29,7 @@ use alloy::rpc::types::state::AccountOverride;
 use alloy::rpc::types::TransactionRequest;
 use alloy::transports::RpcError;
 use async_trait::async_trait;
-use executor_core::wallet_metrics::WalletBalanceFetcher;
+use oe_core::wallet_metrics::WalletBalanceFetcher;
 use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::log::error;

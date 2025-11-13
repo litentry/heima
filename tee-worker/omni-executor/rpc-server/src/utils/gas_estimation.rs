@@ -18,10 +18,10 @@ use crate::utils::paymaster::calculate_erc20_token_cost;
 use crate::utils::types::GasEstimateResponse;
 use crate::utils::user_op::pack_account_gas_limits;
 use alloy::primitives::{Address, Bytes, U256};
-use executor_primitives::ChainId;
 use oe_client_aa::EntryPointClient;
 use oe_client_binance::BinancePaymasterApi;
 use oe_client_ethereum::AlloyRpcProvider;
+use oe_primitives::ChainId;
 use std::sync::Arc;
 use tracing::{debug, info};
 

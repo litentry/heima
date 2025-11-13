@@ -4,13 +4,13 @@ use crate::{
 	utils::validation::{parse_rpc_params, validate_email},
 	Deserialize,
 };
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{Hashable, Identity};
-use executor_storage::{Storage, VerificationCodeStorage};
 use heima_identity_verification::web2::email::{
 	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
 };
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent_executor::IntentExecutor;
+use oe_primitives::{Hashable, Identity};
+use oe_storage::{Storage, VerificationCodeStorage};
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]

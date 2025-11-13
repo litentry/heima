@@ -1,5 +1,5 @@
 use crate::constants::{CLIENT_ID_HEIMA, CLIENT_ID_PUMPX, CLIENT_ID_WILDMETA};
-use executor_crypto::jwt;
+use oe_crypto::jwt;
 use parity_scale_codec::{Decode, Encode};
 use rsa::{
 	pkcs1::{DecodeRsaPrivateKey, EncodeRsaPublicKey},
@@ -111,7 +111,7 @@ mod tests {
 
 	use super::*;
 	use chrono::{Days, Utc};
-	use executor_primitives::{utils::hex::hex_encode, Identity};
+	use oe_primitives::{utils::hex::hex_encode, Identity};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 
 	#[derive(PartialEq, Debug, Serialize, Deserialize)]

@@ -10,10 +10,10 @@ ruint = { workspace = true, features = ["parity-scale-codec"] }
 tracing = { workspace = true }
 
 # Local dependencies
-executor-core = { workspace = true }
-executor-primitives = { workspace = true }
-executor-storage = { workspace = true }
 heima-primitives = { workspace = true }
+oe-core = { workspace = true }
+oe-primitives = { workspace = true }
+oe-storage = { workspace = true }
 
 
 [dev-dependencies]

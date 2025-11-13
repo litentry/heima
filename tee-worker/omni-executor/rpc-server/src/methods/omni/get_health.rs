@@ -15,8 +15,8 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::server::RpcContext;
-use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent_executor::IntentExecutor;
 
 pub fn register_get_health<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
 	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
@@ -30,8 +30,6 @@ pub fn register_get_health<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 mod test {
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
-	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -39,6 +37,8 @@ mod test {
 	use oe_client_pumpx::PumpxApiClient;
 	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
 	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::intent_executor::MockedIntentExecutor;
+	use oe_storage::{StorageDB, WildmetaTimestampStorage};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::collections::HashMap;
 	use std::sync::Arc;
@@ -63,7 +63,7 @@ mod test {
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
-		let loan_record_storage = Arc::new(executor_storage::LoanRecordStorage::new(db.clone()));
+		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(db.clone()));
 
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 		let aes_key = [0u8; 32];

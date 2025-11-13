@@ -4,11 +4,11 @@ use crate::utils::omni::to_omni_account;
 use crate::utils::types::{RpcOptionExt, RpcResultExt};
 use crate::utils::user_op::submit_corewriter_user_ops;
 use crate::utils::validation::{parse_as, parse_rpc_params};
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::ChainId;
 use jsonrpsee::RpcModule;
 use oe_client_hyperliquid::*;
+use oe_core::intent_executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 

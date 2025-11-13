@@ -11,11 +11,11 @@ members = [
     "clients/wildmeta",
     "contracts/accounting/solana/programs/accounting-contract",
     "config-loader",
-    "executor-crypto",
-    "executor-core",
-    "executor-worker",
-    "executor-storage",
-    "executor-primitives",
+    "crypto",
+    "core",
+    "bin",
+    "storage",
+    "primitives",
     "heima/authentication",
     "heima/identity-verification",
     "intent/asset-lock",
@@ -104,10 +104,6 @@ accounting-contract = { path = "contracts/accounting/solana/programs/accounting-
 config-loader = { path = "config-loader" }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
-executor-core = { path = "executor-core" }
-executor-crypto = { path = "executor-crypto" }
-executor-primitives = { path = "executor-primitives" }
-executor-storage = { path = "executor-storage" }
 heima-authentication = { path = "heima/authentication" }
 heima-identity-verification = { path = "heima/identity-verification" }
 intent-asset-lock = { path = "intent/asset-lock" }
@@ -123,6 +119,10 @@ oe-client-pumpx = { path = "clients/pumpx" }
 oe-client-signer = { path = "clients/signer" }
 oe-client-solana = { path = "clients/solana" }
 oe-client-wildmeta = { path = "clients/wildmeta" }
+oe-core = { path = "core" }
+oe-crypto = { path = "crypto" }
+oe-primitives = { path = "primitives" }
+oe-storage = { path = "storage" }
 rpc-server = { path = "rpc-server" }
 solana-intent-executor = { path = "intent/executors/solana" }
 

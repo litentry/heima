@@ -3,14 +3,14 @@ use crate::{
 	utils::types::RpcResultExt, utils::validation::parse_rpc_params, Deserialize, RpcResult,
 };
 use alloy::primitives::keccak256;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::{
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use oe_core::intent_executor::IntentExecutor;
+use oe_crypto::{
 	aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput},
 	ecdsa,
 };
-use executor_primitives::utils::hex::decode_hex;
-use executor_storage::{Storage, WildmetaTimestampStorage};
-use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use oe_primitives::utils::hex::decode_hex;
+use oe_storage::{Storage, WildmetaTimestampStorage};
 use rsa::Oaep;
 use sha2::Sha256;
 use std::sync::Arc;
@@ -178,15 +178,15 @@ mod tests {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
-	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_crypto::{ecdsa, PairTrait};
-	use executor_primitives::utils::hex::hex_encode;
-	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
 	use oe_client_binance::mocks::MockBinanceApiClient;
 	use oe_client_pumpx::PumpxApiClient;
 	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
 	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::intent_executor::MockedIntentExecutor;
+	use oe_crypto::{ecdsa, PairTrait};
+	use oe_primitives::utils::hex::hex_encode;
+	use oe_storage::{StorageDB, WildmetaTimestampStorage};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::{collections::HashMap, sync::Arc};
 	use tempfile::tempdir;
@@ -220,7 +220,7 @@ mod tests {
 	}
 
 	fn decrypt_response(encrypted: &SerdeAesOutput, aes_key: &Aes256Key) -> Vec<u8> {
-		use executor_crypto::aes256::{aes_decrypt, Aes256KeyNonce, AesOutput};
+		use oe_crypto::aes256::{aes_decrypt, Aes256KeyNonce, AesOutput};
 		let nonce: Aes256KeyNonce =
 			encrypted.nonce.to_vec().try_into().expect("Invalid nonce length");
 		let mut aes_output = AesOutput {
@@ -251,8 +251,7 @@ mod tests {
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage =
 			Arc::new(WildmetaTimestampStorage::new(storage_db.clone()));
-		let loan_record_storage =
-			Arc::new(executor_storage::LoanRecordStorage::new(storage_db.clone()));
+		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(storage_db.clone()));
 
 		let (cross_chain_intent_executor, _) = MockedIntentExecutor::new();
 

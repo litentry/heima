@@ -23,7 +23,7 @@ pub use pumpx_api::*;
 
 use base58::ToBase58;
 use ethers::core::utils::to_checksum;
-use executor_primitives::ChainAsset;
+use oe_primitives::ChainAsset;
 use sp_core::keccak_256;
 use tracing::log::error;
 

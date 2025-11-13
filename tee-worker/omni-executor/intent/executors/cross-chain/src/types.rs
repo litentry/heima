@@ -1,11 +1,11 @@
 use alloy::primitives::U256;
 use async_trait::async_trait;
 use base58::ToBase58;
-use executor_primitives::{ChainAsset, EthereumToken, SolanaToken};
 use oe_client_ethereum::client::EthereumClient;
 use oe_client_ethereum::signer::RemoteSigner as RemoteEvmSigner;
 use oe_client_solana::signer::RemoteSigner as RemoteSolanaSigner;
 use oe_client_solana::SolanaClient as SolanaClientTrait;
+use oe_primitives::{ChainAsset, EthereumToken, SolanaToken};
 use std::{collections::HashMap, sync::Arc};
 
 use rust_decimal::Decimal;

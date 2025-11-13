@@ -15,7 +15,7 @@ solana-sdk = { workspace = true }
 spl-token = { workspace = true }
 tracing = { workspace = true }
 
-executor-primitives = { workspace = true }
+oe-primitives = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

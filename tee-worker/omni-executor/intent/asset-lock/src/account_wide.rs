@@ -68,11 +68,11 @@ pub mod tests {
 
 	use super::AccountWideAssetsLock;
 	use crate::AccountAssetLocks;
-	use executor_storage::AssetLockStorageKey;
-	use executor_storage::Storage;
-	use executor_storage::StorageDB;
 	use heima_primitives::AccountId;
 	use heima_primitives::EthereumToken;
+	use oe_storage::AssetLockStorageKey;
+	use oe_storage::Storage;
+	use oe_storage::StorageDB;
 	use std::sync::Arc;
 	use tempfile::tempdir;
 

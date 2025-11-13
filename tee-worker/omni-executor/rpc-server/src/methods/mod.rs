@@ -1,6 +1,6 @@
 use crate::server::RpcContext;
-use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::RpcModule;
+use oe_core::intent_executor::IntentExecutor;
 
 pub mod omni;
 use omni::*;

@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use executor_core::key_store::KeyStore;
-use executor_crypto::{ecdsa, PairTrait};
+use oe_core::key_store::KeyStore;
+use oe_crypto::{ecdsa, PairTrait};
 
 pub struct AuthKeyStore {
 	path: String,

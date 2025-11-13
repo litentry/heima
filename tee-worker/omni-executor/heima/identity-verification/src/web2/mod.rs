@@ -3,8 +3,8 @@ pub mod email;
 pub mod google;
 pub mod oauth2_common;
 
-use executor_primitives::{Identity, Web2ValidationData};
-use executor_storage::{Storage, StorageDB, VerificationCodeStorage};
+use oe_primitives::{Identity, Web2ValidationData};
+use oe_storage::{Storage, StorageDB, VerificationCodeStorage};
 use std::sync::Arc;
 use tracing::{error, warn};
 

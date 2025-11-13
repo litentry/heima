@@ -11,13 +11,13 @@ use crate::utils::validation::{
 };
 use crate::RpcResult;
 use alloy::primitives::{hex, Address};
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{ChainId, ClientAuth, UserAuth, UserId};
-use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
 use oe_client_pumpx::pubkey_to_address;
 use oe_client_signer::ChainType;
+use oe_core::intent_executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::{ChainId, ClientAuth, UserAuth, UserId};
+use oe_storage::WildmetaTimestampStorage;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error};
@@ -958,7 +958,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_backend_calldata_arbitrum() {
-		use executor_core::types::SerializablePackedUserOperation;
+		use oe_core::types::SerializablePackedUserOperation;
 
 		// Helper function to create ERC20 transfer calldata
 		fn create_erc20_transfer_calldata(recipient: &str, amount: u64) -> String {
@@ -1034,7 +1034,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_backend_calldata_hyperevm() {
-		use executor_core::types::SerializablePackedUserOperation;
+		use oe_core::types::SerializablePackedUserOperation;
 
 		// Helper function to create calldata with proper payload format
 		fn create_test_calldata(action_id: u32, additional_data: &[u8]) -> String {
@@ -1118,7 +1118,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_backend_calldata_wrong_contract() {
-		use executor_core::types::SerializablePackedUserOperation;
+		use oe_core::types::SerializablePackedUserOperation;
 
 		let user_op = SerializablePackedUserOperation {
 			sender: "0x1111111111111111111111111111111111111111".to_string(), // Wrong contract

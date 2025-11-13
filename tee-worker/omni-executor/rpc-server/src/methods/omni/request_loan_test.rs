@@ -5,12 +5,12 @@ use crate::utils::types::{RpcOptionExt, RpcResultExt};
 use crate::utils::user_op::submit_corewriter_user_ops;
 use crate::utils::validation::{parse_as, parse_rpc_params, validate_evm_address};
 use crate::RpcResult;
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{AccountId, ChainId};
-use executor_storage::{LoanState, Storage};
 use jsonrpsee::RpcModule;
 use oe_client_hyperliquid::*;
+use oe_core::intent_executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::{AccountId, ChainId};
+use oe_storage::{LoanState, Storage};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -57,7 +57,7 @@ struct ExecutionContext<'a, CrossChainIntentExecutor: IntentExecutor + Send + Sy
 	wallet_index: u32,
 	hypercore_client: &'a HyperCoreClient,
 	smart_wallet: &'a str,
-	storage_key: &'a executor_storage::loan_record::Key,
+	storage_key: &'a oe_storage::loan_record::Key,
 }
 
 struct SellSpotContext {
@@ -91,7 +91,7 @@ pub fn register_request_loan_test<
 			let smart_wallet = &params.user_operation.sender;
 
 			// Calculate storage_key based on loan_nonce parameter
-			let storage_key = executor_storage::loan_record::Key {
+			let storage_key = oe_storage::loan_record::Key {
 				account_id: omni_account.clone(),
 				nonce: params.loan_nonce.unwrap_or(params.user_operation.nonce as u64),
 			};
@@ -514,7 +514,7 @@ async fn do_sell_spot<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 		.loan_record_storage
 		.create(
 			exec_ctx.storage_key,
-			executor_storage::loan_record::NewLoanRecord {
+			oe_storage::loan_record::NewLoanRecord {
 				collateral_ticker: collateral_ticker.to_string(),
 				collateral_size: collateral_size.to_string(),
 				usdc_sold,

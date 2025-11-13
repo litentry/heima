@@ -27,7 +27,7 @@ use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
 use tracing::log::error;
 
-use executor_primitives::{EthereumToken, SolanaToken};
+use oe_primitives::{EthereumToken, SolanaToken};
 
 sol!("artifacts/IERC20.sol");
 
@@ -161,7 +161,7 @@ pub mod tests {
 	mod tests {
 		use super::*;
 		use alloy::primitives::{Address, U256};
-		use executor_primitives::{EthereumToken, SolanaToken};
+		use oe_primitives::{EthereumToken, SolanaToken};
 		use solana_account_decoder_client_types::{ParsedAccount, UiAccount, UiAccountData};
 		use solana_client::rpc_request::TokenAccountsFilter;
 		use solana_client::rpc_response::RpcKeyedAccount;

@@ -1,7 +1,7 @@
 use crate::*;
 use ::oe_client_pumpx::methods::create_market_order_tx::CreateMarketOrderTxBody;
 use alloy::primitives::ChainId;
-use executor_primitives::PumpxConfig;
+use oe_primitives::PumpxConfig;
 use tracing::{debug, error};
 
 impl<

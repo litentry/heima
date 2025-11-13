@@ -7,13 +7,13 @@ edition = "2021"
 alloy = { workspace = true }
 anyhow = "1.0"
 clap = { workspace = true, features = ["derive"] }
-executor-core = { workspace = true }
-executor-primitives = { workspace = true }
 heima-primitives = { workspace = true }
 hex = { workspace = true }
 oe-client-aa = { workspace = true }
 oe-client-ethereum = { workspace = true }
 oe-client-signer = { workspace = true }
+oe-core = { workspace = true }
+oe-primitives = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

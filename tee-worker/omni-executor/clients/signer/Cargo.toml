@@ -10,7 +10,7 @@ mockall = { workspace = true }
 serde = { workspace = true }
 
 # Local dependencies
-executor-crypto = { workspace = true }
+oe-crypto = { workspace = true }
 
 [lints]
 workspace = true

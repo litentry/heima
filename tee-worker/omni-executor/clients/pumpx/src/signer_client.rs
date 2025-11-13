@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use base_signer_client::{ChainType, SignerClient};
-use executor_crypto::ecdsa;
 use jsonrpsee::core::client::ClientT;
 use jsonrpsee::core::params::ArrayParams;
 use jsonrpsee::core::traits::ToRpcParams;
 use jsonrpsee::http_client::HttpClient;
 use jsonrpsee::server::tracing::error;
+use oe_crypto::ecdsa;
 use rand::rngs::OsRng;
 use rsa::BigUint;
 use rsa::Oaep;
@@ -226,7 +226,7 @@ impl SignerClient for PumpxSignerClient {
 		omni_account: [u8; 32],
 		aes_key: Vec<u8>,
 		wallet_address: String,
-	) -> Result<executor_crypto::aes256::AesOutput, ()> {
+	) -> Result<oe_crypto::aes256::AesOutput, ()> {
 		let client = HttpClient::builder()
 			.build(&self.url)
 			.map_err(|e| error!("Could not create client: {:?}", e))?;
@@ -256,7 +256,7 @@ impl SignerClient for PumpxSignerClient {
 			.request("dex_exportWallet", signed)
 			.await
 			.map_err(|e| println!("Could not export wallet: {:?}", e))?;
-		Ok(executor_crypto::aes256::AesOutput {
+		Ok(oe_crypto::aes256::AesOutput {
 			aad: output.aad,
 			ciphertext: output.ciphertext,
 			nonce: output.nonce,

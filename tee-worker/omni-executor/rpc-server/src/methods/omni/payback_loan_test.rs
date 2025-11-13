@@ -5,12 +5,12 @@ use crate::utils::types::{RpcOptionExt, RpcResultExt};
 use crate::utils::user_op::submit_corewriter_user_ops;
 use crate::utils::validation::{parse_as, parse_rpc_params};
 use crate::RpcResult;
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::AccountId;
-use executor_storage::{LoanState, Storage};
 use jsonrpsee::RpcModule;
 use oe_client_hyperliquid::*;
+use oe_core::intent_executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::AccountId;
+use oe_storage::{LoanState, Storage};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info};
@@ -49,7 +49,7 @@ struct ExecutionContext<'a, CrossChainIntentExecutor: IntentExecutor + Send + Sy
 	wallet_index: u32,
 	hypercore_client: &'a HyperCoreClient,
 	smart_wallet: &'a str,
-	storage_key: &'a executor_storage::loan_record::Key,
+	storage_key: &'a oe_storage::loan_record::Key,
 }
 
 struct CloseHedgeContext {
@@ -91,7 +91,7 @@ pub fn register_payback_loan_test<
 
 			let ctx = Arc::clone(&ctx);
 			let smart_wallet = &params.user_operation.sender;
-			let storage_key = executor_storage::loan_record::Key {
+			let storage_key = oe_storage::loan_record::Key {
 				account_id: omni_account.clone(),
 				nonce: loan_nonce,
 			};
@@ -335,7 +335,7 @@ async fn precheck_close_hedge<CrossChainIntentExecutor: IntentExecutor + Send + 
 	collateral_ticker: &str,
 	hedge_open_cloid: u128,
 	min_expected_account_value_f64: f64,
-	loan_record: &executor_storage::loan_record::LoanRecord,
+	loan_record: &oe_storage::loan_record::LoanRecord,
 ) -> RpcResult<CloseHedgeContext> {
 	// Validate loan state is HedgeOpened
 	if loan_record.state != LoanState::HedgeOpened {

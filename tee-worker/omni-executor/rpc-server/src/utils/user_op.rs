@@ -23,15 +23,15 @@ use crate::utils::paymaster::{
 use crate::utils::types::RpcResultExt;
 use crate::RpcResult;
 use alloy::primitives::{hex, Address, Bytes, FixedBytes, U256};
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::utils::hex::decode_hex;
-use executor_primitives::{AccountId, ChainId};
 use jsonrpsee::types::ErrorObjectOwned;
 use oe_client_aa::calculate_user_operation_hash;
 use oe_client_binance::BinancePaymasterApi;
 use oe_client_hyperliquid::*;
 use oe_client_signer::ChainType;
+use oe_core::intent_executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::utils::hex::decode_hex;
+use oe_primitives::{AccountId, ChainId};
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
@@ -224,7 +224,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 	user_operations: Vec<SerializablePackedUserOperation>,
 	chain_id: ChainId,
 	wallet_index: u32,
-	omni_account: &executor_primitives::AccountId,
+	omni_account: &oe_primitives::AccountId,
 ) -> RpcResult<Option<String>> {
 	// Inlined handler logic from handle_submit_user_op
 	info!(

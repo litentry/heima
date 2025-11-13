@@ -19,11 +19,11 @@ use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::submit_user_ops;
 use crate::utils::validation::{parse_as, parse_rpc_params};
 use alloy::primitives::Address;
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::ChainId;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
+use oe_core::intent_executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 

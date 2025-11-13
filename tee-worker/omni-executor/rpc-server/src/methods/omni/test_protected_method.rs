@@ -1,9 +1,9 @@
 use crate::server::RpcContext;
 use crate::utils::omni::extract_omni_account;
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::utils::hex::hex_encode;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
+use oe_core::intent_executor::IntentExecutor;
+use oe_primitives::utils::hex::hex_encode;
 
 #[cfg(test)]
 pub fn register_test_protected_method<
@@ -26,10 +26,6 @@ mod test {
 	use crate::{start_server, ShieldingKey};
 	use chrono::{Days, Utc};
 	use config_loader::ConfigLoader;
-	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_crypto::jwt;
-	use executor_primitives::{utils::hex::hex_encode, UserId};
-	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use heima_authentication::{
 		auth_token::{AuthOptions, AuthTokenClaims},
 		constants::{AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA},
@@ -41,6 +37,10 @@ mod test {
 	use oe_client_pumpx::PumpxApiClient;
 	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
 	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::intent_executor::MockedIntentExecutor;
+	use oe_crypto::jwt;
+	use oe_primitives::{utils::hex::hex_encode, UserId};
+	use oe_storage::{StorageDB, WildmetaTimestampStorage};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::collections::HashMap;
 	use std::sync::Arc;
@@ -65,7 +65,7 @@ mod test {
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
-		let loan_record_storage = Arc::new(executor_storage::LoanRecordStorage::new(db.clone()));
+		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(db.clone()));
 
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 		let aes_key = [0u8; 32];

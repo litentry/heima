@@ -1,10 +1,10 @@
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::validation::parse_rpc_params;
-use executor_core::intent_executor::IntentExecutor;
-use executor_storage::LoanRecord;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
+use oe_core::intent_executor::IntentExecutor;
+use oe_storage::LoanRecord;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
@@ -50,12 +50,6 @@ mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
 	use config_loader::ConfigLoader;
-	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_primitives::utils::hex::hex_encode;
-	use executor_primitives::AccountId;
-	use executor_storage::{
-		loan_record::LoanState, LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage,
-	};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
@@ -63,6 +57,12 @@ mod test {
 	use oe_client_pumpx::PumpxApiClient;
 	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
 	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::intent_executor::MockedIntentExecutor;
+	use oe_primitives::utils::hex::hex_encode;
+	use oe_primitives::AccountId;
+	use oe_storage::{
+		loan_record::LoanState, LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage,
+	};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
 	use std::collections::HashMap;
 	use std::sync::Arc;
@@ -96,8 +96,7 @@ mod test {
 			state: LoanState::HedgeOpened,
 		};
 
-		let storage_key =
-			executor_storage::loan_record::Key { account_id: omni_account.clone(), nonce };
+		let storage_key = oe_storage::loan_record::Key { account_id: omni_account.clone(), nonce };
 		loan_record_storage.insert(&storage_key, test_record.clone()).unwrap();
 
 		// Start server
@@ -240,10 +239,8 @@ mod test {
 		];
 
 		for (nonce, record) in &test_records {
-			let storage_key = executor_storage::loan_record::Key {
-				account_id: omni_account.clone(),
-				nonce: *nonce,
-			};
+			let storage_key =
+				oe_storage::loan_record::Key { account_id: omni_account.clone(), nonce: *nonce };
 			loan_record_storage.insert(&storage_key, record.clone()).unwrap();
 		}
 
@@ -323,7 +320,7 @@ mod test {
 
 		// Store a record with nonce 100
 		let storage_key =
-			executor_storage::loan_record::Key { account_id: omni_account.clone(), nonce: 100 };
+			oe_storage::loan_record::Key { account_id: omni_account.clone(), nonce: 100 };
 		let test_record = LoanRecord {
 			collateral_ticker: "BTC".to_string(),
 			collateral_size: "1.0".to_string(),
@@ -407,7 +404,7 @@ mod test {
 		// Store a record for a different account
 		let existing_account = AccountId::from([4u8; 32]);
 		let storage_key =
-			executor_storage::loan_record::Key { account_id: existing_account.clone(), nonce: 100 };
+			oe_storage::loan_record::Key { account_id: existing_account.clone(), nonce: 100 };
 		let test_record = LoanRecord {
 			collateral_ticker: "BTC".to_string(),
 			collateral_size: "1.0".to_string(),

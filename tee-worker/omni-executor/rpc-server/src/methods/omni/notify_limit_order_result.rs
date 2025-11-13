@@ -2,8 +2,8 @@ use crate::{
 	detailed_error::DetailedError, server::RpcContext, utils::omni::extract_omni_account,
 	utils::validation::parse_rpc_params, Deserialize,
 };
-use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::RpcModule;
+use oe_core::intent_executor::IntentExecutor;
 use tracing::{debug, error, info};
 
 #[derive(Debug, Deserialize)]

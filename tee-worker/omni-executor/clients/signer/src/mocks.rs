@@ -39,6 +39,6 @@ mock! {
 			omni_account: [u8; 32],
 			aes_key: Vec<u8>,
 			wallet_address: String,
-		) -> Result<executor_crypto::aes256::AesOutput, ()>;
+		) -> Result<oe_crypto::aes256::AesOutput, ()>;
 	}
 }

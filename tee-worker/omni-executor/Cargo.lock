@@ -2579,9 +2579,6 @@ dependencies = [
  "async-trait",
  "base58",
  "bincode",
- "executor-core",
- "executor-primitives",
- "executor-storage",
  "heima-authentication",
  "heima-primitives",
  "hex",
@@ -2595,6 +2592,9 @@ dependencies = [
  "oe-client-pumpx",
  "oe-client-signer",
  "oe-client-solana",
+ "oe-core",
+ "oe-primitives",
+ "oe-storage",
  "parity-scale-codec",
  "reqwest 0.12.24",
  "rust_decimal",
@@ -3493,11 +3493,11 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "executor-core",
- "executor-primitives",
  "futures",
  "mockall",
  "oe-client-ethereum",
+ "oe-core",
+ "oe-primitives",
  "tokio",
  "tracing",
 ]
@@ -3864,82 +3864,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "executor-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "executor-crypto",
- "executor-primitives",
- "heima-authentication",
- "metrics",
- "parity-scale-codec",
- "rand 0.8.5",
- "regex",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid 1.18.1",
-]
-
-[[package]]
-name = "executor-crypto"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "chrono",
- "ciborium",
- "ethers",
- "hex",
- "jsonwebtoken 9.3.1",
- "p256",
- "parity-scale-codec",
- "rand 0.8.5",
- "ring 0.17.14",
- "rsa",
- "secp256k1 0.29.1",
- "serde",
- "serde_json",
- "serde_with",
- "sha2 0.10.9",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing",
-]
-
-[[package]]
-name = "executor-primitives"
-version = "0.1.0"
-dependencies = [
- "base58",
- "base64 0.22.1",
- "bitcoin",
- "executor-crypto",
- "heima-primitives",
- "heima-utils",
- "hex",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing",
-]
-
-[[package]]
-name = "executor-storage"
-version = "0.1.0"
-dependencies = [
- "executor-crypto",
- "executor-primitives",
- "parity-scale-codec",
- "rocksdb",
- "serde",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "executor-worker"
 version = "0.1.0"
 dependencies = [
@@ -3948,10 +3872,6 @@ dependencies = [
  "config-loader",
  "cross-chain-intent-executor",
  "ethers",
- "executor-core",
- "executor-crypto",
- "executor-primitives",
- "executor-storage",
  "heima-identity-verification",
  "hex",
  "intent-asset-lock",
@@ -3966,6 +3886,10 @@ dependencies = [
  "oe-client-signer",
  "oe-client-solana",
  "oe-client-wildmeta",
+ "oe-core",
+ "oe-crypto",
+ "oe-primitives",
+ "oe-storage",
  "rand 0.8.5",
  "rpc-server",
  "rsa",
@@ -4843,8 +4767,8 @@ name = "heima-authentication"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "executor-crypto",
- "executor-primitives",
+ "oe-crypto",
+ "oe-primitives",
  "parity-scale-codec",
  "rand 0.8.5",
  "rsa",
@@ -4858,10 +4782,10 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
- "executor-crypto",
- "executor-primitives",
- "executor-storage",
  "oauth-providers",
+ "oe-crypto",
+ "oe-primitives",
+ "oe-storage",
  "parity-scale-codec",
  "rand 0.8.5",
  "regex",
@@ -5530,10 +5454,10 @@ dependencies = [
 name = "intent-asset-lock"
 version = "0.1.0"
 dependencies = [
- "executor-core",
- "executor-primitives",
- "executor-storage",
  "heima-primitives",
+ "oe-core",
+ "oe-primitives",
+ "oe-storage",
  "parity-scale-codec",
  "ruint",
  "rust_decimal",
@@ -5547,11 +5471,11 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "base64 0.22.1",
- "executor-primitives",
  "hex-literal",
  "mockall",
  "oe-client-ethereum",
  "oe-client-solana",
+ "oe-primitives",
  "serde_json",
  "solana-account-decoder-client-types",
  "solana-client",
@@ -6784,10 +6708,10 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "ciborium",
- "executor-primitives",
  "heima-primitives",
  "mockall",
  "oe-client-ethereum",
+ "oe-primitives",
  "rand 0.8.5",
  "regex",
  "sha2 0.10.9",
@@ -6837,12 +6761,12 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "executor-core",
  "hex-literal",
  "libsecp256k1 0.7.2",
  "mock-server",
  "mockall",
  "oe-client-signer",
+ "oe-core",
  "serde_json",
  "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.17",
@@ -6857,8 +6781,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "ethabi",
- "executor-primitives",
  "hex",
+ "oe-primitives",
  "reqwest 0.12.24",
  "serde",
  "serde_json",
@@ -6873,14 +6797,14 @@ dependencies = [
  "async-trait",
  "base58",
  "ethers",
- "executor-core",
- "executor-crypto",
- "executor-primitives",
  "hex",
  "jsonrpsee",
  "libsecp256k1 0.7.2",
  "mockall",
  "oe-client-signer",
+ "oe-core",
+ "oe-crypto",
+ "oe-primitives",
  "parity-scale-codec",
  "rand 0.8.5",
  "reqwest 0.12.24",
@@ -6900,8 +6824,8 @@ name = "oe-client-signer"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "executor-crypto",
  "mockall",
+ "oe-crypto",
  "serde",
 ]
 
@@ -6910,11 +6834,11 @@ name = "oe-client-solana"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "executor-core",
  "mock-server",
  "mockall",
  "oe-client-pumpx",
  "oe-client-signer",
+ "oe-core",
  "solana-client",
  "solana-sdk",
  "spl-associated-token-account",
@@ -6939,6 +6863,82 @@ dependencies = [
 ]
 
 [[package]]
+name = "oe-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "heima-authentication",
+ "metrics",
+ "oe-crypto",
+ "oe-primitives",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "regex",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid 1.18.1",
+]
+
+[[package]]
+name = "oe-crypto"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "ciborium",
+ "ethers",
+ "hex",
+ "jsonwebtoken 9.3.1",
+ "p256",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "ring 0.17.14",
+ "rsa",
+ "secp256k1 0.29.1",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "sha2 0.10.9",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing",
+]
+
+[[package]]
+name = "oe-primitives"
+version = "0.1.0"
+dependencies = [
+ "base58",
+ "base64 0.22.1",
+ "bitcoin",
+ "heima-primitives",
+ "heima-utils",
+ "hex",
+ "oe-crypto",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sp-core 35.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing",
+]
+
+[[package]]
+name = "oe-storage"
+version = "0.1.0"
+dependencies = [
+ "oe-crypto",
+ "oe-primitives",
+ "parity-scale-codec",
+ "rocksdb",
+ "serde",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "oid-registry"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6954,13 +6954,13 @@ dependencies = [
  "alloy",
  "anyhow",
  "clap",
- "executor-core",
- "executor-primitives",
  "heima-primitives",
  "hex",
  "oe-client-aa",
  "oe-client-ethereum",
  "oe-client-signer",
+ "oe-core",
+ "oe-primitives",
  "reqwest 0.12.24",
  "serde",
  "serde_json",
@@ -8352,10 +8352,6 @@ dependencies = [
  "config-loader",
  "email_address",
  "ethers",
- "executor-core",
- "executor-crypto",
- "executor-primitives",
- "executor-storage",
  "heima-authentication",
  "heima-identity-verification",
  "heima-primitives",
@@ -8372,6 +8368,10 @@ dependencies = [
  "oe-client-pumpx",
  "oe-client-signer",
  "oe-client-wildmeta",
+ "oe-core",
+ "oe-crypto",
+ "oe-primitives",
+ "oe-storage",
  "parity-scale-codec",
  "rand 0.8.5",
  "rsa",
@@ -10042,9 +10042,9 @@ name = "solana-intent-executor"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "executor-core",
- "executor-primitives",
  "oe-client-pumpx",
+ "oe-core",
+ "oe-primitives",
  "solana-client",
  "solana-sdk",
  "tokio",

@@ -17,10 +17,10 @@ tracing = { workspace = true }
 url = { workspace = true }
 
 # Local dependencies
-executor-crypto = { workspace = true }
-executor-primitives = { workspace = true }
-executor-storage = { workspace = true }
 oauth-providers = { workspace = true }
+oe-crypto = { workspace = true }
+oe-primitives = { workspace = true }
+oe-storage = { workspace = true }
 
 [lints]
 workspace = true

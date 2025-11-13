@@ -26,9 +26,9 @@ url = { workspace = true }
 
 # Local dependencies
 base-signer-client = { package = "oe-client-signer", path = "../signer" }
-executor-core = { workspace = true }
-executor-crypto = { workspace = true }
-executor-primitives = { workspace = true }
+oe-core = { workspace = true }
+oe-crypto = { workspace = true }
+oe-primitives = { workspace = true }
 sp-core = { workspace = true }
 
 [lints]

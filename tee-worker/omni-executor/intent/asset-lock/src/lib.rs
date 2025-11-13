@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use executor_primitives::AccountId;
-use executor_storage::{AssetLockStorage, AssetLockStorageKey};
-use executor_storage::{Storage, StorageDB};
 use heima_primitives::ChainAsset;
+use oe_primitives::AccountId;
+use oe_storage::{AssetLockStorage, AssetLockStorageKey};
+use oe_storage::{Storage, StorageDB};
 use parity_scale_codec::Decode;
 use parity_scale_codec::Encode;
 use ruint::Uint;

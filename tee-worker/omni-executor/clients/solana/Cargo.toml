@@ -15,9 +15,9 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
-executor-core = { workspace = true }
 oe-client-pumpx = { workspace = true }
 oe-client-signer = { workspace = true }
+oe-core = { workspace = true }
 
 [lints]
 workspace = true

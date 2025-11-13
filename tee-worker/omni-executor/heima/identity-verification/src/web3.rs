@@ -1,4 +1,4 @@
-use executor_primitives::{utils::hex::hex_encode, Identity, Web3ValidationData};
+use oe_primitives::{utils::hex::hex_encode, Identity, Web3ValidationData};
 
 // This function validates the signature with both the raw message and its prettified format. Any of them is valid.
 // The prettified version was introduced to extend the support for utf-8 signatures for browser wallets that

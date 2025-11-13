@@ -16,7 +16,7 @@ oe-client-ethereum = { workspace = true }
 
 [dev-dependencies]
 heima-primitives = { workspace = true }
-executor-primitives = { workspace = true }
+oe-primitives = { workspace = true }
 test-log = { workspace = true }
 oe-client-ethereum = { workspace = true, features = ["mocks"] }
 mockall = { workspace = true }

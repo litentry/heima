@@ -2,7 +2,7 @@
 pub mod mocks;
 
 use async_trait::async_trait;
-use executor_crypto::aes256::AesOutput;
+use oe_crypto::aes256::AesOutput;
 use serde::Deserialize;
 use serde::Serialize;
 

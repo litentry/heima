@@ -1,5 +1,5 @@
 use alloy::primitives::Address;
-use executor_primitives::utils::hex::hex_encode;
+use oe_primitives::utils::hex::hex_encode;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn generate_cloid() -> u128 {

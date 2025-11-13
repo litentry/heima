@@ -3,10 +3,10 @@ use crate::{
 	verify_auth::verify_auth, Deserialize, Serialize,
 };
 
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{to_omni_auth, UserAuth, UserId};
-use executor_storage::PasskeyStorage;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent_executor::IntentExecutor;
+use oe_primitives::{to_omni_auth, UserAuth, UserId};
+use oe_storage::PasskeyStorage;
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

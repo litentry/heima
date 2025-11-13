@@ -1132,9 +1132,9 @@ pub mod test {
 	use alloy::signers::local::PrivateKeySigner;
 	use alloy::signers::Signer;
 	use alloy::sol_types::SolCall;
-	use executor_primitives::UserId;
 	use oe_client_ethereum::mocks::MockRpcProvider;
 	use oe_client_ethereum::{AlloyRpcProvider, RpcProvider};
+	use oe_primitives::UserId;
 	use std::str::FromStr;
 	use std::sync::Arc;
 	use test_log::test;

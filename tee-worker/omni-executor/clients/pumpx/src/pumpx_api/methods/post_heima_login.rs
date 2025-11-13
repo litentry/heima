@@ -1,4 +1,4 @@
-use executor_primitives::{ClientAuth, UserId};
+use oe_primitives::{ClientAuth, UserId};
 use parity_scale_codec::{Decode, Encode};
 use reqwest::Error;
 use serde::{Deserialize, Serialize};

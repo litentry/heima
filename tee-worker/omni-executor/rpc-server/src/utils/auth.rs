@@ -2,17 +2,17 @@ use crate::utils::user_op::convert_to_packed_user_op;
 use crate::RpcResult;
 use crate::{error_code::AUTH_VERIFICATION_FAILED_CODE, ErrorCode};
 use alloy::primitives::Address;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_crypto::ecdsa;
-use executor_primitives::{
+use heima_primitives::{Address20, Identity};
+use jsonrpsee::types::ErrorObject;
+use oe_client_aa::calculate_user_operation_hash;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_crypto::ecdsa;
+use oe_primitives::{
 	signature::{EthereumSignature, HeimaMultiSignature},
 	utils::hex::decode_hex,
 	ChainId,
 };
-use executor_storage::{Storage, WildmetaTimestampStorage};
-use heima_primitives::{Address20, Identity};
-use jsonrpsee::types::ErrorObject;
-use oe_client_aa::calculate_user_operation_hash;
+use oe_storage::{Storage, WildmetaTimestampStorage};
 use std::sync::Arc;
 use tracing::error;
 
@@ -147,7 +147,7 @@ pub fn verify_payload_timestamp(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use executor_storage::StorageDB;
+	use oe_storage::StorageDB;
 	use tempfile::tempdir;
 
 	#[test]
@@ -269,7 +269,7 @@ mod tests {
 
 	#[test]
 	fn test_verify_wildmeta_backend_signature_invalid_signature() {
-		use executor_core::types::SerializablePackedUserOperation;
+		use oe_core::types::SerializablePackedUserOperation;
 
 		// Create a test user operation
 		let user_op = SerializablePackedUserOperation {
@@ -305,11 +305,9 @@ mod tests {
 	#[test]
 	fn test_wildmeta_backend_valid_signature_verification() {
 		use alloy::primitives::{keccak256, Address};
-		use executor_core::types::SerializablePackedUserOperation;
-		use executor_crypto::secp256k1::{
-			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
-		};
 		use oe_client_aa::calculate_user_operation_hash;
+		use oe_core::types::SerializablePackedUserOperation;
+		use oe_crypto::secp256k1::{secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign};
 
 		// Create a test private key (32 bytes)
 		let private_key: [u8; 32] = [
@@ -374,11 +372,9 @@ mod tests {
 	#[test]
 	fn test_wildmeta_backend_multiple_operations_signature_verification() {
 		use alloy::primitives::{keccak256, Address};
-		use executor_core::types::SerializablePackedUserOperation;
-		use executor_crypto::secp256k1::{
-			secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign,
-		};
 		use oe_client_aa::calculate_user_operation_hash;
+		use oe_core::types::SerializablePackedUserOperation;
+		use oe_crypto::secp256k1::{secp256k1_ecdsa_recover_compressed, secp256k1_ecdsa_sign};
 
 		let private_key: [u8; 32] = [
 			0x47, 0xf7, 0x8f, 0x59, 0x81, 0x2d, 0x6d, 0x1f, 0x2c, 0x8a, 0x65, 0x04, 0x19, 0x0d,
@@ -467,9 +463,9 @@ mod tests {
 	#[test]
 	fn test_wildmeta_backend_invalid_signature_wrong_key() {
 		use alloy::primitives::{keccak256, Address};
-		use executor_core::types::SerializablePackedUserOperation;
-		use executor_crypto::secp256k1::secp256k1_ecdsa_sign;
 		use oe_client_aa::calculate_user_operation_hash;
+		use oe_core::types::SerializablePackedUserOperation;
+		use oe_crypto::secp256k1::secp256k1_ecdsa_sign;
 
 		// Create a test private key
 		let private_key: [u8; 32] = [

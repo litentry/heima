@@ -2,8 +2,8 @@ pub mod helpers;
 pub mod web2;
 pub mod web3;
 
-use executor_crypto::hashing::blake2_256;
-use executor_primitives::Identity;
+use oe_crypto::hashing::blake2_256;
+use oe_primitives::Identity;
 use parity_scale_codec::Encode;
 
 // verification message format:

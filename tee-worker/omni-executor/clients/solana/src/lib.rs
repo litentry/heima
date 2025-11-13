@@ -1,7 +1,7 @@
 pub mod signer;
 
 use async_trait::async_trait;
-use executor_core::wallet_metrics::WalletBalanceFetcher;
+use oe_core::wallet_metrics::WalletBalanceFetcher;
 use solana_client::rpc_response::RpcKeyedAccount;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
 use solana_sdk::{

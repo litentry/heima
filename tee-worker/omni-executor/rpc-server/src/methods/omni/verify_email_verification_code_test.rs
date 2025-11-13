@@ -3,9 +3,9 @@ use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
 use crate::utils::validation::parse_rpc_params;
 use crate::verify_auth::verify_email_authentication;
 use crate::RpcContext;
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{UserAuth, UserId};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent_executor::IntentExecutor;
+use oe_primitives::{UserAuth, UserId};
 use tracing::error;
 
 #[derive(Debug, serde::Deserialize)]

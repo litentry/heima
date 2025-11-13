@@ -1,5 +1,5 @@
 use config_loader::{ConfigLoader, OAuth2Config};
-use executor_primitives::OAuth2Provider;
+use oe_primitives::OAuth2Provider;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -55,7 +55,7 @@ impl OAuth2ConfigFactory {
 mod tests {
 	use super::*;
 	use config_loader::ConfigLoader;
-	use executor_primitives::OAuth2Provider;
+	use oe_primitives::OAuth2Provider;
 
 	#[test]
 	fn test_oauth2_factory_caching_google() {

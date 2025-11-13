@@ -10,9 +10,9 @@ async-trait = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
-executor-core = { workspace = true }
-executor-primitives = { workspace = true }
 oe-client-ethereum = { workspace = true }
+oe-core = { workspace = true }
+oe-primitives = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
