@@ -7,6 +7,7 @@ use executor_core::intent_executor::IntentExecutor;
 use executor_primitives::UserId;
 use executor_storage::PasskeyStorage;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use tracing::debug;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ListPasskeyParams {

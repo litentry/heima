@@ -402,6 +402,8 @@ pub fn register_get_hyperliquid_signature_data<
 				},
 			};
 
+			debug!("main_address: {:?}", main_address);
+
 			Ok(GetHyperliquidSignatureDataResponse {
 				main_address,
 				hyperliquid_signature_data: HyperliquidSignatureData { action, nonce, signature },
