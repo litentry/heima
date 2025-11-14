@@ -78,7 +78,7 @@ impl PasskeyVerifier {
 	pub fn verify_client_data_json<F>(
 		client_data_json: &str,
 		omni_account: &[u8; 32],
-		expected_origin: &str,
+		allowed_origins: &[&str],
 		expected_type: &str,
 		verify_and_consume_challenge: F,
 	) -> Result<(), PasskeyError>
@@ -88,8 +88,8 @@ impl PasskeyVerifier {
 		// Parse client data JSON
 		let client_data = Self::parse_client_data_json(client_data_json)?;
 
-		// Verify origin
-		if client_data.origin != expected_origin {
+		// Verify origin against the allowed origins pool
+		if !allowed_origins.iter().any(|&origin| origin == client_data.origin) {
 			return Err(PasskeyError::OriginVerificationFailed);
 		}
 

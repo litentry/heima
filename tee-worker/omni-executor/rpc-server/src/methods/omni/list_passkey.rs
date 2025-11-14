@@ -7,6 +7,7 @@ use jsonrpsee::{types::ErrorObject, RpcModule};
 use oe_core::intent::executor::IntentExecutor;
 use oe_primitives::UserId;
 use oe_storage::PasskeyStorage;
+use tracing::debug;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ListPasskeyParams {
@@ -33,6 +34,8 @@ pub fn register_list_passkey<CrossChainIntentExecutor: IntentExecutor + Send + S
 	module
 		.register_async_method("omni_listPasskey", |params, ctx, _| async move {
 			let params = parse_rpc_params::<ListPasskeyParams>(params)?;
+
+			debug!("Received omni_listPasskey, params: {:?}", params);
 
 			let omni_account = params
 				.user_id
