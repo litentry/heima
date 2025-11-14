@@ -48,7 +48,7 @@ updates:
       - "/tee-worker/omni-executor/client-sdk"
       - "/tee-worker/omni-executor/ts-tests"
       - "/tee-worker/omni-executor/ts-tests/integration-tests"
-      - "/tee-worker/omni-executor/accounting-contract/solana"
+      - "/tee-worker/omni-executor/contracts/accounting/solana"
     labels: ["automated-pr"]
     groups:
       typescript-dependencies:

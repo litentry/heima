@@ -3,10 +3,10 @@ use crate::{
 	Deserialize, Serialize,
 };
 
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::UserId;
-use executor_storage::PasskeyStorage;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::UserId;
+use oe_storage::PasskeyStorage;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ListPasskeyParams {

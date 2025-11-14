@@ -1,0 +1,533 @@
+// Copyright 2020-2024 Trust Computing GmbH.
+// This file is part of Litentry.
+//
+// Litentry is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Litentry is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
+
+use std::collections::HashMap;
+use std::str::FromStr;
+use tracing::{info, warn};
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MailerType {
+	Sendgrid,
+	Console,
+}
+
+impl FromStr for MailerType {
+	type Err = String;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"sendgrid" => Ok(MailerType::Sendgrid),
+			"console" => Ok(MailerType::Console),
+			_ => Err(format!("Invalid mailer type: {}", s)),
+		}
+	}
+}
+
+const DEFAULT_MAILER_TYPE: &str = "sendgrid";
+const DEFAULT_MAILER_API_KEY: &str = "";
+const DEFAULT_MAILER_FROM_EMAIL: &str = "no-reply@example.com";
+const DEFAULT_MAILER_FROM_NAME: &str = "Heima Verify";
+const DEFAULT_ETHEREUM_URL: &str = "https://eth-mainnet.g.alchemy.com/v2/";
+const DEFAULT_SOLANA_URL: &str = "https://solana-mainnet.g.alchemy.com/v2/";
+const DEFAULT_BSC_URL: &str = "https://bnb-mainnet.g.alchemy.com/v2/";
+const DEFAULT_BSC_TESTNET_URL: &str = "https://bnb-testnet.g.alchemy.com/v2/"; // Optional
+const DEFAULT_ARBITRUM_URL: &str = "https://arb-mainnet.g.alchemy.com/v2/";
+const DEFAULT_ARBITRUM_TESTNET_URL: &str = "https://arb-sepolia.g.alchemy.com/v2/"; // Optional
+const DEFAULT_HYPEREVM_URL: &str = "https://rpc.hyperevm.org";
+const DEFAULT_HYPEREVM_TESTNET_URL: &str = "https://testnet-rpc.hyperevm.org"; // Optional
+const DEFAULT_BASE_URL: &str = "https://base.drpc.org";
+const DEFAULT_PUMPX_API_BASE_URL: &str = "https://test-dex-api.heima.network";
+const DEFAULT_PUMPX_SIGNER_URL: &str = "https://dev-dex-signer.heima.network";
+const DEFAULT_PUMPX_WORKER_URL: &str = "wss://dev-dex-worker.heima.network";
+const DEFAULT_BINANCE_API_KEY: &str = "";
+const DEFAULT_BINANCE_API_SECRET: &str = "";
+const DEFAULT_BINANCE_API_BASE_URL: &str = "https://api.binance.com";
+const DEFAULT_OMNI_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
+const DEFAULT_ENTRY_POINT_ADDRESS: &str = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const DEFAULT_WILDMETA_API_URL: &str = "https://test-dex-api.heima.network";
+const DEFAULT_WILDMETA_BACKEND_ECDSA_PUBKEY: &str =
+	"020000000000000000000000000000000000000000000000000000000000000000";
+const DEFAULT_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY: &str =
+	"020000000000000000000000000000000000000000000000000000000000000000";
+
+#[derive(Debug, Clone)]
+pub struct MailerConfig {
+	pub mailer_type: MailerType,
+	pub mailer_api_host: Option<String>,
+	pub mailer_api_key: String,
+	pub mailer_from_email: String,
+	pub mailer_from_name: String,
+}
+
+impl Default for MailerConfig {
+	fn default() -> Self {
+		Self {
+			mailer_type: MailerType::from_str(DEFAULT_MAILER_TYPE).unwrap_or(MailerType::Sendgrid),
+			mailer_api_host: None,
+			mailer_api_key: DEFAULT_MAILER_API_KEY.to_string(),
+			mailer_from_email: DEFAULT_MAILER_FROM_EMAIL.to_string(),
+			mailer_from_name: DEFAULT_MAILER_FROM_NAME.to_string(),
+		}
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct OAuth2Config {
+	pub client_id: String,
+	pub client_secret: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfigLoader {
+	pub mailer_configs: HashMap<String, MailerConfig>,
+	pub oauth2_configs: HashMap<String, HashMap<String, OAuth2Config>>, // client -> provider -> config
+	pub ethereum_url: String,
+	pub solana_url: String,
+	pub bsc_url: String,
+	pub bsc_testnet_url: Option<String>,
+	pub arbitrum_url: String,
+	pub arbitrum_testnet_url: Option<String>,
+	pub hyperevm_url: String,
+	pub hyperevm_testnet_url: Option<String>,
+	pub base_url: String,
+	pub pumpx_signer_url: String,
+	pub pumpx_api_base_url: String,
+	pub pumpx_worker_url: String,
+	pub oe_client_binance_key: String,
+	pub oe_client_binance_secret: String,
+	pub oe_client_binance_base_url: String,
+	pub omni_factory_address: String,
+	pub entry_point_address: String,
+	pub wildmeta_api_url: String,
+	pub wildmeta_backend_ecdsa_pubkey: String,
+	pub bundler_key_export_authorized_pubkey: String,
+}
+
+struct EnvVar {
+	env_key: &'static str,
+	default: &'static str,
+	sensitive: bool,
+	optional: bool,
+}
+
+fn get_env_value(var: &EnvVar) -> Option<String> {
+	let val = std::env::var(var.env_key).unwrap_or_else(|_| var.default.to_string());
+	if !var.sensitive && (!val.is_empty() || !var.optional) {
+		info!("Env {}: {}", var.env_key, val);
+	}
+	if var.optional && val.is_empty() {
+		None
+	} else {
+		Some(val)
+	}
+}
+
+impl ConfigLoader {
+	pub fn from_env() -> Self {
+		info!("Executing: {}", std::env::args().collect::<Vec<_>>().join(" "));
+
+		let vars: HashMap<&str, EnvVar> = HashMap::from([
+			(
+				"ethereum_url",
+				EnvVar {
+					env_key: "OE_ETHEREUM_URL",
+					default: DEFAULT_ETHEREUM_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"solana_url",
+				EnvVar {
+					env_key: "OE_SOLANA_URL",
+					default: DEFAULT_SOLANA_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"bsc_url",
+				EnvVar {
+					env_key: "OE_BSC_URL",
+					default: DEFAULT_BSC_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"bsc_testnet_url",
+				EnvVar {
+					env_key: "OE_BSC_TESTNET_URL",
+					default: DEFAULT_BSC_TESTNET_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
+			(
+				"arbitrum_url",
+				EnvVar {
+					env_key: "OE_ARBITRUM_URL",
+					default: DEFAULT_ARBITRUM_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"arbitrum_testnet_url",
+				EnvVar {
+					env_key: "OE_ARBITRUM_TESTNET_URL",
+					default: DEFAULT_ARBITRUM_TESTNET_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
+			(
+				"hyperevm_url",
+				EnvVar {
+					env_key: "OE_HYPEREVM_URL",
+					default: DEFAULT_HYPEREVM_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"hyperevm_testnet_url",
+				EnvVar {
+					env_key: "OE_HYPEREVM_TESTNET_URL",
+					default: DEFAULT_HYPEREVM_TESTNET_URL,
+					sensitive: false,
+					optional: true,
+				},
+			),
+			(
+				"base_url",
+				EnvVar {
+					env_key: "OE_BASE_URL",
+					default: DEFAULT_BASE_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"pumpx_signer_url",
+				EnvVar {
+					env_key: "OE_PUMPX_SIGNER_URL",
+					default: DEFAULT_PUMPX_SIGNER_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"pumpx_api_base_url",
+				EnvVar {
+					env_key: "OE_PUMPX_API_BASE_URL",
+					default: DEFAULT_PUMPX_API_BASE_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"pumpx_worker_url",
+				EnvVar {
+					env_key: "OE_PUMPX_WORKER_URL",
+					default: DEFAULT_PUMPX_WORKER_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"oe_client_binance_key",
+				EnvVar {
+					env_key: "OE_BINANCE_API_KEY",
+					default: DEFAULT_BINANCE_API_KEY,
+					sensitive: true,
+					optional: false,
+				},
+			),
+			(
+				"oe_client_binance_secret",
+				EnvVar {
+					env_key: "OE_BINANCE_API_SECRET",
+					default: DEFAULT_BINANCE_API_SECRET,
+					sensitive: true,
+					optional: false,
+				},
+			),
+			(
+				"oe_client_binance_base_url",
+				EnvVar {
+					env_key: "OE_BINANCE_API_BASE_URL",
+					default: DEFAULT_BINANCE_API_BASE_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"omni_factory_address",
+				EnvVar {
+					env_key: "OE_OMNI_FACTORY_ADDRESS",
+					default: DEFAULT_OMNI_FACTORY_ADDRESS,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"entry_point_address",
+				EnvVar {
+					env_key: "OE_ENTRY_POINT_ADDRESS",
+					default: DEFAULT_ENTRY_POINT_ADDRESS,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"wildmeta_api_url",
+				EnvVar {
+					env_key: "OE_WILDMETA_API_URL",
+					default: DEFAULT_WILDMETA_API_URL,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"wildmeta_backend_ecdsa_pubkey",
+				EnvVar {
+					env_key: "OE_WILDMETA_BACKEND_ECDSA_PUBKEY",
+					default: DEFAULT_WILDMETA_BACKEND_ECDSA_PUBKEY,
+					sensitive: false,
+					optional: false,
+				},
+			),
+			(
+				"bundler_key_export_authorized_pubkey",
+				EnvVar {
+					env_key: "OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY",
+					default: DEFAULT_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY,
+					sensitive: false,
+					optional: false,
+				},
+			),
+		]);
+
+		let alchemy_key = std::env::var("OE_ALCHEMY_KEY").unwrap_or_default();
+		let append_key = |url: &str| {
+			if !alchemy_key.is_empty() && url.contains("alchemy") {
+				format!("{}{}", url, alchemy_key)
+			} else {
+				url.to_string()
+			}
+		};
+
+		let get = |key: &str| get_env_value(&vars[key]).unwrap_or_default();
+		let get_opt = |key: &str| get_env_value(&vars[key]);
+
+		let mailer_configs = Self::load_mailer_configs();
+		let oauth2_configs = Self::load_oauth2_configs();
+
+		ConfigLoader {
+			mailer_configs,
+			oauth2_configs,
+			ethereum_url: append_key(&get("ethereum_url")),
+			solana_url: append_key(&get("solana_url")),
+			bsc_url: append_key(&get("bsc_url")),
+			bsc_testnet_url: get_opt("bsc_testnet_url").map(|v| append_key(&v)),
+			arbitrum_url: append_key(&get("arbitrum_url")),
+			arbitrum_testnet_url: get_opt("arbitrum_testnet_url").map(|v| append_key(&v)),
+			hyperevm_url: get("hyperevm_url"),
+			hyperevm_testnet_url: get_opt("hyperevm_testnet_url"),
+			base_url: get("base_url"),
+			pumpx_signer_url: get("pumpx_signer_url"),
+			pumpx_api_base_url: get("pumpx_api_base_url"),
+			pumpx_worker_url: get("pumpx_worker_url"),
+			oe_client_binance_key: get("oe_client_binance_key"),
+			oe_client_binance_secret: get("oe_client_binance_secret"),
+			oe_client_binance_base_url: get("oe_client_binance_base_url"),
+			omni_factory_address: get("omni_factory_address"),
+			entry_point_address: get("entry_point_address"),
+			wildmeta_api_url: get("wildmeta_api_url"),
+			wildmeta_backend_ecdsa_pubkey: get("wildmeta_backend_ecdsa_pubkey"),
+			bundler_key_export_authorized_pubkey: get("bundler_key_export_authorized_pubkey"),
+		}
+	}
+
+	/// Load mailer configurations for multiple clients from environment variables
+	/// Format: OE_MAILER_TYPE_{CLIENT}, OE_MAILER_API_HOST_{CLIENT}, etc.
+	/// CLIENT can be HEIMA, WILDMETA, CONSOLE, etc.
+	fn load_mailer_configs() -> HashMap<String, MailerConfig> {
+		let mut configs = HashMap::new();
+
+		// Get all environment variables
+		let env_vars: HashMap<String, String> = std::env::vars().collect();
+
+		// Find all unique client suffixes
+		let mut clients = std::collections::HashSet::new();
+		for key in env_vars.keys() {
+			if key.starts_with("OE_MAILER_TYPE_") {
+				// Extract client name from OE_MAILER_TYPE_{CLIENT}
+				if let Some(client) = key.strip_prefix("OE_MAILER_TYPE_") {
+					info!("Found mailer type configuration for client: {}", client);
+					clients.insert(client.to_lowercase());
+				}
+			}
+		}
+
+		info!("Total discovered clients: {:?}", clients);
+
+		// If no clients are configured via environment variables, provide default console fallback
+		if clients.is_empty() {
+			warn!("No mailer configurations found in environment variables. Adding default console mailer.");
+			let default_config = MailerConfig {
+				mailer_type: MailerType::Console,
+				mailer_api_host: None,
+				mailer_api_key: String::new(),
+				mailer_from_email: "test@example.com".to_string(),
+				mailer_from_name: "Default Console Mailer".to_string(),
+			};
+			configs.insert("console".to_string(), default_config);
+			return configs;
+		}
+
+		// Load configuration for each client
+		for client in clients {
+			let client_upper = client.to_uppercase();
+			let mut config = MailerConfig::default();
+
+			// Load client-specific values, falling back to defaults
+			if let Ok(mailer_type) = std::env::var(format!("OE_MAILER_TYPE_{}", client_upper)) {
+				config.mailer_type =
+					MailerType::from_str(&mailer_type).unwrap_or(config.mailer_type);
+			}
+
+			if let Ok(api_host) = std::env::var(format!("OE_MAILER_API_HOST_{}", client_upper)) {
+				config.mailer_api_host = if api_host.is_empty() { None } else { Some(api_host) };
+			}
+
+			if let Ok(api_key) = std::env::var(format!("OE_MAILER_API_KEY_{}", client_upper)) {
+				config.mailer_api_key = api_key;
+			}
+
+			if let Ok(from_email) = std::env::var(format!("OE_MAILER_FROM_EMAIL_{}", client_upper))
+			{
+				config.mailer_from_email = from_email;
+			}
+
+			if let Ok(from_name) = std::env::var(format!("OE_MAILER_FROM_NAME_{}", client_upper)) {
+				config.mailer_from_name = from_name;
+			}
+
+			info!(
+				"Loaded mailer config for client '{}': type={:?}, from_email={}",
+				client, config.mailer_type, config.mailer_from_email
+			);
+
+			configs.insert(client.clone(), config);
+		}
+
+		configs
+	}
+
+	/// Get mailer configuration for a specific client
+	pub fn get_mailer_config(&self, client_id: &str) -> Option<MailerConfig> {
+		let client_key = client_id.to_lowercase();
+		self.mailer_configs.get(&client_key).cloned()
+	}
+
+	/// Get all available client configurations
+	pub fn list_available_clients(&self) -> Vec<String> {
+		let mut clients: Vec<String> = self.mailer_configs.keys().cloned().collect();
+		clients.sort();
+		clients
+	}
+
+	/// Load OAuth2 configurations for all supported providers from environment variables
+	/// Format: OE_{PROVIDER}_CLIENT_ID_{CLIENT}, OE_{PROVIDER}_CLIENT_SECRET_{CLIENT}
+	/// PROVIDER can be GOOGLE, APPLE, etc.
+	/// CLIENT can be WILDMETA, HEIMA, etc.
+	fn load_oauth2_configs() -> HashMap<String, HashMap<String, OAuth2Config>> {
+		let providers = vec!["GOOGLE", "APPLE"];
+		let mut all_configs: HashMap<String, HashMap<String, OAuth2Config>> = HashMap::new();
+
+		for provider in providers {
+			let provider_lower = provider.to_lowercase();
+			let prefix = format!("OE_{}_CLIENT_ID_", provider);
+
+			let env_vars: HashMap<String, String> = std::env::vars().collect();
+			let mut clients = std::collections::HashSet::new();
+
+			for key in env_vars.keys() {
+				if key.starts_with(&prefix) {
+					if let Some(client) = key.strip_prefix(&prefix) {
+						info!(
+							"Found {} OAuth2 configuration for client: {}",
+							provider_lower, client
+						);
+						clients.insert(client.to_lowercase());
+					}
+				}
+			}
+
+			info!("Total discovered {} OAuth2 clients: {:?}", provider_lower, clients);
+
+			if clients.is_empty() {
+				warn!(
+					"No {} OAuth2 configurations found in environment variables.",
+					provider_lower
+				);
+				continue;
+			}
+
+			for client in clients {
+				let client_upper = client.to_uppercase();
+
+				let client_id =
+					std::env::var(format!("OE_{}_CLIENT_ID_{}", provider, client_upper))
+						.unwrap_or_default();
+				let client_secret =
+					std::env::var(format!("OE_{}_CLIENT_SECRET_{}", provider, client_upper))
+						.unwrap_or_default();
+
+				if client_id.is_empty() || client_secret.is_empty() {
+					warn!(
+						"Incomplete {} OAuth2 config for client '{}': client_id_empty={}, client_secret_empty={}",
+						provider_lower,
+						client,
+						client_id.is_empty(),
+						client_secret.is_empty()
+					);
+					continue;
+				}
+
+				let config = OAuth2Config { client_id, client_secret };
+
+				info!("Loaded {} OAuth2 config for client '{}'", provider_lower, client);
+
+				all_configs
+					.entry(client.clone())
+					.or_default()
+					.insert(provider_lower.clone(), config);
+			}
+		}
+
+		all_configs
+	}
+
+	/// Get OAuth2 configuration for a specific client and provider
+	pub fn get_oauth2_config(&self, client_id: &str, provider: &str) -> Option<OAuth2Config> {
+		let client_key = client_id.to_lowercase();
+		let provider_key = provider.to_lowercase();
+		self.oauth2_configs.get(&client_key)?.get(&provider_key).cloned()
+	}
+}

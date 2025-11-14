@@ -5,12 +5,12 @@ use crate::utils::{
 	get_binance_deposit_info, get_token_available_amount, str_to_u256,
 };
 use crate::*;
-use ::pumpx::methods::common::SwapType;
-use ::pumpx::methods::create_cross_order::{CreateCrossOrderBody, CrossOrderInfo};
-use accounting_contract_client::Plus;
-use executor_primitives::SwapOrder;
-use executor_storage::PumpxProfileStorage;
+use ::oe_client_pumpx::methods::common::SwapType;
+use ::oe_client_pumpx::methods::create_cross_order::{CreateCrossOrderBody, CrossOrderInfo};
 use heima_primitives::PumpxConfig;
+use oe_client_accounting::Plus;
+use oe_primitives::SwapOrder;
+use oe_storage::PumpxProfileStorage;
 use std::str::FromStr;
 use tracing::{debug, error, info};
 
@@ -64,7 +64,7 @@ impl<
 			false
 		} else {
 			let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
-				&self.binance_api,
+				&self.oe_client_binance,
 				usdt_trade_symbol,
 				from_asset_binance_coin.name(),
 				from_amount_decimal,
@@ -117,7 +117,10 @@ impl<
 
 		match (&swap_order.from_asset, &swap_order.to_asset) {
 			// SOL to BSC
-			(ChainAsset::Solana(_), ChainAsset::Ethereum(::pumpx::constants::BSC_CHAIN_ID, _)) => {
+			(
+				ChainAsset::Solana(_),
+				ChainAsset::Ethereum(::oe_client_pumpx::constants::BSC_CHAIN_ID, _),
+			) => {
 				let payout_address = Address::from_str(&to_address).map_err(|_| {
 					error!("Failed to parse payout address");
 				})?;
@@ -127,7 +130,7 @@ impl<
 					// todo: can we reuse existing code ?
 
 					let (_, binance_asset, from_amount_decimal, _) = get_binance_deposit_info(
-						self.binance_api.clone(),
+						self.oe_client_binance.clone(),
 						&swap_order.from_asset,
 						&pumpx_config.from_amount,
 					)
@@ -144,7 +147,7 @@ impl<
 
 					// init `payout_amount` with estimated-amount-to-receive
 					let payout_amount = estimate_payout_amount(
-						&self.binance_api,
+						&self.oe_client_binance,
 						&trade_symbol,
 						binance_coin.clone(),
 						from_amount_decimal,
@@ -159,7 +162,7 @@ impl<
 							pumpx_config,
 						)
 						.await?,
-						self.evm_accounting_contract_client.get_signer_address().await.to_string(),
+						self.evm_oe_client_accounting.get_signer_address().await.to_string(),
 						Some(InstantFlowDetails {
 							omni_account,
 							from_asset: swap_order.from_asset.clone(),
@@ -181,7 +184,7 @@ impl<
 					)) as Box<dyn ChainTransferClient>);
 					let (payout_amount, payout_amount_u256) = self
 						.do_binance_swap(
-							&self.evm_accounting_contract_client,
+							&self.evm_oe_client_accounting,
 							&chain_transfer_client,
 							swap_order.from_asset.clone(),
 							pumpx_config.from_amount.clone(),
@@ -193,7 +196,7 @@ impl<
 						.await?;
 
 					self.do_payout(
-						&self.evm_accounting_contract_client,
+						&self.evm_oe_client_accounting,
 						payout_address,
 						payout_amount_u256,
 					)
@@ -213,7 +216,10 @@ impl<
 				}
 			},
 			// BSC to SOL
-			(ChainAsset::Ethereum(::pumpx::constants::BSC_CHAIN_ID, _), ChainAsset::Solana(_)) => {
+			(
+				ChainAsset::Ethereum(::oe_client_pumpx::constants::BSC_CHAIN_ID, _),
+				ChainAsset::Solana(_),
+			) => {
 				let payout_address = Pubkey::from_str(&to_address).map_err(|_| {
 					error!("Failed to parse payout address");
 				})?;
@@ -234,7 +240,7 @@ impl<
 				)) as Box<dyn ChainTransferClient>);
 				let (payout_amount, payout_amount_u256) = self
 					.do_binance_swap(
-						&self.solana_accounting_contract_client,
+						&self.solana_oe_client_accounting,
 						&chain_transfer_client,
 						swap_order.from_asset.clone(),
 						pumpx_config.from_amount.clone(),
@@ -246,7 +252,7 @@ impl<
 					.await?;
 
 				self.do_payout(
-					&self.solana_accounting_contract_client,
+					&self.solana_oe_client_accounting,
 					payout_address,
 					payout_amount_u256,
 				)
@@ -333,7 +339,8 @@ impl<
 		N: Plus<u64, Output = N> + std::fmt::Debug,
 	{
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			get_binance_deposit_info(self.binance_api.clone(), &from_asset, &from_amount).await?;
+			get_binance_deposit_info(self.oe_client_binance.clone(), &from_asset, &from_amount)
+				.await?;
 
 		let binance_network = binance_asset.network;
 		let binance_coin = binance_asset.coin;
@@ -347,7 +354,7 @@ impl<
 
 		// init `payout_amount` with estimated-amount-to-receive
 		let mut payout_amount = estimate_payout_amount(
-			&self.binance_api,
+			&self.oe_client_binance,
 			&trade_symbol,
 			binance_coin.clone(),
 			from_amount_decimal,
@@ -406,7 +413,7 @@ impl<
 				order_side,
 				from_amount,
 				payout_coin,
-				self.binance_api.clone(),
+				self.oe_client_binance.clone(),
 			)
 			.await?;
 			payout_amount = result.0;
@@ -456,7 +463,7 @@ impl<
 		order_side: BinanceOrderSide,
 		from_amount: String,
 		payout_coin: BinanceCoin,
-		binance_api: Arc<BinanceClient>,
+		oe_client_binance: Arc<BinanceClient>,
 	) -> Result<(String, U256), ()> {
 		debug!("Waiting for deposit to be confirmed on Binance...");
 		debug!("Deposit tx_id: {:?}", tx_id);
@@ -466,7 +473,7 @@ impl<
 		let timeout = Duration::from_secs(300); // 5 minute timeout
 
 		while !deposit_confirmed && start_time.elapsed() < timeout {
-			let Ok(deposit_history) = WalletApi::new(binance_api.as_ref())
+			let Ok(deposit_history) = WalletApi::new(oe_client_binance.as_ref())
 				.get_deposit_history(Some(binance_coin.name().into()), tx_id.clone())
 				.await
 			else {
@@ -530,7 +537,7 @@ impl<
 			..Default::default()
 		};
 		debug!("Creating binance order with params: {:?}", binance_order_params);
-		let spot_trading_api = SpotTradingApi::new(binance_api.as_ref());
+		let spot_trading_api = SpotTradingApi::new(oe_client_binance.as_ref());
 
 		if let Ok(commission_rates) =
 			spot_trading_api.get_commission_rates(&binance_order_params.symbol).await
@@ -539,7 +546,7 @@ impl<
 		}
 		let Ok(binance_order) = spot_trading_api.create_order(binance_order_params).await else {
 			error!("Failed to create binance order");
-			WalletApi::new(binance_api.as_ref())
+			WalletApi::new(oe_client_binance.as_ref())
 				.withdraw(
 					binance_coin.name(),
 					&from_address,
@@ -572,7 +579,7 @@ impl<
 		// - `executedQty` indicates the amount of the base-asset bought
 		// - `cummulativeQuoteQty`` shows the total amount of the quote-asset spent
 		let (trade_success, payout_amount) = loop {
-			let trade_order = SpotTradingApi::new(binance_api.as_ref())
+			let trade_order = SpotTradingApi::new(oe_client_binance.as_ref())
 				.get_order(&trade_symbol, Some(binance_order.order_id), None, None)
 				.await
 				.map_err(|_| {
@@ -609,7 +616,7 @@ impl<
 		};
 		if !trade_success {
 			error!("Binance order failed");
-			WalletApi::new(binance_api.as_ref())
+			WalletApi::new(oe_client_binance.as_ref())
 				.withdraw(
 					binance_coin.name(),
 					&from_address,
@@ -676,12 +683,12 @@ impl<
 }
 
 pub(crate) async fn estimate_payout_amount<BinanceClient: BinanceApi>(
-	binance_api: &Arc<BinanceClient>,
+	oe_client_binance: &Arc<BinanceClient>,
 	trade_symbol: &str,
 	binance_coin: BinanceCoin,
 	from_amount_decimal: Decimal,
 ) -> Result<String, ()> {
-	let price_str = SpotTradingApi::new(binance_api.as_ref())
+	let price_str = SpotTradingApi::new(oe_client_binance.as_ref())
 		.get_symbol_price(trade_symbol)
 		.await
 		.map_err(|_| {

@@ -4,8 +4,8 @@ use crate::error_code::{
 	STORAGE_SERVICE_ERROR_CODE, WILDMETA_SERVICE_ERROR_CODE,
 };
 use jsonrpsee::types::{ErrorCode, ErrorObject, ErrorObjectOwned};
+use oe_client_pumpx::methods::common::ApiResponse;
 use parity_scale_codec::Codec;
-use pumpx::methods::common::ApiResponse;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
