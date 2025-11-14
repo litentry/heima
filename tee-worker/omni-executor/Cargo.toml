@@ -1,26 +1,18 @@
 [workspace]
 members = [
-    "clients/aa",
-    "clients/accounting",
-    "clients/binance",
-    "clients/ethereum",
-    "clients/hyperliquid",
-    "clients/pumpx",
-    "clients/signer",
-    "clients/solana",
-    "clients/wildmeta",
+    "bin",
+    "cli",
+    "clients/*",
     "contracts/accounting/solana/programs/accounting-contract",
     "crypto",
     "core",
-    "bin",
-    "storage",
-    "primitives",
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
     "intent/executors/solana",
     "mock-server",
-    "cli",
+    "primitives",
     "rpc-server",
+    "storage",
 ]
 
 resolver = "2"
