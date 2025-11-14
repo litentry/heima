@@ -3,11 +3,10 @@ use crate::{
 	verify_auth::verify_auth, Deserialize, Serialize,
 };
 
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{to_omni_auth, UserAuth, UserId};
-use executor_storage::PasskeyStorage;
-use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::{to_omni_auth, UserAuth, UserId};
+use oe_storage::PasskeyStorage;
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -36,8 +35,10 @@ pub fn register_rename_passkey_alias<
 
 			debug!("Received omni_renamePasskeyAliasName, params: {:?}", params);
 
-			let identity = Identity::try_from(params.user_id.clone())
-				.map_err_parse("Invalid user ID format")?;
+			let omni_account = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
 
 			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
 				.map_err_parse("Failed to convert to OmniAuth")?;
@@ -47,7 +48,6 @@ pub fn register_rename_passkey_alias<
 				e.to_detailed_error().to_rpc_error()
 			})?;
 
-			let omni_account = identity.to_omni_account(&params.client_id);
 			let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 
 			passkey_storage

@@ -9,17 +9,17 @@ use crate::{
 	Deserialize,
 };
 use chrono::{Days, Utc};
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::jwt;
-use executor_primitives::{utils::hex::hex_encode, OmniAuth};
-use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::{
+use heima_primitives::Identity;
+use jsonrpsee::RpcModule;
+use oe_client_pumpx::methods::user_connect::UserConnectResponse;
+use oe_core::auth::{
 	auth_token::*,
 	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
 };
-use heima_primitives::{Identity, Web2IdentityType};
-use jsonrpsee::RpcModule;
-use pumpx::methods::user_connect::UserConnectResponse;
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::jwt;
+use oe_primitives::{utils::hex::hex_encode, OmniAuth};
+use oe_storage::{HeimaJwtStorage, Storage};
 use serde::Serialize;
 use tracing::{debug, error};
 
@@ -93,8 +93,8 @@ pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 			let user_id = res.data.user_id.ok_or_internal("Empty data.user_id")?;
 
 			debug!("get_account_user_id ok, email: {}, user_id: {}", params.user_email, user_id);
-			let omni_account = Identity::from_web2_account(&user_id, Web2IdentityType::Pumpx)
-				.to_omni_account(&params.client_id);
+			let omni_account =
+				Identity::Pumpx(user_id.as_str().into()).to_omni_account(&params.client_id);
 
 			let access_token_claims: AuthTokenClaims = AuthTokenClaims::new(
 				hex_encode(omni_account.as_ref()),

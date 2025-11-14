@@ -11,14 +11,14 @@ use crate::utils::validation::{
 };
 use crate::RpcResult;
 use alloy::primitives::{hex, Address};
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{ChainId, ClientAuth, Identity, UserAuth, UserId};
-use executor_storage::WildmetaTimestampStorage;
 use jsonrpsee::RpcModule;
-use pumpx::pubkey_to_address;
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::{ChainId, ClientAuth, UserAuth, UserId};
+use oe_storage::WildmetaTimestampStorage;
 use serde::{Deserialize, Serialize};
-use signer_client::ChainType;
 use std::sync::Arc;
 use tracing::{debug, error};
 
@@ -296,14 +296,14 @@ fn extract_execute_params_from_calldata(call_data: &str) -> RpcResult<Vec<(Addre
 		// Handle executeBatch call
 		parse_execute_batch(&call_bytes)
 	} else {
-		return Err(DetailedError::new(
+		Err(DetailedError::new(
 			AUTH_VERIFICATION_FAILED_CODE,
 			"Call data is not an OmniAccount execute or executeBatch function call",
 		)
 		.with_field("method_signature")
 		.with_received(format!("0x{}", hex::encode(method_sig)))
 		.with_expected("0xb61d27f6 (execute) or 0x18dfeb3c (executeBatch)")
-		.to_rpc_error());
+		.to_rpc_error())
 	}
 }
 
@@ -681,57 +681,57 @@ pub fn register_submit_user_op_with_auth<
 				},
 			};
 
-			let identity = Identity::try_from(params.user_id.clone()).map_err_parse("Failed to convert user_id to identity")?;
-
 			// Only validate main_address if it's provided (not None)
 			if let Some(main_addr) = &main_address {
-				match &identity {
-					Identity::Evm(_) => {
-						if let UserId::Evm(user_address) = &params.user_id {
-							if user_address.to_lowercase() != main_addr.to_lowercase() {
-								error!("Main address does not match user_id for EVM identity");
-								return Err(DetailedError::new(
-										AUTH_VERIFICATION_FAILED_CODE,
-										"User address does not match authenticated main address for EVM identity",
-									)
-									.with_field("user_address")
-									.with_received(user_address.to_string())
-									.with_expected(main_addr.to_string())
-									.with_suggestion("For EVM identity, the user_id must match the authenticated main address").to_rpc_error());
-							}
-						}
-					},
-					_ => {
-						let omni_account = identity.to_omni_account(&params.client_id);
-						let derived_address = ctx
-							.signer_client
-							.request_wallet(
-								ChainType::Evm,
-								params.wallet_index,
-								*omni_account.as_ref(),
+				if let UserId::Evm(user_address) = &params.user_id {
+					if user_address.to_lowercase() != main_addr.to_lowercase() {
+						error!("Main address does not match user_id for EVM identity");
+						return Err(DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"User address does not match authenticated main address for EVM identity",
 							)
-							.await
-							.map_err(|_| {
-								DetailedError::signer_service_error().to_rpc_error()
-							})
-							.and_then(|pk| pubkey_to_address(ChainType::Evm, &pk).map_err_internal("Failed to convert pubkey to address"))?;
+							.with_field("user_address")
+							.with_received(user_address.to_string())
+							.with_expected(main_addr.to_string())
+							.with_suggestion("For EVM identity, the user_id must match the authenticated main address").to_rpc_error());
+					}
+				} else {
+					let omni_account = params
+						.user_id
+						.to_omni_account(&params.client_id)
+						.map_err_parse("Failed to convert to omni_account")?;
 
-						if derived_address.to_lowercase() != main_addr.to_lowercase() {
-							error!("Main address does not match derived EVM address");
-							return Err(DetailedError::new(
-									AUTH_VERIFICATION_FAILED_CODE,
-									"Derived address does not match authenticated address",
-								)
-								.with_field("derived_address")
-								.with_received(derived_address.to_string())
-								.with_expected(main_addr.to_string())
-								.with_suggestion("The derived EVM address must match the authenticated main address").to_rpc_error());
-						}
-					},
+					let derived_address = ctx
+						.signer_client
+						.request_wallet(
+							ChainType::Evm,
+							params.wallet_index,
+							*omni_account.as_ref(),
+						)
+						.await
+						.map_err(|_| {
+							DetailedError::signer_service_error().to_rpc_error()
+						})
+						.and_then(|pk| pubkey_to_address(ChainType::Evm, &pk).map_err_internal("Failed to convert pubkey to address"))?;
+
+					if derived_address.to_lowercase() != main_addr.to_lowercase() {
+						error!("Main address does not match derived EVM address");
+						return Err(DetailedError::new(
+								AUTH_VERIFICATION_FAILED_CODE,
+								"Derived address does not match authenticated address",
+							)
+							.with_field("derived_address")
+							.with_received(derived_address.to_string())
+							.with_expected(main_addr.to_string())
+							.with_suggestion("The derived EVM address must match the authenticated main address").to_rpc_error());
+					}
 				}
 			}
 
-			let account_id = identity.to_omni_account(&params.client_id);
+			let account_id = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
 
 			// Call the common submission logic
 			let transaction_hash = submit_user_ops(
@@ -958,7 +958,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_backend_calldata_arbitrum() {
-		use executor_core::types::SerializablePackedUserOperation;
+		use oe_core::types::SerializablePackedUserOperation;
 
 		// Helper function to create ERC20 transfer calldata
 		fn create_erc20_transfer_calldata(recipient: &str, amount: u64) -> String {
@@ -1034,7 +1034,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_backend_calldata_hyperevm() {
-		use executor_core::types::SerializablePackedUserOperation;
+		use oe_core::types::SerializablePackedUserOperation;
 
 		// Helper function to create calldata with proper payload format
 		fn create_test_calldata(action_id: u32, additional_data: &[u8]) -> String {
@@ -1118,7 +1118,7 @@ mod tests {
 
 	#[test]
 	fn test_validate_backend_calldata_wrong_contract() {
-		use executor_core::types::SerializablePackedUserOperation;
+		use oe_core::types::SerializablePackedUserOperation;
 
 		let user_op = SerializablePackedUserOperation {
 			sender: "0x1111111111111111111111111111111111111111".to_string(), // Wrong contract

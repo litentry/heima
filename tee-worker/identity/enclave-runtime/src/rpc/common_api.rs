@@ -33,7 +33,7 @@ use lc_identity_verification::{
 };
 use litentry_primitives::{
 	aes_decrypt, decode_hex, if_development, if_development_or, AesRequest, DecryptableRequest,
-	Identity, Web2IdentityType,
+	Identity,
 };
 use log::debug;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -468,8 +468,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 						)))
 					},
 				};
-				let google_identity =
-					Identity::from_web2_account(&google_account, Web2IdentityType::Google);
+				let google_identity = Identity::Google(google_account.as_str().into());
 				let state = generate_verification_code();
 				let authorize_data = google::get_authorize_data(&google_client_id, &redirect_uri);
 
@@ -505,7 +504,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OcallApi, Stat
 					data_provider_config.sendgrid_from_email.clone(),
 				);
 				let verification_code = generate_verification_code();
-				let email_identity = Identity::from_web2_account(&email, Web2IdentityType::Email);
+				let email_identity = Identity::Email(email.as_str().into());
 
 				match email::VerificationCodeStore::insert(
 					omni_account,

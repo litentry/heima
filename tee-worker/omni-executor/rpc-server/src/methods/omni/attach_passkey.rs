@@ -3,12 +3,11 @@ use crate::{
 	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, Serialize,
 };
 
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
-use executor_primitives::{to_omni_auth, utils::hex::hex_encode, UserAuth, UserId};
-use executor_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
-use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::passkey::{AttestationResult, PasskeyVerifier};
+use oe_primitives::{to_omni_auth, utils::hex::hex_encode, UserAuth, UserId};
+use oe_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -38,18 +37,10 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			// Reject UserId::Passkey type - passkeys cannot be attached to passkey identities
 			if matches!(params.user_id, UserId::Passkey(_)) {
-				error!("Cannot attach passkey to a Passkey user_id type");
-				return Err(DetailedError::invalid_params(
-					"user_id",
-					"UserId::Passkey type is not allowed for passkey attachment",
-				)
-				.with_reason("Passkeys can only be attached to non-passkey identity types")
-				.with_suggestion("Use a different identity type (e.g. Email) as user_id")
-				.to_rpc_error());
+				let msg = "Cannot attach passkey to a Passkey user_id type";
+				error!(msg);
+				return Err(DetailedError::invalid_params("user_id", msg).to_rpc_error());
 			}
-
-			let identity = Identity::try_from(params.user_id.clone())
-				.map_err_parse("Invalid user ID format")?;
 
 			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
 				.map_err_parse("Failed to convert to OmniAuth")?;
@@ -59,16 +50,21 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 				e.to_detailed_error().to_rpc_error()
 			})?;
 
-			let omni_account = identity.to_omni_account(&params.client_id);
-
-			let expected_origin = super::get_origin_for_client(&params.client_id);
+			let omni_account = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
+			let allowed_origins =
+				ctx.config_loader.get_passkey_config(&params.client_id).allowed_origins;
+			let allowed_origins_refs: Vec<&str> =
+				allowed_origins.iter().map(|s| s.as_str()).collect();
 
 			// Verify client data JSON and consume challenge
 			let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
 			PasskeyVerifier::verify_client_data_json(
 				&params.client_data_json,
 				omni_account.as_ref(),
-				expected_origin,
+				&allowed_origins_refs,
 				"webauthn.create", // For passkey registration/attachment
 				|challenge, omni_account| {
 					challenge_storage
@@ -91,7 +87,7 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 									);
 								},
 							}
-							executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed
+							oe_crypto::passkey::PasskeyError::ChallengeVerificationFailed
 						})
 				},
 			)

@@ -3,11 +3,10 @@ use crate::{
 	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, Serialize,
 };
 
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{to_omni_auth, UserAuth, UserId};
-use executor_storage::PasskeyStorage;
-use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::{to_omni_auth, UserAuth, UserId};
+use oe_storage::PasskeyStorage;
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -33,9 +32,6 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			debug!("Received omni_removePasskey, params: {:?}", params);
 
-			let identity = Identity::try_from(params.user_id.clone())
-				.map_err_parse("Invalid user ID format")?;
-
 			let auth = to_omni_auth(&params.user_auth, &params.user_id, &params.client_id)
 				.map_err_parse("Failed to convert to OmniAuth")?;
 
@@ -44,7 +40,11 @@ pub fn register_remove_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 				e.to_detailed_error().to_rpc_error()
 			})?;
 
-			let omni_account = identity.to_omni_account(&params.client_id);
+			let omni_account = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
+
 			let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 
 			if !passkey_storage.exists_passkey(&omni_account, &params.credential_id) {

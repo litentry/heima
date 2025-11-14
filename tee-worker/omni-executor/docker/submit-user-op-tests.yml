@@ -5,7 +5,7 @@ services:
     volumes:
       - ../ts-tests:/ts-tests
       - ../../client-api:/client-api
-      - ../cli:/usr/local/executor-worker-cli
+      - ../ts-tests/cli:/usr/local/executor-worker-cli
       - shared-data:/shared
     build:
       context: ${PWD}/../../

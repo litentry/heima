@@ -3,11 +3,11 @@ use crate::{
 	Deserialize, Serialize,
 };
 
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::UserId;
-use executor_storage::PasskeyStorage;
-use heima_primitives::Identity;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::UserId;
+use oe_storage::PasskeyStorage;
+use tracing::debug;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ListPasskeyParams {
@@ -35,10 +35,13 @@ pub fn register_list_passkey<CrossChainIntentExecutor: IntentExecutor + Send + S
 		.register_async_method("omni_listPasskey", |params, ctx, _| async move {
 			let params = parse_rpc_params::<ListPasskeyParams>(params)?;
 
-			let identity = Identity::try_from(params.user_id.clone())
-				.map_err_parse("Invalid user ID format")?;
+			debug!("Received omni_listPasskey, params: {:?}", params);
 
-			let omni_account = identity.to_omni_account(&params.client_id);
+			let omni_account = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
+
 			let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
 
 			let passkeys = passkey_storage

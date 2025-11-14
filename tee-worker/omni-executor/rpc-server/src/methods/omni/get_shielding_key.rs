@@ -1,7 +1,7 @@
 use crate::server::RpcContext;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey, SerdeRsa3072PubKey};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::rsa::{traits::PublicKeyParts, Rsa3072PubKey, SerdeRsa3072PubKey};
 
 // example output:
 // {"jsonrpc":"2.0","id":1,"result":{"e":"0x010001","n":"0x0dee6b464b9a1033d0442be11ea013565e7cda30ff50bfafa9245e4d221e27a056be373251771cd5a949c6a29c1264eceaddf078d820d331f8ab6d9f4da167c55364ed8094cdc1ab467c2e68f2bcebe83453af3044f33cb4269428842cb354571fbc7c10aca61a06843a9d82c52231c18799dd8249d6e696f2c92695b40594b0b00d0b0fb77e7f7c9c89d2be0b9fd105d51d643094ebb2eb03185f056e75caf57df818ce6fca6ed104919296ba171caf950d2241c34257db7323e5c90fbbec813243ecbc41c0fbf6df2112c781d4f8540d4af356fbe999368c3404ebb7f806fdd94694d231704097be1da0ce895ce5ce69130a0d43432024cf3018e4621cfb370507d2ec1070ba65b6223de2d6a39dc997e3a3407302d7f0b456412d579f13ce57d8e4230d3c935956a526c77de48f73c73606f713aeb3ab9e8817aa53a48df1a961df9d262d88ee116fecfe4c4551b1fd704a23c25568f6448e3f22c53451061203cff70ec87780416dc02e4078a608359b20f6d129438bd5bce5bee16f24d3"}}
@@ -24,20 +24,20 @@ pub fn register_get_shielding_key<
 mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
-	use binance_api::mocks::MockBinanceApiClient;
-	use config_loader::ConfigLoader;
-	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use pumpx::PumpxApiClient;
+	use oe_client_binance::mocks::MockBinanceApiClient;
+	use oe_client_pumpx::PumpxApiClient;
+	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
+	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::config::ConfigLoader;
+	use oe_core::intent::executor::MockedIntentExecutor;
+	use oe_storage::{StorageDB, WildmetaTimestampStorage};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-	use signer_client::{mocks::MockSignerClient, SignerClient};
 	use std::collections::HashMap;
 	use std::sync::Arc;
 	use tempfile::tempdir;
-	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
 	pub async fn get_shielding_key_works() {
@@ -52,12 +52,12 @@ mod test {
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
 			Arc::new(MockBinanceApiClient::new());
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
-		let loan_record_storage = Arc::new(executor_storage::LoanRecordStorage::new(db.clone()));
+		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(db.clone()));
 
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 		let aes_key = [0u8; 32];
@@ -71,7 +71,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,

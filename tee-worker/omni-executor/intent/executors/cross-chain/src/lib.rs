@@ -19,48 +19,50 @@
 
 mod types;
 
-use ::pumpx::methods::common::{GasType, SwapType};
-use ::pumpx::methods::create_limit_order::CreateLimitOrderBody;
-use ::pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
-use ::pumpx::methods::cross_fail::CrossFailBody;
-use ::pumpx::methods::send_order_tx::SendOrderTxBody;
-use ::pumpx::signer_client::PumpxChainId;
-use aa_contracts_client::{calculate_omni_account_address, OwnerType};
-use accounting_contract_client::AccountingContractApi;
+use ::oe_client_pumpx::methods::common::{GasType, SwapType};
+use ::oe_client_pumpx::methods::create_limit_order::CreateLimitOrderBody;
+use ::oe_client_pumpx::methods::create_market_order_unsigned_tx::CreateMarketOrderUnsignedTxBody;
+use ::oe_client_pumpx::methods::cross_fail::CrossFailBody;
+use ::oe_client_pumpx::methods::send_order_tx::SendOrderTxBody;
+use ::oe_client_pumpx::signer_client::PumpxChainId;
 use alloy::consensus::{SignableTransaction, TxLegacy};
 use alloy::network::TxSigner as AlloyTxSigner;
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::ruint::ParseError;
 use alloy::primitives::{Address, Signature, U256};
 use async_trait::async_trait;
-use binance_api::spot_trading_api::types::{
+use oe_client_aa::{calculate_omni_account_address, OwnerType};
+use oe_client_accounting::AccountingContractApi;
+use oe_client_binance::spot_trading_api::types::{
 	CreateOrderParams as BinanceCreateOrderParams, OrderSide as BinanceOrderSide,
 	OrderStatus as BinanceOrderStatus, OrderType as BinanceOrderType,
 };
-use binance_api::spot_trading_api::SpotTradingApi;
-use binance_api::wallet_api::WalletApi;
-use binance_api::BinanceApi;
-use ethereum_rpc::{
+use oe_client_binance::spot_trading_api::SpotTradingApi;
+use oe_client_binance::wallet_api::WalletApi;
+use oe_client_binance::BinanceApi;
+use oe_client_ethereum::{
 	client::EthereumClient as EthereumClientTrait, signer::RemoteSigner as RemoteEvmSigner,
 };
-use executor_core::intent_executor::{IntentExecutionResult, IntentExecutor};
-use executor_primitives::AccountId;
-use executor_primitives::ChainAsset;
-use executor_primitives::Intent;
-use executor_primitives::IntentId;
-use executor_primitives::PumpxOrderType;
-use executor_primitives::SingleChainSwapProvider;
-use executor_storage::StorageDB;
-use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, CLIENT_ID_HEIMA};
-use intent_asset_lock::precise::PreciseAssetsLock;
-use intent_asset_lock::AccountAssetLocks;
-use intent_asset_lock::AmountType;
+use oe_client_signer::{ChainType, SignerClient};
+use oe_client_solana::{
+	signer::RemoteSigner as RemoteSolanaSigner, SolanaClient as SolanaClientTrait,
+};
+use oe_core::auth::constants::{AUTH_TOKEN_ACCESS_TYPE, CLIENT_ID_HEIMA};
+use oe_core::intent::asset_lock::precise::PreciseAssetsLock;
+use oe_core::intent::asset_lock::AccountAssetLocks;
+use oe_core::intent::asset_lock::AmountType;
+use oe_core::intent::executor::{IntentExecutionResult, IntentExecutor};
+use oe_primitives::AccountId;
+use oe_primitives::ChainAsset;
+use oe_primitives::Intent;
+use oe_primitives::IntentId;
+use oe_primitives::PumpxOrderType;
+use oe_primitives::SingleChainSwapProvider;
+use oe_storage::StorageDB;
+use oe_storage::{HeimaJwtStorage, Storage};
 use parity_scale_codec::Encode;
 use rust_decimal::prelude::*;
 use rust_decimal::Decimal;
-use signer_client::{ChainType, SignerClient};
-use solana::{signer::RemoteSigner as RemoteSolanaSigner, SolanaClient as SolanaClientTrait};
 use solana_sdk::pubkey::Pubkey;
 use std::sync::Arc;
 use tokio::{
@@ -78,8 +80,8 @@ use utils::{
 	determine_trade_symbol_and_order_side, estimate_payout_amount, get_binance_deposit_info,
 	str_to_u256,
 };
-// use intent_asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
-// use intent_asset_lock::AccountAssetLocks;
+// use oe_core::intent::asset_lock::always_unlocked::AlwaysUnlockedAssetsLock;
+// use oe_core::intent::asset_lock::AccountAssetLocks;
 
 // TODO: should we rename this to something like MultiChainIntentExecutor?
 pub struct CrossChainIntentExecutor<
@@ -90,13 +92,13 @@ pub struct CrossChainIntentExecutor<
 	account_asset_lock: Arc<AccountAssetLocks<PreciseAssetsLock>>,
 	rpc_endpoint_registry: RpcEndpointRegistry,
 	pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-	pumpx_api: Arc<Box<dyn ::pumpx::PumpxApi>>,
+	pumpx_api: Arc<Box<dyn ::oe_client_pumpx::PumpxApi>>,
 	storage_db: Arc<StorageDB>,
-	binance_api: Arc<BinanceClient>,
+	oe_client_binance: Arc<BinanceClient>,
 	bsc_client: Arc<EthereumClient>,
 	solana_client: Arc<SolanaClient>,
-	evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>>,
-	solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>>,
+	evm_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Address, U256>>>,
+	solana_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>>,
 	instant_payout_threshold: Decimal,
 	// AA contracts configuration
 	omni_account_factory_address: Address,
@@ -114,13 +116,13 @@ impl<
 		account_asset_lock: Arc<AccountAssetLocks<PreciseAssetsLock>>,
 		rpc_endpoint_registry: RpcEndpointRegistry,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
-		pumpx_api: Arc<Box<dyn ::pumpx::PumpxApi>>,
+		pumpx_api: Arc<Box<dyn ::oe_client_pumpx::PumpxApi>>,
 		storage_db: Arc<StorageDB>,
-		binance_api: Arc<BinanceClient>,
+		oe_client_binance: Arc<BinanceClient>,
 		bsc_client: Arc<EthereumClient>,
 		solana_client: Arc<SolanaClient>,
-		evm_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Address, U256>>>,
-		solana_accounting_contract_client: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>>,
+		evm_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Address, U256>>>,
+		solana_oe_client_accounting: Arc<Box<dyn AccountingContractApi<Pubkey, u64>>>,
 		instant_payout_threshold: Decimal,
 		omni_account_factory_address: Address,
 		omni_account_implementation_address: Address,
@@ -131,11 +133,11 @@ impl<
 			pumpx_signer_client,
 			pumpx_api,
 			storage_db,
-			binance_api,
+			oe_client_binance,
 			bsc_client,
 			solana_client,
-			evm_accounting_contract_client,
-			solana_accounting_contract_client,
+			evm_oe_client_accounting,
+			solana_oe_client_accounting,
 			instant_payout_threshold,
 			omni_account_factory_address,
 			omni_account_implementation_address,
@@ -201,7 +203,7 @@ impl<
 							})?;
 
 						let mut from_address =
-							::pumpx::pubkey_to_address(from_chain_type, &from_wallet)?;
+							::oe_client_pumpx::pubkey_to_address(from_chain_type, &from_wallet)?;
 
 						let Some(to_chain_type) =
 							ChainType::from_pumpx_chain_id(pumpx_config.to_chain_id)
@@ -222,7 +224,8 @@ impl<
 								error!("Could not get to_wallet from pumpx-signer: {:?}", e)
 							})?;
 
-						let to_address = ::pumpx::pubkey_to_address(to_chain_type, &to_wallet)?;
+						let to_address =
+							::oe_client_pumpx::pubkey_to_address(to_chain_type, &to_wallet)?;
 
 						let storage = HeimaJwtStorage::new(self.storage_db.clone());
 						let Ok(Some(access_token)) =
@@ -287,7 +290,7 @@ impl<
 
 						// deposit here and unlock assets
 						if let Some(details) = instant_flow_details {
-							let binance_api = self.binance_api.clone();
+							let oe_client_binance = self.oe_client_binance.clone();
 							let pumpx_signer = self.pumpx_signer_client.clone();
 							let bsc_client = self.bsc_client.clone();
 							let solana_client = self.solana_client.clone();
@@ -302,7 +305,7 @@ impl<
 									details.from_address,
 									details.wallet_index,
 									false,
-									binance_api,
+									oe_client_binance,
 									pumpx_signer,
 									bsc_client,
 									solana_client,
@@ -326,8 +329,7 @@ impl<
 						debug!("Processing Omni single chain swap provider");
 
 						// For omni, we generate addresses using AA contracts
-						let root_address =
-							self.evm_accounting_contract_client.get_signer_address().await;
+						let root_address = self.evm_oe_client_accounting.get_signer_address().await;
 						let omni_account: [u8; 32] = *account_id.as_ref();
 
 						// Generate from and to addresses using AA contracts
@@ -403,7 +405,7 @@ impl<
 
 						// Handle instant flow for omni (similar to pumpx but without pumpx-specific logic)
 						if let Some(details) = instant_flow_details {
-							let binance_api = self.binance_api.clone();
+							let oe_client_binance = self.oe_client_binance.clone();
 							let bsc_client = self.bsc_client.clone();
 							let solana_client = self.solana_client.clone();
 							let account_asset_lock = self.account_asset_lock.clone();
@@ -418,7 +420,7 @@ impl<
 									details.from_amount.to_string(),
 									details.from_address,
 									false,
-									binance_api,
+									oe_client_binance,
 									bsc_client,
 									solana_client,
 								)
@@ -478,12 +480,12 @@ impl<
 		from_amount: String,
 		from_address: String,
 		should_wait_for_deposit_confirm: bool,
-		binance_api: Arc<BinanceClient>,
+		oe_client_binance: Arc<BinanceClient>,
 		_bsc_client: Arc<EthereumClient>,
 		_solana_client: Arc<SolanaClient>,
 	) -> Result<(String, U256), ()> {
 		let (_deposit_address, binance_asset, from_amount_decimal, _amount_to_transfer_decimal) =
-			get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
+			get_binance_deposit_info(oe_client_binance.clone(), &from_asset, &from_amount).await?;
 
 		let binance_network = binance_asset.network;
 		let binance_coin = binance_asset.coin;
@@ -497,7 +499,7 @@ impl<
 
 		// init `payout_amount` with estimated-amount-to-receive
 		let mut payout_amount = estimate_payout_amount(
-			&binance_api,
+			&oe_client_binance,
 			&trade_symbol,
 			binance_coin.clone(),
 			from_amount_decimal,
@@ -534,7 +536,7 @@ impl<
 				order_side,
 				from_amount,
 				BinanceCoin::Sol,
-				binance_api.clone(),
+				oe_client_binance.clone(),
 			)
 			.await?;
 			payout_amount = result.0;
@@ -550,13 +552,13 @@ impl<
 		from_address: String,
 		wallet_index: u32,
 		should_wait_for_deposit_confirm: bool,
-		binance_api: Arc<BinanceClient>,
+		oe_client_binance: Arc<BinanceClient>,
 		pumpx_signer_client: Arc<Box<dyn SignerClient>>,
 		bsc_client: Arc<EthereumClient>,
 		solana_client: Arc<SolanaClient>,
 	) -> Result<(String, U256), ()> {
 		let (deposit_address, binance_asset, from_amount_decimal, amount_to_transfer_decimal) =
-			get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
+			get_binance_deposit_info(oe_client_binance.clone(), &from_asset, &from_amount).await?;
 
 		let binance_network = binance_asset.network;
 		let binance_coin = binance_asset.coin;
@@ -570,7 +572,7 @@ impl<
 
 		// init `payout_amount` with estimated-amount-to-receive
 		let mut payout_amount = estimate_payout_amount(
-			&binance_api,
+			&oe_client_binance,
 			&trade_symbol,
 			binance_coin.clone(),
 			from_amount_decimal,
@@ -659,7 +661,7 @@ impl<
 				order_side,
 				from_amount,
 				BinanceCoin::Sol,
-				binance_api.clone(),
+				oe_client_binance.clone(),
 			)
 			.await?;
 			payout_amount = result.0;

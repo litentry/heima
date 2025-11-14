@@ -1,23 +1,23 @@
 use crate::{detailed_error::DetailedError, server::RpcContext};
 use base64::Engine;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::hashing::blake2_256;
-use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode, Web2IdentityType,
-};
-use executor_storage::{
-	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
-	VerificationCodeStorage,
-};
-use heima_authentication::{
+use oe_core::auth::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,
 	web3::HeimaMessagePayload,
 };
-use heima_identity_verification::web2::{apple, google, oauth2_common};
-use oauth_providers::{
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::oauth::{
 	AppleProviderConfig, GoogleProviderConfig, OAuth2Client, OAuth2ProviderConfig,
+};
+use oe_core::verify::web2::{apple, google, oauth2_common};
+use oe_crypto::hashing::blake2_256;
+use oe_primitives::{
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
+	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode,
+};
+use oe_storage::{
+	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
+	VerificationCodeStorage,
 };
 use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
@@ -134,8 +134,7 @@ pub fn verify_email_authentication<
 	email: &str,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	let email_identity = Identity::from_web2_account(email, Web2IdentityType::Email);
-	let omni_account = email_identity.to_omni_account(client_id);
+	let omni_account = Identity::Email(email.into()).to_omni_account(client_id);
 	let storage_key = omni_account.hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
@@ -162,16 +161,6 @@ pub fn verify_auth_token_authentication(
 }
 
 pub async fn verify_oauth2_authentication<
-	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
->(
-	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
-	client_id: &str,
-	payload: &OAuth2Data,
-) -> Result<Identity, AuthenticationError> {
-	verify_oauth2_provider(ctx, client_id, payload).await
-}
-
-async fn verify_oauth2_provider<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
@@ -288,12 +277,10 @@ async fn verify_oauth2_provider<
 		return Err(AuthenticationError::OAuth2SubClaimMismatch);
 	}
 
-	let identity_type = match payload.provider {
-		OAuth2Provider::Google => Web2IdentityType::Google,
-		OAuth2Provider::Apple => Web2IdentityType::Apple,
+	let identity = match payload.provider {
+		OAuth2Provider::Google => Identity::Google(provider_sub.as_str().into()),
+		OAuth2Provider::Apple => Identity::Apple(provider_sub.as_str().into()),
 	};
-
-	let identity = Identity::from_web2_account(&provider_sub, identity_type);
 
 	Ok(identity)
 }
@@ -324,9 +311,8 @@ pub fn verify_passkey_authentication<
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	passkey_data: &PasskeyData,
 ) -> Result<(), AuthenticationError> {
-	use crate::methods::omni::{get_origin_for_client, get_rp_id_for_client};
-	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
-	use executor_storage::PasskeyStorage;
+	use oe_crypto::passkey::{ClientData, PasskeyVerifier};
+	use oe_storage::PasskeyStorage;
 
 	let identity = Identity::try_from(passkey_data.user_id.clone())
 		.map_err(|_| AuthenticationError::PasskeyError("Invalid user ID format".to_string()))?;
@@ -337,13 +323,12 @@ pub fn verify_passkey_authentication<
 			AuthenticationError::PasskeyError(format!("Failed to parse client data: {}", e))
 		})?;
 
-	let expected_origin = get_origin_for_client(&passkey_data.client_id);
-	if client_data.origin != expected_origin {
-		return Err(AuthenticationError::PasskeyError(format!(
-			"Client data origin mismatch: expected '{}', got '{}'",
-			expected_origin,
-			client_data.origin.as_str()
-		)));
+	let allowed_origins =
+		ctx.config_loader.get_passkey_config(&passkey_data.client_id).allowed_origins;
+	if !allowed_origins.iter().any(|origin| origin == &client_data.origin) {
+		return Err(AuthenticationError::PasskeyError(
+			oe_crypto::passkey::PasskeyError::OriginVerificationFailed.to_string(),
+		));
 	}
 
 	const EXPECTED_PASSKEY_TYPE: &str = "webauthn.get";
@@ -360,7 +345,7 @@ pub fn verify_passkey_authentication<
 	challenge_storage
 		.verify_and_consume_challenge(&client_data.challenge, &omni_account)
 		.map_err(|e| {
-			use executor_storage::PasskeyChallengeError;
+			use oe_storage::PasskeyChallengeError;
 			match e {
 				PasskeyChallengeError::ChallengeNotFound => {
 					AuthenticationError::PasskeyError("Challenge not found".to_string())
@@ -404,9 +389,8 @@ pub fn verify_passkey_authentication<
 	// CRITICAL SECURITY CHECK: Verify RP ID hash
 	// The first 32 bytes of auth data must be SHA-256(RP ID) to prevent phishing attacks
 	// This ensures the authenticator signed for the correct domain
-	let expected_rp_id = get_rp_id_for_client(&passkey_data.client_id);
-
-	PasskeyVerifier::verify_rp_id_hash(&auth_data_bytes, expected_rp_id).map_err(|e| {
+	let expected_rp_id = ctx.config_loader.get_passkey_config(&passkey_data.client_id).rp_id;
+	PasskeyVerifier::verify_rp_id_hash(&auth_data_bytes, &expected_rp_id).map_err(|e| {
 		AuthenticationError::PasskeyError(format!(
 			"RP ID validation failed: {}. Expected RP ID: '{}' for client_id: '{}'",
 			e, expected_rp_id, passkey_data.client_id
@@ -460,11 +444,9 @@ mod tests {
 	use super::*;
 	use alloy_signer::SignerSync;
 	use alloy_signer_local::PrivateKeySigner;
-	use executor_crypto::{ed25519, sr25519, PairTrait};
-	use executor_primitives::{
-		signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity,
-	};
-	use heima_identity_verification::helpers::generate_otp;
+	use oe_core::verify::helpers::generate_otp;
+	use oe_crypto::{ed25519, sr25519, PairTrait};
+	use oe_primitives::{signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity};
 	use tempfile::tempdir;
 
 	#[test]
