@@ -3857,44 +3857,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "executor-worker"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "clap",
- "cross-chain-intent-executor",
- "ethers",
- "hex",
- "jsonrpsee",
- "metrics-exporter-prometheus",
- "mock-server",
- "oe-client-aa",
- "oe-client-accounting",
- "oe-client-binance",
- "oe-client-ethereum",
- "oe-client-pumpx",
- "oe-client-signer",
- "oe-client-solana",
- "oe-client-wildmeta",
- "oe-core",
- "oe-crypto",
- "oe-primitives",
- "oe-storage",
- "rand 0.8.5",
- "rpc-server",
- "rsa",
- "rust_decimal",
- "scale-encode",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
 name = "expander"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6895,6 +6857,44 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid 1.18.1",
+]
+
+[[package]]
+name = "omni-executor"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "cross-chain-intent-executor",
+ "ethers",
+ "hex",
+ "jsonrpsee",
+ "metrics-exporter-prometheus",
+ "mock-server",
+ "oe-client-aa",
+ "oe-client-accounting",
+ "oe-client-binance",
+ "oe-client-ethereum",
+ "oe-client-pumpx",
+ "oe-client-signer",
+ "oe-client-solana",
+ "oe-client-wildmeta",
+ "oe-core",
+ "oe-crypto",
+ "oe-primitives",
+ "oe-storage",
+ "rand 0.8.5",
+ "rpc-server",
+ "rsa",
+ "rust_decimal",
+ "scale-encode",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
