@@ -3,14 +3,14 @@ use crate::{
 	utils::types::RpcResultExt, utils::validation::parse_rpc_params, Deserialize, RpcResult,
 };
 use alloy::primitives::keccak256;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::{
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::{
 	aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput},
 	ecdsa,
 };
-use executor_primitives::utils::hex::decode_hex;
-use executor_storage::{Storage, WildmetaTimestampStorage};
-use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use oe_primitives::utils::hex::decode_hex;
+use oe_storage::{Storage, WildmetaTimestampStorage};
 use rsa::Oaep;
 use sha2::Sha256;
 use std::sync::Arc;
@@ -177,19 +177,19 @@ pub fn register_export_bundler_private_key<
 mod tests {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
-	use binance_api::mocks::MockBinanceApiClient;
-	use config_loader::ConfigLoader;
-	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_crypto::{ecdsa, PairTrait};
-	use executor_primitives::utils::hex::hex_encode;
-	use executor_storage::{StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClientBuilder};
-	use pumpx::PumpxApiClient;
+	use oe_client_binance::mocks::MockBinanceApiClient;
+	use oe_client_pumpx::PumpxApiClient;
+	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
+	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::config::ConfigLoader;
+	use oe_core::intent::executor::MockedIntentExecutor;
+	use oe_crypto::{ecdsa, PairTrait};
+	use oe_primitives::utils::hex::hex_encode;
+	use oe_storage::{StorageDB, WildmetaTimestampStorage};
 	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-	use signer_client::{mocks::MockSignerClient, SignerClient};
 	use std::{collections::HashMap, sync::Arc};
 	use tempfile::tempdir;
-	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	const TEST_AES_KEY: Aes256Key = [42u8; 32];
 
@@ -220,7 +220,7 @@ mod tests {
 	}
 
 	fn decrypt_response(encrypted: &SerdeAesOutput, aes_key: &Aes256Key) -> Vec<u8> {
-		use executor_crypto::aes256::{aes_decrypt, Aes256KeyNonce, AesOutput};
+		use oe_crypto::aes256::{aes_decrypt, Aes256KeyNonce, AesOutput};
 		let nonce: Aes256KeyNonce =
 			encrypted.nonce.to_vec().try_into().expect("Invalid nonce length");
 		let mut aes_output = AesOutput {
@@ -245,14 +245,13 @@ mod tests {
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
 			Arc::new(MockBinanceApiClient::new());
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage =
 			Arc::new(WildmetaTimestampStorage::new(storage_db.clone()));
-		let loan_record_storage =
-			Arc::new(executor_storage::LoanRecordStorage::new(storage_db.clone()));
+		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(storage_db.clone()));
 
 		let (cross_chain_intent_executor, _) = MockedIntentExecutor::new();
 
@@ -267,7 +266,7 @@ mod tests {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,

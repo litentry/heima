@@ -59,11 +59,6 @@ on:
         description: rebuild-contract
         required: true
         default: false
-      rebuild-identity:
-        type: boolean
-        description: rebuild-identity
-        required: true
-        default: false
       push-docker:
         type: boolean
         description: push-docker
@@ -92,12 +87,10 @@ jobs:
     if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}
     outputs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
-      rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
       rebuild_contract: ${{ steps.env.outputs.rebuild_contract }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
-      run_identity_test: ${{ steps.env.outputs.run_identity_test }}
       run_omni_executor_test: ${{ steps.env.outputs.run_omni_executor_test }}
     steps:
       - uses: actions/checkout@v5
@@ -116,18 +109,13 @@ jobs:
         id: env
         run: |
           rebuild_parachain=false
-          rebuild_identity=false
           rebuild_omni_executor=false
           rebuild_contract=false
           push_docker=false
           run_parachain_test=false
-          run_identity_test=false
           run_omni_executor_test=false
           if [ "${{ github.event.inputs.rebuild-parachain }}" = "true" ] || [ "${{ steps.filter.outputs.parachain_src }}" = "true" ]; then
             rebuild_parachain=true
-          fi
-          if [ "${{ github.event.inputs.rebuild-identity }}" = "true" ] || [ "${{ steps.filter.outputs.identity_src }}" = "true" ]; then
-            rebuild_identity=true
           fi
           if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
             rebuild_omni_executor=true
@@ -143,20 +131,15 @@ jobs:
           if [ "${{ steps.filter.outputs.parachain_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ]; then
             run_parachain_test=true
           fi
-          if [ "${{ steps.filter.outputs.identity_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_identity" = "true" ]; then
-            run_identity_test=true
-          fi
           if [ "${{ steps.filter.outputs.omni_executor_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_omni_executor" = "true" ]; then
             run_omni_executor_test=true
           fi
 
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
-          echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
           echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
           echo "rebuild_contract=$rebuild_contract" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
-          echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
           echo "run_omni_executor_test=$run_omni_executor_test" | tee -a $GITHUB_OUTPUT
 
   fmt:
@@ -362,14 +345,14 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge version
-        working-directory: ./tee-worker/omni-executor/aa-contracts
+        working-directory: ./tee-worker/omni-executor/contracts/aa
         run: forge --version
 
       - name: Check AA contracts
-        working-directory: ./tee-worker/omni-executor/aa-contracts
+        working-directory: ./tee-worker/omni-executor/contracts/aa
         run: |
           forge b
-          forge t --gas-report > ./../../../gasreport.ansi
+          forge t --gas-report > ./../../../../gasreport.ansi
         env:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
@@ -399,13 +382,13 @@ jobs:
           solana -V
 
       - name: Check bsc accounting contracts
-        working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
+        working-directory: ./tee-worker/omni-executor/contracts/accounting/bsc
         run: |
           forge b
           forge t
 
       - name: Check solana accounting contracts
-        working-directory: ./tee-worker/omni-executor/accounting-contract/solana
+        working-directory: ./tee-worker/omni-executor/contracts/accounting/solana
         run: |
           anchor b
           # TODO: P-1575 tests fail randomly in CI

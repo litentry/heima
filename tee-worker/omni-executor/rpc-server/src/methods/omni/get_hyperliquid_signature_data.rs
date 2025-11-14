@@ -8,19 +8,17 @@ use crate::{
 	RpcResult,
 };
 use chrono::Utc;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
-use executor_primitives::{
-	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, UserAuth, UserId,
-};
-use executor_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
 use hyperliquid_rust_sdk::{
 	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
 };
 use jsonrpsee::RpcModule;
-use pumpx::pubkey_to_address;
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::passkey::{AttestationResult, PasskeyVerifier};
+use oe_primitives::{to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, UserAuth, UserId};
+use oe_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
 use serde::{Deserialize, Serialize};
-use signer_client::ChainType;
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -201,7 +199,7 @@ pub fn register_get_hyperliquid_signature_data<
 										error!("Challenge verification failed during passkey attachment: {:?}", e);
 									},
 								}
-								executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed
+								oe_crypto::passkey::PasskeyError::ChallengeVerificationFailed
 							})
 					},
 				)
@@ -442,7 +440,7 @@ async fn generate_eip712_signature<
 mod tests {
 	use super::*;
 	use alloy::primitives::Address;
-	use executor_primitives::VerificationCode;
+	use oe_primitives::VerificationCode;
 	use std::str::FromStr;
 
 	#[test]

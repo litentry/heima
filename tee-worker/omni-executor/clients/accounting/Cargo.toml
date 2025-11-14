@@ -1,0 +1,25 @@
+[package]
+name = "oe-client-accounting"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+accounting-contract = { workspace = true }
+alloy = { workspace = true, features = ["contract", "signer-local", "rpc", "rpc-types", "eips"] }
+anchor-client = { workspace = true, features = ["async"] }
+async-trait = { workspace = true }
+bincode = { workspace = true }
+mockall = { workspace = true }
+oe-client-ethereum = { workspace = true }
+sp-core = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+mock-server = { workspace = true }
+
+[features]
+mocks = []

@@ -21,10 +21,10 @@ use crate::utils::omni::to_omni_account;
 use crate::utils::user_op::convert_to_packed_user_op;
 use crate::utils::validation::{parse_rpc_params, validate_evm_address};
 use alloy::primitives::utils::format_units;
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::ChainId;
 use jsonrpsee::RpcModule;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 
@@ -124,7 +124,7 @@ pub fn register_estimate_user_op_gas<
 				entry_point_client.clone(),
 				packed_user_op,
 				params.chain_id,
-				ctx.binance_api_client.as_ref(),
+				ctx.oe_client_binance_client.as_ref(),
 			)
 			.await;
 

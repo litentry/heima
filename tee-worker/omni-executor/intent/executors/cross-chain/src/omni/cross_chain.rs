@@ -20,7 +20,7 @@ use crate::utils::{
 };
 use crate::*;
 use alloy::primitives::Address;
-use executor_primitives::SwapOrder;
+use oe_primitives::SwapOrder;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use tracing::{debug, error, info};
@@ -65,7 +65,7 @@ impl<
 		};
 
 		let estimated_from_amount_in_usdt = estimate_asset_value_in_usdt(
-			&self.binance_api,
+			&self.oe_client_binance,
 			usdt_trade_symbol,
 			from_asset_binance_coin.name(),
 			from_amount_decimal,
@@ -115,7 +115,7 @@ impl<
 
 				if instant {
 					let (_, binance_asset, from_amount_decimal, _) = get_binance_deposit_info(
-						self.binance_api.clone(),
+						self.oe_client_binance.clone(),
 						&swap_order.from_asset,
 						&from_amount,
 					)
@@ -132,7 +132,7 @@ impl<
 
 					// init `payout_amount` with estimated-amount-to-receive
 					let payout_amount = estimate_payout_amount(
-						&self.binance_api,
+						&self.oe_client_binance,
 						&trade_symbol,
 						binance_coin.clone(),
 						from_amount_decimal,
@@ -141,7 +141,7 @@ impl<
 
 					Ok((
 						self.apply_omni_gas_fee(&payout_amount, BinanceCoin::Bnb).await?,
-						self.evm_accounting_contract_client.get_signer_address().await.to_string(),
+						self.evm_oe_client_accounting.get_signer_address().await.to_string(),
 						Some(InstantFlowDetails {
 							omni_account,
 							from_asset: swap_order.from_asset.clone(),
@@ -153,8 +153,8 @@ impl<
 					))
 				} else {
 					let (payout_amount, payout_amount_u256) = do_binance_swap(
-						self.binance_api.clone(),
-						&self.evm_accounting_contract_client,
+						self.oe_client_binance.clone(),
+						&self.evm_oe_client_accounting,
 						swap_order.from_asset.clone(),
 						from_amount.clone(),
 						BinanceNetwork::Bsc,
@@ -162,12 +162,8 @@ impl<
 					)
 					.await?;
 
-					do_payout(
-						&self.evm_accounting_contract_client,
-						payout_address,
-						payout_amount_u256,
-					)
-					.await?;
+					do_payout(&self.evm_oe_client_accounting, payout_address, payout_amount_u256)
+						.await?;
 
 					Ok((
 						self.apply_omni_gas_fee(&payout_amount, BinanceCoin::Bnb).await?,
@@ -185,8 +181,8 @@ impl<
 				debug!("omni cross chain swap details: intent_id: {}, from_amount: {}, from_address: {}, payout_address: {}", intent_id, from_amount, from_address, payout_address);
 
 				let (payout_amount, payout_amount_u256) = do_binance_swap(
-					self.binance_api.clone(),
-					&self.solana_accounting_contract_client,
+					self.oe_client_binance.clone(),
+					&self.solana_oe_client_accounting,
 					swap_order.from_asset.clone(),
 					from_amount.clone(),
 					BinanceNetwork::Sol,
@@ -194,12 +190,8 @@ impl<
 				)
 				.await?;
 
-				do_payout(
-					&self.solana_accounting_contract_client,
-					payout_address,
-					payout_amount_u256,
-				)
-				.await?;
+				do_payout(&self.solana_oe_client_accounting, payout_address, payout_amount_u256)
+					.await?;
 
 				Ok((
 					self.apply_omni_gas_fee(&payout_amount, BinanceCoin::Sol).await?,

@@ -2,8 +2,8 @@ use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::RpcResult;
 use jsonrpsee::RpcModule;
+use oe_client_pumpx::methods::common::ApiResponse;
 use parity_scale_codec::Codec;
-use pumpx::methods::common::ApiResponse;
 use tracing::error;
 
 mod get_health;
@@ -26,7 +26,7 @@ use get_web3_sign_in_message::*;
 
 mod add_wallet;
 use add_wallet::*;
-use executor_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 
 mod export_wallet;
 use export_wallet::*;

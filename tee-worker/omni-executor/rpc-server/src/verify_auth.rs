@@ -1,23 +1,23 @@
 use crate::{detailed_error::DetailedError, server::RpcContext};
 use base64::Engine;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::hashing::blake2_256;
-use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode,
-};
-use executor_storage::{
-	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
-	VerificationCodeStorage,
-};
-use heima_authentication::{
+use oe_core::auth::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,
 	web3::HeimaMessagePayload,
 };
-use heima_identity_verification::web2::{apple, google, oauth2_common};
-use oauth_providers::{
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::oauth::{
 	AppleProviderConfig, GoogleProviderConfig, OAuth2Client, OAuth2ProviderConfig,
+};
+use oe_core::verify::web2::{apple, google, oauth2_common};
+use oe_crypto::hashing::blake2_256;
+use oe_primitives::{
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
+	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode,
+};
+use oe_storage::{
+	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
+	VerificationCodeStorage,
 };
 use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
@@ -345,7 +345,7 @@ pub fn verify_passkey_authentication<
 	challenge_storage
 		.verify_and_consume_challenge(&client_data.challenge, &omni_account)
 		.map_err(|e| {
-			use executor_storage::PasskeyChallengeError;
+			use oe_storage::PasskeyChallengeError;
 			match e {
 				PasskeyChallengeError::ChallengeNotFound => {
 					AuthenticationError::PasskeyError("Challenge not found".to_string())
@@ -444,11 +444,9 @@ mod tests {
 	use super::*;
 	use alloy_signer::SignerSync;
 	use alloy_signer_local::PrivateKeySigner;
-	use executor_crypto::{ed25519, sr25519, PairTrait};
-	use executor_primitives::{
-		signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity,
-	};
-	use heima_identity_verification::helpers::generate_otp;
+	use oe_core::verify::helpers::generate_otp;
+	use oe_crypto::{ed25519, sr25519, PairTrait};
+	use oe_primitives::{signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity};
 	use tempfile::tempdir;
 
 	#[test]

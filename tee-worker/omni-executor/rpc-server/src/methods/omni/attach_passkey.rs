@@ -3,11 +3,11 @@ use crate::{
 	utils::validation::parse_rpc_params, verify_auth::verify_auth, Deserialize, Serialize,
 };
 
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::passkey::{AttestationResult, PasskeyVerifier};
-use executor_primitives::{to_omni_auth, utils::hex::hex_encode, UserAuth, UserId};
-use executor_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::passkey::{AttestationResult, PasskeyVerifier};
+use oe_primitives::{to_omni_auth, utils::hex::hex_encode, UserAuth, UserId};
+use oe_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
 use tracing::*;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -87,7 +87,7 @@ pub fn register_attach_passkey<CrossChainIntentExecutor: IntentExecutor + Send +
 									);
 								},
 							}
-							executor_crypto::passkey::PasskeyError::ChallengeVerificationFailed
+							oe_crypto::passkey::PasskeyError::ChallengeVerificationFailed
 						})
 				},
 			)

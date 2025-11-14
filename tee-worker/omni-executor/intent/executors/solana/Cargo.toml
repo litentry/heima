@@ -6,15 +6,15 @@ edition.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
-executor-core = { workspace = true }
+oe-core = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 
 # Local dependencies
-executor-primitives = { workspace = true }
-pumpx = { workspace = true }
+oe-client-pumpx = { workspace = true }
+oe-primitives = { workspace = true }
 
 [lints]
 workspace = true
