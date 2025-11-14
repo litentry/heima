@@ -311,7 +311,6 @@ pub fn verify_passkey_authentication<
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	passkey_data: &PasskeyData,
 ) -> Result<(), AuthenticationError> {
-	use crate::methods::omni::{get_origin_for_client, get_rp_id_for_client};
 	use oe_crypto::passkey::{ClientData, PasskeyVerifier};
 	use oe_storage::PasskeyStorage;
 
@@ -324,13 +323,12 @@ pub fn verify_passkey_authentication<
 			AuthenticationError::PasskeyError(format!("Failed to parse client data: {}", e))
 		})?;
 
-	let expected_origin = get_origin_for_client(&passkey_data.client_id);
-	if client_data.origin != expected_origin {
-		return Err(AuthenticationError::PasskeyError(format!(
-			"Client data origin mismatch: expected '{}', got '{}'",
-			expected_origin,
-			client_data.origin.as_str()
-		)));
+	let allowed_origins =
+		ctx.config_loader.get_passkey_config(&passkey_data.client_id).allowed_origins;
+	if !allowed_origins.iter().any(|origin| origin == &client_data.origin) {
+		return Err(AuthenticationError::PasskeyError(
+			oe_crypto::passkey::PasskeyError::OriginVerificationFailed.to_string(),
+		));
 	}
 
 	const EXPECTED_PASSKEY_TYPE: &str = "webauthn.get";
@@ -391,9 +389,8 @@ pub fn verify_passkey_authentication<
 	// CRITICAL SECURITY CHECK: Verify RP ID hash
 	// The first 32 bytes of auth data must be SHA-256(RP ID) to prevent phishing attacks
 	// This ensures the authenticator signed for the correct domain
-	let expected_rp_id = get_rp_id_for_client(&passkey_data.client_id);
-
-	PasskeyVerifier::verify_rp_id_hash(&auth_data_bytes, expected_rp_id).map_err(|e| {
+	let expected_rp_id = ctx.config_loader.get_passkey_config(&passkey_data.client_id).rp_id;
+	PasskeyVerifier::verify_rp_id_hash(&auth_data_bytes, &expected_rp_id).map_err(|e| {
 		AuthenticationError::PasskeyError(format!(
 			"RP ID validation failed: {}. Expected RP ID: '{}' for client_id: '{}'",
 			e, expected_rp_id, passkey_data.client_id
