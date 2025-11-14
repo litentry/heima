@@ -311,8 +311,8 @@ pub fn verify_passkey_authentication<
 	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	passkey_data: &PasskeyData,
 ) -> Result<(), AuthenticationError> {
-	use executor_crypto::passkey::{ClientData, PasskeyVerifier};
-	use executor_storage::PasskeyStorage;
+	use oe_crypto::passkey::{ClientData, PasskeyVerifier};
+	use oe_storage::PasskeyStorage;
 
 	let identity = Identity::try_from(passkey_data.user_id.clone())
 		.map_err(|_| AuthenticationError::PasskeyError("Invalid user ID format".to_string()))?;
@@ -327,7 +327,7 @@ pub fn verify_passkey_authentication<
 		ctx.config_loader.get_passkey_config(&passkey_data.client_id).allowed_origins;
 	if !allowed_origins.iter().any(|origin| origin == &client_data.origin) {
 		return Err(AuthenticationError::PasskeyError(
-			executor_crypto::passkey::PasskeyError::OriginVerificationFailed.to_string(),
+			oe_crypto::passkey::PasskeyError::OriginVerificationFailed.to_string(),
 		));
 	}
 
