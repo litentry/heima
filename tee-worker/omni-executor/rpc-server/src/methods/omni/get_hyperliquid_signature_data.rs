@@ -168,15 +168,18 @@ pub fn register_get_hyperliquid_signature_data<
 					e.to_detailed_error().to_rpc_error()
 				})?;
 
-				// Determine expected origin based on client_id
-				let expected_origin = super::get_origin_for_client(&params.client_id);
+				// Get allowed origins for the client (supports web, iOS, and Android)
+				let allowed_origins =
+					ctx.config_loader.get_passkey_config(&params.client_id).allowed_origins;
+				let allowed_origins_refs: Vec<&str> =
+					allowed_origins.iter().map(|s| s.as_str()).collect();
 
 				// Verify client data JSON and consume challenge
 				let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
 				PasskeyVerifier::verify_client_data_json(
 					&attach_passkey_data.client_data_json,
 					omni_account.as_ref(),
-					expected_origin,
+					&allowed_origins_refs,
 					"webauthn.create", // For passkey registration/attachment
 					|challenge, omni_account| {
 						challenge_storage
@@ -399,6 +402,8 @@ pub fn register_get_hyperliquid_signature_data<
 					(HyperliquidAction::UserDexAbstraction(action), signature)
 				},
 			};
+
+			debug!("main_address: {:?}", main_address);
 
 			Ok(GetHyperliquidSignatureDataResponse {
 				main_address,
