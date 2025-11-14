@@ -1,11 +1,9 @@
 use crate::server::RpcContext;
-use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::RpcModule;
+use oe_core::intent::executor::IntentExecutor;
 
-mod omni;
+pub mod omni;
 use omni::*;
-
-pub use omni::PumpxRpcError;
 
 pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_testProtectedMethod",

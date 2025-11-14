@@ -74,7 +74,7 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         // Create Web3 instance
         const web3 = new Web3(config.parachain_ws);
 
-        let value = ethers.utils.parseUnits('0.1', 18).toString(); // 0.1
+        let value = ethers.parseUnits('0.1', 18).toString(); // 0.1
         // ExistentialDeposit = 100 000 000 000 000 000
         // Sign Tx with PK
         console.log(`Tx Signing with: ${evmAccountRaw.privateKey}`);

@@ -1,10 +1,11 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{AUTH_VERIFICATION_FAILED_CODE, INVALID_PARAMS_CODE, PARSE_ERROR_CODE};
-use crate::server::RpcContext;
+use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+use crate::utils::validation::parse_rpc_params;
 use crate::verify_auth::verify_email_authentication;
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{UserAuth, UserId};
+use crate::RpcContext;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::{UserAuth, UserId};
 use tracing::error;
 
 #[derive(Debug, serde::Deserialize)]
@@ -23,22 +24,15 @@ pub fn register_verify_email_verification_code_test<
 		.register_async_method(
 			"omni_verifyEmailVerificationCodeTest",
 			|params, ctx, _ext| async move {
-				let params =
-					params.parse::<VerifyEmailVerificationCodeTestParams>().map_err(|e| {
-						error!("Failed to parse params: {:?}", e);
-						DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-							.with_reason("Invalid JSON format or missing required fields")
-							.to_error_object()
-					})?;
+				let params = parse_rpc_params::<VerifyEmailVerificationCodeTestParams>(params)?;
 
 				let email = match &params.user_id {
 					UserId::Email(email) => email.clone(),
 					_ => {
 						error!("Invalid user_id type: expected Email, got {:?}", params.user_id);
-						return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid parameter")
-							.with_field("user_id")
-							.with_reason("user_id must be of type 'email'")
-							.to_error_object());
+						return Err(
+							DetailedError::invalid_params("user_id", "expect email").to_rpc_error()
+						);
 					},
 				};
 
@@ -46,10 +40,9 @@ pub fn register_verify_email_verification_code_test<
 					UserAuth::Email(code) => code.clone(),
 					_ => {
 						error!("Invalid auth type: expected Email, got {:?}", params.auth);
-						return Err(DetailedError::new(INVALID_PARAMS_CODE, "Invalid parameter")
-							.with_field("auth")
-							.with_reason("auth must be of type 'email' with verification code")
-							.to_error_object());
+						return Err(
+							DetailedError::invalid_params("auth", "expect email").to_rpc_error()
+						);
 					},
 				};
 
@@ -61,7 +54,7 @@ pub fn register_verify_email_verification_code_test<
 						);
 						DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication failed")
 							.with_reason(format!("Email verification failed: {}", e))
-							.to_error_object()
+							.to_rpc_error()
 					})?;
 
 				Ok::<(), ErrorObject>(())

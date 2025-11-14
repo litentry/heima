@@ -1,0 +1,38 @@
+[package]
+name = "oe-client-pumpx"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+base58 = { workspace = true }
+ethers = { workspace = true }
+hex = { workspace = true }
+jsonrpsee = { workspace = true, features = ["client"] }
+libsecp256k1 = { workspace = true }
+mockall = { workspace = true }
+parity-scale-codec = { workspace = true }
+rand = { workspace = true }
+reqwest = { workspace = true }
+rsa = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_repr = { workspace = true }
+serde_with = { workspace = true }
+sha2 = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+
+# Local dependencies
+base-signer-client = { package = "oe-client-signer", path = "../signer" }
+oe-core = { workspace = true }
+oe-crypto = { workspace = true }
+oe-primitives = { workspace = true }
+sp-core = { workspace = true }
+
+[lints]
+workspace = true
+
+[features]
+mocks = []

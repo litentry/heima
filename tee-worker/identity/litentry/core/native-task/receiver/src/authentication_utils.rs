@@ -8,7 +8,7 @@ use lc_authentication::jwt;
 use lc_data_providers::{google::GoogleOAuth2Client, DataProviderConfig};
 use lc_identity_verification::web2::{email::VerificationCodeStore, google};
 use lc_omni_account::InMemoryStore as OmniAccountStore;
-use litentry_primitives::{hex_encode, Identity, ShardIdentifier, Web2IdentityType};
+use litentry_primitives::{hex_encode, Identity, ShardIdentifier};
 use sp_core::{blake2_256, crypto::AccountId32 as AccountId, H256};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -134,7 +134,7 @@ fn verify_google_oauth2(
 	})?;
 	let claims = google::decode_jwt(&token)
 		.map_err(|e| AuthenticationError::OAuth2Error(format!("Failed to decode JWT: {:?}", e)))?;
-	let google_identity = Identity::from_web2_account(&claims.email, Web2IdentityType::Google);
+	let google_identity = Identity::Google(claims.email.as_str().into());
 	let identity_omni_account = match OmniAccountStore::get_omni_account(google_identity.hash()) {
 		Ok(Some(account_id)) => account_id,
 		_ => google_identity.to_omni_account(DEFAULT_CLIENT_ID),

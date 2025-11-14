@@ -1,16 +1,16 @@
 use crate::detailed_error::DetailedError;
-use crate::error_code::{INTERNAL_ERROR_CODE, INVALID_CHAIN_ID_CODE, PARSE_ERROR_CODE};
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
-use crate::utils::user_op::submit_corewriter_userop;
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::ChainId;
-use hyperliquid::*;
+use crate::utils::types::{RpcOptionExt, RpcResultExt};
+use crate::utils::user_op::submit_corewriter_user_ops;
+use crate::utils::validation::{parse_as, parse_rpc_params};
 use jsonrpsee::RpcModule;
+use oe_client_hyperliquid::*;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 #[derive(Debug, Deserialize)]
 pub struct OpenPositionTestParams {
@@ -36,78 +36,44 @@ pub fn register_open_position_test<
 ) {
 	module
 		.register_async_method("omni_openPositionTest", |params, ctx, _ext| async move {
-			let params = params.parse::<OpenPositionTestParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from(
-					DetailedError::new(PARSE_ERROR_CODE, "Parse error")
-						.with_reason("Invalid JSON format or missing required fields"),
-				)
-			})?;
+			let params = parse_rpc_params::<OpenPositionTestParams>(params)?;
 
 			debug!("Received omni_openPositionTest, params: {:?}", params);
 
-			let omni_account = to_omni_account(&params.omni_account).map_err(|_| {
-				error!("Failed to parse omni account");
-				PumpxRpcError::from(DetailedError::new(
-					PARSE_ERROR_CODE,
-					"Failed to parse omni account",
-				))
-			})?;
+			let omni_account = to_omni_account(&params.omni_account)?;
 
 			let smart_wallet = &params.sender;
 			let ticker = &params.ticker;
 
-			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INVALID_CHAIN_ID_CODE, "Chain not supported").with_reason(e),
-				)
+			let hypercore_client = HyperCoreClient::new(params.chain_id).map_err(|_| {
+				DetailedError::internal_error("HyperCore client error").to_rpc_error()
 			})?;
 
-			let (perp_meta, perp_mark_price, perp_mid_price) =
-				hypercore_client.get_perp_market_prices(ticker).await.map_err(|e| {
-					error!("Failed to get perp market prices for {}: {}", ticker, e);
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Failed to get perp market prices: {}", e)),
-					)
-				})?;
+			let (perp_meta, perp_mark_price, perp_mid_price) = hypercore_client
+				.get_perp_market_prices(ticker)
+				.await
+				.map_err_internal("Failed to get perp market prices")?;
 
-			let perp_asset_id = get_perp_asset_id(ticker, &perp_meta).map_err(|e| {
-				error!("Failed to get perp asset ID: {}", e);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error").with_reason(e),
-				)
-			})?;
+			let perp_asset_id = get_perp_asset_id(ticker, &perp_meta)
+				.map_err_internal("Failed to get perp asset id")?;
 
-			let perp_asset = perp_meta.universe.get(perp_asset_id as usize).ok_or_else(|| {
-				error!("Perp asset {} not found in meta", perp_asset_id);
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Perp asset {} not found", perp_asset_id)),
-				)
-			})?;
+			let perp_asset = perp_meta
+				.universe
+				.get(perp_asset_id as usize)
+				.ok_or_internal("Perp asset not found in meta")?;
 
 			let perp_sz_decimals = perp_asset.sz_decimals;
 
 			let (_, perp_ask_price) = get_bid_ask_prices(perp_mark_price, perp_mid_price);
 			let target_hedge_price = perp_ask_price * PERP_ENTRY_PRICE_RATIO;
-			let hedge_size = params.position_size.parse::<f64>().unwrap();
+			let hedge_size: f64 = parse_as(&params.position_size, "position_size")?;
 
 			let clamped_hedge_size = clamp_size(hedge_size, perp_sz_decimals);
 			let clamped_hedge_price = clamp_price(target_hedge_price, perp_sz_decimals, false);
 
-			let clamped_hedge_size_f64 = clamped_hedge_size.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Failed to parse clamped hedge size: {}", e)),
-				)
-			})?;
-			let clamped_hedge_price_f64 = clamped_hedge_price.parse::<f64>().map_err(|e| {
-				PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason(format!("Failed to parse clamped hedge price: {}", e)),
-				)
-			})?;
+			let clamped_hedge_size_f64: f64 = parse_as(&clamped_hedge_size, "clamped_hedge_size")?;
+			let clamped_hedge_price_f64: f64 =
+				parse_as(&clamped_hedge_price, "clamped_hedge_price")?;
 
 			let cloid = generate_cloid();
 
@@ -118,7 +84,7 @@ pub fn register_open_position_test<
 				cloid,
 			);
 
-			let hedge_open_tx_hash = submit_corewriter_userop(
+			let hedge_open_tx_hash = submit_corewriter_user_ops(
 				ctx.clone(),
 				&omni_account,
 				&generate_userop(smart_wallet, params.nonce),
@@ -140,17 +106,13 @@ pub fn register_open_position_test<
 				.wait_for_order(smart_wallet, &cloid.to_string(), 20, OrderWaitCondition::Opened)
 				.await
 				.map_err(|e| {
-					PumpxRpcError::from(
-						DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-							.with_reason(format!("Hedge order failed to open: {}", e)),
-					)
+					DetailedError::internal_error(&format!("Hedge order failed to open: {}", e))
+						.to_rpc_error()
 				})?;
 
 			if !order_opened {
-				return Err(PumpxRpcError::from(
-					DetailedError::new(INTERNAL_ERROR_CODE, "Internal error")
-						.with_reason("Hedge order was rejected or canceled"),
-				));
+				return Err(DetailedError::internal_error("Hedge order was rejected or canceled")
+					.to_rpc_error());
 			}
 
 			hypercore_client.print_account_state(smart_wallet, "After Open Position").await;

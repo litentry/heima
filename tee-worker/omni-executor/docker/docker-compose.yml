@@ -59,7 +59,7 @@ services:
   aa-contracts-deploy:
     build:
       context: ..
-      dockerfile: aa-contracts/Dockerfile.deploy
+      dockerfile: contracts/aa/Dockerfile.deploy
     container_name: aa-contracts-deploy
     volumes:
       - shared_contracts:/shared

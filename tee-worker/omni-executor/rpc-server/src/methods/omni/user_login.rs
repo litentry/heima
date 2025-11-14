@@ -1,24 +1,26 @@
-use super::common::check_omni_api_response;
+use super::check_backend_response;
 use crate::{
-	error_code::*, server::RpcContext, verify_auth::verify_auth, Deserialize, ErrorCode, Serialize,
+	detailed_error::DetailedError,
+	error_code::*,
+	server::RpcContext,
+	utils::{types::RpcResultExt, validation::parse_rpc_params},
+	verify_auth::verify_auth,
+	Deserialize, ErrorCode, Serialize,
 };
 
 use chrono::{Days, Utc};
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::jwt;
-use executor_primitives::{
-	to_omni_auth, utils::hex::hex_encode, ClientAuth, OmniAuth, UserAuth, UserId,
-};
-use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::{
+use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_client_pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
+use oe_core::auth::{
 	auth_token::{AuthOptions, AuthTokenClaims},
 	constants::{
 		AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE, CLIENT_ID_WILDMETA,
 	},
 };
-use heima_primitives::Identity;
-use jsonrpsee::{types::ErrorObject, RpcModule};
-use pumpx::methods::post_heima_login::{PostHeimaLoginBody, PostHeimaLoginResponse};
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::jwt;
+use oe_primitives::{to_omni_auth, utils::hex::hex_encode, ClientAuth, OmniAuth, UserAuth, UserId};
+use oe_storage::{HeimaJwtStorage, Storage};
 use tracing::error;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -49,10 +51,7 @@ pub fn register_user_login<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 ) {
 	module
 		.register_async_method("omni_userLogin", |params, ctx, _| async move {
-			let params = params.parse::<UserLoginParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				ErrorCode::ParseError
-			})?;
+			let params = parse_rpc_params::<UserLoginParams>(params)?;
 			let auth = OmniAuth::try_from(params.clone()).map_err(|e| {
 				error!("Failed to convert params to OmniAuth: {:?}", e);
 				ErrorCode::ParseError
@@ -61,30 +60,14 @@ pub fn register_user_login<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 				error!("Failed to verify auth: {:?}", auth);
 				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
 			})?;
-			let identity = Identity::try_from(params.user_id.clone()).map_err(|_| {
-				error!("Invalid user ID format");
+			let omni_account = params.user_id.to_omni_account(&params.client_id).map_err(|_| {
+				error!("Failed to convert user_id to omni_account");
 				ErrorCode::ParseError
 			})?;
-			let id_token = create_jwt_for_user(
-				identity.clone(),
-				AUTH_TOKEN_ID_TYPE,
-				&params.client_id,
-				&ctx.jwt_rsa_private_key,
-			)
-			.map_err(|_| {
-				error!("Failed to create access token for user");
-				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-			})?;
-			let access_token = create_jwt_for_user(
-				identity.clone(),
-				AUTH_TOKEN_ACCESS_TYPE,
-				&params.client_id,
-				&ctx.jwt_rsa_private_key,
-			)
-			.map_err(|_| {
-				error!("Failed to create access token for user");
-				ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE)
-			})?;
+
+			let (id_token, access_token) =
+				create_jwt(omni_account.as_ref(), &params.client_id, &ctx.jwt_rsa_private_key)
+					.map_err_internal("Failed to create jwt")?;
 
 			if params.client_id == CLIENT_ID_WILDMETA {
 				let body = PostHeimaLoginBody {
@@ -93,24 +76,25 @@ pub fn register_user_login<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 					client_auth: params.client_auth,
 					heima_login_success: true,
 				};
-				let Ok(backend_response) =
-					ctx.pumpx_api.post_heima_login(&access_token, body).await
-				else {
-					error!("Post_heima_login failed for Wildmeta client");
-					return Err(ErrorCode::ServerError(POST_HEIMA_LOGIN_FAILED_CODE).into());
-				};
+				let backend_response =
+					ctx.pumpx_api.post_heima_login(&access_token, body).await.map_err(|e| {
+						error!("Failed to call post_heim_login: {:?}", e);
+						DetailedError::pumpx_service_error("post_heima_login", format!("{:?}", e))
+							.to_rpc_error()
+					})?;
 
-				check_omni_api_response(backend_response.clone(), "Post heima login".into())?;
+				check_backend_response(&backend_response, "post_heima_login")?;
 
 				let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
-				let omni_account = identity.to_omni_account(&params.client_id);
-				if storage
-					.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
-					.is_err()
+				if let Err(e) =
+					storage.insert(&(omni_account, AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
 				{
 					error!(
-						"Failed to insert pumpx_{}_jwt_token into storage",
-						AUTH_TOKEN_ACCESS_TYPE
+						"Failed to insert pumpx_{}_jwt_token into storage: {:?}",
+						AUTH_TOKEN_ACCESS_TYPE, e
+					);
+					return Err(
+						DetailedError::storage_service_error("insert access token").to_rpc_error()
 					);
 				};
 				Ok::<UserLoginResponse, ErrorObject>(UserLoginResponse {
@@ -126,25 +110,36 @@ pub fn register_user_login<CrossChainIntentExecutor: IntentExecutor + Send + Syn
 		.expect("Failed to register omni_requestJwt method");
 }
 
-fn create_jwt_for_user(
-	identity: Identity,
-	token_type: &str,
+fn create_jwt(
+	omni_account: &[u8],
 	client_id: &str,
 	jwt_rsa_private_key: &[u8],
-) -> Result<String, ()> {
+) -> Result<(String, String), ()> {
 	let expires_at = Utc::now()
 		.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
 		.expect("Failed to calculate expiration")
 		.timestamp();
 	let auth_options = AuthOptions { expires_at };
-	let omni_account = identity.to_omni_account(client_id);
 	let token_claims = AuthTokenClaims::new(
-		hex_encode(omni_account.as_ref()),
-		token_type.to_string(),
+		hex_encode(omni_account),
+		AUTH_TOKEN_ID_TYPE.to_string(),
 		client_id.to_string(),
 		auth_options.clone(),
 	);
-	jwt::create(&token_claims, jwt_rsa_private_key).map_err(|e| {
+	let id_token = jwt::create(&token_claims, jwt_rsa_private_key).map_err(|e| {
 		error!("Failed to create JWT token: {:?}", e);
-	})
+	})?;
+
+	let token_claims = AuthTokenClaims::new(
+		hex_encode(omni_account),
+		AUTH_TOKEN_ACCESS_TYPE.to_string(),
+		client_id.to_string(),
+		auth_options.clone(),
+	);
+
+	let access_token = jwt::create(&token_claims, jwt_rsa_private_key).map_err(|e| {
+		error!("Failed to create JWT token: {:?}", e);
+	})?;
+
+	Ok((id_token, access_token))
 }

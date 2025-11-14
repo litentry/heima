@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
+use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
+use crate::utils::validation::parse_rpc_params;
 use crate::ErrorCode;
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::AccountId;
-use executor_storage::{IntentIdStorage, Storage};
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::AccountId;
+use oe_storage::{IntentIdStorage, Storage};
 use serde::Deserialize;
 use std::str::FromStr;
 use tracing::log::error;
@@ -37,7 +39,7 @@ pub fn register_get_next_intent_id<
 ) {
 	module
 		.register_async_method("omni_getNextIntentId", |params, ctx, _| async move {
-			let params = params.parse::<GetNextIntentIdParams>()?;
+			let params = parse_rpc_params::<GetNextIntentIdParams>(params)?;
 			let account = AccountId::from_str(&params.omni_account).map_err(|e| {
 				error!("Could not parse AccountId: {:?}", e);
 				<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InvalidParams)
@@ -48,7 +50,7 @@ pub fn register_get_next_intent_id<
 				.get(&account)
 				.map_err(|e| {
 					error!("Could not get IntentId from store: {:?}", e);
-					<ErrorCode as Into<ErrorObject>>::into(ErrorCode::InternalError)
+					DetailedError::storage_service_error("get intent ID").to_rpc_error()
 				})?
 				.unwrap_or_default();
 

@@ -1,15 +1,17 @@
 use crate::{
-	detailed_error::DetailedError, error_code::PARSE_ERROR_CODE, server::RpcContext,
-	validation_helpers::validate_email, Deserialize,
-};
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::{Hashable, Identity, Web2IdentityType};
-use executor_storage::{Storage, VerificationCodeStorage};
-use heima_identity_verification::web2::email::{
-	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
+	detailed_error::DetailedError,
+	server::RpcContext,
+	utils::validation::{parse_rpc_params, validate_email},
+	Deserialize,
 };
 use jsonrpsee::{types::ErrorObject, RpcModule};
-use tracing::{error, info};
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::verify::web2::email::{
+	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
+};
+use oe_primitives::{Hashable, Identity};
+use oe_storage::{Storage, VerificationCodeStorage};
+use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestEmailVerificationCodeParams {
@@ -24,23 +26,12 @@ pub fn register_request_email_verification_code<
 ) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
-			let params = params.parse::<RequestEmailVerificationCodeParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				DetailedError::new(PARSE_ERROR_CODE, "Failed to parse request parameters")
-					.with_reason(format!("Invalid JSON structure: {}", e))
-					.to_error_object()
-			})?;
+			debug!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, params: {:?}", params);
 
-			info!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, client_id: {}, user_email: {}", params.client_id, params.user_email);
+			let params = parse_rpc_params::<RequestEmailVerificationCodeParams>(params)?;
+			validate_email(&params.user_email)?;
 
-			validate_email(&params.user_email).map_err(|e| {
-				error!("[EMAIL_LIFECYCLE] Email validation failed for {}: {:?}", params.user_email, e);
-				e.to_error_object()
-			})?;
-
-			let email_identity =
-				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
-			let omni_account = email_identity.to_omni_account(&params.client_id);
+			let omni_account = Identity::Email(params.user_email.as_str().into()).to_omni_account(&params.client_id);
 
 			let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 			let verification_code = generate_verification_code();
@@ -49,7 +40,7 @@ pub fn register_request_email_verification_code<
 				.insert(&omni_account.hash(), verification_code.clone())
 				.map_err(|e| {
 					error!("[EMAIL_LIFECYCLE] Failed to store verification code for {}: {:?}", params.user_email, e);
-					DetailedError::storage_error("insert verification code").to_error_object()
+					DetailedError::storage_service_error("insert verification code").to_rpc_error()
 				})?;
 
 			// Get the appropriate mailer for this client
@@ -63,7 +54,7 @@ pub fn register_request_email_verification_code<
 					.with_field("client_id")
 					.with_received(&params.client_id)
 					.with_reason(format!("Error: {}", e))
-					.to_error_object()
+					.to_rpc_error()
 				})?;
 
 			// Use Wildmeta template for wildmeta client
@@ -76,14 +67,14 @@ pub fn register_request_email_verification_code<
 				.await
 				.map_err(|e| {
 					error!("[EMAIL_LIFECYCLE] Failed to send Wildmeta verification email to {} (client: {}): {:?}", params.user_email, params.client_id, e);
-					DetailedError::email_service_error(&params.user_email).to_error_object()
+					DetailedError::email_service_error(&params.user_email).to_rpc_error()
 				})?;
 			} else {
 				send_verification_email(&*mailer, params.user_email.clone(), verification_code.clone())
 					.await
 					.map_err(|e| {
 						error!("[EMAIL_LIFECYCLE] Failed to send verification email to {} (client: {}): {:?}", params.user_email, params.client_id, e);
-						DetailedError::email_service_error(&params.user_email).to_error_object()
+						DetailedError::email_service_error(&params.user_email).to_rpc_error()
 					})?;
 			}
 

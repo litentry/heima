@@ -18,12 +18,12 @@ use std::str::FromStr;
 
 use alloy::primitives::Address;
 use async_trait::async_trait;
-use ethereum_rpc::AlloyRpcProviderFactory;
-use executor_core::intent_executor::IntentExecutionResult;
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::AccountId;
-use executor_primitives::Intent;
-use executor_primitives::IntentId;
+use oe_client_ethereum::AlloyRpcProviderFactory;
+use oe_core::intent::executor::IntentExecutionResult;
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::AccountId;
+use oe_primitives::Intent;
+use oe_primitives::IntentId;
 use signer::get_omni_account_signer;
 use tracing::log::{error, info};
 use tx::submit;

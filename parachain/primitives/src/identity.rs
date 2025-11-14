@@ -81,6 +81,12 @@ impl IdentityString {
 	}
 }
 
+impl From<&str> for IdentityString {
+	fn from(value: &str) -> Self {
+		IdentityString::new(value.as_bytes().to_vec())
+	}
+}
+
 impl Debug for IdentityString {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
 		if_development_or!(
@@ -467,7 +473,12 @@ impl Identity {
 			},
 			Identity::Apple(handle) => {
 				hasher.update(b"apple");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 			Identity::Email(handle) => {
 				hasher.update(b"email");
@@ -480,7 +491,12 @@ impl Identity {
 			},
 			Identity::Google(handle) => {
 				hasher.update(b"google");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 			Identity::Pumpx(handle) => {
 				// TODO: this type will be removed.
@@ -489,7 +505,12 @@ impl Identity {
 			},
 			Identity::Passkey(handle) => {
 				hasher.update(b"passkey");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 		}
 
@@ -544,6 +565,8 @@ impl Identity {
 					return Ok(Identity::Google(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "pumpx" {
 					return Ok(Identity::Pumpx(IdentityString::new(v[1].as_bytes().to_vec())));
+				} else if v[0] == "passkey" {
+					return Ok(Identity::Passkey(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else {
 					return Err("Unknown did type");
 				}
@@ -607,39 +630,6 @@ impl Identity {
 	pub fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()
 	}
-
-	pub fn from_web2_account(handle: &str, identity_type: Web2IdentityType) -> Self {
-		match identity_type {
-			Web2IdentityType::Twitter => {
-				Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Discord => {
-				Identity::Discord(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Apple => {
-				Identity::Apple(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Email => {
-				Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Google => {
-				Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Pumpx => {
-				Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-		}
-	}
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Web2IdentityType {
-	Twitter,
-	Discord,
-	Apple,
-	Email,
-	Google,
-	Pumpx,
 }
 
 impl From<ed25519::Public> for Identity {

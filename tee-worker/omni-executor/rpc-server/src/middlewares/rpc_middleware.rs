@@ -2,7 +2,6 @@ use crate::{
 	error_code::AUTH_VERIFICATION_FAILED_CODE, methods::PROTECTED_METHODS,
 	middlewares::HttpExtensions, verify_auth::verify_auth_token_authentication,
 };
-use heima_authentication::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use jsonrpsee::{
 	server::{
 		middleware::rpc::{ResponseFuture, RpcServiceT},
@@ -10,6 +9,7 @@ use jsonrpsee::{
 	},
 	types::{ErrorObject, Request},
 };
+use oe_core::auth::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
 use tower::layer::util::{Identity, Stack};
 
 #[derive(Clone, Debug)]
