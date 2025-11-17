@@ -299,7 +299,7 @@ jobs:
           context: .
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:latest
-          target: executor-worker
+          target: omni-executor
           build-args: |
             CARGO_FEATURES=mock-server
 

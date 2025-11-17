@@ -2,7 +2,7 @@
 
 ### Local binary deployment image
 ##################################################
-FROM ubuntu:24.04 AS executor-worker
+FROM ubuntu:24.04 AS omni-executor
 
 ENV BIN_DIR=/usr/local/bin
 WORKDIR $BIN_DIR
@@ -10,11 +10,11 @@ WORKDIR $BIN_DIR
 RUN apt update && apt install -y ca-certificates curl
 
 # Copy the pre-built binary from local target directory
-COPY target/release/executor-worker $BIN_DIR/executor-worker
+COPY target/release/omni-executor $BIN_DIR/omni-executor
 COPY local/keystore $BIN_DIR/local/keystore
 
-RUN chmod +x $BIN_DIR/executor-worker
+RUN chmod +x $BIN_DIR/omni-executor
 RUN ls -al $BIN_DIR
-RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
+RUN ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version
 
-CMD ["executor-worker"]
+CMD ["omni-executor"]
