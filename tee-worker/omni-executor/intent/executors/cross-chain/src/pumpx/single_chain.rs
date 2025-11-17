@@ -289,7 +289,7 @@ impl<
 			.iter()
 			.map(|tx| {
 				let unsigned_tx_bytes = hex::decode(tx.trim_start_matches("0x")).unwrap();
-				bincode1::deserialize(&unsigned_tx_bytes[..])
+				bincode::deserialize(&unsigned_tx_bytes[..])
 					.map_err(|e| error!("Failed to deserialize string: {:?}", e))
 			})
 			.collect::<Result<Vec<solana_sdk::transaction::Transaction>, _>>()?;
@@ -322,7 +322,7 @@ impl<
 			tx.verify().map_err(|e| {
 				error!("Solana transaction verification failed: {:?}", e);
 			})?;
-			let encoded_tx = bincode1::serialize(&tx).map_err(|e| {
+			let encoded_tx = bincode::serialize(&tx).map_err(|e| {
 				error!("Failed to serialize Solana transaction: {:?}", e);
 			})?;
 			tx_data.push(format!("0x{}", hex::encode(encoded_tx)));
