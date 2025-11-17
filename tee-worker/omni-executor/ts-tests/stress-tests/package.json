@@ -35,7 +35,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.16",
+    "@types/chai": "^5.2.3",
     "@types/express": "^5.0.5",
     "@types/mocha": "^10.0.7",
     "@types/node": "^20.14.11",
