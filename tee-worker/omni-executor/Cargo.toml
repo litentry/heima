@@ -3,7 +3,6 @@ members = [
     "bin",
     "cli",
     "clients/*",
-    "contracts/accounting/solana/programs/accounting-contract",
     "crypto",
     "core",
     "intent/executors/cross-chain",
