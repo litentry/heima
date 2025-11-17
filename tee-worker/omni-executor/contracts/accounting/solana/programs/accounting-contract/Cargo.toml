@@ -18,6 +18,5 @@ no-log-ix-name = []
 test-skip-auth = []
 
 [dependencies]
-anchor-lang = { version = "0.32", features = ["init-if-needed"] }
-bincode = "2.0.1"
+anchor-lang = { version = "0.31", features = ["init-if-needed"] }
 serde = { version = "1.0.217", features = ["derive"] }
