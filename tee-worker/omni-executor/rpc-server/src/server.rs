@@ -5,7 +5,10 @@ use crate::{
 	middlewares::{HttpMiddleware, RpcMiddleware},
 	ShieldingKey,
 };
-use jsonrpsee::{server::Server, RpcModule};
+use jsonrpsee::{
+	server::{Server, ServerConfig},
+	RpcModule,
+};
 use oe_client_aa::EntryPointClient;
 use oe_client_binance::BinancePaymasterApi;
 use oe_client_ethereum::AlloyRpcProvider;
@@ -142,8 +145,9 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	let address = format!("0.0.0.0:{}", port);
 	let max_connections: u32 =
 		env::var("OE_RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
+	let config = ServerConfig::builder().max_connections(max_connections).build();
 	let server = Server::builder()
-		.max_connections(max_connections)
+		.set_id_provider(config)
 		.set_http_middleware(HttpMiddleware::create_builder())
 		.set_rpc_middleware(RpcMiddleware::create_builder(jwt_rsa_private_key))
 		.build(address.parse::<SocketAddr>()?)

@@ -6,10 +6,11 @@ use oe_primitives::SolanaToken;
 use solana_account_decoder_client_types::UiAccountData;
 use solana_client::rpc_response::RpcKeyedAccount;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
-	commitment_config::CommitmentConfig, program_pack::Pack, pubkey::Pubkey,
-	signer::Signer as SignerTrait, system_instruction, transaction::Transaction,
+	program_pack::Pack, pubkey::Pubkey, signer::Signer as SignerTrait, transaction::Transaction,
 };
+use solana_system_interface::instruction as system_instruction;
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
 use tracing::{debug, error};

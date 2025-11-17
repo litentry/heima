@@ -102,8 +102,11 @@ impl AccountingContractApi<Pubkey, u64> for AccountingContractClient {
 		match program.rpc().get_account(&account_pubkey).await {
 			// return default nonce 0 when fail to get nonce
 			Ok(account) => {
-				match bincode::deserialize::<accounting_contract::Nonce>(&account.data[8..]) {
-					Ok(nonce) => Ok(nonce.nonce),
+				match bincode::decode_from_slice::<accounting_contract::Nonce, _>(
+					&account.data[8..],
+					bincode::config::standard(),
+				) {
+					Ok((nonce, _)) => Ok(nonce.nonce),
 					Err(e) => {
 						error!("Failed deserialize nonce from account {:?}: {:?}", account, e);
 						Ok(0)

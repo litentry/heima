@@ -20,13 +20,13 @@ use oe_primitives::AccountId;
 use oe_primitives::Intent;
 use oe_primitives::IntentId;
 use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
-	commitment_config::CommitmentConfig,
 	pubkey::Pubkey,
 	signer::{keypair::Keypair, EncodableKey, Signer},
-	system_instruction,
 	transaction::Transaction,
 };
+use solana_system_interface::instruction as system_instruction;
 use tracing::log::{error, info};
 
 // Executes intents on Solana network.
