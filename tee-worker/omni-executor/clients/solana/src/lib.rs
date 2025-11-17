@@ -6,14 +6,17 @@ use oe_primitives::SolanaToken;
 use solana_account_decoder_client_types::UiAccountData;
 use solana_client::rpc_response::RpcKeyedAccount;
 use solana_client::{nonblocking::rpc_client::RpcClient, rpc_request::TokenAccountsFilter};
-use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
-	program_pack::Pack, pubkey::Pubkey, signer::Signer as SignerTrait, transaction::Transaction,
+	commitment_config::CommitmentConfig, program_pack::Pack, pubkey::Pubkey,
+	signer::Signer as SignerTrait, transaction::Transaction,
 };
-use solana_system_interface::instruction as system_instruction;
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
 use tracing::{debug, error};
+
+// Using deprecated solana_sdk::system_instruction to avoid extra solana_system_interface dependency
+#[allow(deprecated)]
+use solana_sdk::system_instruction;
 
 #[async_trait]
 pub trait SolanaClient: Send + Sync {

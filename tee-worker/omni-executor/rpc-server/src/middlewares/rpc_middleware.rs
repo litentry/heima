@@ -3,12 +3,12 @@ use crate::{
 	middlewares::HttpExtensions, verify_auth::verify_auth_token_authentication,
 };
 use jsonrpsee::{
-	server::{middleware::rpc::RpcServiceT, TowerServiceBuilder},
+	server::middleware::rpc::{Batch, Notification, RpcServiceBuilder, RpcServiceT},
 	types::{ErrorObject, Request},
 	MethodResponse,
 };
 use oe_core::auth::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE};
-use tower::layer::util::{Identity, Stack};
+use tower::layer::util::Stack;
 
 #[derive(Clone, Debug)]
 pub struct RpcExtensions {
@@ -22,8 +22,8 @@ pub struct RpcMiddleware;
 impl RpcMiddleware {
 	pub fn create_builder(
 		rsa_private_key: Vec<u8>,
-	) -> TowerServiceBuilder<Stack<AuthRpcLayer, Identity>> {
-		TowerServiceBuilder::new().layer(AuthRpcLayer { rsa_private_key })
+	) -> RpcServiceBuilder<Stack<AuthRpcLayer, tower::layer::util::Identity>> {
+		RpcServiceBuilder::new().layer(AuthRpcLayer { rsa_private_key })
 	}
 }
 
@@ -48,7 +48,14 @@ pub struct AuthRpcService<S> {
 
 impl<S> RpcServiceT for AuthRpcService<S>
 where
-	S: RpcServiceT + Send + Sync + Clone + 'static,
+	S: RpcServiceT<
+			MethodResponse = MethodResponse,
+			NotificationResponse = MethodResponse,
+			BatchResponse = MethodResponse,
+		> + Send
+		+ Sync
+		+ Clone
+		+ 'static,
 {
 	type MethodResponse = S::MethodResponse;
 	type NotificationResponse = S::NotificationResponse;
@@ -105,14 +112,14 @@ where
 
 	fn batch<'a>(
 		&self,
-		batch: jsonrpsee::types::Batch<'a>,
+		batch: Batch<'a>,
 	) -> impl std::future::Future<Output = Self::BatchResponse> + Send + 'a {
 		self.service.batch(batch)
 	}
 
 	fn notification<'a>(
 		&self,
-		notification: jsonrpsee::types::Notification<'a>,
+		notification: Notification<'a>,
 	) -> impl std::future::Future<Output = Self::NotificationResponse> + Send + 'a {
 		self.service.notification(notification)
 	}

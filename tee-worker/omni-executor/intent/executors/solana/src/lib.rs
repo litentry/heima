@@ -20,14 +20,17 @@ use oe_primitives::AccountId;
 use oe_primitives::Intent;
 use oe_primitives::IntentId;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
+	commitment_config::CommitmentConfig,
 	pubkey::Pubkey,
 	signer::{keypair::Keypair, EncodableKey, Signer},
 	transaction::Transaction,
 };
-use solana_system_interface::instruction as system_instruction;
 use tracing::log::{error, info};
+
+// Using deprecated solana_sdk::system_instruction to avoid extra solana_system_interface dependency
+#[allow(deprecated)]
+use solana_sdk::system_instruction;
 
 // Executes intents on Solana network.
 pub struct SolanaIntentExecutor {

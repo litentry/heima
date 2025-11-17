@@ -147,7 +147,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		env::var("OE_RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
 	let config = ServerConfig::builder().max_connections(max_connections).build();
 	let server = Server::builder()
-		.set_id_provider(config)
+		.set_config(config)
 		.set_http_middleware(HttpMiddleware::create_builder())
 		.set_rpc_middleware(RpcMiddleware::create_builder(jwt_rsa_private_key))
 		.build(address.parse::<SocketAddr>()?)

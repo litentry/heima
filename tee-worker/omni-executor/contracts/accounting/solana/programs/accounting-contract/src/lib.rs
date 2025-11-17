@@ -119,7 +119,7 @@ pub struct PayoutRequest {
 }
 
 #[account]
-#[derive(InitSpace, Serialize, Deserialize, Debug)]
+#[derive(InitSpace, Serialize, Deserialize, Debug, bincode::Encode, bincode::Decode)]
 pub struct Nonce {
 	pub nonce: u64,
 }
