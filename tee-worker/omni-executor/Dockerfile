@@ -23,7 +23,7 @@ RUN if [ -n "$CARGO_FEATURES" ]; then \
 
 ### Deploy image (for CI - No Gramine)
 ##################################################
-FROM node:20-bookworm-slim AS executor-worker
+FROM node:20-bookworm-slim AS omni-executor
 
 ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
 ENV BIN_DIR=/usr/local/bin
@@ -32,13 +32,13 @@ WORKDIR $BIN_DIR
 RUN apt update && apt install -y ca-certificates curl
 RUN corepack enable && corepack prepare pnpm@8.7.6 --activate && corepack enable pnpm
 
-COPY --from=plain-builder $SRC_DIR/target/release/executor-worker $BIN_DIR/executor-worker
+COPY --from=plain-builder $SRC_DIR/target/release/omni-executor $BIN_DIR/omni-executor
 COPY --from=plain-builder $SRC_DIR/local/keystore $BIN_DIR/local/keystore
 
-RUN chmod +x $BIN_DIR/executor-worker
+RUN chmod +x $BIN_DIR/omni-executor
 RUN ls -al $BIN_DIR
-RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
-CMD ["$BIN_DIR/executor-worker"]
+RUN ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version
+CMD ["$BIN_DIR/omni-executor"]
 
 
 ### Builder Stage - With Gramine (SGX Hardware)

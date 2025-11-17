@@ -25,7 +25,7 @@ endif
 .PHONY: $(BIN_NAME)
 $(BIN_NAME):
 	cargo build --release --locked --features=$(COMPILATION_FEATURES)
-	cp target/release/executor-worker $(BIN_NAME)
+	cp target/release/omni-executor $(BIN_NAME)
 
 
 ifeq ($(DEBUG),1)
@@ -77,7 +77,7 @@ clean-data:
 
 .PHONY: build-docker
 build-docker:
-	docker build --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+	docker build --target omni-executor -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
@@ -94,7 +94,7 @@ stop-local:
 
 .PHONY: build-docker-test
 build-docker-test:
-	docker build --build-arg CARGO_FEATURES="mock-server,test-endpoints" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+	docker build --build-arg CARGO_FEATURES="mock-server,test-endpoints" --target omni-executor -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: rebuild-docker-dev
 rebuild-docker-dev:
