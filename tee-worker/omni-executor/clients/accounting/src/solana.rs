@@ -8,7 +8,7 @@ use anchor_client::{
 		pubkey::Pubkey,
 		signature::{Keypair, Signer},
 		signer::SeedDerivable,
-		system_program,
+		system_program::ID as SYSTEM_PROGRAM_ID,
 	},
 	Client, Cluster,
 };
@@ -37,7 +37,7 @@ impl AccountingContractClient {
 		let cluster = Cluster::from_str(&self.solana_url).map_err(|err| {
 			error!("Failed to create solana cluster: {:?}", err);
 		})?;
-		let payer = Arc::new(Keypair::from_bytes(&self.payer.to_bytes()).map_err(|err| {
+		let payer = Arc::new(Keypair::try_from(&self.payer.to_bytes()[..]).map_err(|err| {
 			error!("Failed to clone keypair: {:?}", err);
 		})?);
 		Ok(Client::new_with_options(cluster, payer, CommitmentConfig::confirmed()))
@@ -73,7 +73,7 @@ impl AccountingContractApi<Pubkey, u64> for AccountingContractClient {
 				worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 				treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 				beneficiary,
-				system_program: system_program::ID,
+				system_program: SYSTEM_PROGRAM_ID,
 			})
 			.args(accounting_contract::instruction::CreatePayRequest {
 				amount: amount.try_into().map_err(|_| {

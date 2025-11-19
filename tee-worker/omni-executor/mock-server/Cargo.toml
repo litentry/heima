@@ -13,4 +13,4 @@ serde_json = { workspace = true, features = ["std"] }
 sp-core = { workspace = true, features = ["std"] }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
-warp = "0.3.7"
+warp = { version = "0.4.2", features = ["server"] }

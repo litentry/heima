@@ -7,7 +7,7 @@ edition.workspace = true
 [dependencies]
 async-trait = { workspace = true }
 mockall = { workspace = true }
-solana-account-decoder-client-types = "2.1.5"
+solana-account-decoder-client-types = "2.3.13"
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 spl-associated-token-account = { workspace = true }

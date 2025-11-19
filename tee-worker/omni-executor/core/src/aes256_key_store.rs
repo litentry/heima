@@ -28,8 +28,8 @@ impl Aes256KeyStore {
 
 impl KeyStore<Aes256Key> for Aes256KeyStore {
 	fn generate_key() -> Result<Aes256Key, ()> {
-		let mut rng = rand::thread_rng();
-		Ok(rng.gen())
+		let mut rng = rand::rng();
+		Ok(rng.random())
 	}
 
 	fn serialize(k: &Aes256Key) -> Result<Vec<u8>, ()> {

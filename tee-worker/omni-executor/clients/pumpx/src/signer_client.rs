@@ -6,7 +6,7 @@ use jsonrpsee::core::traits::ToRpcParams;
 use jsonrpsee::http_client::HttpClient;
 use jsonrpsee::server::tracing::error;
 use oe_crypto::ecdsa;
-use rand::rngs::OsRng;
+use rsa::rand_core::OsRng;
 use rsa::BigUint;
 use rsa::Oaep;
 use rsa::RsaPublicKey;
