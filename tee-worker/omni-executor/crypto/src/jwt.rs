@@ -38,6 +38,7 @@ mod tests {
 	use chrono::{Days, Utc};
 	use rsa::{
 		pkcs1::{EncodeRsaPrivateKey, EncodeRsaPublicKey},
+		rand_core::OsRng,
 		RsaPrivateKey,
 	};
 
@@ -50,7 +51,7 @@ mod tests {
 
 	#[test]
 	fn decode_jwt_works() {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -71,7 +72,7 @@ mod tests {
 
 	#[test]
 	fn skip_exp_check_works() {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
