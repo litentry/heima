@@ -15,7 +15,10 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-	rsa::{errors::Error as RsaError, sha2::Sha256, Oaep, RsaPrivateKey, RsaPublicKey},
+	rsa::{
+		errors::Error as RsaError, rand_core::OsRng, sha2::Sha256, Oaep, RsaPrivateKey,
+		RsaPublicKey,
+	},
 	traits::Decrypt,
 };
 
@@ -52,7 +55,7 @@ impl Decrypt for ShieldingKey {
 
 impl Default for ShieldingKey {
 	fn default() -> Self {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let key = RsaPrivateKey::new(&mut rng, 3072).expect("Failed to generate RSA key");
 		Self { key }
 	}

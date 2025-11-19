@@ -24,10 +24,13 @@ use solana_sdk::{
 	commitment_config::CommitmentConfig,
 	pubkey::Pubkey,
 	signer::{keypair::Keypair, EncodableKey, Signer},
-	system_instruction,
 	transaction::Transaction,
 };
 use tracing::log::{error, info};
+
+// Using deprecated solana_sdk::system_instruction to avoid extra solana_system_interface dependency
+#[allow(deprecated)]
+use solana_sdk::system_instruction;
 
 // Executes intents on Solana network.
 pub struct SolanaIntentExecutor {

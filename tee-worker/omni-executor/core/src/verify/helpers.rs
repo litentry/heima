@@ -1,14 +1,14 @@
-use rand::{thread_rng, Rng};
+use rand::Rng;
 use std::string::String;
 
 // This will be used for oauth2 authentication
 #[allow(dead_code)]
 pub(crate) fn generate_alphanumeric_otp(length: usize) -> String {
-	let mut rng = thread_rng();
+	let mut rng = rand::rng();
 	let charset: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 	let random_string: String = (0..length)
 		.map(|_| {
-			let idx = rng.gen_range(0..charset.len());
+			let idx = rng.random_range(0..charset.len());
 			charset[idx] as char
 		})
 		.collect();
@@ -17,8 +17,8 @@ pub(crate) fn generate_alphanumeric_otp(length: usize) -> String {
 }
 
 pub fn generate_otp(length: usize) -> String {
-	let mut rng = rand::thread_rng();
-	let otp: String = (0..length).map(|_| rng.gen_range(0..10).to_string()).collect();
+	let mut rng = rand::rng();
+	let otp: String = (0..length).map(|_| rng.random_range(0..10).to_string()).collect();
 	otp
 }
 
