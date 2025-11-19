@@ -77,7 +77,7 @@ bitflags = { version = "2.9.3" }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 der = { version = "0.7", default-features = false }
-derive_more = { version = "1.0" }
+derive_more = { version = "2.0" }
 env_logger = { version = "0.10.2" }
 environmental = { version = "1.1.2", default-features = false }
 impl-trait-for-tuples = { version = "0.2.2" }
@@ -101,8 +101,8 @@ ecdsa = { version = "0.16", default-features = false }
 futures = { version = "0.3.30", features = ["compat"] }
 jsonrpsee = { version = "0.24.8", features = ["server"] }
 tokio = { version = "1.40.0", features = ["macros", "sync"] }
-strum = { version = "0.26", default-features = false }
-strum_macros = { version = "0.26", default-features = false }
+strum = { version = "0.27", default-features = false }
+strum_macros = { version = "0.27", default-features = false }
 libsecp256k1 = { version = "0.7", default-features = false }
 num_enum = { version = "0.7.3", default-features = false }
 num-integer = { version = "0.1", default-features = false }
