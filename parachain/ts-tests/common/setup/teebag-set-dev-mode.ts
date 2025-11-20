@@ -1,6 +1,6 @@
 import '@polkadot/api-augment';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-import { loadConfig, signAndSend, sudoWrapperGc } from '../utils';
+import { loadConfig, signAndSend, sudoWrapperGc } from '../utils/index.js';
 
 async function setAliceAsAdmin(api: ApiPromise, config: any) {
     // Get keyring of Alice, who is also the sudo in dev chain spec

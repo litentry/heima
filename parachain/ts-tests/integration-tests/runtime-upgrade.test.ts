@@ -1,12 +1,11 @@
+import { expect, test } from 'vitest';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import * as fs from 'fs';
 import { Keyring, ApiPromise, WsProvider } from '@polkadot/api';
 import { describeLitentry } from '../common/utils/integration-setup';
 import '@polkadot/wasm-crypto/initOnlyAsm';
 import * as path from 'path';
-import { expect } from 'chai';
-import { step } from 'mocha-steps';
-import { signAndSend, subscribeToEvents } from '../common/utils';
+import { signAndSend, subscribeToEvents } from '../common/utils/index.js';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Event } from '@polkadot/types/interfaces/system';
 import { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
@@ -95,7 +94,7 @@ async function excuteNotePreimage(api: ApiPromise, signer: KeyringPair, encoded:
     const eventsPromise = subscribeToEvents('preimage', 'Noted', api);
     await signAndSend(notePreimageTx, signer);
     const notePreimageEvent = (await eventsPromise).map(({ event }) => event);
-    expect(notePreimageEvent.length === 1, 'Note preimage failed');
+    expect(notePreimageEvent.length).toBe(1);
     console.log('Preimage noted ✅');
 }
 
@@ -109,7 +108,7 @@ async function excuteCouncilProposal(
         const eventsPromise = subscribeToEvents('council', 'Proposed', api);
         await signAndSend(proposalTx, signer);
         const proposalTxEvent = (await eventsPromise).map(({ event }) => event);
-        expect(proposalTxEvent.length === 1, 'Council proposal failed');
+        expect(proposalTxEvent.length).toBe(1);
         console.log('Council Proposed ✅');
         resolve(proposalTxEvent);
     });
@@ -125,7 +124,7 @@ async function excuteTechnicalCommitteeProposal(
     const techCommitteeProposalTx = api.tx.technicalCommittee.propose(1, proposal, proposal.encodedLength);
     await signAndSend(techCommitteeProposalTx, signer);
     const democracyStartedEvent = (await eventsPromise).map(({ event }) => event);
-    expect(democracyStartedEvent.length === 1);
+    expect(democracyStartedEvent.length).toBe(1);
     console.log('Tech committee proposal executed ✅');
 }
 
@@ -165,7 +164,7 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
 
     await Promise.all([await signAndSend(voteTx, alice), await signAndSend(voteTx, bob)]);
     const voteTxEvent = (await voteEventsPromise).map(({ event }) => event);
-    expect(voteTxEvent.length === 2);
+    expect(voteTxEvent.length).toBe(2);
     console.log('Alice Bob council Voted ✅');
 
     // close the council proposal
@@ -181,7 +180,7 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     const closeEventsPromise = subscribeToEvents('council', 'Closed', api);
     await signAndSend(councilCloseTx, alice);
     const councilCloseEvent = (await closeEventsPromise).map(({ event }) => event);
-    expect(councilCloseEvent.length === 1);
+    expect(councilCloseEvent.length).toBe(1);
     console.log('Council Closed ✅');
 
     // fast track the democracy proposal
@@ -196,7 +195,7 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
 
     await Promise.all([await signAndSend(democracyVoteTx, alice), await signAndSend(democracyVoteTx, bob)]);
     const democracyVoteEvent = (await democracyVoteEventsPromise).map(({ event }) => event);
-    expect(democracyVoteEvent.length === 2);
+    expect(democracyVoteEvent.length).toBe(2);
     console.log('Alice Bob democracy Voted ✅');
 
     console.log('Waiting for democracy to pass...');
@@ -273,9 +272,7 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     return newRuntimeVersion;
 }
 describeLitentry('Runtime upgrade test', ``, (context) => {
-    step('Running runtime ugprade test', async function () {
-        this.timeout(600000); // 10 minutes
-
+    test('Running runtime ugprade test', async () => {
         let runtimeVersion: number;
         const wasmPath = path.resolve('/tmp/runtime.wasm');
         const wasm = fs.readFileSync(wasmPath).toString('hex');
@@ -292,7 +289,7 @@ describeLitentry('Runtime upgrade test', ``, (context) => {
         console.log('Block build mode set to Instant ✅');
 
         runtimeVersion = await runtimeupgradeViaGovernance(api, `0x${wasm}`);
-        expect(runtimeVersion === (await getRuntimeVersion(api)));
+        expect(runtimeVersion).toBe(await getRuntimeVersion(api));
 
         console.log('Runtime upgraded ✅');
     });

@@ -7,30 +7,30 @@
         "test": "integration-tests"
     },
     "scripts": {
-        "register-parathread": "pnpm exec ts-node common/setup/register-parathread.ts",
-        "skip-schedule-enclave-check": "pnpm exec ts-node common/setup/skip-schedule-enclave-check.ts",
-        "upgrade-parathread": "pnpm exec ts-node common/setup/upgrade-parathread.ts",
-        "wait-finalized-block": "pnpm exec ts-node common/setup/wait-finalized-block.ts",
-        "setup-enclave": "pnpm exec ts-node common/setup/setup-enclave.ts",
-        "test-filter": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/base-filter.test.ts'",
-        "test-evm-contract": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/evm-contract.test.ts'",
-        "test-runtime-upgrade": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/runtime-upgrade.test.ts'",
-        "test-all": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/**/*.test.ts'",
-        "test-precompile-contract": "pnpm exec mocha --exit --sort -r ts-node/register 'integration-tests/precompile-contract.test.ts'",
+        "register-parathread": "pnpm exec tsx common/setup/register-parathread.ts",
+        "skip-schedule-enclave-check": "pnpm exec tsx common/setup/skip-schedule-enclave-check.ts",
+        "upgrade-parathread": "pnpm exec tsx common/setup/upgrade-parathread.ts",
+        "wait-finalized-block": "pnpm exec tsx common/setup/wait-finalized-block.ts",
+        "setup-enclave": "pnpm exec tsx common/setup/setup-enclave.ts",
+        "test-filter": "vitest run integration-tests/base-filter.test.ts",
+        "test-evm-contract": "vitest run integration-tests/evm-contract.test.ts",
+        "test-runtime-upgrade": "vitest run integration-tests/runtime-upgrade.test.ts",
+        "test-all": "vitest run integration-tests",
+        "test-precompile-contract": "vitest run integration-tests/precompile-contract.test.ts",
+        "test": "vitest",
+        "test:ui": "vitest --ui",
         "format": "pnpm exec prettier --write '**.ts'"
     },
     "author": "Heima Dev",
     "license": "ISC",
     "devDependencies": {
-        "@types/chai": "^5.2.3",
-        "@types/mocha": "^10.0.10",
-        "chai": "^6.2.1",
+        "@vitest/ui": "^4.0.11",
         "gts": "^6.0.2",
-        "mocha": "^11.7.5",
-        "mocha-steps": "^1.3.0",
         "prettier": "^3.6.2",
         "ts-node": "^10.9.2",
-        "typescript": "^5.9.3"
+        "tsx": "^4.20.6",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.11"
     },
     "dependencies": {
         "@polkadot/api": "^16.5.2",
@@ -49,10 +49,7 @@
         "web3-types": "^1.10.0",
         "web3-utils": "^4.3.3"
     },
-    "compilerOptions": {
-        "allowSyntheticDefaultImports": true,
-        "esModuleInterop": true
-    },
+    "type": "module",
     "packageManager": "pnpm@10.21.0",
     "pnpm": {
         "overrides": {
