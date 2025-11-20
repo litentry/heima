@@ -252,22 +252,41 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
 
     // In standalone mode without relaychain, applyAuthorizedUpgrade won't work
     // because it requires relay chain coordination via parachainSystem.enactAuthorizedUpgrade
-    // Instead, we use Chopsticks' dev_setStorage to directly inject the runtime code
-    console.log('Using dev_setStorage to inject runtime code (standalone mode workaround)');
+    // Instead, we use Chopsticks' scheduler injection to execute system.setCode with Root origin
+    console.log('Using scheduler injection to apply runtime upgrade (standalone mode workaround)');
 
-    // The well-known storage key for runtime code is :code (0x3a636f6465)
-    const codeKey = '0x3a636f6465';
-    await api.rpc('dev_setStorage', {
-        [codeKey]: wasm,
-    });
-    console.log('Runtime code injected via dev_setStorage ✅');
+    // Create the system.setCode call
+    const setCodeCall = api.tx.system.setCode(wasm);
+    const encodedCall = setCodeCall.method.toHex();
 
-    // Clear the authorized upgrade storage since we've applied it manually
-    const authorizedUpgradeKey = api.query.system.authorizedUpgrade.key();
+    // Get current block number
+    const currentHeader = await api.rpc.chain.getHeader();
+    const currentBlock = currentHeader.number.toNumber();
+    const targetBlock = currentBlock + 2; // Schedule for 2 blocks ahead
+
+    console.log(`Current block: ${currentBlock}, scheduling upgrade for block: ${targetBlock}`);
+
+    // Inject the call into the scheduler for the next block with Root origin
     await api.rpc('dev_setStorage', {
-        [authorizedUpgradeKey]: null,
+        scheduler: {
+            agenda: [
+                [
+                    [targetBlock],
+                    [
+                        {
+                            call: { Inline: encodedCall },
+                            origin: { system: 'Root' },
+                        },
+                    ],
+                ],
+            ],
+        },
     });
-    console.log('Cleared AuthorizedUpgrade storage ✅');
+    console.log('Runtime upgrade scheduled via scheduler ✅');
+
+    // Produce a block to commit the scheduler changes
+    await api.rpc('dev_newBlock', { count: 1 });
+    console.log('Block produced to commit scheduler ✅');
 
     console.log('Waiting for runtime upgrade to complete...');
     // In standalone mode, the runtime should upgrade in the next few blocks
