@@ -64,11 +64,24 @@ async function waitForRuntimeUpgradeWithBlockProduction(
         // Produce blocks on both chains if relaychain is available
         if (relaychainApi) {
             await relaychainApi.rpc('dev_newBlock', { count: 1 });
+            const relayHeader = await relaychainApi.rpc.chain.getHeader();
+            const relayBlockNum = relayHeader.number.toNumber();
+
+            const parachainHeader = await parachainApi.rpc.chain.getHeader();
+            const parachainBlockNum = parachainHeader.number.toNumber();
+
+            // Check newValidationCode to see if there's an expected_at block
+            const newValidationCode = await parachainApi.query.parachainSystem.newValidationCode();
+            const nvCode = newValidationCode.toHuman();
+
+            console.log(
+                `⏳ Block +${i + 1}: Relay #${relayBlockNum}, Para #${parachainBlockNum}, NewValidationCode: ${JSON.stringify(nvCode)}`
+            );
         }
         await parachainApi.rpc('dev_newBlock', { count: 1 });
 
         const runtimeVersion = await getRuntimeVersion(parachainApi);
-        console.log(`⏳ Block +${i + 1}: Runtime version = ${runtimeVersion}`);
+        console.log(`   Runtime version = ${runtimeVersion}`);
 
         if (runtimeVersion > oldRuntimeVersion) {
             const header = await parachainApi.rpc.chain.getHeader();
@@ -278,6 +291,12 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
 
     await eventPromise;
     console.log('Apply upgrade transaction succeeded ✅');
+
+    // Check what's in parachainSystem storage after applyAuthorizedUpgrade
+    const pendingValidationCode = await api.query.parachainSystem.pendingValidationCode();
+    const newValidationCode = await api.query.parachainSystem.newValidationCode();
+    console.log('PendingValidationCode:', pendingValidationCode.isEmpty ? 'None' : 'Present');
+    console.log('NewValidationCode:', newValidationCode.toHuman());
 
     console.log('Waiting for runtime upgrade to complete...');
     // In XCM mode, we need more blocks for relay chain coordination
