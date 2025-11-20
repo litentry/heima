@@ -1,6 +1,6 @@
 import '@polkadot/api-augment';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-import { loadConfig, signAndSend, sudoWrapperGc } from '../utils';
+import { loadConfig, signAndSend, sudoWrapperGc } from '../utils/index.js';
 import { hexToU8a } from '@polkadot/util';
 
 const mrenclave = process.argv[2];

@@ -1,7 +1,7 @@
 import '@polkadot/api-augment';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import type { ISubmittableResult } from '@polkadot/types/types';
-import { loadConfig } from '../utils';
+import { loadConfig } from '../utils/index.js';
 
 // upgrade the parathread to parachain by forcibly leasing a certain period
 // can be used to extend the leasing period if it's already in onboarding process

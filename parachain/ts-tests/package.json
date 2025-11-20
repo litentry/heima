@@ -7,11 +7,11 @@
         "test": "integration-tests"
     },
     "scripts": {
-        "register-parathread": "pnpm exec ts-node common/setup/register-parathread.ts",
-        "skip-schedule-enclave-check": "pnpm exec ts-node common/setup/skip-schedule-enclave-check.ts",
-        "upgrade-parathread": "pnpm exec ts-node common/setup/upgrade-parathread.ts",
-        "wait-finalized-block": "pnpm exec ts-node common/setup/wait-finalized-block.ts",
-        "setup-enclave": "pnpm exec ts-node common/setup/setup-enclave.ts",
+        "register-parathread": "pnpm exec ts-node --esm common/setup/register-parathread.ts",
+        "skip-schedule-enclave-check": "pnpm exec ts-node --esm common/setup/skip-schedule-enclave-check.ts",
+        "upgrade-parathread": "pnpm exec ts-node --esm common/setup/upgrade-parathread.ts",
+        "wait-finalized-block": "pnpm exec ts-node --esm common/setup/wait-finalized-block.ts",
+        "setup-enclave": "pnpm exec ts-node --esm common/setup/setup-enclave.ts",
         "test-filter": "vitest run integration-tests/base-filter.test.ts",
         "test-evm-contract": "vitest run integration-tests/evm-contract.test.ts",
         "test-runtime-upgrade": "vitest run integration-tests/runtime-upgrade.test.ts",
