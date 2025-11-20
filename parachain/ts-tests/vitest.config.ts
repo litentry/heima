@@ -11,11 +11,9 @@ export default defineConfig({
         },
         globals: false,
         pool: 'threads',
-        poolOptions: {
-            threads: {
-                singleThread: true,
-            },
-        },
+        // Vitest 4.0: poolOptions removed, use top-level options
+        maxWorkers: 1,
+        isolate: false,
         reporters: ['verbose'],
         retry: 0,
     },
