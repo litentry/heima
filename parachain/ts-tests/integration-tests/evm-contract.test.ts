@@ -180,8 +180,7 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         };
 
         const message = await sayMessage(deployed.contractAddress!);
-        const initialResult = message === 'Hello World' ? 1 : 0;
-        assert.equal(1, initialResult, 'Contract initial storage query mismatch');
+        expect(message).toBe('Hello World');
 
         // Test set message contract method
         const setMessage = async (contractAddress: string, accountFrom: any, message: string) => {
@@ -206,8 +205,7 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         };
         const setMsg = await setMessage(deployed.contractAddress!, evmAccountRaw, 'Goodbye World');
         const sayMsg = await sayMessage(deployed.contractAddress!);
-        const setResult = sayMsg === 'Goodbye World' ? 1 : 0;
-        assert.equal(1, setResult, 'Contract modified storage query mismatch');
+        expect(sayMsg).toBe('Goodbye World');
     });
 
     test('Set ExtrinsicFilter mode to Normal', async () => {

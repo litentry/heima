@@ -152,9 +152,9 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             });
             await tx.wait();
 
-            expect(true).to.eq(false); // test should fail here
+            expect(true).toBe(false); // test should fail here
         } catch (e) {
-            expect(e).to.be.instanceof(Error);
+            expect(e).toBeInstanceOf(Error);
         }
     });
 
@@ -168,7 +168,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         if (parseInt(balance.free.toString()) < parseInt('10000000000000000')) {
             await transferTokens(context.alice, evmAccountRaw);
 
-            expect(parseInt(balance.free.toString())).to.gt(parseInt('10000000000000000'));
+            expect(parseInt(balance.free.toString())).toBeGreaterThan(parseInt('10000000000000000'));
         }
 
         // Set admin
@@ -201,7 +201,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         const eventsPromise = subscribeToEvents('omniBridge', 'PaidIn', context.api);
         const events = (await eventsPromise).map(({ event }) => event);
 
-        expect(events.length).to.eq(1);
+        expect(events.length).toBe(1);
         const event_data = events[0].toHuman().data! as {
             sourceAccount: string;
             nonce: number;
@@ -216,12 +216,12 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // PaidIn(source_account, nonce, asset, resource_id, dest_chain, dest_account, amount)
-        expect(event_data.destChain).to.deep.equal({ Ethereum: '0' });
-        expect(event_data.destAccount).to.eq(dest_address);
+        expect(event_data.destChain).toEqual({ Ethereum: '0' });
+        expect(event_data.destAccount).toBe(dest_address);
 
         // 0.01 - 0.001 = 0.009
         const expectedBalance = bn1e18.div(bn100).sub(bn1e18.div(bn1000));
-        expect(event_data.amount.replace(/,/g, '')).to.eq(expectedBalance.toString());
+        expect(event_data.amount.replace(/,/g, '')).toBe(expectedBalance.toString());
 
         console.timeEnd('Test precompile omni bridge contract');
     });
@@ -281,9 +281,9 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
             afterDelegateBalance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
 
-            expect(afterDelegateBalance.reserved.toString()).to.eq(toBigInt(60).toString());
+            expect(afterDelegateBalance.reserved.toString()).toBe(toBigInt(60).toString());
             const collator = await collatorDetails();
-            expect(collator.value).to.eq(autoCompoundPercent);
+            expect(collator.value).toBe(autoCompoundPercent);
         }
 
         // delegatorBondMore(collator, amount)
@@ -295,7 +295,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         const { data: balanceAfterBondMore } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
 
-        expect(balanceAfterBondMore.reserved.toBigInt()).to.eq(afterDelegateBalance.reserved.toBigInt() + toBigInt(1));
+        expect(balanceAfterBondMore.reserved.toBigInt()).toBe(afterDelegateBalance.reserved.toBigInt() + toBigInt(1));
 
         const setAutoCompound = precompileStakingContract.interface.encodeFunctionData('setAutoCompound', [
             collatorPublicKey,
@@ -304,10 +304,10 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         await executeTransaction(setAutoCompound, precompileStakingContractAddress, 'setAutoCompound');
         const collatorAfterCompound = await collatorDetails();
-        expect(collatorAfterCompound.value).to.eq(autoCompoundPercent + 5);
+        expect(collatorAfterCompound.value).toBe(autoCompoundPercent + 5);
 
         // scheduleDelegatorBondLess(collator, amount)
-        expect(await isPendingRequest()).to.be.false;
+        expect(await isPendingRequest()).toBe(false);
 
         const scheduleDelegatorBondLess = precompileStakingContract.interface.encodeFunctionData(
             'scheduleDelegatorBondLess',
@@ -320,7 +320,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         );
 
         // Zero delay impl will make execution immediately
-        expect(await isPendingRequest()).to.be.false;
+        expect(await isPendingRequest()).toBe(false);
 
         console.timeEnd('Test precompile staking contract');
     });
@@ -364,14 +364,14 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         const eventsPromise = subscribeToEvents('vesting', 'VestingCompleted', context.api);
         const events = (await eventsPromise).map(({ event }) => event);
 
-        expect(events.length).to.eq(1);
+        expect(events.length).toBe(1);
         const event_data = events[0].toHuman().data! as {
             account: string;
         };
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // VestingCompleted Event
-        expect(encodeAddress(event_data.account, 42)).to.eq(evmToAddress(evmAccountRaw.address, 42));
+        expect(encodeAddress(event_data.account, 42)).toBe(evmToAddress(evmAccountRaw.address, 42));
 
         console.timeEnd('Test precompile vesting contract');
     });
