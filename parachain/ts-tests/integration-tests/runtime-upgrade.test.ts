@@ -140,13 +140,21 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     const proposalIndex = Number(proposedEvent[0].data[1].toHuman());
 
     // vote on the council proposal
-    const voteTx = api.tx.council.vote(proposalHash, proposalIndex, true);
-    const voteEventsPromise = subscribeToEvents('council', 'Voted', api);
+    // Vote with Alice first
+    const aliceVoteTx = api.tx.council.vote(proposalHash, proposalIndex, true);
+    const aliceVoteEventsPromise = subscribeToEvents('council', 'Voted', api);
+    await signAndSend(aliceVoteTx, alice);
+    const aliceVoteEvent = await aliceVoteEventsPromise;
+    expect(aliceVoteEvent.length).toBe(1);
+    console.log('Alice council Voted ✅');
 
-    await Promise.all([await signAndSend(voteTx, alice), await signAndSend(voteTx, bob)]);
-    const voteTxEvent = (await voteEventsPromise).map(({ event }) => event);
-    expect(voteTxEvent.length).toBe(2);
-    console.log('Alice Bob council Voted ✅');
+    // Vote with Bob
+    const bobVoteTx = api.tx.council.vote(proposalHash, proposalIndex, true);
+    const bobVoteEventsPromise = subscribeToEvents('council', 'Voted', api);
+    await signAndSend(bobVoteTx, bob);
+    const bobVoteEvent = await bobVoteEventsPromise;
+    expect(bobVoteEvent.length).toBe(1);
+    console.log('Bob council Voted ✅');
 
     // close the council proposal
     const councilCloseTx = api.tx.council.close(
@@ -168,16 +176,27 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     await excuteTechnicalCommitteeProposal(api, alice, encodedHash);
 
     // vote on the democracy proposal
-    const democracyVoteEventsPromise = subscribeToEvents('democracy', 'Voted', api);
     const referendumCount = (await api.query.democracy.referendumCount()).toNumber();
-    const democracyVoteTx = api.tx.democracy.vote(referendumCount - 1, {
+
+    // Vote with Alice first
+    const aliceDemocracyVoteTx = api.tx.democracy.vote(referendumCount - 1, {
         Standard: { vote: true, balance: 1_00_000_000_000_000 },
     });
+    const aliceDemocracyVoteEventsPromise = subscribeToEvents('democracy', 'Voted', api);
+    await signAndSend(aliceDemocracyVoteTx, alice);
+    const aliceDemocracyVoteEvent = await aliceDemocracyVoteEventsPromise;
+    expect(aliceDemocracyVoteEvent.length).toBe(1);
+    console.log('Alice democracy Voted ✅');
 
-    await Promise.all([await signAndSend(democracyVoteTx, alice), await signAndSend(democracyVoteTx, bob)]);
-    const democracyVoteEvent = (await democracyVoteEventsPromise).map(({ event }) => event);
-    expect(democracyVoteEvent.length).toBe(2);
-    console.log('Alice Bob democracy Voted ✅');
+    // Vote with Bob
+    const bobDemocracyVoteTx = api.tx.democracy.vote(referendumCount - 1, {
+        Standard: { vote: true, balance: 1_00_000_000_000_000 },
+    });
+    const bobDemocracyVoteEventsPromise = subscribeToEvents('democracy', 'Voted', api);
+    await signAndSend(bobDemocracyVoteTx, bob);
+    const bobDemocracyVoteEvent = await bobDemocracyVoteEventsPromise;
+    expect(bobDemocracyVoteEvent.length).toBe(1);
+    console.log('Bob democracy Voted ✅');
 
     console.log('Waiting for democracy to pass...');
     await waitForEventWithBlockProduction('democracy', 'Passed', api);
