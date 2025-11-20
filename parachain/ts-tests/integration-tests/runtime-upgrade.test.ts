@@ -46,13 +46,25 @@ async function waitForRuntimeUpgradeWithBlockProduction(
     oldRuntimeVersion: number,
     maxBlocks = 100
 ): Promise<number> {
-    console.log('Running in single-chain mode (no relaychain)');
+    // Try to connect to relaychain if available (XCM mode)
+    let relaychainApi: ApiPromise | null = null;
+    try {
+        const relayProvider = new WsProvider('ws://localhost:9945');
+        relaychainApi = await ApiPromise.create({ provider: relayProvider });
+        await relaychainApi.isReady;
+        console.log('Connected to relaychain ✅');
+    } catch (e) {
+        console.log('Relaychain not available, running in single-chain mode');
+    }
+
     const header = await parachainApi.rpc.chain.getHeader();
     console.log(`Current parachain block number: ${header.number.toNumber()}`);
 
     for (let i = 0; i < maxBlocks; i++) {
-        // Produce blocks only on parachain
-        // The mock inherent data provider in Chopsticks will provide the upgrade_go_ahead signal
+        // Produce blocks on both chains if relaychain is available
+        if (relaychainApi) {
+            await relaychainApi.rpc('dev_newBlock', { count: 1 });
+        }
         await parachainApi.rpc('dev_newBlock', { count: 1 });
 
         const runtimeVersion = await getRuntimeVersion(parachainApi);
@@ -63,10 +75,16 @@ async function waitForRuntimeUpgradeWithBlockProduction(
             console.log(
                 `✅ Runtime upgraded to version ${runtimeVersion} after ${i + 1} blocks at: ${header.number.toNumber()}`
             );
+            if (relaychainApi) {
+                await relaychainApi.disconnect();
+            }
             return runtimeVersion;
         }
     }
 
+    if (relaychainApi) {
+        await relaychainApi.disconnect();
+    }
     throw new Error(`❌ Timeout: runtime not upgraded after ${maxBlocks} blocks`);
 }
 
@@ -248,50 +266,22 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
         console.log('Note: UpgradeRestrictionSignal is present, but in standalone mode this is managed internally');
     }
 
-    console.log('Applying runtime upgrade in standalone mode...');
+    console.log('Applying authorized upgrade in XCM mode...');
 
-    // In standalone mode without relaychain, applyAuthorizedUpgrade won't work
-    // because it requires relay chain coordination via parachainSystem.enactAuthorizedUpgrade
-    // Instead, we use Chopsticks' scheduler injection to execute system.setCode with Root origin
-    console.log('Using scheduler injection to apply runtime upgrade (standalone mode workaround)');
+    // In XCM mode with relaychain, use the standard applyAuthorizedUpgrade approach
+    // This will use parachainSystem.enactAuthorizedUpgrade which waits for relay chain approval
+    const applyUpgradeTx = api.tx.system.applyAuthorizedUpgrade(wasm);
+    const eventPromise = subscribeToEvents('system', 'ExtrinsicSuccess', api);
 
-    // Create the system.setCode call
-    const setCodeCall = api.tx.system.setCode(wasm);
-    const encodedCall = setCodeCall.method.toHex();
+    await signAndSend(applyUpgradeTx, alice);
+    console.log('Apply upgrade transaction sent ✅');
 
-    // Get current block number
-    const currentHeader = await api.rpc.chain.getHeader();
-    const currentBlock = currentHeader.number.toNumber();
-    const targetBlock = currentBlock + 2; // Schedule for 2 blocks ahead
-
-    console.log(`Current block: ${currentBlock}, scheduling upgrade for block: ${targetBlock}`);
-
-    // Inject the call into the scheduler for the next block with Root origin
-    await api.rpc('dev_setStorage', {
-        scheduler: {
-            agenda: [
-                [
-                    [targetBlock],
-                    [
-                        {
-                            call: { Inline: encodedCall },
-                            origin: { system: 'Root' },
-                        },
-                    ],
-                ],
-            ],
-        },
-    });
-    console.log('Runtime upgrade scheduled via scheduler ✅');
-
-    // Produce a block to commit the scheduler changes
-    await api.rpc('dev_newBlock', { count: 1 });
-    console.log('Block produced to commit scheduler ✅');
+    await eventPromise;
+    console.log('Apply upgrade transaction succeeded ✅');
 
     console.log('Waiting for runtime upgrade to complete...');
-    // In standalone mode, the runtime should upgrade in the next few blocks
-    // We give it 50 blocks to be safe (much less than 200 needed for relaychain coordination)
-    const newRuntimeVersion = await waitForRuntimeUpgradeWithBlockProduction(api, old_runtime_version, 50);
+    // In XCM mode, we need more blocks for relay chain coordination
+    const newRuntimeVersion = await waitForRuntimeUpgradeWithBlockProduction(api, old_runtime_version, 200);
     return newRuntimeVersion;
 }
 describeLitentry('Runtime upgrade test', ``, (context) => {
