@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use alloy::primitives::{Address, Bytes};
-use binance_api::BinancePaymasterApi;
+use oe_client_binance::BinancePaymasterApi;
 use std::collections::HashMap;
 use tracing::{debug, error, info};
 
@@ -229,13 +229,13 @@ pub async fn get_token_info_from_mapping(
 
 // Calculate exchange rate using Binance API
 pub async fn calculate_exchange_rate_with_binance(
-	binance_api: &dyn BinancePaymasterApi,
+	oe_client_binance: &dyn BinancePaymasterApi,
 	token_symbol: &str,
 	token_decimals: u8,
 ) -> Result<u128, String> {
 	// Query price from Binance
 	// For ETHUSDC, this returns how many USDC for 1 ETH (e.g., 4479.99)
-	let price_str = binance_api
+	let price_str = oe_client_binance
 		.get_symbol_price(token_symbol)
 		.await
 		.map_err(|e| format!("Failed to get price for {}: {:?}", token_symbol, e))?;
@@ -274,7 +274,7 @@ pub async fn calculate_exchange_rate_with_binance(
 
 // Process ERC20 paymaster data
 pub async fn process_erc20_paymaster_data(
-	binance_api: &dyn BinancePaymasterApi,
+	oe_client_binance: &dyn BinancePaymasterApi,
 	paymaster_and_data: &Bytes,
 	chain_id: u64,
 ) -> Result<Option<Bytes>, String> {
@@ -307,7 +307,7 @@ pub async fn process_erc20_paymaster_data(
 
 		// Calculate new exchange rate
 		let new_exchange_rate =
-			calculate_exchange_rate_with_binance(binance_api, &token_symbol, token_decimals)
+			calculate_exchange_rate_with_binance(oe_client_binance, &token_symbol, token_decimals)
 				.await?;
 
 		// Encode updated paymaster data with new exchange rate, keeping original timestamps
@@ -333,10 +333,10 @@ pub async fn process_erc20_paymaster_data(
 
 /// Calculate estimated token cost for ERC20 paymaster operations
 pub async fn calculate_erc20_token_cost(
-	binance_api: &dyn BinancePaymasterApi,
+	oe_client_binance: &dyn BinancePaymasterApi,
 	paymaster_and_data: &Bytes,
 	gas_estimates: &GasEstimateResponse,
-	user_op: &aa_contracts_client::PackedUserOperation,
+	user_op: &oe_client_aa::PackedUserOperation,
 	chain_id: u64,
 ) -> Option<TokenCostEstimate> {
 	// Decode paymaster data
@@ -360,7 +360,7 @@ pub async fn calculate_erc20_token_cost(
 
 	// Get fresh exchange rate from Binance
 	let exchange_rate = match calculate_exchange_rate_with_binance(
-		binance_api,
+		oe_client_binance,
 		&token_symbol,
 		token_decimals,
 	)

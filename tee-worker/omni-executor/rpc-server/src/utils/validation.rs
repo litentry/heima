@@ -103,7 +103,7 @@ pub fn validate_email(email: &str) -> RpcResult<()> {
 }
 
 pub fn validate_user_operations(
-	operations: &[executor_core::types::SerializablePackedUserOperation],
+	operations: &[oe_core::types::SerializablePackedUserOperation],
 ) -> RpcResult<()> {
 	if operations.is_empty() {
 		return Err(

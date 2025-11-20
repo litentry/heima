@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile.local
-      target: executor-worker
+      target: omni-executor
     volumes:
       - ../local/keystore:/local/keystore
       - shared_contracts:/shared:ro
@@ -31,7 +31,7 @@ services:
       aa-contracts-deploy:
         condition: service_completed_successfully
     entrypoint: ["/entrypoint.sh"]
-    command: ["executor-worker", "run", "--enable-mock-server"]
+    command: ["omni-executor", "run", "--enable-mock-server"]
     privileged: true
     restart: unless-stopped
     networks:
@@ -59,7 +59,7 @@ services:
   aa-contracts-deploy:
     build:
       context: ..
-      dockerfile: aa-contracts/Dockerfile.deploy
+      dockerfile: contracts/aa/Dockerfile.deploy
     container_name: aa-contracts-deploy
     volumes:
       - shared_contracts:/shared

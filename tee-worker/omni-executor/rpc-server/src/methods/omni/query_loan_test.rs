@@ -1,10 +1,10 @@
 use crate::server::RpcContext;
 use crate::utils::omni::to_omni_account;
 use crate::utils::validation::parse_rpc_params;
-use executor_core::intent_executor::IntentExecutor;
-use executor_storage::LoanRecord;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
+use oe_core::intent::executor::IntentExecutor;
+use oe_storage::LoanRecord;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::debug;
@@ -49,21 +49,24 @@ pub fn register_query_loan_test<
 mod test {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
-	use binance_api::mocks::MockBinanceApiClient;
-	use config_loader::ConfigLoader;
-	use executor_core::intent_executor::MockedIntentExecutor;
-	use executor_primitives::utils::hex::hex_encode;
-	use executor_storage::{LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use pumpx::PumpxApiClient;
-	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-	use signer_client::{mocks::MockSignerClient, SignerClient};
+	use oe_client_binance::mocks::MockBinanceApiClient;
+	use oe_client_pumpx::PumpxApiClient;
+	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
+	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::config::ConfigLoader;
+	use oe_core::intent::executor::MockedIntentExecutor;
+	use oe_primitives::utils::hex::hex_encode;
+	use oe_primitives::AccountId;
+	use oe_storage::{
+		loan_record::LoanState, LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage,
+	};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, rand_core::OsRng, RsaPrivateKey};
 	use std::collections::HashMap;
 	use std::sync::Arc;
 	use tempfile::tempdir;
-	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
 	pub async fn test_query_loan_single_record() {
@@ -83,23 +86,28 @@ mod test {
 			collateral_size: "0.5".to_string(),
 			usdc_sold: "25000.00".to_string(),
 			usdc_loaned: "20000.00".to_string(),
-			spot_sell_cloid: "spot123".to_string(),
-			hedge_open_cloid: "hedge456".to_string(),
+			usdc_for_perp: "20000.00".to_string(),
+			txs: Vec::new(),
+			cloids: vec![
+				("spot_sell".to_string(), "spot123".to_string()),
+				("hedge_open".to_string(), "hedge456".to_string()),
+			],
+			position_size: "0.5".to_string(),
+			state: LoanState::HedgeOpened,
 		};
 
-		let storage_key =
-			executor_storage::loan_record::Key { account_id: omni_account.clone(), nonce };
+		let storage_key = oe_storage::loan_record::Key { account_id: omni_account.clone(), nonce };
 		loan_record_storage.insert(&storage_key, test_record.clone()).unwrap();
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
 			Arc::new(MockBinanceApiClient::new());
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
@@ -116,7 +124,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
@@ -149,8 +157,18 @@ mod test {
 		assert_eq!(returned_record.collateral_size, "0.5");
 		assert_eq!(returned_record.usdc_sold, "25000.00");
 		assert_eq!(returned_record.usdc_loaned, "20000.00");
-		assert_eq!(returned_record.spot_sell_cloid, "spot123");
-		assert_eq!(returned_record.hedge_open_cloid, "hedge456");
+		let spot_sell_cloid = returned_record
+			.cloids
+			.iter()
+			.find(|(name, _)| name == "spot_sell")
+			.map(|(_, cloid)| cloid.as_str());
+		assert_eq!(spot_sell_cloid, Some("spot123"));
+		let hedge_open_cloid = returned_record
+			.cloids
+			.iter()
+			.find(|(name, _)| name == "hedge_open")
+			.map(|(_, cloid)| cloid.as_str());
+		assert_eq!(hedge_open_cloid, Some("hedge456"));
 	}
 
 	#[tokio::test]
@@ -174,8 +192,14 @@ mod test {
 					collateral_size: "1.0".to_string(),
 					usdc_sold: "50000.00".to_string(),
 					usdc_loaned: "40000.00".to_string(),
-					spot_sell_cloid: "spot100".to_string(),
-					hedge_open_cloid: "hedge100".to_string(),
+					usdc_for_perp: "40000.00".to_string(),
+					txs: Vec::new(),
+					cloids: vec![
+						("spot_sell".to_string(), "spot100".to_string()),
+						("hedge_open".to_string(), "hedge100".to_string()),
+					],
+					position_size: "1.0".to_string(),
+					state: LoanState::HedgeOpened,
 				},
 			),
 			(
@@ -185,8 +209,14 @@ mod test {
 					collateral_size: "10.0".to_string(),
 					usdc_sold: "25000.00".to_string(),
 					usdc_loaned: "20000.00".to_string(),
-					spot_sell_cloid: "spot200".to_string(),
-					hedge_open_cloid: "hedge200".to_string(),
+					usdc_for_perp: "20000.00".to_string(),
+					txs: Vec::new(),
+					cloids: vec![
+						("spot_sell".to_string(), "spot200".to_string()),
+						("hedge_open".to_string(), "hedge200".to_string()),
+					],
+					position_size: "10.0".to_string(),
+					state: LoanState::HedgeOpened,
 				},
 			),
 			(
@@ -196,29 +226,33 @@ mod test {
 					collateral_size: "100.0".to_string(),
 					usdc_sold: "15000.00".to_string(),
 					usdc_loaned: "12000.00".to_string(),
-					spot_sell_cloid: "spot300".to_string(),
-					hedge_open_cloid: "hedge300".to_string(),
+					usdc_for_perp: "12000.00".to_string(),
+					txs: Vec::new(),
+					cloids: vec![
+						("spot_sell".to_string(), "spot300".to_string()),
+						("hedge_open".to_string(), "hedge300".to_string()),
+					],
+					position_size: "100.0".to_string(),
+					state: LoanState::HedgeOpened,
 				},
 			),
 		];
 
 		for (nonce, record) in &test_records {
-			let storage_key = executor_storage::loan_record::Key {
-				account_id: omni_account.clone(),
-				nonce: *nonce,
-			};
+			let storage_key =
+				oe_storage::loan_record::Key { account_id: omni_account.clone(), nonce: *nonce };
 			loan_record_storage.insert(&storage_key, record.clone()).unwrap();
 		}
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
 			Arc::new(MockBinanceApiClient::new());
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
@@ -235,7 +269,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
@@ -270,8 +304,7 @@ mod test {
 			assert_eq!(returned_record.collateral_size, expected_record.collateral_size);
 			assert_eq!(returned_record.usdc_sold, expected_record.usdc_sold);
 			assert_eq!(returned_record.usdc_loaned, expected_record.usdc_loaned);
-			assert_eq!(returned_record.spot_sell_cloid, expected_record.spot_sell_cloid);
-			assert_eq!(returned_record.hedge_open_cloid, expected_record.hedge_open_cloid);
+			assert_eq!(returned_record.cloids, expected_record.cloids);
 		}
 	}
 
@@ -287,26 +320,32 @@ mod test {
 
 		// Store a record with nonce 100
 		let storage_key =
-			executor_storage::loan_record::Key { account_id: omni_account.clone(), nonce: 100 };
+			oe_storage::loan_record::Key { account_id: omni_account.clone(), nonce: 100 };
 		let test_record = LoanRecord {
 			collateral_ticker: "BTC".to_string(),
 			collateral_size: "1.0".to_string(),
 			usdc_sold: "50000.00".to_string(),
 			usdc_loaned: "40000.00".to_string(),
-			spot_sell_cloid: "spot100".to_string(),
-			hedge_open_cloid: "hedge100".to_string(),
+			usdc_for_perp: "40000.00".to_string(),
+			txs: Vec::new(),
+			cloids: vec![
+				("spot_sell".to_string(), "spot100".to_string()),
+				("hedge_open".to_string(), "hedge100".to_string()),
+			],
+			position_size: "1.0".to_string(),
+			state: LoanState::HedgeOpened,
 		};
 		loan_record_storage.insert(&storage_key, test_record).unwrap();
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
 			Arc::new(MockBinanceApiClient::new());
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
@@ -323,7 +362,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
@@ -365,26 +404,32 @@ mod test {
 		// Store a record for a different account
 		let existing_account = AccountId::from([4u8; 32]);
 		let storage_key =
-			executor_storage::loan_record::Key { account_id: existing_account.clone(), nonce: 100 };
+			oe_storage::loan_record::Key { account_id: existing_account.clone(), nonce: 100 };
 		let test_record = LoanRecord {
 			collateral_ticker: "BTC".to_string(),
 			collateral_size: "1.0".to_string(),
 			usdc_sold: "50000.00".to_string(),
 			usdc_loaned: "40000.00".to_string(),
-			spot_sell_cloid: "spot100".to_string(),
-			hedge_open_cloid: "hedge100".to_string(),
+			usdc_for_perp: "40000.00".to_string(),
+			txs: Vec::new(),
+			cloids: vec![
+				("spot_sell".to_string(), "spot100".to_string()),
+				("hedge_open".to_string(), "hedge100".to_string()),
+			],
+			position_size: "1.0".to_string(),
+			state: LoanState::HedgeOpened,
 		};
 		loan_record_storage.insert(&storage_key, test_record).unwrap();
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-		let binance_api_client: Arc<dyn binance_api::BinancePaymasterApi> =
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
 			Arc::new(MockBinanceApiClient::new());
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
@@ -401,7 +446,7 @@ mod test {
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,

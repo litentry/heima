@@ -1,0 +1,26 @@
+[package]
+name = "oe-client-aa"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+alloy = { workspace = true, features = ["contract", "rpc-types"] }
+ciborium = { workspace = true }
+rand = { workspace = true }
+regex = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
+
+oe-client-ethereum = { workspace = true }
+
+[dev-dependencies]
+heima-primitives = { workspace = true }
+oe-primitives = { workspace = true }
+test-log = { workspace = true }
+oe-client-ethereum = { workspace = true, features = ["mocks"] }
+mockall = { workspace = true }
+sha2 = { workspace = true }
+
+[lints]
+workspace = true

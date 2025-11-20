@@ -2,11 +2,11 @@ use crate::{
 	detailed_error::DetailedError, server::RpcContext, utils::omni::to_omni_account,
 	utils::types::RpcResultExt, utils::validation::parse_rpc_params,
 };
-use executor_core::intent_executor::IntentExecutor;
 use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
-use pumpx::pubkey_to_address;
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
+use oe_core::intent::executor::IntentExecutor;
 use serde::Deserialize;
-use signer_client::ChainType;
 use tracing::debug;
 
 // used in rpc with backend only

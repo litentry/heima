@@ -17,11 +17,11 @@
 use crate::utils::paymaster::calculate_erc20_token_cost;
 use crate::utils::types::GasEstimateResponse;
 use crate::utils::user_op::pack_account_gas_limits;
-use aa_contracts_client::EntryPointClient;
 use alloy::primitives::{Address, Bytes, U256};
-use binance_api::BinancePaymasterApi;
-use ethereum_rpc::AlloyRpcProvider;
-use executor_primitives::ChainId;
+use oe_client_aa::EntryPointClient;
+use oe_client_binance::BinancePaymasterApi;
+use oe_client_ethereum::AlloyRpcProvider;
+use oe_primitives::ChainId;
 use std::sync::Arc;
 use tracing::{debug, info};
 
@@ -50,9 +50,9 @@ pub const MAX_PAYMASTER_GAS: u128 = 5_000_000;
 /// Main gas estimation function
 pub async fn estimate_user_op_gas(
 	entry_point_client: Arc<EntryPointClient<AlloyRpcProvider>>,
-	user_op: aa_contracts_client::PackedUserOperation,
+	user_op: oe_client_aa::PackedUserOperation,
 	chain_id: ChainId,
-	binance_api: &dyn BinancePaymasterApi,
+	oe_client_binance: &dyn BinancePaymasterApi,
 ) -> Result<GasEstimateResponse, String> {
 	// Step 1: Simulate validation to get base gas requirements
 	let validation_result = entry_point_client
@@ -127,7 +127,7 @@ pub async fn estimate_user_op_gas(
 	let estimated_token_cost = if !user_op.paymasterAndData.is_empty() {
 		// Step 7: Calculate token cost if ERC20 paymaster is present
 		calculate_erc20_token_cost(
-			binance_api,
+			oe_client_binance,
 			&user_op.paymasterAndData,
 			&gas_response,
 			&user_op,
@@ -157,7 +157,7 @@ pub async fn estimate_user_op_gas(
 /// Binary search for optimal call gas limit following Rundler's approach
 async fn estimate_call_gas_limit(
 	entry_point_client: Arc<EntryPointClient<AlloyRpcProvider>>,
-	user_op: aa_contracts_client::PackedUserOperation,
+	user_op: oe_client_aa::PackedUserOperation,
 	chain_id: ChainId,
 ) -> Result<U256, String> {
 	// Determine gas limits based on operation type
@@ -261,7 +261,7 @@ async fn estimate_call_gas_limit(
 
 /// Calculate preVerificationGas split into static and dynamic components
 fn calculate_pre_verification_gas(
-	user_op: &aa_contracts_client::PackedUserOperation,
+	user_op: &oe_client_aa::PackedUserOperation,
 	chain_id: ChainId,
 ) -> (U256, U256) {
 	// EIP-2028 gas costs
@@ -330,10 +330,7 @@ fn calculate_pre_verification_gas(
 }
 
 /// Calculate L2-specific data availability costs
-fn calculate_l2_data_cost(
-	user_op: &aa_contracts_client::PackedUserOperation,
-	chain_id: ChainId,
-) -> U256 {
+fn calculate_l2_data_cost(user_op: &oe_client_aa::PackedUserOperation, chain_id: ChainId) -> U256 {
 	// Check if this is an L2 network
 	let is_l2 = matches!(
 		chain_id,

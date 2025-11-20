@@ -14,20 +14,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 use async_trait::async_trait;
-use executor_core::intent_executor::IntentExecutionResult;
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::AccountId;
-use executor_primitives::Intent;
-use executor_primitives::IntentId;
+use oe_core::intent::executor::IntentExecutionResult;
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::AccountId;
+use oe_primitives::Intent;
+use oe_primitives::IntentId;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
 	commitment_config::CommitmentConfig,
 	pubkey::Pubkey,
 	signer::{keypair::Keypair, EncodableKey, Signer},
-	system_instruction,
 	transaction::Transaction,
 };
 use tracing::log::{error, info};
+
+// Using deprecated solana_sdk::system_instruction to avoid extra solana_system_interface dependency
+#[allow(deprecated)]
+use solana_sdk::system_instruction;
 
 // Executes intents on Solana network.
 pub struct SolanaIntentExecutor {

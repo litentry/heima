@@ -1,0 +1,32 @@
+[package]
+name = "oe-client-solana"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+mockall = { workspace = true }
+solana-account-decoder-client-types = "2.3.13"
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
+spl-associated-token-account = { workspace = true }
+spl-token = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+# Local dependencies
+oe-client-pumpx = { workspace = true }
+oe-client-signer = { workspace = true }
+oe-core = { workspace = true }
+oe-primitives = { workspace = true }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+mock-server = { workspace = true }
+serde_json = { workspace = true }
+
+[features]
+mocks = []

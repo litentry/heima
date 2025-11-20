@@ -22,16 +22,16 @@ use crate::utils::paymaster::{
 };
 use crate::utils::types::RpcResultExt;
 use crate::RpcResult;
-use aa_contracts_client::calculate_user_operation_hash;
 use alloy::primitives::{hex, Address, Bytes, FixedBytes, U256};
-use binance_api::BinancePaymasterApi;
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::utils::hex::decode_hex;
-use executor_primitives::{AccountId, ChainId};
-use hyperliquid::*;
 use jsonrpsee::types::ErrorObjectOwned;
-use signer_client::ChainType;
+use oe_client_aa::calculate_user_operation_hash;
+use oe_client_binance::BinancePaymasterApi;
+use oe_client_hyperliquid::*;
+use oe_client_signer::ChainType;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::utils::hex::decode_hex;
+use oe_primitives::{AccountId, ChainId};
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
@@ -88,10 +88,10 @@ pub fn substrate_to_ethereum_signature(substrate_sig: &[u8]) -> Result<[u8; 65],
 	Ok(ethereum_sig)
 }
 
-/// Convert SerializablePackedUserOperation to aa_contracts_client::PackedUserOperation
+/// Convert SerializablePackedUserOperation to oe_client_aa::PackedUserOperation
 pub fn convert_to_packed_user_op(
 	user_op: SerializablePackedUserOperation,
-) -> Result<aa_contracts_client::PackedUserOperation, String> {
+) -> Result<oe_client_aa::PackedUserOperation, String> {
 	use std::str::FromStr;
 
 	// Helper function to parse hex string to fixed bytes
@@ -110,7 +110,7 @@ pub fn convert_to_packed_user_op(
 			Ok(bytes)
 		};
 
-	Ok(aa_contracts_client::PackedUserOperation {
+	Ok(oe_client_aa::PackedUserOperation {
 		sender: Address::from_str(&user_op.sender)
 			.map_err(|e| format!("Invalid sender address '{}': {}", user_op.sender, e))?,
 		nonce: U256::from(user_op.nonce),
@@ -224,7 +224,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 	user_operations: Vec<SerializablePackedUserOperation>,
 	chain_id: ChainId,
 	wallet_index: u32,
-	omni_account: &executor_primitives::AccountId,
+	omni_account: &oe_primitives::AccountId,
 ) -> RpcResult<Option<String>> {
 	// Inlined handler logic from handle_submit_user_op
 	info!(
@@ -276,7 +276,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 				}
 
 				match process_erc20_paymaster_data(
-					ctx.binance_api_client.as_ref() as &dyn BinancePaymasterApi,
+					ctx.oe_client_binance_client.as_ref() as &dyn BinancePaymasterApi,
 					&packed_user_op.paymasterAndData,
 					chain_id,
 				)
@@ -365,8 +365,8 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 			info!("UserOp[{}] is signed with no paymaster, processing", index);
 		}
 
-		// Convert to aa_contracts_client::PackedUserOperation for EntryPoint call
-		let aa_user_op = aa_contracts_client::PackedUserOperation {
+		// Convert to oe_client_aa::PackedUserOperation for EntryPoint call
+		let aa_user_op = oe_client_aa::PackedUserOperation {
 			sender: packed_user_op.sender,
 			nonce: packed_user_op.nonce,
 			initCode: packed_user_op.initCode.clone(),

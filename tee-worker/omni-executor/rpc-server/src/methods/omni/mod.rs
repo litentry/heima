@@ -2,8 +2,8 @@ use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::RpcResult;
 use jsonrpsee::RpcModule;
+use oe_client_pumpx::methods::common::ApiResponse;
 use parity_scale_codec::Codec;
-use pumpx::methods::common::ApiResponse;
 use tracing::error;
 
 mod get_health;
@@ -26,7 +26,7 @@ use get_web3_sign_in_message::*;
 
 mod add_wallet;
 use add_wallet::*;
-use executor_core::intent_executor::IntentExecutor;
+use oe_core::intent::executor::IntentExecutor;
 
 mod export_wallet;
 use export_wallet::*;
@@ -181,19 +181,4 @@ pub fn check_backend_response<T: Codec>(response: &ApiResponse<T>, op: &str) -> 
 		return Err(DetailedError::invalid_backend_response(response, op).to_rpc_error());
 	}
 	Ok(())
-}
-
-// Passkey helper functions
-pub fn get_rp_id_for_client(client_id: &str) -> &str {
-	match client_id {
-		"wildmeta" => "app.wildmeta.ai",
-		_ => "localhost", // Development/testing
-	}
-}
-
-pub fn get_origin_for_client(client_id: &str) -> &str {
-	match client_id {
-		"wildmeta" => "https://app.wildmeta.ai",
-		_ => "http://localhost:3000", // Development/testing
-	}
 }
