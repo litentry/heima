@@ -50,15 +50,13 @@ if [ "$onchain_version" -ge "$release_version" ]; then
   exit 1
 fi
 
-# Start Chopsticks to fork the parachain and relaychain in XCM mode
+# Start Chopsticks to fork the parachain in standalone mode (no relaychain)
 print_divider
-echo "Forking parachain and relaychain with Chopsticks in XCM mode ..."
-npx @acala-network/chopsticks@latest xcm \
-  -r $ROOTDIR/parachain/scripts/chopsticks/paseo-relaychain.yml \
-  -p $ROOTDIR/parachain/scripts/chopsticks/$1.yml &
+echo "Forking parachain with Chopsticks in standalone mode (no relaychain) ..."
+npx @acala-network/chopsticks@latest \
+  --config=$ROOTDIR/parachain/scripts/chopsticks/$1-standalone.yml &
 chopsticks_pid=$!
-echo "Chopsticks XCM mode PID: $chopsticks_pid"
-echo "Relay chain endpoint: ws://localhost:9945"
+echo "Chopsticks standalone mode PID: $chopsticks_pid"
 echo "Parachain ($1) endpoint: ws://localhost:9944"
 sleep 25 # Wait for Chopsticks to initialize
 
