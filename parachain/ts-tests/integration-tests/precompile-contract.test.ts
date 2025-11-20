@@ -1,5 +1,4 @@
-import { expect } from 'chai';
-import { step } from 'mocha-steps';
+import { expect, test } from 'vitest';
 import {
     sleep,
     signAndSend,
@@ -8,7 +7,7 @@ import {
     subscribeToEvents,
     sudoWrapperGc,
     sudoWrapperTc,
-} from '../common/utils';
+} from '../common/utils/index.js';
 import precompileStakingContractAbi from '../common/abi/precompile/Staking.json';
 import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
 import precompileOmniBridgeContractAbi from '../common/abi/precompile/OmniBridge.json';
@@ -130,12 +129,12 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         return collators[0];
     };
 
-    step('Set ExtrinsicFilter mode to Test', async function () {
+    test('Set ExtrinsicFilter mode to Test', async () => {
         let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
         await signAndSend(extrinsic, context.alice);
     });
 
-    step('Address with insufficient amount of tokens', async function () {
+    test('Address with insufficient amount of tokens', async () => {
         const randomEvmWallet = ethers.Wallet.createRandom().connect(provider);
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
             'delegateWithAutoCompound',
@@ -159,7 +158,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         }
     });
 
-    step('Test precompile omni bridge contract', async function () {
+    test('Test precompile omni bridge contract', async () => {
         console.time('Test precompile omni bridge contract');
 
         const dest_address = '0xaaafb3972b05630fccee866ec69cdadd9bac2772'; // random address
@@ -228,7 +227,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     });
 
     // To see full params types for the interfaces, check notion page: https://web3builders.notion.site/Parachain-Precompile-Contract-0c34929e5f16408084446dcf3dd36006
-    step('Test precompile staking contract', async function () {
+    test('Test precompile staking contract', async () => {
         console.time('Test precompile staking contract');
 
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
@@ -326,7 +325,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.timeEnd('Test precompile staking contract');
     });
 
-    step('Test precompile vesting contract', async function () {
+    test('Test precompile vesting contract', async () => {
         console.time('Test precompile vesting contract');
 
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
@@ -377,7 +376,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.timeEnd('Test precompile vesting contract');
     });
 
-    step('Set ExtrinsicFilter mode to Normal', async function () {
+    test('Set ExtrinsicFilter mode to Normal', async () => {
         let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
         await signAndSend(extrinsic, context.alice);
     });

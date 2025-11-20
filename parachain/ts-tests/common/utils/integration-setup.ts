@@ -1,8 +1,8 @@
-import 'mocha';
+import { describe, beforeAll, afterAll } from 'vitest';
 import '@polkadot/api-augment';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { loadConfig } from './config';
+import { loadConfig } from './config.js';
 
 export class ParachainConfig {
     api!: ApiPromise;
@@ -54,10 +54,7 @@ export async function initApiPromise(config: any): Promise<ParachainConfig> {
 }
 
 export function describeLitentry(title: string, specFilename: string, cb: (context: ParachainConfig) => void) {
-    describe(title, function () {
-        // Set timeout to 6000 seconds (Because of 50-blocks delay of rococo, so called "training wheels")
-        this.timeout(6000000);
-
+    describe(title, () => {
         let context: ParachainConfig = {
             api: {} as ApiPromise,
             parachain: {} as string,
@@ -66,8 +63,9 @@ export function describeLitentry(title: string, specFilename: string, cb: (conte
             eve: {} as KeyringPair,
             ferdie: {} as KeyringPair,
         };
-        // Making sure the Litentry node has started
-        before('Starting Litentry Test Node', async function () {
+
+        beforeAll(async () => {
+            console.log('Starting Litentry Test Node');
             const config = loadConfig();
             const initApi = await initApiPromise(config);
             context.parachain = initApi.parachain;
@@ -75,9 +73,14 @@ export function describeLitentry(title: string, specFilename: string, cb: (conte
             context.alice = initApi.alice;
             context.bob = initApi.bob;
             context.eve = initApi.eve;
-        });
+            context.ferdie = initApi.ferdie;
+        }, 60000);
 
-        after(async function () {});
+        afterAll(async () => {
+            if (context.api) {
+                await context.api.disconnect();
+            }
+        });
 
         cb(context);
     });

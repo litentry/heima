@@ -1,12 +1,11 @@
+import { expect, test } from 'vitest';
 import { blake2AsHex } from '@polkadot/util-crypto';
 import * as fs from 'fs';
 import { Keyring, ApiPromise, WsProvider } from '@polkadot/api';
 import { describeLitentry } from '../common/utils/integration-setup';
 import '@polkadot/wasm-crypto/initOnlyAsm';
 import * as path from 'path';
-import { expect } from 'chai';
-import { step } from 'mocha-steps';
-import { signAndSend, subscribeToEvents } from '../common/utils';
+import { signAndSend, subscribeToEvents } from '../common/utils/index.js';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Event } from '@polkadot/types/interfaces/system';
 import { ApiTypes, SubmittableExtrinsic } from '@polkadot/api/types';
@@ -190,7 +189,7 @@ async function runtimeupgradeViaGovernance(api: ApiPromise, wasm: string) {
     return newRuntimeVersion;
 }
 describeLitentry('Runtime upgrade test', ``, (context) => {
-    step('Running runtime ugprade test', async function () {
+    test('Running runtime ugprade test', async () => {
         let runtimeVersion: number;
         const wasmPath = path.resolve('/tmp/runtime.wasm');
         const wasm = fs.readFileSync(wasmPath).toString('hex');
