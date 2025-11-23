@@ -1,6 +1,5 @@
-import { assert, expect } from 'chai';
-import { step } from 'mocha-steps';
-import { signAndSend, describeLitentry, loadConfig, sudoWrapperTc } from '../common/utils';
+import { expect, test } from 'vitest';
+import { signAndSend, describeLitentry, loadConfig, sudoWrapperTc } from '../common/utils/index.js';
 import { compiled } from '../common/utils/compile';
 import { evmToAddress } from '@polkadot/util-crypto';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
@@ -16,12 +15,12 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         mappedAddress: evmToAddress('0xaaafB3972B05630fCceE866eC69CdADd9baC2771', 31),
     };
 
-    step('Set ExtrinsicFilter mode to Test', async function () {
+    test('Set ExtrinsicFilter mode to Test', async () => {
         let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
         await signAndSend(extrinsic, context.alice);
     });
 
-    step('Transfer Value from Eve to EVM external account', async function () {
+    test('Transfer Value from Eve to EVM external account', async () => {
         let eveMappedEVMAccount = context.eve.publicKey.slice(0, 20);
         let eveMappedSustrateAccount = evmToAddress(eveMappedEVMAccount, 31);
 
@@ -58,13 +57,11 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         // If a substrate account using pallet_evm to trigger evm transaction,
         // it will bump 2 for nonce (one for substrate extrinsic, one for evm).
         // +1 nonce for original substrate account, plus another 1 nonce for original substrate account's truncated evm address's mapped susbtrate account.
-        expect(eveCurrentNonce.toNumber()).to.equal(eveInitNonce.toNumber() + 1);
-        expect(evmAccountCurrentBalance.free.toBigInt()).to.equal(
-            evmAccountInitBalance.free.toBigInt() + BigInt(value)
-        );
+        expect(eveCurrentNonce.toNumber()).toBe(eveInitNonce.toNumber() + 1);
+        expect(evmAccountCurrentBalance.free.toBigInt()).toBe(evmAccountInitBalance.free.toBigInt() + BigInt(value));
     });
 
-    step('Transfer some value back to Eve Mapped account from EVM external account', async function () {
+    test('Transfer some value back to Eve Mapped account from EVM external account', async () => {
         // Get the initial balance of Eve and EVM external account
         let eveMappedEVMAccount = context.eve.publicKey.slice(0, 20);
         let eveMappedSustrateAccount = evmToAddress(eveMappedEVMAccount, 31);
@@ -99,11 +96,11 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
 
         console.log(`evmAccount Balance: ${evmAccountCurrentBalance}`);
 
-        expect(evmAccountCurrentNonce.toNumber()).to.equal(evmAccountInitNonce.toNumber() + 1);
-        expect(eveCurrentBalance.free.toBigInt()).to.equal(eveInitBalance.free.toBigInt() + BigInt(value));
+        expect(evmAccountCurrentNonce.toNumber()).toBe(evmAccountInitNonce.toNumber() + 1);
+        expect(eveCurrentBalance.free.toBigInt()).toBe(eveInitBalance.free.toBigInt() + BigInt(value));
     });
 
-    step('Test substrate signature can not access ultra vires evm/substrate account', async function () {
+    test('Test substrate signature can not access ultra vires evm/substrate account', async () => {
         // Get the initial balance of Eve and EVM external account
         const eveInitNonce = (await context.api.query.system.account(context.eve.address)).nonce;
         const evmAccountInitBalance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
@@ -130,12 +127,12 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
 
         // Extrinsic succeed with failed origin
         // So the evm transaction nonce bump will not be triggered
-        expect(eveCurrentNonce.toNumber()).to.equal(eveInitNonce.toNumber() + 1);
+        expect(eveCurrentNonce.toNumber()).toBe(eveInitNonce.toNumber() + 1);
         // Which means balance unchanged
-        expect(evmAccountCurrentBalance.free.toBigInt()).to.equal(evmAccountInitBalance.free.toBigInt());
+        expect(evmAccountCurrentBalance.free.toBigInt()).toBe(evmAccountInitBalance.free.toBigInt());
     });
 
-    step('Deploy and test contract by EVM external account', async function () {
+    test('Deploy and test contract by EVM external account', async () => {
         // Get the bytecode and API
         const bytecode = compiled.evm.bytecode.object;
         const abi = compiled.abi;
@@ -183,8 +180,7 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         };
 
         const message = await sayMessage(deployed.contractAddress!);
-        const initialResult = message === 'Hello World' ? 1 : 0;
-        assert.equal(1, initialResult, 'Contract initial storage query mismatch');
+        expect(message).toBe('Hello World');
 
         // Test set message contract method
         const setMessage = async (contractAddress: string, accountFrom: any, message: string) => {
@@ -209,11 +205,10 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
         };
         const setMsg = await setMessage(deployed.contractAddress!, evmAccountRaw, 'Goodbye World');
         const sayMsg = await sayMessage(deployed.contractAddress!);
-        const setResult = sayMsg === 'Goodbye World' ? 1 : 0;
-        assert.equal(1, setResult, 'Contract modified storage query mismatch');
+        expect(sayMsg).toBe('Goodbye World');
     });
 
-    step('Set ExtrinsicFilter mode to Normal', async function () {
+    test('Set ExtrinsicFilter mode to Normal', async () => {
         let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
         await signAndSend(extrinsic, context.alice);
     });
