@@ -4,6 +4,7 @@ db: ./heima-db.sqlite
 runtime-log-level: 3
 allow-unresolved-imports: true
 mock-signature-host: true
+wasm-override: /tmp/runtime.wasm
 
 import-storage:
   System:
@@ -13,13 +14,13 @@ import-storage:
           - "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"  # Alice
         - providers: 1
           data:
-            free: "100000000000000000000"
+            free: "1000000000000000000000000"  # 1M tokens for preimage deposit
       -
         -
           - "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"  # Bob
         - providers: 1
           data:
-            free: "100000000000000000000"
+            free: "1000000000000000000000000"  # 1M tokens
   TechnicalCommittee:
     Members: ["5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]  # Alice
   Council:

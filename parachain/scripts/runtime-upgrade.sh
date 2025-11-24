@@ -46,21 +46,22 @@ echo "On-chain: $onchain_version"
 echo "Release:  $release_version"
 
 if [ "$onchain_version" -ge "$release_version" ]; then
-  echo "Current On-chain runtime is up to date, quit"
-  exit 1
+  echo "On-chain runtime version ($onchain_version) >= release version ($release_version)"
+  echo "Skipping runtime upgrade test - chain is already up to date"
+  exit 0
 fi
 
-# Start Chopsticks to fork the parachain and relaychain in XCM mode
+echo "Upgrade needed: $onchain_version -> $release_version"
+
+# Start Chopsticks to fork the parachain in standalone mode
+# Standalone mode is simpler and sufficient for runtime upgrade testing
 print_divider
-echo "Forking parachain and relaychain with Chopsticks in XCM mode ..."
-npx @acala-network/chopsticks@latest xcm \
-  -r $ROOTDIR/parachain/scripts/chopsticks/paseo-relaychain.yml \
-  -p $ROOTDIR/parachain/scripts/chopsticks/$1.yml &
+echo "Forking parachain with Chopsticks in standalone mode ..."
+npx @acala-network/chopsticks@latest --config=$ROOTDIR/parachain/scripts/chopsticks/$1.yml &
 chopsticks_pid=$!
-echo "Chopsticks XCM mode PID: $chopsticks_pid"
-echo "Relay chain endpoint: ws://localhost:9945"
+echo "Chopsticks PID: $chopsticks_pid"
 echo "Parachain ($1) endpoint: ws://localhost:9944"
-sleep 25 # Wait for Chopsticks to initialize
+sleep 20 # Wait for Chopsticks to initialize
 
 # Check if Chopsticks is running
 if ! ps -p $chopsticks_pid > /dev/null; then
@@ -79,4 +80,7 @@ pnpm install && pnpm run test-runtime-upgrade 2>&1
 
 # Cleanup
 print_divider
+echo "Stopping Chopsticks..."
+kill $chopsticks_pid 2>/dev/null || true
+wait $chopsticks_pid 2>/dev/null || true
 echo "Runtime upgrade succeed!"

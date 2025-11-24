@@ -4,6 +4,7 @@ db: ./paseo-db.sqlite
 runtime-log-level: 3
 allow-unresolved-imports: true
 mock-signature-host: true
+wasm-override: /tmp/runtime.wasm
 
 import-storage:
   System:
