@@ -136,18 +136,18 @@ jobs:
 
           # Check if upgrade is needed
           release_version=$(subwasm --json info "$RUNTIME_BLOB_PATH" | jq .core_version.specVersion)
-          onchain_version=$(curl -s -H 'Content-Type: application/json' -d '{"id":1, "jsonrpc":"2.0", "method": "state_getRuntimeVersion", "params": [] }' ${{ matrix.runtime.uri }} | jq .result.specVersion)
+          onchain_version=$(curl -s -H 'Content-Type: application/json' -d '{"id":1, "jsonrpc":"2.0", "method": "state_getRuntimeVersion", "params": [] }' ${{ matrix.runtime.uri//wss/https }} | jq .result.specVersion)
 
           echo "On-chain version: $onchain_version"
           echo "Built runtime version: $release_version"
 
           if [ "$onchain_version" -ge "$release_version" ]; then
-            echo "⏭️  On-chain runtime version ($onchain_version) >= built version ($release_version)"
+            echo "On-chain runtime version ($onchain_version) >= built version ($release_version)"
             echo "Skipping migration checks - chain is already up to date"
             exit 0
           fi
 
-          echo "✅ Upgrade needed: $onchain_version -> $release_version"
+          echo "Upgrade needed: $onchain_version -> $release_version"
           echo "Running migration checks..."
 
           export RUST_LOG=remote-ext=debug,runtime=debug
