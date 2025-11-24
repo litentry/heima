@@ -136,7 +136,8 @@ jobs:
 
           # Check if upgrade is needed
           release_version=$(subwasm --json info "$RUNTIME_BLOB_PATH" | jq .core_version.specVersion)
-          onchain_version=$(curl -s -H 'Content-Type: application/json' -d '{"id":1, "jsonrpc":"2.0", "method": "state_getRuntimeVersion", "params": [] }' ${{ matrix.runtime.uri//wss/https }} | jq .result.specVersion)
+          URI="${{ matrix.runtime.uri }}"
+          onchain_version=$(curl -s -H 'Content-Type: application/json' -d '{"id":1, "jsonrpc":"2.0", "method": "state_getRuntimeVersion", "params": [] }' ${URI//wss/https} | jq .result.specVersion)
 
           echo "On-chain version: $onchain_version"
           echo "Built runtime version: $release_version"
