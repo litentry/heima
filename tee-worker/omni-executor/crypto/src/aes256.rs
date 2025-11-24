@@ -122,7 +122,7 @@ impl RingAeadNonceSequence {
 impl NonceSequence for RingAeadNonceSequence {
 	fn advance(&mut self) -> core::result::Result<Nonce, Unspecified> {
 		let nonce = Nonce::assume_unique_for_key(self.nonce);
-		let nonce_vec = rand::thread_rng().gen::<Aes256KeyNonce>();
+		let nonce_vec = rand::rng().random::<Aes256KeyNonce>();
 		self.nonce.copy_from_slice(&nonce_vec[0..NONCE_LEN]);
 		Ok(nonce)
 	}

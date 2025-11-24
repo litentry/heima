@@ -41,7 +41,7 @@ mod test {
 	use oe_crypto::jwt;
 	use oe_primitives::{utils::hex::hex_encode, UserId};
 	use oe_storage::{StorageDB, WildmetaTimestampStorage};
-	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, rand_core::OsRng, RsaPrivateKey};
 	use std::collections::HashMap;
 	use std::sync::Arc;
 	use tempfile::tempdir;
@@ -53,7 +53,7 @@ mod test {
 		let shielding_key = ShieldingKey::new();
 		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();

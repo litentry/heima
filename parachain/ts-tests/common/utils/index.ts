@@ -1,3 +1,3 @@
-export * from './config';
-export * from './integration-setup';
-export * from './function';
+export * from './config.js';
+export * from './integration-setup.js';
+export * from './function.js';

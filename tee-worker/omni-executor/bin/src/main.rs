@@ -559,7 +559,7 @@ async fn export_bundler_key(args: ExportBundlerKeyArgs) -> Result<(), ()> {
 		aes256::{aes_decrypt, Aes256Key, Aes256KeyNonce, AesOutput},
 		ecdsa, PairTrait,
 	};
-	use rsa::{Oaep, RsaPublicKey};
+	use rsa::{rand_core::OsRng, Oaep, RsaPublicKey};
 	use sha2::Sha256;
 	use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -627,7 +627,7 @@ async fn export_bundler_key(args: ExportBundlerKeyArgs) -> Result<(), ()> {
 
 	info!("RSA-encrypting AES key...");
 	let encrypted_aes_key = rsa_public_key
-		.encrypt(&mut rand::thread_rng(), Oaep::new::<Sha256>(), &aes_key)
+		.encrypt(&mut OsRng, Oaep::new::<Sha256>(), &aes_key)
 		.map_err(|e| {
 			error!("Failed to RSA-encrypt AES key: {:?}", e);
 			eprintln!("❌ Error: Failed to RSA-encrypt AES key: {}", e);
