@@ -36,7 +36,7 @@ pub fn register_request_passkey_challenge<
 			// Generate a random 32-byte challenge
 			use rand::RngCore;
 			let mut challenge_bytes = [0u8; 32];
-			rand::thread_rng().fill_bytes(&mut challenge_bytes);
+			rand::rng().fill_bytes(&mut challenge_bytes);
 
 			// Base64 encode the challenge (URL-safe, no padding)
 			use base64::Engine;

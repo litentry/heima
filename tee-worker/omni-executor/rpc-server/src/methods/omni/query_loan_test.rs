@@ -63,7 +63,7 @@ mod test {
 	use oe_storage::{
 		loan_record::LoanState, LoanRecordStorage, Storage, StorageDB, WildmetaTimestampStorage,
 	};
-	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, rand_core::OsRng, RsaPrivateKey};
 	use std::collections::HashMap;
 	use std::sync::Arc;
 	use tempfile::tempdir;
@@ -100,7 +100,7 @@ mod test {
 		loan_record_storage.insert(&storage_key, test_record.clone()).unwrap();
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -245,7 +245,7 @@ mod test {
 		}
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -338,7 +338,7 @@ mod test {
 		loan_record_storage.insert(&storage_key, test_record).unwrap();
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -422,7 +422,7 @@ mod test {
 		loan_record_storage.insert(&storage_key, test_record).unwrap();
 
 		// Start server
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();

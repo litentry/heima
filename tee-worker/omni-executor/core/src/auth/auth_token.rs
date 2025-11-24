@@ -111,7 +111,7 @@ mod tests {
 	use crate::auth::constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_ID_TYPE, CLIENT_ID_HEIMA};
 	use chrono::{Days, Utc};
 	use oe_primitives::{utils::hex::hex_encode, Identity};
-	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, rand_core::OsRng, RsaPrivateKey};
 
 	#[derive(PartialEq, Debug, Serialize, Deserialize)]
 	pub struct TestAuthTokenNoSubClaims {
@@ -127,7 +127,7 @@ mod tests {
 
 	#[test]
 	fn test_auth_token() {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -155,7 +155,7 @@ mod tests {
 
 	#[test]
 	fn test_auth_token_expired() {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -178,7 +178,7 @@ mod tests {
 
 	#[test]
 	fn test_auth_token_missing_subject() {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -202,7 +202,7 @@ mod tests {
 
 	#[test]
 	fn test_auth_token_missing_typ() {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();
@@ -225,7 +225,7 @@ mod tests {
 
 	#[test]
 	fn test_auth_token_invalid_type() {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let private_key = rsa_private_key.to_pkcs1_der().unwrap();

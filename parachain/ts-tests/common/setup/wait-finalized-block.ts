@@ -2,7 +2,7 @@ import '@polkadot/api-augment';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import type { VoidFn } from '@polkadot/api/types';
 import type { ISubmittableResult } from '@polkadot/types/types';
-import { loadConfig } from '../utils';
+import { loadConfig } from '../utils/index.js';
 
 const FINALIZED_BLOCKS_COUNT = 1;
 const TIMEOUT_MIN = 5;

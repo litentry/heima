@@ -187,7 +187,7 @@ mod tests {
 	use oe_crypto::{ecdsa, PairTrait};
 	use oe_primitives::utils::hex::hex_encode;
 	use oe_storage::{StorageDB, WildmetaTimestampStorage};
-	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, rand_core::OsRng, RsaPrivateKey};
 	use std::{collections::HashMap, sync::Arc};
 	use tempfile::tempdir;
 
@@ -214,7 +214,7 @@ mod tests {
 		let aes_key = TEST_AES_KEY;
 		let encrypted_key = shielding_key
 			.public_key()
-			.encrypt(&mut rand::thread_rng(), Oaep::new::<Sha256>(), &aes_key)
+			.encrypt(&mut OsRng, Oaep::new::<Sha256>(), &aes_key)
 			.expect("Failed to encrypt AES key");
 		(aes_key, hex_encode(&encrypted_key))
 	}
@@ -238,7 +238,7 @@ mod tests {
 		storage_db: Arc<StorageDB>,
 		shielding_key: ShieldingKey,
 	) {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
