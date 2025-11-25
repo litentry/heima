@@ -33,12 +33,11 @@ pub struct BridgeTransferPrecompile<Runtime>(PhantomData<Runtime>);
 impl<Runtime> BridgeTransferPrecompile<Runtime>
 where
 	Runtime: pallet_bridge_transfer::Config + pallet_evm::Config,
-	Runtime::RuntimeOrigin: From<
-		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
-	>,
+	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_bridge_transfer::Call<Runtime>>,
-	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin:
+		From<Option<<Runtime::AccountProvider as fp_evm::AccountProvider>::AccountId>>,
 	BalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 {
 	#[precompile::public("transferAssets(uint256,uint8,bytes32,bytes)")]

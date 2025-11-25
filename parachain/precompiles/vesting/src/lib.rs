@@ -28,12 +28,11 @@ pub struct VestingPrecompile<Runtime>(PhantomData<Runtime>);
 impl<Runtime> VestingPrecompile<Runtime>
 where
 	Runtime: pallet_vesting::Config + pallet_evm::Config,
-	Runtime::RuntimeOrigin: From<
-		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
-	>,
+	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_vesting::Call<Runtime>>,
-	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin:
+		From<Option<<Runtime::AccountProvider as fp_evm::AccountProvider>::AccountId>>,
 {
 	#[precompile::public("vest()")]
 	fn vest(handle: &mut impl PrecompileHandle) -> EvmResult {

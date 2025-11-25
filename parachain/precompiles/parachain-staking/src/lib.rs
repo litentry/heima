@@ -50,13 +50,11 @@ pub struct ParachainStakingPrecompile<Runtime>(PhantomData<Runtime>);
 impl<Runtime> ParachainStakingPrecompile<Runtime>
 where
 	Runtime: pallet_parachain_staking::Config + pallet_evm::Config,
-	Runtime::RuntimeOrigin: From<
-		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
-	>,
-	Runtime::AccountId: From<[u8; 32]>,
+	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	Runtime::RuntimeCall: From<pallet_parachain_staking::Call<Runtime>>,
+	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin:
+		From<Option<<Runtime::AccountProvider as fp_evm::AccountProvider>::AccountId>>,
 	BalanceOf<Runtime>: TryFrom<U256> + Into<U256> + solidity::Codec,
 {
 	#[precompile::public("delegationRequestIsPending(bytes32,bytes32)")]

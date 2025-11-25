@@ -37,12 +37,11 @@ pub struct AIUSDConvertorPrecompile<Runtime>(PhantomData<Runtime>);
 impl<Runtime> AIUSDConvertorPrecompile<Runtime>
 where
 	Runtime: pallet_aiusd_convertor::Config + pallet_evm::Config,
-	Runtime::RuntimeOrigin: From<
-		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
-	>,
+	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_aiusd_convertor::Call<Runtime>>,
-	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin:
+		From<Option<<Runtime::AccountProvider as fp_evm::AccountProvider>::AccountId>>,
 	AssetBalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 	AssetIdOf<Runtime>: TryFrom<U256> + Into<U256>,
 {

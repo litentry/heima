@@ -116,6 +116,11 @@ pub fn new_partial<BIQ>(
 			Option<Telemetry>,
 			Option<TelemetryWorkerHandle>,
 			Arc<fc_db::kv::Backend<Block, ParachainClient>>,
+			Arc<
+				sc_transaction_pool::Pool<
+					sc_transaction_pool::FullChainApi<ParachainClient, Block>,
+				>,
+			>,
 		),
 	>,
 	sc_service::Error,
@@ -181,6 +186,18 @@ where
 	.with_prometheus(config.prometheus_registry())
 	.build();
 
+	// Create a separate pool for Frontier RPC that has access to the inner Pool type
+	let chain_api = Arc::new(sc_transaction_pool::FullChainApi::new(
+		client.clone(),
+		None,
+		&task_manager.spawn_essential_handle(),
+	));
+	let transaction_pool_inner = Arc::new(sc_transaction_pool::Pool::new(
+		sc_transaction_pool::Options::default(),
+		config.role.is_authority().into(),
+		chain_api,
+	));
+
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
 	let frontier_block_import = FrontierBlockImport::new(client.clone(), client.clone());
@@ -220,7 +237,13 @@ where
 		task_manager,
 		transaction_pool: transaction_pool.into(),
 		select_chain,
-		other: (block_import, telemetry, telemetry_worker_handle, frontier_backend),
+		other: (
+			block_import,
+			telemetry,
+			telemetry_worker_handle,
+			frontier_backend,
+			transaction_pool_inner,
+		),
 	})
 }
 
@@ -289,7 +312,13 @@ where
 
 	let params =
 		new_partial::<BIQ>(&parachain_config, build_import_queue, false, delayed_best_block)?;
-	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
+	let (
+		block_import,
+		mut telemetry,
+		telemetry_worker_handle,
+		frontier_backend,
+		transaction_pool_graph,
+	) = params.other;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -403,7 +432,7 @@ where
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.clone(),
+				graph: transaction_pool_graph.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: validator,
@@ -656,7 +685,7 @@ pub async fn start_standalone_node(
 		keystore_container,
 		select_chain: maybe_select_chain,
 		transaction_pool,
-		other: (_, _, _, frontier_backend),
+		other: (_, _, _, frontier_backend, transaction_pool_graph),
 	} = new_partial::<_>(&config, build_import_queue, true, true)?;
 
 	// Sinks for pubsub notifications.
@@ -821,7 +850,7 @@ pub async fn start_standalone_node(
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.clone(),
+				graph: transaction_pool_graph.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: role.is_authority(),
@@ -911,7 +940,7 @@ pub fn start_node_evm_impl(
 				},
 			)
 		} else {
-			tracing::RpcRequesters { debug: None, trace: None }
+			tracing::RpcRequesters {}
 		};
 
 	// Frontier offchain DB task. Essential.
