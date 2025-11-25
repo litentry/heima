@@ -423,7 +423,7 @@ impl Identity {
 			Identity::Evm(address) => {
 				let account =
 					HashedAddressMapping::into_account_id(H160::from_slice(address.as_ref()));
-				Some(account.into())
+				Some(account)
 			},
 			// we use identity hash for non substrate/evm web3 accounts, as they
 			// can't connect to the parachain directly

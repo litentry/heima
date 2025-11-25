@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
+use fp_evm::{PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	traits::fungible::NativeOrWithId,

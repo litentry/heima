@@ -18,6 +18,7 @@ use crate::{mock::*, *};
 use frame_support::{assert_noop, assert_ok};
 use sp_std::vec;
 
+#[allow(dead_code)]
 fn request_intent_call(intent: Intent) -> Box<RuntimeCall> {
 	RuntimeCall::OmniAccount(crate::Call::request_intent { intent }).into()
 }

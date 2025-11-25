@@ -43,19 +43,10 @@ use sp_consensus_aura::{sr25519::AuthorityId as AuraId, AuraApi};
 use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
 use std::sync::Arc;
 
-use crate::tracing;
-
 type HashFor<Block> = <Block as BlockT>::Hash;
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
-
-#[derive(Clone)]
-pub struct EvmTracingConfig {
-	pub tracing_requesters: tracing::RpcRequesters,
-	pub trace_filter_max_count: u32,
-	pub enable_txpool: bool,
-}
 
 // TODO This is copied from frontier. It should be imported instead after
 // https://github.com/paritytech/frontier/issues/333 is solved
@@ -132,7 +123,6 @@ pub fn create_full<C, P, BE, A>(
 		>,
 	>,
 	pending_consenus_data_provider: Box<dyn ConsensusDataProvider<Block>>,
-	tracing_config: EvmTracingConfig,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
 	C: ProvideRuntimeApi<Block>
@@ -258,9 +248,8 @@ where
 			.into_rpc(),
 		)?;
 
-		if tracing_config.enable_txpool {
-			module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
-		}
+		// Always enable TxPool RPC
+		module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
 	}
 
 	Ok(module)

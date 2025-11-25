@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{self as pallet_omni_account, Decode, Encode, EnsureOmniAccount};
+use crate::{self as pallet_omni_account, Encode, EnsureOmniAccount};
 use frame_support::{
 	assert_ok, derive_impl,
 	pallet_prelude::EnsureOrigin,
@@ -25,7 +25,6 @@ use frame_system::EnsureRoot;
 use heima_primitives::{DefaultOmniAccountConverter, Identity, MemberAccount};
 pub use pallet_teebag::test_util::get_signer;
 use pallet_teebag::test_util::{TEST8_CERT, TEST8_SIGNER_PUB, TEST8_TIMESTAMP, URL};
-use sp_core::RuntimeDebug;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
 	traits::{IdentifyAccount, IdentityLookup, Verify},
@@ -96,18 +95,22 @@ pub fn bob() -> Accounts {
 	create_accounts(AccountKeyring::Bob)
 }
 
+#[allow(dead_code)]
 pub fn charlie() -> Accounts {
 	create_accounts(AccountKeyring::Charlie)
 }
 
+#[allow(dead_code)]
 pub fn dave() -> Accounts {
 	create_accounts(AccountKeyring::Dave)
 }
 
+#[allow(dead_code)]
 pub fn public_member_account(accounts: Accounts) -> MemberAccount {
 	MemberAccount::Public(accounts.identity)
 }
 
+#[allow(dead_code)]
 pub fn private_member_account(accounts: Accounts) -> MemberAccount {
 	MemberAccount::Private(accounts.identity.encode(), accounts.identity.hash())
 }

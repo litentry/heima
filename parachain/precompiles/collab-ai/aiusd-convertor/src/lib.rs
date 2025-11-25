@@ -16,7 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
+use fp_evm::{PrecompileFailure, PrecompileHandle};
 use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use pallet_evm::AddressMapping;
 use precompile_utils::prelude::*;

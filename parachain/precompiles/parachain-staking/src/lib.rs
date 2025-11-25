@@ -20,7 +20,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
+use fp_evm::{PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	sp_runtime::Percent,
