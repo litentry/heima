@@ -74,7 +74,7 @@ jobs:
     name: ${{ matrix.chain }}
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -158,7 +158,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
@@ -215,7 +215,7 @@ jobs:
     name: ${{ matrix.chain }}
     steps:
       - name: Checkout codes
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -282,7 +282,7 @@ jobs:
       (success('build-parachain-runtime') || success('parachain-ts-tests') || success('build-omni-executor'))
     steps:
       - name: Checkout codes on ${{ env.RELEASE_TAG }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0

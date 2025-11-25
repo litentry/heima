@@ -93,7 +93,7 @@ jobs:
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
       run_omni_executor_test: ${{ steps.env.outputs.run_omni_executor_test }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -145,7 +145,7 @@ jobs:
   fmt:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install rust toolchain
         run: rustup show
@@ -208,7 +208,7 @@ jobs:
       - sequentialise
     if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -234,7 +234,7 @@ jobs:
       - set-condition
       - sequentialise
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -278,7 +278,7 @@ jobs:
       - set-condition
       - sequentialise
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -336,7 +336,7 @@ jobs:
       - sequentialise
     if: needs.set-condition.outputs.rebuild_contract == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
@@ -406,7 +406,7 @@ jobs:
           - paseo
     name: ${{ matrix.chain }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/download-artifact@v6
         with:
@@ -474,7 +474,7 @@ jobs:
     # run_parachain_test is related to ts-tests only
     if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -533,7 +533,7 @@ jobs:
           # - test_name: omni-account-test
     name: ${{ matrix.test_name }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/download-artifact@v6
         with:
