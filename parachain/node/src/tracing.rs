@@ -19,8 +19,6 @@ use crate::evm_tracing_types::{EthApi as EthApiCmd, EvmTracingConfig};
 use fc_rpc_core::types::FilterPool;
 use fc_storage::StorageOverride;
 use fp_rpc::EthereumRuntimeRPCApi;
-use moonbeam_rpc_debug::{DebugHandler, DebugRequester};
-use moonbeam_rpc_trace::{CacheRequester as TraceFilterCacheRequester, CacheTask};
 use sc_client_api::{
 	Backend, BlockOf, BlockchainEvents, HeaderBackend, StateBackend, StorageProvider,
 };
@@ -36,8 +34,7 @@ use tokio::sync::Semaphore;
 
 #[derive(Clone)]
 pub struct RpcRequesters {
-	pub debug: Option<DebugRequester>,
-	pub trace: Option<TraceFilterCacheRequester>,
+	// Tracing support removed - using standard frontier without debug/trace APIs
 }
 
 #[allow(dead_code)]
@@ -61,63 +58,13 @@ where
 	C: HeaderBackend<B> + HeaderMetadata<B, Error = BlockChainError> + 'static,
 	C: BlockchainEvents<B>,
 	C: Send + Sync + 'static,
-	C::Api: EthereumRuntimeRPCApi<B> + moonbeam_rpc_primitives_debug::DebugRuntimeApi<B>,
+	C::Api: EthereumRuntimeRPCApi<B>,
 	C::Api: BlockBuilder<B>,
 	B: BlockT<Hash = H256> + Send + Sync + 'static,
 	B::Header: HeaderT<Number = u32>,
 	BE: Backend<B> + 'static,
 	BE::State: StateBackend<BlakeTwo256>,
 {
-	let permit_pool = Arc::new(Semaphore::new(rpc_config.ethapi_max_permits as usize));
-
-	let (trace_filter_task, trace_filter_requester) =
-		if rpc_config.ethapi.contains(&EthApiCmd::Trace) {
-			let (trace_filter_task, trace_filter_requester) = CacheTask::create(
-				Arc::clone(&params.client),
-				Arc::clone(&params.substrate_backend),
-				core::time::Duration::from_secs(rpc_config.ethapi_trace_cache_duration),
-				Arc::clone(&permit_pool),
-				Arc::clone(&params.storage_override),
-				prometheus,
-			);
-			(Some(trace_filter_task), Some(trace_filter_requester))
-		} else {
-			(None, None)
-		};
-
-	let (debug_task, debug_requester) = if rpc_config.ethapi.contains(&EthApiCmd::Debug) {
-		let (debug_task, debug_requester) = DebugHandler::task(
-			Arc::clone(&params.client),
-			Arc::clone(&params.substrate_backend),
-			Arc::clone(&params.frontier_backend),
-			Arc::clone(&permit_pool),
-			Arc::clone(&params.storage_override),
-			rpc_config.tracing_raw_max_memory_usage,
-		);
-		(Some(debug_task), Some(debug_requester))
-	} else {
-		(None, None)
-	};
-
-	// `trace_filter` cache task. Essential.
-	// Proxies rpc requests to it's handler.
-	if let Some(trace_filter_task) = trace_filter_task {
-		params.task_manager.spawn_essential_handle().spawn(
-			"trace-filter-cache",
-			Some("eth-tracing"),
-			trace_filter_task,
-		);
-	}
-
-	// `debug` task if enabled. Essential.
-	// Proxies rpc requests to it's handler.
-	if let Some(debug_task) = debug_task {
-		params.task_manager.spawn_essential_handle().spawn(
-			"ethapi-debug",
-			Some("eth-tracing"),
-			debug_task,
-		);
-	}
-
-	RpcRequesters { debug: debug_requester, trace: trace_filter_requester }
+	// Tracing support removed - using standard frontier without debug/trace APIs
+	RpcRequesters {}
 }

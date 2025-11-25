@@ -75,16 +75,12 @@ use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 
 #[cfg(not(feature = "runtime-benchmarks"))]
-pub type HostFunctions = (
-	cumulus_client_service::ParachainHostFunctions,
-	moonbeam_primitives_ext::moonbeam_ext::HostFunctions,
-);
+pub type HostFunctions = cumulus_client_service::ParachainHostFunctions;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub type HostFunctions = (
 	cumulus_client_service::ParachainHostFunctions,
 	frame_benchmarking::benchmarking::HostFunctions,
-	moonbeam_primitives_ext::moonbeam_ext::HostFunctions,
 );
 
 type ParachainClient = TFullClient<Block, FakeRuntimeApi, WasmExecutor<HostFunctions>>;

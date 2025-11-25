@@ -119,9 +119,6 @@ pallet-evm-precompile-parachain-staking = { workspace = true }
 pallet-evm-precompile-score-staking = { workspace = true }
 pallet-evm-precompile-vesting = { workspace = true }
 
-moonbeam-evm-tracer = { workspace = true }
-moonbeam-rpc-primitives-debug = { workspace = true }
-moonbeam-rpc-primitives-txpool = { workspace = true }
 precompile-utils = { workspace = true }
 
 [dev-dependencies]
@@ -222,9 +219,6 @@ std = [
     "frame-try-runtime?/std",
     "hex?/std",
     "log/std",
-    "moonbeam-evm-tracer/std",
-    "moonbeam-rpc-primitives-debug/std",
-    "moonbeam-rpc-primitives-txpool/std",
     "num_enum/std",
     "pallet-account-fix/std",
     "pallet-asset-manager/std",

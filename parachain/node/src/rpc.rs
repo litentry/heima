@@ -28,8 +28,6 @@ use fc_rpc::{
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::StorageOverride;
 use heima_primitives::{AccountId, Balance, Block, Nonce};
-use moonbeam_rpc_debug::{Debug, DebugServer};
-use moonbeam_rpc_trace::{Trace, TraceServer};
 use polkadot_primitives::PersistedValidationData;
 use sc_client_api::{
 	AuxStore, Backend, BlockchainEvents, StateBackend, StorageProvider, UsageProvider,
@@ -285,17 +283,6 @@ where
 
 		if tracing_config.enable_txpool {
 			module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
-		}
-
-		if let Some(trace_filter_requester) = tracing_config.tracing_requesters.trace {
-			module.merge(
-				Trace::new(client, trace_filter_requester, tracing_config.trace_filter_max_count)
-					.into_rpc(),
-			)?;
-		}
-
-		if let Some(debug_requester) = tracing_config.tracing_requesters.debug {
-			module.merge(Debug::new(debug_requester).into_rpc())?;
 		}
 	}
 
