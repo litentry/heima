@@ -80,7 +80,7 @@ fi
 print_divider
 
 echo "launching zombienet network (in background), dir = $ZOMBIENET_DIR ..."
-nohup $ZOMBIENET_BIN -d $ZOMBIENET_DIR -l silent spawn config.toml > /dev/null 2>&1 &
+$ZOMBIENET_BIN -d $ZOMBIENET_DIR spawn config.toml 2>&1
 
 cd "$ROOTDIR/parachain/ts-tests"
 

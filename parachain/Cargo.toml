@@ -108,8 +108,7 @@ num_enum = { version = "0.7.3", default-features = false }
 num-integer = { version = "0.1", default-features = false }
 rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.2", default-features = false }
-# to be compatible with astar-frontier
-evm = { git = "https://github.com/rust-ethereum/evm", rev = "e81732d", default-features = false }
+evm = { version = "1.0", default-features = false }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6" }
@@ -130,7 +129,7 @@ polkadot-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "
 # frontier
 fc-api = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
 fc-consensus = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
-fc-db = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
+fc-db = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false, features = ["rocksdb"] }
 fc-mapping-sync = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
 fc-rpc = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false, features = ["rpc-binary-search-estimate", "txpool", "aura"] }
 fc-rpc-core = { git = "https://github.com/polkadot-evm/frontier", branch = "stable2412", default-features = false }
