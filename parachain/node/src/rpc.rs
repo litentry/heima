@@ -248,7 +248,6 @@ where
 			.into_rpc(),
 		)?;
 
-		// Always enable TxPool RPC
 		module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
 	}
 
