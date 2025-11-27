@@ -5,16 +5,12 @@ name = 'runtime-common'
 version = '0.1.0'
 
 [dependencies]
-log = { workspace = true }
 parity-scale-codec = { workspace = true }
-scale-info = { workspace = true }
 
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 sp-core = { workspace = true }
-sp-io = { workspace = true }
 sp-runtime = { workspace = true }
-sp-state-machine = { workspace = true }
 sp-std = { workspace = true }
 
 pallet-assets = { workspace = true }
@@ -29,7 +25,6 @@ pallet-treasury = { workspace = true }
 pallet-vesting = { workspace = true }
 
 cumulus-primitives-core = { workspace = true }
-cumulus-primitives-parachain-inherent = { workspace = true }
 parachain-info = { workspace = true }
 
 pallet-xcm = { workspace = true }
@@ -40,10 +35,8 @@ xcm-simulator = { workspace = true, optional = true }
 
 polkadot-core-primitives = { workspace = true }
 polkadot-parachain-primitives = { workspace = true }
-polkadot-primitives = { workspace = true }
 polkadot-runtime-parachains = { workspace = true }
 
-cumulus-test-relay-sproof-builder = { workspace = true, optional = true }
 heima-primitives = { workspace = true }
 pallet-asset-manager = { workspace = true }
 pallet-extrinsic-filter = { workspace = true }
@@ -56,11 +49,8 @@ default = ["std"]
 std = [
     "heima-primitives/std",
     "cumulus-primitives-core/std",
-    "cumulus-primitives-parachain-inherent/std",
-    "cumulus-test-relay-sproof-builder/std",
     "frame-support/std",
     "frame-system/std",
-    "log/std",
     "pallet-asset-manager/std",
     "pallet-assets/std",
     "pallet-authorship/std",
@@ -80,18 +70,14 @@ std = [
     "parachain-info/std",
     "parity-scale-codec/std",
     "polkadot-core-primitives/std",
-    "polkadot-primitives/std",
     "polkadot-runtime-parachains/std",
     "sp-core/std",
-    "sp-io/std",
     "sp-runtime/std",
-    "sp-state-machine/std",
     "sp-std/std",
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",
     "polkadot-parachain-primitives/std",
-    "scale-info/std",
 ]
 
 runtime-benchmarks = [
@@ -112,7 +98,6 @@ runtime-benchmarks = [
     "pallet-vesting/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
     "polkadot-parachain-primitives/runtime-benchmarks",
-    "polkadot-primitives/runtime-benchmarks",
     "polkadot-runtime-parachains/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",

@@ -11,13 +11,10 @@ hex-literal = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 
-sp-arithmetic = { workspace = true }
-sp-core = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 pallet-assets = { workspace = true }
@@ -33,7 +30,6 @@ pallet-timestamp = { workspace = true, features = ["std"] }
 [features]
 default = ["std"]
 runtime-benchmarks = [
-    "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-assets/runtime-benchmarks",
@@ -41,7 +37,8 @@ runtime-benchmarks = [
     "pallet-chain-bridge/runtime-benchmarks",
 ]
 std = [
-    "frame-benchmarking?/std",
+    "parity-scale-codec/std",
+    "scale-info/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-assets-handler/std",
@@ -50,10 +47,6 @@ std = [
     "pallet-bridge-common/std",
     "pallet-chain-bridge/std",
     "pallet-timestamp/std",
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "sp-arithmetic/std",
-    "sp-core/std",
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",

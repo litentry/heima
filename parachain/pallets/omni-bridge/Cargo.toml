@@ -7,11 +7,10 @@ name = 'pallet-omni-bridge'
 repository = 'https://github.com/litentry/heima'
 
 [dependencies]
-parity-scale-codec = { workspace = true }
-scale-info = { workspace = true }
-
 frame-support = { workspace = true }
 frame-system = { workspace = true }
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }

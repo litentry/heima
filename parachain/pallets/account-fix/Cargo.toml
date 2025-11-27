@@ -11,11 +11,11 @@ version = '0.1.0'
 [dependencies]
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
+sp-runtime = { workspace = true }
 
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 pallet-balances = { workspace = true }
-sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
 [features]
@@ -25,11 +25,11 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
 ]
 std = [
+    "parity-scale-codec/std",
+    "scale-info/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-balances/std",
-    "parity-scale-codec/std",
-    "scale-info/std",
     "sp-runtime/std",
     "sp-std/std",
 ]
