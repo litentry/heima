@@ -17,7 +17,6 @@ sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
 sp-genesis-builder = { workspace = true }
 sp-inherents = { workspace = true }
-sp-io = { workspace = true }
 sp-offchain = { workspace = true }
 sp-runtime = { workspace = true }
 sp-session = { workspace = true }
@@ -61,13 +60,11 @@ pallet-vesting = { workspace = true }
 pallet-whitelist = { workspace = true }
 
 cumulus-pallet-aura-ext = { workspace = true }
-cumulus-pallet-dmp-queue = { workspace = true }
 cumulus-pallet-parachain-system = { workspace = true }
 cumulus-pallet-xcm = { workspace = true }
 cumulus-pallet-xcmp-queue = { workspace = true }
 cumulus-primitives-aura = { workspace = true }
 cumulus-primitives-core = { workspace = true }
-cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
 parachain-info = { workspace = true }
 parachains-common = { workspace = true }
@@ -84,7 +81,6 @@ frame-benchmarking = { workspace = true, optional = true }
 frame-system-benchmarking = { workspace = true, optional = true }
 
 heima-primitives = { workspace = true }
-pallet-account-fix = { workspace = true }
 pallet-asset-manager = { workspace = true }
 pallet-assets = { workspace = true }
 pallet-assets-handler = { workspace = true }
@@ -103,12 +99,6 @@ pallet-teebag = { workspace = true }
 pallet-vc-management = { workspace = true }
 runtime-common = { workspace = true }
 
-pallet-aiusd-convertor = { workspace = true }
-pallet-collab-ai-common = { workspace = true }
-pallet-curator = { workspace = true }
-pallet-guardian = { workspace = true }
-pallet-investing-pool = { workspace = true }
-pallet-pool-proposal = { workspace = true }
 
 fp-evm = { workspace = true }
 fp-rpc = { workspace = true }
@@ -130,23 +120,12 @@ pallet-evm-precompile-parachain-staking = { workspace = true }
 pallet-evm-precompile-score-staking = { workspace = true }
 pallet-evm-precompile-vesting = { workspace = true }
 
-pallet-evm-precompile-aiusd-convertor = { workspace = true }
-pallet-evm-precompile-curator = { workspace = true }
-pallet-evm-precompile-guardian = { workspace = true }
-pallet-evm-precompile-investing-pool = { workspace = true }
-pallet-evm-precompile-pool-proposal = { workspace = true }
 
-moonbeam-evm-tracer = { workspace = true }
-moonbeam-rpc-primitives-debug = { workspace = true }
-moonbeam-rpc-primitives-txpool = { workspace = true }
 precompile-utils = { workspace = true }
 
 [dev-dependencies]
-cumulus-primitives-parachain-inherent = { workspace = true, features = ["std"] }
-polkadot-primitives = { workspace = true, features = ["std"] }
 polkadot-runtime-parachains = { workspace = true, features = ["std"] }
 runtime-common = { workspace = true, features = ["tests"] }
-sp-state-machine = { workspace = true, features = ["std"] }
 xcm-simulator = { workspace = true }
 pallet-message-queue = { workspace = true, features = ["std"] }
 
@@ -157,7 +136,6 @@ substrate-wasm-builder = { workspace = true, optional = true }
 default = ["std"]
 fast-runtime = []
 runtime-benchmarks = [
-    "cumulus-pallet-dmp-queue/runtime-benchmarks",
     "cumulus-pallet-parachain-system/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
@@ -167,7 +145,6 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
-    "pallet-account-fix/runtime-benchmarks",
     "pallet-asset-manager/runtime-benchmarks",
     "pallet-assets-handler/runtime-benchmarks",
     "pallet-assets/runtime-benchmarks",
@@ -210,34 +187,25 @@ runtime-benchmarks = [
     "pallet-xcm/runtime-benchmarks",
     "parachains-common/runtime-benchmarks",
     "polkadot-parachain-primitives/runtime-benchmarks",
-    "polkadot-primitives/runtime-benchmarks",
     "polkadot-runtime-common/runtime-benchmarks",
     "polkadot-runtime-parachains/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "xcm-executor/runtime-benchmarks",
-    "pallet-aiusd-convertor/runtime-benchmarks",
-    "pallet-collab-ai-common/runtime-benchmarks",
-    "pallet-curator/runtime-benchmarks",
-    "pallet-evm-precompile-aiusd-convertor/runtime-benchmarks",
-    "pallet-guardian/runtime-benchmarks",
-    "pallet-investing-pool/runtime-benchmarks",
-    "pallet-pool-proposal/runtime-benchmarks",
     "pallet-omni-bridge/runtime-benchmarks",
 ]
 std = [
+    "log/std",
+    "num_enum/std",
     "heima-primitives/std",
     "cumulus-pallet-aura-ext/std",
-    "cumulus-pallet-dmp-queue/std",
     "cumulus-pallet-parachain-system/std",
     "cumulus-pallet-session-benchmarking?/std",
     "cumulus-pallet-xcm/std",
     "cumulus-pallet-xcmp-queue/std",
     "cumulus-primitives-aura/std",
     "cumulus-primitives-core/std",
-    "cumulus-primitives-parachain-inherent/std",
-    "cumulus-primitives-timestamp/std",
     "cumulus-primitives-utility/std",
     "fp-evm/std",
     "fp-rpc/std",
@@ -250,12 +218,6 @@ std = [
     "frame-metadata-hash-extension/std",
     "frame-system/std",
     "frame-try-runtime?/std",
-    "log/std",
-    "moonbeam-evm-tracer/std",
-    "moonbeam-rpc-primitives-debug/std",
-    "moonbeam-rpc-primitives-txpool/std",
-    "num_enum/std",
-    "pallet-account-fix/std",
     "pallet-asset-manager/std",
     "pallet-assets-handler/std",
     "pallet-assets/std",
@@ -317,24 +279,21 @@ std = [
     "parachain-info/std",
     "parachains-common/std",
     "parity-scale-codec/std",
+    "scale-info/std",
     "polkadot-parachain-primitives/std",
-    "polkadot-primitives/std",
     "polkadot-runtime-common/std",
     "polkadot-runtime-parachains/std",
     "precompile-utils/std",
     'runtime-common/std',
-    "scale-info/std",
     "sp-api/std",
     "sp-block-builder/std",
     "sp-consensus-aura/std",
     "sp-core/std",
     "sp-genesis-builder/std",
     "sp-inherents/std",
-    "sp-io/std",
     "sp-offchain/std",
     "sp-runtime/std",
     "sp-session/std",
-    "sp-state-machine/std",
     "sp-std/std",
     "sp-transaction-pool/std",
     "sp-version/std",
@@ -342,22 +301,10 @@ std = [
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",
-    "pallet-aiusd-convertor/std",
-    "pallet-collab-ai-common/std",
-    "pallet-curator/std",
-    "pallet-evm-precompile-aiusd-convertor/std",
-    "pallet-evm-precompile-curator/std",
-    "pallet-evm-precompile-guardian/std",
-    "pallet-evm-precompile-investing-pool/std",
-    "pallet-evm-precompile-pool-proposal/std",
-    "pallet-guardian/std",
-    "pallet-investing-pool/std",
-    "pallet-pool-proposal/std",
     "pallet-omni-bridge/std",
 ]
 try-runtime = [
     "cumulus-pallet-aura-ext/try-runtime",
-    "cumulus-pallet-dmp-queue/try-runtime",
     "cumulus-pallet-parachain-system/try-runtime",
     "cumulus-pallet-xcm/try-runtime",
     "cumulus-pallet-xcmp-queue/try-runtime",
@@ -366,7 +313,6 @@ try-runtime = [
     "frame-support/try-runtime",
     "frame-system/try-runtime",
     "frame-try-runtime",
-    "pallet-account-fix/try-runtime",
     "pallet-asset-manager/try-runtime",
     "pallet-assets-handler/try-runtime",
     "pallet-assets/try-runtime",
@@ -415,11 +361,5 @@ try-runtime = [
     "polkadot-runtime-parachains/try-runtime",
     "runtime-common/try-runtime",
     "sp-runtime/try-runtime",
-    "pallet-aiusd-convertor/try-runtime",
-    "pallet-collab-ai-common/try-runtime",
-    "pallet-curator/try-runtime",
-    "pallet-guardian/try-runtime",
-    "pallet-investing-pool/try-runtime",
-    "pallet-pool-proposal/try-runtime",
     "pallet-omni-bridge/try-runtime",
 ]

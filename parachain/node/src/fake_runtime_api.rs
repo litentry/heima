@@ -299,35 +299,4 @@ sp_api::impl_runtime_apis! {
 			unimplemented!()
 		}
 	}
-
-	impl moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block> for Runtime {
-		fn trace_transaction(_extrinsics: Vec<<Block as BlockT>::Extrinsic>, _traced_transaction: &pallet_ethereum::Transaction, _header: &<Block as BlockT>::Header) -> Result<(), sp_runtime::DispatchError> {
-			unimplemented!()
-		}
-
-		fn trace_block(_extrinsics: Vec<<Block as BlockT>::Extrinsic>, _known_transactions: Vec<H256>, _header: &<Block as BlockT>::Header) -> Result<(), sp_runtime::DispatchError> {
-			unimplemented!()
-		}
-
-		fn trace_call(
-			_header: &<Block as BlockT>::Header,
-			_from: H160,
-			_to: H160,
-			_data: Vec<u8>,
-			_value: U256,
-			_gas_limit: U256,
-			_max_fee_per_gas: Option<U256>,
-			_max_priority_fee_per_gas: Option<U256>,
-			_nonce: Option<U256>,
-			_access_list: Option<Vec<(H160, Vec<H256>)>>,
-		) -> Result<(), sp_runtime::DispatchError> {
-			unimplemented!()
-		}
-	}
-
-	impl moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block> for Runtime {
-		fn extrinsic_filter(_xts_ready: Vec<<Block as BlockT>::Extrinsic>, _xts_future: Vec<<Block as BlockT>::Extrinsic>) -> moonbeam_rpc_primitives_txpool::TxPoolResponse {
-			unimplemented!()
-		}
-	}
 }
