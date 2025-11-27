@@ -17,6 +17,7 @@ parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 sp-runtime = { workspace = true }
 
+frame-benchmarking = { workspace = true, optional = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 sp-std = { workspace = true }
@@ -29,6 +30,7 @@ pallet-timestamp = { workspace = true, features = ["std"] }
 [features]
 default = ["std"]
 runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
 ]
@@ -36,6 +38,7 @@ std = [
     "parity-scale-codec/std",
     "scale-info/std",
     "log/std",
+    "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
     "pallet-balances/std",

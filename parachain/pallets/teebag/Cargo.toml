@@ -31,6 +31,7 @@ pallet-utility = { workspace = true }
 sp-io = { workspace = true }
 sp-std = { workspace = true }
 
+frame-benchmarking = { workspace = true, optional = true }
 heima-primitives = { workspace = true }
 
 [dev-dependencies]
@@ -50,6 +51,7 @@ std = [
     "scale-info/std",
     "heima-primitives/std",
     "der/std",
+    "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
     "hex/std",
@@ -64,6 +66,7 @@ std = [
     "x509-cert/std",
 ]
 runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "pallet-balances?/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
