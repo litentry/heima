@@ -103,12 +103,6 @@ pallet-teebag = { workspace = true }
 pallet-vc-management = { workspace = true }
 runtime-common = { workspace = true }
 
-pallet-aiusd-convertor = { workspace = true }
-pallet-collab-ai-common = { workspace = true }
-pallet-curator = { workspace = true }
-pallet-guardian = { workspace = true }
-pallet-investing-pool = { workspace = true }
-pallet-pool-proposal = { workspace = true }
 
 fp-evm = { workspace = true }
 fp-rpc = { workspace = true }
@@ -130,11 +124,6 @@ pallet-evm-precompile-parachain-staking = { workspace = true }
 pallet-evm-precompile-score-staking = { workspace = true }
 pallet-evm-precompile-vesting = { workspace = true }
 
-pallet-evm-precompile-aiusd-convertor = { workspace = true }
-pallet-evm-precompile-curator = { workspace = true }
-pallet-evm-precompile-guardian = { workspace = true }
-pallet-evm-precompile-investing-pool = { workspace = true }
-pallet-evm-precompile-pool-proposal = { workspace = true }
 
 precompile-utils = { workspace = true }
 
@@ -214,13 +203,6 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "xcm-executor/runtime-benchmarks",
-    "pallet-aiusd-convertor/runtime-benchmarks",
-    "pallet-collab-ai-common/runtime-benchmarks",
-    "pallet-curator/runtime-benchmarks",
-    "pallet-evm-precompile-aiusd-convertor/runtime-benchmarks",
-    "pallet-guardian/runtime-benchmarks",
-    "pallet-investing-pool/runtime-benchmarks",
-    "pallet-pool-proposal/runtime-benchmarks",
     "pallet-omni-bridge/runtime-benchmarks",
 ]
 std = [
@@ -336,17 +318,6 @@ std = [
     "xcm-builder/std",
     "xcm-executor/std",
     "xcm/std",
-    "pallet-aiusd-convertor/std",
-    "pallet-collab-ai-common/std",
-    "pallet-curator/std",
-    "pallet-evm-precompile-aiusd-convertor/std",
-    "pallet-evm-precompile-curator/std",
-    "pallet-evm-precompile-guardian/std",
-    "pallet-evm-precompile-investing-pool/std",
-    "pallet-evm-precompile-pool-proposal/std",
-    "pallet-guardian/std",
-    "pallet-investing-pool/std",
-    "pallet-pool-proposal/std",
     "pallet-omni-bridge/std",
 ]
 try-runtime = [
@@ -409,11 +380,5 @@ try-runtime = [
     "polkadot-runtime-parachains/try-runtime",
     "runtime-common/try-runtime",
     "sp-runtime/try-runtime",
-    "pallet-aiusd-convertor/try-runtime",
-    "pallet-collab-ai-common/try-runtime",
-    "pallet-curator/try-runtime",
-    "pallet-guardian/try-runtime",
-    "pallet-investing-pool/try-runtime",
-    "pallet-pool-proposal/try-runtime",
     "pallet-omni-bridge/try-runtime",
 ]
