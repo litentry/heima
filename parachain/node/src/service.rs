@@ -21,10 +21,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::{
-	evm_tracing_types::{EthApi as EthApiCmd, EvmTracingConfig},
-	fake_runtime_api::RuntimeApi as FakeRuntimeApi,
-	standalone_block_import::StandaloneBlockImport,
-	tracing::{self, RpcRequesters},
+	fake_runtime_api::RuntimeApi as FakeRuntimeApi, standalone_block_import::StandaloneBlockImport,
 };
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
@@ -75,16 +72,12 @@ use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
 
 #[cfg(not(feature = "runtime-benchmarks"))]
-pub type HostFunctions = (
-	cumulus_client_service::ParachainHostFunctions,
-	moonbeam_primitives_ext::moonbeam_ext::HostFunctions,
-);
+pub type HostFunctions = cumulus_client_service::ParachainHostFunctions;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub type HostFunctions = (
 	cumulus_client_service::ParachainHostFunctions,
 	frame_benchmarking::benchmarking::HostFunctions,
-	moonbeam_primitives_ext::moonbeam_ext::HostFunctions,
 );
 
 type ParachainClient = TFullClient<Block, FakeRuntimeApi, WasmExecutor<HostFunctions>>;
@@ -120,6 +113,11 @@ pub fn new_partial<BIQ>(
 			Option<Telemetry>,
 			Option<TelemetryWorkerHandle>,
 			Arc<fc_db::kv::Backend<Block, ParachainClient>>,
+			Arc<
+				sc_transaction_pool::Pool<
+					sc_transaction_pool::FullChainApi<ParachainClient, Block>,
+				>,
+			>,
 		),
 	>,
 	sc_service::Error,
@@ -185,6 +183,18 @@ where
 	.with_prometheus(config.prometheus_registry())
 	.build();
 
+	// Create a separate pool for Frontier RPC that has access to the inner Pool type
+	let chain_api = Arc::new(sc_transaction_pool::FullChainApi::new(
+		client.clone(),
+		None,
+		&task_manager.spawn_essential_handle(),
+	));
+	let transaction_pool_inner = Arc::new(sc_transaction_pool::Pool::new(
+		sc_transaction_pool::Options::default(),
+		config.role.is_authority().into(),
+		chain_api,
+	));
+
 	let select_chain = if is_standalone { Some(LongestChain::new(backend.clone())) } else { None };
 	let frontier_backend = crate::rpc::open_frontier_backend(client.clone(), config)?;
 	let frontier_block_import = FrontierBlockImport::new(client.clone(), client.clone());
@@ -224,16 +234,19 @@ where
 		task_manager,
 		transaction_pool: transaction_pool.into(),
 		select_chain,
-		other: (block_import, telemetry, telemetry_worker_handle, frontier_backend),
+		other: (
+			block_import,
+			telemetry,
+			telemetry_worker_handle,
+			frontier_backend,
+			transaction_pool_inner,
+		),
 	})
 }
 
 /// To add additional config to start_xyz_node functions
 #[derive(Clone)]
 pub struct AdditionalConfig {
-	/// EVM tracing configuration
-	pub evm_tracing_config: EvmTracingConfig,
-
 	/// Whether EVM RPC be enabled
 	pub enable_evm_rpc: bool,
 }
@@ -293,7 +306,13 @@ where
 
 	let params =
 		new_partial::<BIQ>(&parachain_config, build_import_queue, false, delayed_best_block)?;
-	let (block_import, mut telemetry, telemetry_worker_handle, frontier_backend) = params.other;
+	let (
+		block_import,
+		mut telemetry,
+		telemetry_worker_handle,
+		frontier_backend,
+		transaction_pool_graph,
+	) = params.other;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -371,35 +390,22 @@ where
 	> = Default::default();
 	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
 
-	let (
-		filter_pool,
-		fee_history_limit,
-		fee_history_cache,
-		block_data_cache,
-		storage_override,
-		tracing_requesters,
-		ethapi_cmd,
-	) = start_node_evm_impl(
-		client.clone(),
-		backend.clone(),
-		frontier_backend.clone(),
-		&mut task_manager,
-		&parachain_config,
-		additional_config.evm_tracing_config.clone(),
-		sync_service.clone(),
-		pubsub_notification_sinks.clone(),
-	);
+	let (filter_pool, fee_history_limit, fee_history_cache, block_data_cache, storage_override) =
+		start_node_evm_impl(
+			client.clone(),
+			backend.clone(),
+			frontier_backend.clone(),
+			&mut task_manager,
+			&parachain_config,
+			sync_service.clone(),
+			pubsub_notification_sinks.clone(),
+		);
 
 	let rpc_builder = {
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
 
 		let network = network.clone();
-		let rpc_config = crate::rpc::EvmTracingConfig {
-			tracing_requesters,
-			trace_filter_max_count: additional_config.evm_tracing_config.ethapi_trace_max_count,
-			enable_txpool: ethapi_cmd.contains(&EthApiCmd::TxPool),
-		};
 		let sync = sync_service.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks.clone();
 
@@ -407,7 +413,7 @@ where
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.clone(),
+				graph: transaction_pool_graph.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: validator,
@@ -428,7 +434,6 @@ where
 				subscription,
 				pubsub_notification_sinks.clone(),
 				pending_consensus_data_provider,
-				rpc_config.clone(),
 			)
 			.map_err(Into::into)
 		};
@@ -650,7 +655,6 @@ pub fn build_import_queue(
 // start a standalone node which doesn't need to connect to relaychain
 pub async fn start_standalone_node(
 	config: Configuration,
-	evm_tracing_config: crate::evm_tracing_types::EvmTracingConfig,
 ) -> Result<TaskManager, sc_service::Error> {
 	let sc_service::PartialComponents {
 		client,
@@ -660,7 +664,7 @@ pub async fn start_standalone_node(
 		keystore_container,
 		select_chain: maybe_select_chain,
 		transaction_pool,
-		other: (_, _, _, frontier_backend),
+		other: (_, _, _, frontier_backend, transaction_pool_graph),
 	} = new_partial::<_>(&config, build_import_queue, true, true)?;
 
 	// Sinks for pubsub notifications.
@@ -697,24 +701,16 @@ pub async fn start_standalone_node(
 	let force_authoring = config.force_authoring;
 	let backoff_authoring_blocks: Option<()> = None;
 
-	let (
-		filter_pool,
-		fee_history_limit,
-		fee_history_cache,
-		block_data_cache,
-		storage_override,
-		tracing_requesters,
-		ethapi_cmd,
-	) = start_node_evm_impl(
-		client.clone(),
-		backend.clone(),
-		frontier_backend.clone(),
-		&mut task_manager,
-		&config,
-		evm_tracing_config.clone(),
-		sync_service.clone(),
-		pubsub_notification_sinks.clone(),
-	);
+	let (filter_pool, fee_history_limit, fee_history_cache, block_data_cache, storage_override) =
+		start_node_evm_impl(
+			client.clone(),
+			backend.clone(),
+			frontier_backend.clone(),
+			&mut task_manager,
+			&config,
+			sync_service.clone(),
+			pubsub_notification_sinks.clone(),
+		);
 
 	let select_chain = maybe_select_chain
 		.expect("In `standalone` mode, `new_partial` will return some `select_chain`; qed");
@@ -813,11 +809,6 @@ pub async fn start_standalone_node(
 		let client = client.clone();
 		let network = network.clone();
 		let transaction_pool = transaction_pool.clone();
-		let rpc_config = crate::rpc::EvmTracingConfig {
-			tracing_requesters,
-			trace_filter_max_count: evm_tracing_config.ethapi_trace_max_count,
-			enable_txpool: ethapi_cmd.contains(&EthApiCmd::TxPool),
-		};
 		let sync = sync_service.clone();
 		let pubsub_notification_sinks = pubsub_notification_sinks;
 
@@ -825,7 +816,7 @@ pub async fn start_standalone_node(
 			let deps = crate::rpc::FullDeps {
 				client: client.clone(),
 				pool: transaction_pool.clone(),
-				graph: transaction_pool.clone(),
+				graph: transaction_pool_graph.clone(),
 				network: network.clone(),
 				sync: sync.clone(),
 				is_authority: role.is_authority(),
@@ -847,7 +838,6 @@ pub async fn start_standalone_node(
 				subscription,
 				pubsub_notification_sinks.clone(),
 				pending_consensus_data_provider,
-				rpc_config.clone(),
 			)
 			.map_err(Into::into)
 		})
@@ -878,7 +868,6 @@ pub fn start_node_evm_impl(
 	frontier_backend: Arc<fc_db::kv::Backend<Block, ParachainClient>>,
 	task_manager: &mut TaskManager,
 	config: &Configuration,
-	evm_tracing_config: crate::evm_tracing_types::EvmTracingConfig,
 	sync_service: Arc<SyncingService<Block>>,
 	pubsub_notification_sinks: Arc<
 		fc_mapping_sync::EthereumBlockNotificationSinks<
@@ -891,32 +880,11 @@ pub fn start_node_evm_impl(
 	FeeHistoryCache,
 	Arc<EthBlockDataCacheTask<Block>>,
 	Arc<dyn StorageOverride<Block>>,
-	RpcRequesters,
-	Vec<EthApiCmd>,
 ) {
 	let prometheus_registry = config.prometheus_registry().cloned();
 	let filter_pool: FilterPool = Arc::new(std::sync::Mutex::new(BTreeMap::new()));
 	let fee_history_cache: FeeHistoryCache = Arc::new(std::sync::Mutex::new(BTreeMap::new()));
 	let storage_override = Arc::new(StorageOverrideHandler::new(client.clone()));
-
-	let ethapi_cmd = evm_tracing_config.ethapi.clone();
-	let tracing_requesters =
-		if ethapi_cmd.contains(&EthApiCmd::Debug) || ethapi_cmd.contains(&EthApiCmd::Trace) {
-			tracing::spawn_tracing_tasks(
-				&evm_tracing_config,
-				prometheus_registry.clone(),
-				tracing::SpawnTasksParams {
-					task_manager,
-					client: client.clone(),
-					substrate_backend: backend.clone(),
-					frontier_backend: frontier_backend.clone(),
-					filter_pool: Some(filter_pool.clone()),
-					storage_override: storage_override.clone(),
-				},
-			)
-		} else {
-			tracing::RpcRequesters { debug: None, trace: None }
-		};
 
 	// Frontier offchain DB task. Essential.
 	// Maps emulated ethereum data to substrate native data.
@@ -972,15 +940,7 @@ pub fn start_node_evm_impl(
 		prometheus_registry,
 	));
 
-	(
-		filter_pool,
-		FEE_HISTORY_LIMIT,
-		fee_history_cache,
-		block_data_cache,
-		storage_override,
-		tracing_requesters,
-		ethapi_cmd,
-	)
+	(filter_pool, FEE_HISTORY_LIMIT, fee_history_cache, block_data_cache, storage_override)
 }
 
 /// Start consensus using the lookahead aura collator.

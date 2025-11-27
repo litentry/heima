@@ -18,8 +18,6 @@
 // This File should be safe to delete once All parachain matrix are EVM impl.
 #![warn(missing_docs)]
 
-use cumulus_primitives_parachain_inherent::ParachainInherentData;
-use cumulus_test_relay_sproof_builder::RelayStateSproofBuilder;
 use fc_rpc::{
 	pending::ConsensusDataProvider, Eth, EthApiServer, EthBlockDataCacheTask, EthFilter,
 	EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net, NetApiServer, TxPool, TxPoolApiServer,
@@ -28,15 +26,13 @@ use fc_rpc::{
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use fc_storage::StorageOverride;
 use heima_primitives::{AccountId, Balance, Block, Nonce};
-use moonbeam_rpc_debug::{Debug, DebugServer};
-use moonbeam_rpc_trace::{Trace, TraceServer};
-use polkadot_primitives::PersistedValidationData;
 use sc_client_api::{
 	AuxStore, Backend, BlockchainEvents, StateBackend, StorageProvider, UsageProvider,
 };
 use sc_network::service::traits::NetworkService;
 use sc_network_sync::SyncingService;
 pub use sc_rpc::SubscriptionTaskExecutor;
+use sc_transaction_pool::{ChainApi, Pool};
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::{CallApiAt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder;
@@ -47,19 +43,10 @@ use sp_consensus_aura::{sr25519::AuthorityId as AuraId, AuraApi};
 use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
 use std::sync::Arc;
 
-use crate::tracing;
-
 type HashFor<Block> = <Block as BlockT>::Hash;
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpsee::RpcModule<()>;
-
-#[derive(Clone)]
-pub struct EvmTracingConfig {
-	pub tracing_requesters: tracing::RpcRequesters,
-	pub trace_filter_max_count: u32,
-	pub enable_txpool: bool,
-}
 
 // TODO This is copied from frontier. It should be imported instead after
 // https://github.com/paritytech/frontier/issues/333 is solved
@@ -97,13 +84,13 @@ where
 }
 
 /// Full client dependencies
-pub struct FullDeps<C, P> {
+pub struct FullDeps<C, P, A: ChainApi> {
 	/// The client instance to use.
 	pub client: Arc<C>,
 	/// Transaction pool instance.
 	pub pool: Arc<P>,
 	/// Graph pool instance.
-	pub graph: Arc<P>,
+	pub graph: Arc<Pool<A>>,
 	/// Network service
 	pub network: Arc<dyn NetworkService>,
 	/// Chain syncing service
@@ -127,8 +114,8 @@ pub struct FullDeps<C, P> {
 }
 
 /// Instantiate all RPC extensions.
-pub fn create_full<C, P, BE>(
-	deps: FullDeps<C, P>,
+pub fn create_full<C, P, BE, A>(
+	deps: FullDeps<C, P, A>,
 	subscription_task_executor: SubscriptionTaskExecutor,
 	pubsub_notification_sinks: Arc<
 		fc_mapping_sync::EthereumBlockNotificationSinks<
@@ -136,7 +123,6 @@ pub fn create_full<C, P, BE>(
 		>,
 	>,
 	pending_consenus_data_provider: Box<dyn ConsensusDataProvider<Block>>,
-	tracing_config: EvmTracingConfig,
 ) -> Result<RpcExtension, Box<dyn std::error::Error + Send + Sync>>
 where
 	C: ProvideRuntimeApi<Block>
@@ -156,10 +142,9 @@ where
 		+ fp_rpc::ConvertTransactionRuntimeApi<Block>
 		+ fp_rpc::EthereumRuntimeRPCApi<Block>
 		+ BlockBuilder<Block>
-		+ AuraApi<Block, AuraId>
-		+ moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block>
-		+ moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block>,
+		+ AuraApi<Block, AuraId>,
 	P: TransactionPool<Block = Block, Hash = HashFor<Block>> + Sync + Send + 'static,
+	A: ChainApi<Block = Block> + 'static,
 	BE: Backend<Block> + 'static,
 	BE::State: StateBackend<BlakeTwo256>,
 	BE::Blockchain: BlockchainBackend<Block>,
@@ -206,30 +191,11 @@ where
 					*timestamp,
 					slot_duration,
 				);
-			// Create a dummy parachain inherent data provider which is required to pass
-			// the checks by the para chain system. We use dummy values because in the 'pending
-			// context' neither do we have access to the real values nor do we need them.
-			let (relay_parent_storage_root, relay_chain_state) =
-				RelayStateSproofBuilder::default().into_state_root_and_proof();
-			let vfp = PersistedValidationData {
-				// This is a hack to make
-				// `cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases` happy. Relay
-				// parent number can't be bigger than u32::MAX.
-				relay_parent_number: u32::MAX,
-				relay_parent_storage_root,
-				..Default::default()
-			};
-			let parachain_inherent_data = ParachainInherentData {
-				validation_data: vfp,
-				relay_chain_state,
-				downward_messages: Default::default(),
-				horizontal_messages: Default::default(),
-			};
-			Ok((slot, timestamp, parachain_inherent_data))
+			Ok((slot, timestamp))
 		};
 
 		module.merge(
-			Eth::<_, _, _, _, _, _, ()>::new(
+			Eth::<_, _, _, _, _, A, _, LitentryEthConfig<C, BE>>::new(
 				client.clone(),
 				pool.clone(),
 				graph.clone(),
@@ -248,7 +214,6 @@ where
 				pending_create_inherent_data_providers,
 				Some(pending_consenus_data_provider),
 			)
-			.replace_config::<LitentryEthConfig<C, BE>>()
 			.into_rpc(),
 		)?;
 
@@ -283,20 +248,7 @@ where
 			.into_rpc(),
 		)?;
 
-		if tracing_config.enable_txpool {
-			module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
-		}
-
-		if let Some(trace_filter_requester) = tracing_config.tracing_requesters.trace {
-			module.merge(
-				Trace::new(client, trace_filter_requester, tracing_config.trace_filter_max_count)
-					.into_rpc(),
-			)?;
-		}
-
-		if let Some(debug_requester) = tracing_config.tracing_requesters.debug {
-			module.merge(Debug::new(debug_requester).into_rpc())?;
-		}
+		module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
 	}
 
 	Ok(module)

@@ -21,7 +21,8 @@ function print_divider() {
 # Download runtime wasm
 print_divider
 echo "Download $1-runtime.compact.compressed.wasm from release tag $3 ..."
-gh release download "$3" -p "$1-runtime.compact.compressed.wasm" -O "$new_wasm" || true
+gh release download "$3" -p "$1-runtime.compact.compressed.wasm" || true
+mv "$1-runtime.compact.compressed.wasm" "$new_wasm"
 
 if [ -f "$new_wasm" ] && [ -s "$new_wasm" ]; then
   ls -l "$new_wasm"
@@ -45,17 +46,22 @@ echo "On-chain: $onchain_version"
 echo "Release:  $release_version"
 
 if [ "$onchain_version" -ge "$release_version" ]; then
-  echo "Current On-chain runtime is up to date, quit"
-  exit 1
+  echo "On-chain runtime version ($onchain_version) >= release version ($release_version)"
+  echo "Skipping runtime upgrade test - chain is already up to date"
+  exit 0
 fi
 
-# Start Chopsticks to fork the chain
+echo "Upgrade needed: $onchain_version -> $release_version"
+
+# Start Chopsticks to fork the parachain in standalone mode
+# Standalone mode is simpler and sufficient for runtime upgrade testing
 print_divider
-echo "Forking parachain with Chopsticks ..."
+echo "Forking parachain with Chopsticks in standalone mode ..."
 npx @acala-network/chopsticks@latest --config=$ROOTDIR/parachain/scripts/chopsticks/$1.yml &
 chopsticks_pid=$!
-echo "Chopsticks fork parachain PID: $chopsticks_pid"
-sleep 30 # Wait for Chopsticks to initialize
+echo "Chopsticks PID: $chopsticks_pid"
+echo "Parachain ($1) endpoint: ws://localhost:9944"
+sleep 20 # Wait for Chopsticks to initialize
 
 # Check if Chopsticks is running
 if ! ps -p $chopsticks_pid > /dev/null; then
@@ -69,8 +75,12 @@ echo "Performing runtime upgrade ..."
 
 cd "$ROOTDIR/parachain/ts-tests"
 echo "NODE_ENV=ci" > .env
+echo "PARACHAIN_NAME=$1" >> .env
 pnpm install && pnpm run test-runtime-upgrade 2>&1
 
 # Cleanup
 print_divider
+echo "Stopping Chopsticks..."
+kill $chopsticks_pid 2>/dev/null || true
+wait $chopsticks_pid 2>/dev/null || true
 echo "Runtime upgrade succeed!"

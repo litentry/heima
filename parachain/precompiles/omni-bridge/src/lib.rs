@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use fp_evm::{AccountProvider, PrecompileFailure, PrecompileHandle};
+use fp_evm::{PrecompileFailure, PrecompileHandle};
 use frame_support::{
 	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	traits::fungible::NativeOrWithId,
@@ -36,12 +36,11 @@ type BridgeBalanceOf<Runtime> = <Runtime as pallet_omni_bridge::Config>::Balance
 impl<Runtime> OmniBridgePrecompile<Runtime>
 where
 	Runtime: pallet_omni_bridge::Config<AssetKind = NativeOrWithId<AssetId>> + pallet_evm::Config,
-	Runtime::RuntimeOrigin: From<
-		Option<<<Runtime as pallet_evm::Config>::AccountProvider as AccountProvider>::AccountId>,
-	>,
+	Runtime::AccountId: From<[u8; 32]> + Into<[u8; 32]>,
 	Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
 	Runtime::RuntimeCall: From<pallet_omni_bridge::Call<Runtime>>,
-	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin:
+		From<Option<<Runtime::AccountProvider as fp_evm::AccountProvider>::AccountId>>,
 	BridgeBalanceOf<Runtime>: TryFrom<U256> + Into<U256>,
 {
 	#[precompile::public("payIn(uint256,uint8,bool,uint256,bytes)")]
