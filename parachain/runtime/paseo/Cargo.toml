@@ -136,9 +136,6 @@ pallet-evm-precompile-guardian = { workspace = true }
 pallet-evm-precompile-investing-pool = { workspace = true }
 pallet-evm-precompile-pool-proposal = { workspace = true }
 
-moonbeam-evm-tracer = { workspace = true }
-moonbeam-rpc-primitives-debug = { workspace = true }
-moonbeam-rpc-primitives-txpool = { workspace = true }
 precompile-utils = { workspace = true }
 
 [dev-dependencies]
@@ -251,9 +248,6 @@ std = [
     "frame-system/std",
     "frame-try-runtime?/std",
     "log/std",
-    "moonbeam-evm-tracer/std",
-    "moonbeam-rpc-primitives-debug/std",
-    "moonbeam-rpc-primitives-txpool/std",
     "num_enum/std",
     "pallet-account-fix/std",
     "pallet-asset-manager/std",
