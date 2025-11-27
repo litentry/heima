@@ -18,20 +18,16 @@ targets = ['x86_64-unknown-linux-gnu']
 [dependencies]
 async-trait = { workspace = true }
 clap = { workspace = true }
+frame-support = { workspace = true, features = ["std"] }
 futures = { workspace = true }
 jsonrpsee = { workspace = true }
 log = { workspace = true }
-parity-scale-codec = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-tokio = { workspace = true }
-
-frame-support = { workspace = true, features = ["std"] }
 pallet-ethereum = { workspace = true, features = ["std"] }
 pallet-evm = { workspace = true, features = ["std"] }
 pallet-transaction-payment = { workspace = true, features = ["std"] }
 pallet-transaction-payment-rpc = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = ["std"] }
+parity-scale-codec = { workspace = true }
 sc-basic-authorship = { workspace = true }
 sc-chain-spec = { workspace = true }
 sc-cli = { workspace = true }
@@ -48,6 +44,8 @@ sc-telemetry = { workspace = true }
 sc-tracing = { workspace = true }
 sc-transaction-pool = { workspace = true }
 sc-transaction-pool-api = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 sp-api = { workspace = true, features = ["std"] }
 sp-block-builder = { workspace = true, features = ["std"] }
 sp-blockchain = { workspace = true }
@@ -55,7 +53,6 @@ sp-consensus-aura = { workspace = true, features = ["std"] }
 sp-core = { workspace = true, features = ["std"] }
 sp-genesis-builder = { workspace = true, features = ["std"] }
 sp-inherents = { workspace = true, features = ["std"] }
-sp-io = { workspace = true, features = ["std"] }
 sp-keystore = { workspace = true, features = ["std"] }
 sp-offchain = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
@@ -86,24 +83,19 @@ cumulus-client-parachain-inherent = { workspace = true }
 cumulus-client-service = { workspace = true }
 cumulus-primitives-aura = { workspace = true, features = ["std"] }
 cumulus-primitives-core = { workspace = true, features = ["std"] }
-cumulus-primitives-parachain-inherent = { workspace = true, features = ["std"] }
 cumulus-relay-chain-interface = { workspace = true }
-cumulus-test-relay-sproof-builder = { workspace = true, features = ["std"] }
 
 polkadot-cli = { workspace = true }
 polkadot-primitives = { workspace = true, features = ["std"] }
-polkadot-service = { workspace = true }
 xcm = { workspace = true }
 
 frame-benchmarking = { workspace = true }
 frame-benchmarking-cli = { workspace = true }
-frame-metadata-hash-extension = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 frame-try-runtime = { workspace = true, optional = true }
 
 heima-primitives = { workspace = true, features = ["std"] }
 heima-runtime = { workspace = true, features = ["std"] }
-pallet-omni-account-runtime-api = { workspace = true, features = ["std"] }
 paseo-runtime = { workspace = true, features = ["std"] }
 runtime-common = { workspace = true, features = ["std"] }
 
@@ -127,7 +119,6 @@ runtime-benchmarks = [
     "paseo-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks",
     "polkadot-primitives/runtime-benchmarks",
-    "polkadot-service/runtime-benchmarks",
     "runtime-common/runtime-benchmarks",
     "sc-service/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
@@ -140,7 +131,6 @@ try-runtime = [
     "pallet-transaction-payment/try-runtime",
     "paseo-runtime/try-runtime",
     "polkadot-cli/try-runtime",
-    "polkadot-service/try-runtime",
     "runtime-common/try-runtime",
     "sp-runtime/try-runtime",
     "frame-try-runtime",

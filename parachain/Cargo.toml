@@ -8,13 +8,6 @@ members = [
     'pallets/bridge/chain-bridge',
     'pallets/bridge/bridge-transfer',
     'pallets/bridge/common',
-    'pallets/collab-ai/aiusd-convertor',
-    'pallets/collab-ai/common',
-    'pallets/collab-ai/curator',
-    'pallets/collab-ai/guardian',
-    'pallets/collab-ai/halving-mint',
-    'pallets/collab-ai/pool-proposal',
-    'pallets/collab-ai/investing-pool',
     'pallets/extrinsic-filter',
     'pallets/evm-assertions',
     'pallets/identity-management',
@@ -28,11 +21,6 @@ members = [
     'pallets/omni-bridge',
     'precompiles/assets-erc20',
     'precompiles/bridge-transfer',
-    'precompiles/collab-ai/aiusd-convertor',
-    'precompiles/collab-ai/curator',
-    'precompiles/collab-ai/guardian',
-    'precompiles/collab-ai/pool-proposal',
-    'precompiles/collab-ai/investing-pool',
     'precompiles/omni-bridge',
     'precompiles/parachain-staking',
     'precompiles/score-staking',
@@ -248,7 +236,7 @@ cumulus-primitives-aura = { git = "https://github.com/paritytech/polkadot-sdk", 
 cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
-cumulus-primitives-parachain-inherent = { git = 'https://github.com/paritytech/polkadot-sdk', branch = "stable2412", default-features = false }
+cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 pallet-collator-selection = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 parachain-info = { package = "staging-parachain-info", git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 parachains-common = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
@@ -260,7 +248,7 @@ substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", defaul
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6" }
-cumulus-pallet-session-benchmarking = { git = 'https://github.com/paritytech/polkadot-sdk', branch = "stable2412", default-features = false }
+cumulus-pallet-session-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", default-features = false }
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-stable2412-6", features = ["metadata-hash"] }
 
 # local
@@ -293,19 +281,5 @@ pallet-evm-precompile-parachain-staking = { path = "precompiles/parachain-stakin
 pallet-evm-precompile-score-staking = { path = "precompiles/score-staking", default-features = false }
 pallet-evm-precompile-vesting = { path = "precompiles/vesting", default-features = false }
 
-pallet-evm-precompile-aiusd-convertor = { path = "precompiles/collab-ai/aiusd-convertor", default-features = false }
-pallet-evm-precompile-curator = { path = "precompiles/collab-ai/curator", default-features = false }
-pallet-evm-precompile-guardian = { path = "precompiles/collab-ai/guardian", default-features = false }
-pallet-evm-precompile-pool-proposal = { path = "precompiles/collab-ai/pool-proposal", default-features = false }
-pallet-evm-precompile-investing-pool = { path = "precompiles/collab-ai/investing-pool", default-features = false }
 
 pallet-evm-assertions = { path = "pallets/evm-assertions", default-features = false }
-
-# CollabAI local - TODO: will remove unused deps later
-pallet-aiusd-convertor = { path = "pallets/collab-ai/aiusd-convertor", default-features = false }
-pallet-collab-ai-common = { path = "pallets/collab-ai/common", default-features = false }
-pallet-curator = { path = "pallets/collab-ai/curator", default-features = false }
-pallet-guardian = { path = "pallets/collab-ai/guardian", default-features = false }
-pallet-halving-mint = { path = "pallets/collab-ai/halving-mint", default-features = false }
-pallet-pool-proposal = { path = "pallets/collab-ai/pool-proposal", default-features = false }
-pallet-investing-pool = { path = "pallets/collab-ai/investing-pool", default-features = false }
