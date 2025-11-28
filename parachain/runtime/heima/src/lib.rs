@@ -1035,9 +1035,9 @@ impl pallet_parachain_staking::Config for Runtime {
 	/// Blocks per round
 	type DefaultBlocksPerRound = Period;
 	/// Rounds before the collator leaving the candidates request can be executed
-	type LeaveCandidatesDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type LeaveCandidatesDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the candidate bond increase/decrease can be executed
-	type CandidateBondLessDelay = ConstU32<{ prod_or_fast!(8, 1) }>;
+	type CandidateBondLessDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the delegator exit can be executed
 	type LeaveDelegatorsDelay = ConstU32<{ prod_or_fast!(0, 0) }>;
 	/// Rounds before the delegator revocation can be executed
