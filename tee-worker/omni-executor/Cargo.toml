@@ -1,37 +1,17 @@
 [workspace]
 members = [
-    "aa-contracts-client",
-    "accounting-contract/solana/programs/accounting-contract",
-    "accounting-contract-client",
-    "binance-api",
-    "config-loader",
-    "ethereum-rpc",
-    "executor-crypto",
-    "executor-core",
-    "executor-worker",
-    "executor-storage",
-    "executor-primitives",
-    "heima/authentication",
-    "heima/identity-verification",
-    "intent/asset-lock",
+    "bin",
+    "cli",
+    "clients/*",
+    "crypto",
+    "core",
     "intent/executors/cross-chain",
     "intent/executors/ethereum",
     "intent/executors/solana",
-    "intent/token-query",
     "mock-server",
-    "native-task-handler",
-    "oauth-providers",
-    "omni-cli",
-    "parentchain/listener",
-    "parentchain/api-interface",
-    "parentchain/attestation",
-    "parentchain/rpc-client",
-    "parentchain/signer",
-    "pumpx",
+    "primitives",
     "rpc-server",
-    "signer-client",
-    "solana",
-    "wildmeta-api",
+    "storage",
 ]
 
 resolver = "2"
@@ -40,42 +20,42 @@ resolver = "2"
 edition = "2021"
 
 [workspace.dependencies]
-alloy = "1.0.3"
+alloy = "1.1.2"
 alloy-rlp = "0.3.11"
 alloy-signer = "1.0.9"
 alloy-signer-local = "1.0.9"
-alloy-sol-types = "1.3.0"
-anchor-client = "0.31.1"
+anchor-client = "0.32.1"
 async-trait = "0.1.82"
 base58 = "0.2.0"
 base64 = "0.22.1"
-bincode = "1.3.2"
+bincode = "1.3"
 bitcoin = "0.32.5"
 bs58 = "0.5"
 chrono = "0.4.40"
 ciborium = "0.2"
-clap = "4.5.17"
-env_logger = "0.11.5"
+clap = "4.5.53"
+email_address = "0.2"
+ethabi = "18.0"
 ethers = "2.0"
-frame-metadata = { version = "23.0.0", features = ["decode"], default-features = false }
-frame-support = { version = "39.0.0", features = ["std"] }
 futures = "0.3.31"
 hex = "0.4"
-hex-literal = "0.4"
+hex-literal = "1.1"
 hmac = "0.12.1"
-http = "1.3.1"
-jsonrpsee = { version = "0.24.9", features = ["server"] }
-jsonwebtoken = "9.3.0"
+http = "1.4.0"
+hyperliquid_rust_sdk = { git = "https://github.com/BillyWooo/hyperliquid-rust-sdk", branch = "fork_new_feature" }
+jsonrpsee = { version = "0.26.0", features = ["server"] }
+jsonwebtoken = { version = "10.1.0", features = ["rust_crypto"] }
 libsecp256k1 = "0.7.1"
 log = "0.4.22"
 metrics = "0.24.1"
-metrics-exporter-prometheus = "0.16.2"
-mockall = "0.13.1"
+metrics-exporter-prometheus = "0.17.2"
+mockall = "0.14.0"
+p256 = { version = "0.13", features = ["ecdsa"] }
 parity-scale-codec = "3.6.12"
-rand = "0.8.5"
+rand = "0.9.2"
 regex = "1.7"
 reqwest = { version = "0.12", features = ["json"] }
-ring = "0.16.20"
+ring = "0.17.14"
 rsa = "0.9.7"
 ruint = "1.13.1"
 rust_decimal = "1.37.1"
@@ -85,23 +65,19 @@ secp256k1 = "=0.29.1"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1"
 serde_repr = "0.1.20"
-serde_with = { version = "3.11", features = ["hex"] }
+serde_with = { version = "3.15", features = ["hex"] }
 sha2 = "0.10.8"
 solana-client = "2.2.1"
 solana-sdk = "2.2.1"
 sp-core = "35.0.0"
-sp-state-machine = { version = "0.44.0", features = ["std"] }
 spl-associated-token-account = "6.0.0"
 spl-token = "7.0.0"
-subxt = "0.42.0"
-subxt-core = "0.42.0"
-subxt-signer = { version = "0.42.0", features = ["subxt"] }
 tempfile = "3.19.1"
 test-log = { version = "0.2.17", features = ["trace"] }
 thiserror = "2"
 tokio = "1.43.0"
-tower = "0.4.13"
-tower-http = { version = "0.5.2", features = ["auth", "sensitive-headers"] }
+tower = "0.5.2"
+tower-http = { version = "0.6.7", features = ["auth", "sensitive-headers"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 url = "2.5.4"
@@ -109,36 +85,25 @@ uuid = "1.16.0"
 
 
 # Local dependencies
-aa-contracts-client = { path = "aa-contracts-client" }
-accounting-contract = { path = "accounting-contract/solana/programs/accounting-contract", features = ["no-entrypoint"] }
-accounting-contract-client = { path = "accounting-contract-client" }
-binance-api = { path = "binance-api" }
-config-loader = { path = "config-loader" }
+accounting-contract = { path = "contracts/accounting/solana/programs/accounting-contract", features = ["no-entrypoint"] }
 cross-chain-intent-executor = { path = "intent/executors/cross-chain" }
 ethereum-intent-executor = { path = "intent/executors/ethereum" }
-ethereum-rpc = { path = "ethereum-rpc" }
-executor-core = { path = "executor-core" }
-executor-crypto = { path = "executor-crypto" }
-executor-primitives = { path = "executor-primitives" }
-executor-storage = { path = "executor-storage" }
-heima-authentication = { path = "heima/authentication" }
-heima-identity-verification = { path = "heima/identity-verification" }
-intent-asset-lock = { path = "intent/asset-lock" }
-intent-token-query = { path = "intent/token-query" }
 mock-server = { path = "mock-server" }
-native-task-handler = { path = "native-task-handler" }
-oauth-providers = { path = "oauth-providers" }
-parentchain-api-interface = { path = "parentchain/api-interface" }
-parentchain-attestation = { path = "parentchain/attestation" }
-parentchain-listener = { path = "parentchain/listener" }
-parentchain-rpc-client = { path = "parentchain/rpc-client" }
-parentchain-signer = { path = "parentchain/signer" }
-pumpx = { path = "pumpx" }
+oe-client-aa = { path = "clients/aa" }
+oe-client-accounting = { path = "clients/accounting" }
+oe-client-binance = { path = "clients/binance" }
+oe-client-ethereum = { path = "clients/ethereum" }
+oe-client-hyperliquid = { path = "clients/hyperliquid" }
+oe-client-pumpx = { path = "clients/pumpx" }
+oe-client-signer = { path = "clients/signer" }
+oe-client-solana = { path = "clients/solana" }
+oe-client-wildmeta = { path = "clients/wildmeta" }
+oe-core = { path = "core" }
+oe-crypto = { path = "crypto" }
+oe-primitives = { path = "primitives" }
+oe-storage = { path = "storage" }
 rpc-server = { path = "rpc-server" }
-signer-client = { path = "signer-client" }
-solana = { path = "solana" }
 solana-intent-executor = { path = "intent/executors/solana" }
-wildmeta-api = { path = "wildmeta-api" }
 
 heima-primitives = { path = "../../parachain/primitives", default-features = false, features = ["std"] }
 heima-utils = { path = "../../parachain/utils", default-features = false, features = ["std"] }

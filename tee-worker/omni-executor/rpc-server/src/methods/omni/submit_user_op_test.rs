@@ -14,19 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::handle_omni_native_task;
-use crate::methods::omni::PumpxRpcError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
+use crate::utils::omni::to_omni_account;
+use crate::utils::user_op::submit_user_ops;
+use crate::utils::validation::{parse_as, parse_rpc_params};
 use alloy::primitives::Address;
-use executor_core::native_task::{NativeTask, NativeTaskWrapper};
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{AccountId, ChainId};
+use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
-use parity_scale_codec::Decode;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tracing::debug;
 
 #[derive(Debug, Deserialize)]
 pub struct SubmitUserOpTestParams {
@@ -34,6 +33,7 @@ pub struct SubmitUserOpTestParams {
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
 	pub omni_account: String,
+	#[allow(dead_code)]
 	pub client_id: String,
 }
 
@@ -42,63 +42,35 @@ pub struct SubmitUserOpTestResponse {
 	pub transaction_hash: Option<String>,
 }
 
-pub fn register_submit_user_op_test(module: &mut RpcModule<RpcContext>) {
+pub fn register_submit_user_op_test<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_async_method("omni_submitUserOpTest", |params, ctx, _ext| async move {
-			let params = params.parse::<SubmitUserOpTestParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
-			})?;
+			let params = parse_rpc_params::<SubmitUserOpTestParams>(params)?;
 
 			debug!("Received omni_submitUserOpTest, params: {:?}", params);
 
-			let address_bytes =
-				hex::decode(params.omni_account.strip_prefix("0x").unwrap_or(&params.omni_account))
-					.map_err(|_| {
-						error!("Failed to decode omni account hex string");
-						PumpxRpcError::from_error_code(ErrorCode::InternalError)
-					})?;
-
-			if address_bytes.len() != 32 {
-				error!(
-					"Invalid omni account length: expected 32 bytes, got {}",
-					address_bytes.len()
-				);
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			}
-
 			for op in &params.user_operations {
-				op.sender.parse::<Address>().map_err(|e| {
-					error!("Invalid sender address '{}': {}", op.sender, e);
-					PumpxRpcError::from_error_code(ErrorCode::ParseError)
-				})?;
+				let _: Address = parse_as(&op.sender, "sender")?;
 			}
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::SubmitUserOp(
-					AccountId::decode(&mut &address_bytes[..]).map_err(|_| {
-						error!("Failed to decode AccountId from bytes");
-						PumpxRpcError::from_error_code(ErrorCode::InternalError)
-					})?,
-					params.user_operations.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
-				params.client_id,
-			);
+			let omni_account = to_omni_account(&params.omni_account)?;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::SubmitUserOp(transaction_hash) => {
-					Ok(SubmitUserOpTestResponse { transaction_hash })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
+			let transaction_hash = submit_user_ops(
+				&ctx,
+				params.user_operations,
+				params.chain_id,
+				params.wallet_index,
+				&omni_account,
+			)
+			.await?;
+
+			Ok::<SubmitUserOpTestResponse, ErrorObjectOwned>(SubmitUserOpTestResponse {
+				transaction_hash,
 			})
-			.await
 		})
 		.expect("Failed to register omni_submitUserOpTest method");
 }

@@ -224,8 +224,22 @@ if is_omni_executor_release; then
   WORKER_RUSTC_VERSION=$(cd tee-worker/omni-executor && rustc --version)
   docker run --rm --entrypoint gramine-sgx-sigstruct-view -v /var/run/aesmd:/var/run/aesmd litentry/omni-executor:$OMNI_EXECUTOR_DOCKER_TAG omni-executor.sig > enclave-sigstruct.txt
   SIGSTRUCT=$(<enclave-sigstruct.txt)
-  # Format the sigstruct output with proper indentation
-  FORMATTED_SIGSTRUCT=$(echo "$SIGSTRUCT" | sed 's/^/    /')
+  # Reformat the sigstruct output to match the alignment pattern
+  FORMATTED_SIGSTRUCT=$(echo "$SIGSTRUCT" | awk '
+    /^Attributes:/ {
+      printf "Attributes                   :\n"
+      next
+    }
+    /^[[:space:]]*[^[:space:]]+:/ {
+      # Extract field name and value
+      match($0, /^[[:space:]]*([^:]+):[[:space:]]*(.*)/, arr)
+      field = arr[1]
+      value = arr[2]
+      printf "  %-27s: %s\n", field, value
+      next
+    }
+    # Skip other lines or pass them through if needed
+  ')
 cat << EOF >> "$1"
 ## Omni-Executor
 

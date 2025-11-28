@@ -1,13 +1,16 @@
-use crate::{server::RpcContext, Deserialize};
-use executor_primitives::{Hashable, Identity, Web2IdentityType};
-use executor_storage::{Storage, VerificationCodeStorage};
-use heima_identity_verification::web2::email::{
-	generate_verification_code, send_verification_email,
+use crate::{
+	detailed_error::DetailedError,
+	server::RpcContext,
+	utils::validation::{parse_rpc_params, validate_email},
+	Deserialize,
 };
-use jsonrpsee::{
-	types::{ErrorCode, ErrorObject},
-	RpcModule,
+use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::verify::web2::email::{
+	generate_verification_code, send_verification_email, send_wildmeta_verification_email,
 };
+use oe_primitives::{Hashable, Identity};
+use oe_storage::{Storage, VerificationCodeStorage};
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -16,32 +19,64 @@ pub struct RequestEmailVerificationCodeParams {
 	pub user_email: String,
 }
 
-pub fn register_request_email_verification_code(module: &mut RpcModule<RpcContext>) {
+pub fn register_request_email_verification_code<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_async_method("omni_requestEmailVerificationCode", |params, ctx, _| async move {
-			let params = params.parse::<RequestEmailVerificationCodeParams>()?;
+			debug!("[EMAIL_LIFECYCLE] Received omni_requestEmailVerificationCode, params: {:?}", params);
 
-			debug!(
-				"Received omni_requestEmailVerificationCode, client_id: {}, user_email: {}",
-				params.client_id, params.user_email
-			);
+			let params = parse_rpc_params::<RequestEmailVerificationCodeParams>(params)?;
+			validate_email(&params.user_email)?;
 
-			let email_identity =
-				Identity::from_web2_account(&params.user_email, Web2IdentityType::Email);
-			let omni_account = email_identity.to_omni_account(&params.client_id);
+			let omni_account = Identity::Email(params.user_email.as_str().into()).to_omni_account(&params.client_id);
+
 			let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 			let verification_code = generate_verification_code();
 
 			verification_code_storage
 				.insert(&omni_account.hash(), verification_code.clone())
-				.map_err(|_| ErrorCode::InternalError)?;
-
-			send_verification_email(&*ctx.mailer, params.user_email, verification_code)
-				.await
-				.map_err(|_| {
-					error!("Failed to send verification email");
-					ErrorCode::InternalError
+				.map_err(|e| {
+					error!("[EMAIL_LIFECYCLE] Failed to store verification code for {}: {:?}", params.user_email, e);
+					DetailedError::storage_service_error("insert verification code").to_rpc_error()
 				})?;
+
+			// Get the appropriate mailer for this client
+			let mailer =
+				ctx.mailer_factory.get_mailer_for_client(&params.client_id).map_err(|e| {
+					error!("[EMAIL_LIFECYCLE] Failed to get mailer for client '{}': {}", params.client_id, e);
+					DetailedError::new(
+						crate::error_code::EXTERNAL_API_ERROR_CODE,
+						"Failed to initialize email service",
+					)
+					.with_field("client_id")
+					.with_received(&params.client_id)
+					.with_reason(format!("Error: {}", e))
+					.to_rpc_error()
+				})?;
+
+			// Use Wildmeta template for wildmeta client
+			if params.client_id.to_lowercase() == "wildmeta" {
+				send_wildmeta_verification_email(
+					&*mailer,
+					params.user_email.clone(),
+					verification_code.clone(),
+				)
+				.await
+				.map_err(|e| {
+					error!("[EMAIL_LIFECYCLE] Failed to send Wildmeta verification email to {} (client: {}): {:?}", params.user_email, params.client_id, e);
+					DetailedError::email_service_error(&params.user_email).to_rpc_error()
+				})?;
+			} else {
+				send_verification_email(&*mailer, params.user_email.clone(), verification_code.clone())
+					.await
+					.map_err(|e| {
+						error!("[EMAIL_LIFECYCLE] Failed to send verification email to {} (client: {}): {:?}", params.user_email, params.client_id, e);
+						DetailedError::email_service_error(&params.user_email).to_rpc_error()
+					})?;
+			}
 
 			Ok::<(), ErrorObject>(())
 		})

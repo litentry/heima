@@ -5,6 +5,10 @@ updates:
       - "/parachain"
       - "/tee-worker/omni-executor"
     labels: ["automated-pr"]
+    groups:
+      cargo:
+        patterns:
+          - "*"
     # Handle updates for crates from github.com/paritytech/substrate manually.
     ignore:
       - dependency-name: "substrate-*"
@@ -32,6 +36,13 @@ updates:
       - dependency-name: "pallet-ethereum"
       - dependency-name: "pallet-evm-*"
       - dependency-name: "cargo_toml" # still used by id-worker
+      - dependency-name: "jsonrpsee" # needs to match polkadot-sdk version
+      - dependency-name: "solana-sdk"
+      - dependency-name: "solana-client"
+      - dependency-name: "spl-associated-token-account"
+      - dependency-name: "spl-token"
+      - dependency-name: "solana-account-decoder-client-types"
+      - dependency-name: "bincode" # referenced by solana sdks
     reviewers:
       - "litentry/parachain"
     schedule:
@@ -44,7 +55,7 @@ updates:
       - "/tee-worker/omni-executor/client-sdk"
       - "/tee-worker/omni-executor/ts-tests"
       - "/tee-worker/omni-executor/ts-tests/integration-tests"
-      - "/tee-worker/omni-executor/accounting-contract/solana"
+      - "/tee-worker/omni-executor/contracts/accounting/solana"
     labels: ["automated-pr"]
     groups:
       typescript-dependencies:

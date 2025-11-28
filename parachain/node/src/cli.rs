@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{chain_specs, evm_tracing_types::EthApiOptions};
+use crate::chain_specs;
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -86,9 +86,6 @@ pub struct Cli {
 	/// Relay chain arguments
 	#[arg(raw = true)]
 	pub relaychain_args: Vec<String>,
-
-	#[clap(flatten)]
-	pub eth_api_options: EthApiOptions,
 
 	/// Enable Ethereum compatible JSON-RPC servers (disabled by default).
 	#[clap(name = "enable-evm-rpc", long)]

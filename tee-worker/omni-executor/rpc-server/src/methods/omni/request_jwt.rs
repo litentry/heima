@@ -1,17 +1,27 @@
+use super::check_backend_response;
 use crate::{
-	error_code::*, methods::omni::PumpxRpcError, server::RpcContext, verify_auth::verify_auth,
-	Deserialize, ErrorCode,
+	detailed_error::DetailedError,
+	error_code::*,
+	server::RpcContext,
+	utils::types::{RpcOptionExt, RpcResultExt},
+	utils::validation::parse_rpc_params,
+	verify_auth::verify_auth,
+	Deserialize,
 };
-use executor_core::native_task::*;
-use executor_primitives::OmniAuth;
-use heima_primitives::{Identity, Web2IdentityType};
+use chrono::{Days, Utc};
+use heima_primitives::Identity;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
-use pumpx::methods::user_connect::UserConnectResponse;
+use oe_client_pumpx::methods::user_connect::UserConnectResponse;
+use oe_core::auth::{
+	auth_token::*,
+	constants::{AUTH_TOKEN_ACCESS_TYPE, AUTH_TOKEN_EXPIRATION_DAYS, AUTH_TOKEN_ID_TYPE},
+};
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::jwt;
+use oe_primitives::{utils::hex::hex_encode, OmniAuth};
+use oe_storage::{HeimaJwtStorage, Storage};
 use serde::Serialize;
 use tracing::{debug, error};
-
-use super::common::{check_omni_api_response, handle_omni_native_task};
 
 #[derive(Debug, Deserialize)]
 pub struct RequestJwtParams {
@@ -31,63 +41,125 @@ pub struct RequestJwtResponse {
 }
 
 impl RequestJwtParams {
-	pub fn into_native_task_wrapper(self) -> NativeTaskWrapper<NativeTask> {
-		NativeTaskWrapper::new(
-			NativeTask::PumpxRequestJwt(
-				Identity::from_web2_account(self.user_email.as_str(), Web2IdentityType::Email), // actually unused
-				self.user_email.clone(),
-				self.invite_code,
-				self.google_code,
-				self.language,
-			),
-			None,
-			Some(OmniAuth::Email(self.client_id.clone(), self.user_email, self.email_code)),
-			self.client_id,
-		)
+	pub fn get_omni_auth(&self) -> OmniAuth {
+		OmniAuth::Email(self.client_id.clone(), self.user_email.clone(), self.email_code.clone())
 	}
 }
 
-pub fn register_request_jwt(module: &mut RpcModule<RpcContext>) {
+pub fn register_request_jwt<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_async_method("omni_requestJwt", |params, ctx, _ext| async move {
-			let params = params.parse::<RequestJwtParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
-			})?;
+			let params = parse_rpc_params::<RequestJwtParams>(params)?;
 
 			debug!(
 				"Received omni_requestJwt, user_email: {}, client_id: {}",
 				params.user_email, params.client_id
 			);
 
-			let wrapper = params.into_native_task_wrapper();
+			// Verify email authentication
+			let auth = params.get_omni_auth();
+			verify_auth(ctx.clone(), &auth).await.map_err(|e| {
+				error!("Failed to verify auth: {:?}, reason: {:?}", auth, e);
+				DetailedError::new(
+					AUTH_VERIFICATION_FAILED_CODE,
+					"Authentication verification failed",
+				)
+				.with_suggestion("Please check your authentication credentials")
+				.to_rpc_error()
+			})?;
 
-			if wrapper.task.require_auth() {
-				let Some(ref auth) = wrapper.auth else {
-					error!("Missing auth token");
-					return Err(PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						REQUIRE_AUTHENTICATION_CODE,
-					)));
-				};
-				verify_auth(ctx.clone(), auth).await.map_err(|e| {
-					error!("Failed to verify auth: {:?}, reason: {:?}", wrapper.auth, e);
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						AUTH_VERIFICATION_FAILED_CODE,
-					))
+			// Inlined handler logic from handle_pumpx_request_jwt
+			let expires_at = Utc::now()
+				.checked_add_days(Days::new(AUTH_TOKEN_EXPIRATION_DAYS))
+				.expect("Failed to calculate expiration")
+				.timestamp();
+			let auth_options = AuthOptions { expires_at };
+
+			debug!("Calling pumpx get_account_user_id, email: {}", params.user_email);
+			let res = ctx.pumpx_api.get_account_user_id(params.user_email.clone()).await.map_err(
+				|e| {
+					error!(
+						"Failed to get_account_user_id for email {}: {:?}",
+						params.user_email, e
+					);
+					DetailedError::pumpx_service_error("get_account_user_id", format!("{:?}", e))
+						.to_rpc_error()
+				},
+			)?;
+			debug!("Response pumpx get_account_user_id: {:?}", res);
+
+			let user_id = res.data.user_id.ok_or_internal("Empty data.user_id")?;
+
+			debug!("get_account_user_id ok, email: {}, user_id: {}", params.user_email, user_id);
+			let omni_account =
+				Identity::Pumpx(user_id.as_str().into()).to_omni_account(&params.client_id);
+
+			let access_token_claims: AuthTokenClaims = AuthTokenClaims::new(
+				hex_encode(omni_account.as_ref()),
+				AUTH_TOKEN_ACCESS_TYPE.to_string(),
+				params.client_id.to_string(),
+				auth_options.clone(),
+			);
+			let access_token = jwt::create(&access_token_claims, &ctx.jwt_rsa_private_key)
+				.map_err_internal("Failed to create access token")?;
+
+			debug!(
+				"Calling pumpx user_connect, user_id: {}, email: {}, invite_code: {:?}, google_code: {:?}",
+				user_id, params.user_email, params.invite_code, params.google_code
+			);
+			let backend_response = ctx
+				.pumpx_api
+				.user_connect(
+					&access_token,
+					user_id.clone(),
+					params.user_email.clone(),
+					params.invite_code,
+					params.google_code,
+					params.language,
+				)
+				.await
+				.map_err(|e| {
+					error!("Failed to connect user: {:?}", e);
+					DetailedError::pumpx_service_error("user_connect", format!("{:?}", e))
+						.to_rpc_error()
 				})?;
+			debug!("Response pumpx user_connect: {:?}", backend_response);
+			check_backend_response(&backend_response, "user_connect")?;
+
+			// check google auth value
+			if !backend_response.data.google_auth_check.unwrap_or(false) {
+				let msg = "Failed to verify google auth within RequestJwt";
+				error!(msg);
+				return Err(DetailedError::internal_error(msg).to_rpc_error());
 			}
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxRequestJwt { access_token, id_token, backend_response } => {
-					check_omni_api_response(backend_response.clone(), "Request pumpx jwt".into())?;
-					Ok(RequestJwtResponse { access_token, id_token, backend_response })
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			let id_token_claims = AuthTokenClaims::new(
+				hex_encode(omni_account.as_ref()),
+				AUTH_TOKEN_ID_TYPE.to_string(),
+				params.client_id.to_string(),
+				auth_options,
+			);
+			let id_token = jwt::create(&id_token_claims, &ctx.jwt_rsa_private_key)
+				.map_err_internal("Failed to create id token")?;
+
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			if let Err(e) = storage
+				.insert(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE), access_token.clone())
+			{
+				error!("Failed to insert access token into storage: {:?}", e);
+				return Err(
+					DetailedError::storage_service_error("insert access token").to_rpc_error()
+				);
+			};
+
+			if let Err(e) = storage.insert(&(omni_account, AUTH_TOKEN_ID_TYPE), id_token.clone()) {
+				error!("Failed to insert id token into storage: {:?}", e);
+				return Err(DetailedError::storage_service_error("insert id token").to_rpc_error());
+			};
+
+			Ok(RequestJwtResponse { access_token, id_token, backend_response })
 		})
 		.expect("Failed to register omni_requestJwt method");
 }

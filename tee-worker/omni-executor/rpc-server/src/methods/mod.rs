@@ -1,10 +1,8 @@
 use crate::server::RpcContext;
 use jsonrpsee::RpcModule;
+use oe_core::intent::executor::IntentExecutor;
 
-mod pumpx;
-use pumpx::*;
-
-mod omni;
+pub mod omni;
 use omni::*;
 
 pub const PROTECTED_METHODS: [&str; 8] = [
@@ -18,7 +16,8 @@ pub const PROTECTED_METHODS: [&str; 8] = [
 	"omni_exportWallet",
 ];
 
-pub fn register_methods(module: &mut RpcModule<RpcContext>) {
+pub fn register_methods<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	register_omni(module);
-	register_pumpx(module);
 }

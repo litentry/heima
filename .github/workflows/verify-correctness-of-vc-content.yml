@@ -15,7 +15,7 @@ jobs:
   test-vc-correctness:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Pull litentry image optionally
         run: |
@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: logs-lit-vc-correctness-test
           path: logs

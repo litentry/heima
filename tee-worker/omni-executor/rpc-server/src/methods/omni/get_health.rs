@@ -16,8 +16,11 @@
 
 use crate::server::RpcContext;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
 
-pub fn register_get_health(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_health<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_method("omni_getHealth", |_, _, _| Ok::<String, ErrorObject>("OK".to_string()))
 		.expect("Failed to register getHealth method");
@@ -26,55 +29,64 @@ pub fn register_get_health(module: &mut RpcModule<RpcContext>) {
 #[cfg(test)]
 mod test {
 	use crate::{start_server, ShieldingKey};
-	use config_loader::ConfigLoader;
-	use executor_storage::{StorageDB, WildmetaTimestampStorage};
-	use heima_identity_verification::web2::email::{mailer::MailerTrait, ConsoleMailer};
 	use jsonrpsee::core::client::ClientT;
 	use jsonrpsee::rpc_params;
 	use jsonrpsee::ws_client::WsClientBuilder;
-	use native_task_handler::NativeTaskChannelType;
-	use pumpx::PumpxApiClient;
-	use rsa::{pkcs1::EncodeRsaPrivateKey, RsaPrivateKey};
-	use signer_client::{mocks::MockSignerClient, SignerClient};
+	use oe_client_binance::mocks::MockBinanceApiClient;
+	use oe_client_pumpx::PumpxApiClient;
+	use oe_client_signer::{mocks::MockSignerClient, SignerClient};
+	use oe_client_wildmeta::{MockWildmetaApi, WildmetaApi};
+	use oe_core::config::ConfigLoader;
+	use oe_core::intent::executor::MockedIntentExecutor;
+	use oe_storage::{StorageDB, WildmetaTimestampStorage};
+	use rsa::{pkcs1::EncodeRsaPrivateKey, rand_core::OsRng, RsaPrivateKey};
+	use std::collections::HashMap;
 	use std::sync::Arc;
 	use tempfile::tempdir;
-	use tokio::sync::mpsc;
-	use wildmeta_api::{MockWildmetaApi, WildmetaApi};
 
 	#[tokio::test]
 	pub async fn get_health_works() {
 		let tmp_dir = tempdir().unwrap();
 		let port = 2004;
 		let shielding_key = ShieldingKey::new();
-		let (sender, _) = mpsc::channel::<NativeTaskChannelType>(1);
 		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
 
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key =
 			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
 		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
 		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
 		let config_loader = ConfigLoader::from_env();
 		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
-
-		// Create console mailer for test
-		let mailer: Box<dyn MailerTrait + Send + Sync> = Box::new(ConsoleMailer::new());
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
+			Arc::new(MockBinanceApiClient::new());
 
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
+		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(db.clone()));
+
+		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
+		let aes_key = [0u8; 32];
+		let entry_point_clients = HashMap::new();
 
 		start_server(
 			port,
 			shielding_key.clone(),
-			Arc::new(sender),
 			Arc::new(Box::new(pumpx_api)),
 			db,
 			jwt_private_key.as_bytes().to_vec(),
 			&config_loader,
 			signer_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
-			mailer,
+			loan_record_storage,
+			[0u8; 33], // Test ECDSA public key
+			[0u8; 32], // Test bundler private key
+			[0u8; 33], // Test bundler export authorized pubkey
+			Arc::new(cross_chain_intent_executor),
+			aes_key,
+			Arc::new(entry_point_clients),
 		)
 		.await
 		.unwrap();

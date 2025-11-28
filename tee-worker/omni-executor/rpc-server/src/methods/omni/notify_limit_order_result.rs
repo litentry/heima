@@ -1,12 +1,10 @@
-use super::common::handle_omni_native_task;
-use crate::methods::omni::{common::check_auth, PumpxRpcError};
-use crate::{error_code::*, server::RpcContext, Deserialize, ErrorCode};
-use executor_core::native_task::*;
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
-use heima_primitives::Address32;
+use crate::{
+	detailed_error::DetailedError, server::RpcContext, utils::omni::extract_omni_account,
+	utils::validation::parse_rpc_params, Deserialize,
+};
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
-use tracing::{debug, error};
+use oe_core::intent::executor::IntentExecutor;
+use tracing::{debug, error, info};
 
 #[derive(Debug, Deserialize)]
 pub struct NotifyLimitOrderResultParams {
@@ -15,51 +13,31 @@ pub struct NotifyLimitOrderResultParams {
 	pub message: Option<String>,
 }
 
-pub fn register_notify_limit_order_result(module: &mut RpcModule<RpcContext>) {
+pub fn register_notify_limit_order_result<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
-		.register_async_method("omni_notifyLimitOrderResult", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
-			})?;
+		.register_async_method("omni_notifyLimitOrderResult", |params, _ctx, ext| async move {
+			debug!("Received omni_notifyLimitOrderResult, params: {:?}", params);
 
-			let params = params.parse::<NotifyLimitOrderResultParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
-			})?;
+			let params = parse_rpc_params::<NotifyLimitOrderResultParams>(params)?;
+			let _ = extract_omni_account(&ext)?;
 
-			debug!(
-				"Received omni_notifyLimitOrderResult, intent_id: {}, result: {}, message: {:?}",
-				params.intent_id, params.result, params.message
-			);
+			// Inline handle_pumpx_notify_limit_order_result logic
+			if params.result != "ok" && params.result != "nok" {
+				error!("Invalid result value: {}. Must be 'ok' or 'nok'", params.result);
+				return Err(
+					DetailedError::invalid_params("result", "must be ok or nok").to_rpc_error()
+				);
+			}
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			};
+			if let Some(msg) = &params.message {
+				info!("Limit order result message for intent_id {}: {}", params.intent_id, msg);
+			}
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxNotifyLimitOrderResult(
-					AccountId::from(address),
-					params.intent_id,
-					params.result,
-					params.message,
-				),
-				None,
-				None,
-				user.client_id,
-			);
-
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxNotifyLimitOrderResult => Ok(()),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			Ok(())
 		})
 		.expect("Failed to register omni_notifyLimitOrderResult method");
 }

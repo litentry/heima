@@ -81,6 +81,12 @@ impl IdentityString {
 	}
 }
 
+impl From<&str> for IdentityString {
+	fn from(value: &str) -> Self {
+		IdentityString::new(value.as_bytes().to_vec())
+	}
+}
+
 impl Debug for IdentityString {
 	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
 		if_development_or!(
@@ -306,7 +312,7 @@ pub enum Identity {
 	Discord(IdentityString),
 
 	#[codec(index = 2)]
-	Github(IdentityString),
+	Apple(IdentityString),
 
 	#[codec(index = 3)]
 	Substrate(Address32),
@@ -343,7 +349,7 @@ impl Identity {
 			self,
 			Self::Twitter(..)
 				| Self::Discord(..)
-				| Self::Github(..)
+				| Self::Apple(..)
 				| Self::Email(..)
 				| Self::Google(..)
 				| Self::Pumpx(..)
@@ -379,7 +385,7 @@ impl Identity {
 			Identity::Solana(_) => all_solana_web3networks(),
 			Identity::Twitter(_)
 			| Identity::Discord(_)
-			| Identity::Github(_)
+			| Identity::Apple(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
@@ -398,7 +404,7 @@ impl Identity {
 			Identity::Solana(_) => !networks.is_empty() && networks.iter().all(|n| n.is_solana()),
 			Identity::Twitter(_)
 			| Identity::Discord(_)
-			| Identity::Github(_)
+			| Identity::Apple(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
@@ -415,14 +421,16 @@ impl Identity {
 		match self {
 			Identity::Substrate(address) => Some(address.into()),
 			Identity::Evm(address) => {
-				Some(HashedAddressMapping::into_account_id(H160::from_slice(address.as_ref())))
+				let account =
+					HashedAddressMapping::into_account_id(H160::from_slice(address.as_ref()));
+				Some(account)
 			},
 			// we use identity hash for non substrate/evm web3 accounts, as they
 			// can't connect to the parachain directly
 			Identity::Bitcoin(_) | Identity::Solana(_) => Some(self.hash().to_fixed_bytes().into()),
 			Identity::Twitter(_)
 			| Identity::Discord(_)
-			| Identity::Github(_)
+			| Identity::Apple(_)
 			| Identity::Email(_)
 			| Identity::Google(_)
 			| Identity::Pumpx(_)
@@ -465,21 +473,32 @@ impl Identity {
 					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
 				);
 			},
-			Identity::Github(handle) => {
-				hasher.update(b"github");
+			Identity::Apple(handle) => {
+				hasher.update(b"apple");
 				hasher.update(
-					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
 				);
 			},
 			Identity::Email(handle) => {
 				hasher.update(b"email");
 				hasher.update(
-					String::from_utf8(handle.inner.to_vec()).unwrap_or_default().as_bytes(),
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
 				);
 			},
 			Identity::Google(handle) => {
 				hasher.update(b"google");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 			Identity::Pumpx(handle) => {
 				// TODO: this type will be removed.
@@ -488,7 +507,12 @@ impl Identity {
 			},
 			Identity::Passkey(handle) => {
 				hasher.update(b"passkey");
-				hasher.update(String::from_utf8(handle.inner.to_vec()).unwrap_or_default());
+				hasher.update(
+					String::from_utf8(handle.inner.to_vec())
+						.unwrap_or_default()
+						.to_lowercase()
+						.as_bytes(),
+				);
 			},
 		}
 
@@ -531,8 +555,8 @@ impl Identity {
 						.try_into()
 						.map_err(|_| "Address32 conversion error")?;
 					return Ok(Identity::Solana(handle));
-				} else if v[0] == "github" {
-					return Ok(Identity::Github(IdentityString::new(v[1].as_bytes().to_vec())));
+				} else if v[0] == "apple" {
+					return Ok(Identity::Apple(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "discord" {
 					return Ok(Identity::Discord(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "twitter" {
@@ -543,6 +567,8 @@ impl Identity {
 					return Ok(Identity::Google(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else if v[0] == "pumpx" {
 					return Ok(Identity::Pumpx(IdentityString::new(v[1].as_bytes().to_vec())));
+				} else if v[0] == "passkey" {
+					return Ok(Identity::Passkey(IdentityString::new(v[1].as_bytes().to_vec())));
 				} else {
 					return Err("Unknown did type");
 				}
@@ -573,15 +599,16 @@ impl Identity {
 					str::from_utf8(handle.inner_ref())
 						.map_err(|_| "discord handle conversion error")?
 				),
-				Identity::Github(handle) => format!(
-					"github:{}",
+				Identity::Apple(handle) => format!(
+					"apple:{}",
 					str::from_utf8(handle.inner_ref())
-						.map_err(|_| "github handle conversion error")?
+						.map_err(|_| "apple handle conversion error")?
 				),
 				Identity::Email(handle) => format!(
 					"email:{}",
 					str::from_utf8(handle.inner_ref())
 						.map_err(|_| "email handle conversion error")?
+						.to_lowercase()
 				),
 				Identity::Google(handle) => format!(
 					"google:{}",
@@ -605,39 +632,6 @@ impl Identity {
 	pub fn hash(&self) -> H256 {
 		self.using_encoded(blake2_256).into()
 	}
-
-	pub fn from_web2_account(handle: &str, identity_type: Web2IdentityType) -> Self {
-		match identity_type {
-			Web2IdentityType::Twitter => {
-				Identity::Twitter(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Discord => {
-				Identity::Discord(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Github => {
-				Identity::Github(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Email => {
-				Identity::Email(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Google => {
-				Identity::Google(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-			Web2IdentityType::Pumpx => {
-				Identity::Pumpx(IdentityString::new(handle.as_bytes().to_vec()))
-			},
-		}
-	}
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Web2IdentityType {
-	Twitter,
-	Discord,
-	Github,
-	Email,
-	Google,
-	Pumpx,
 }
 
 impl From<ed25519::Public> for Identity {
@@ -709,7 +703,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => true,
 					Identity::Discord(..) => true,
-					Identity::Github(..) => true,
+					Identity::Apple(..) => true,
 					Identity::Email(..) => true,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => false,
@@ -731,7 +725,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => true,
 					Identity::Evm(..) => true,
@@ -753,7 +747,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => true,
 					Identity::Evm(..) => false,
@@ -775,7 +769,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => true,
@@ -797,7 +791,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => false,
@@ -819,7 +813,7 @@ mod tests {
 				match identity {
 					Identity::Twitter(..) => false,
 					Identity::Discord(..) => false,
-					Identity::Github(..) => false,
+					Identity::Apple(..) => false,
 					Identity::Email(..) => false,
 					Identity::Substrate(..) => false,
 					Identity::Evm(..) => false,
@@ -929,19 +923,15 @@ mod tests {
 	}
 
 	#[test]
-	fn test_github_did() {
-		let identity = Identity::Github(IdentityString::new("github_handle".as_bytes().to_vec()));
-		let did_str = "did:litentry:github:github_handle";
-		assert_eq!(identity.to_did().unwrap(), did_str);
-		assert_eq!(Identity::from_did(did_str).unwrap(), identity);
-	}
-
-	#[test]
 	fn test_email_did() {
-		let identity = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
+		let identity1 = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
+		let identity2 = Identity::Email(IdentityString::new("TEST@TEST.COM".as_bytes().to_vec()));
+		let identity3 = Identity::Email(IdentityString::new("teST@TEsT.cOm".as_bytes().to_vec()));
 		let did_str = "did:litentry:email:test@test.com";
-		assert_eq!(identity.to_did().unwrap(), did_str);
-		assert_eq!(Identity::from_did(did_str).unwrap(), identity);
+		assert_eq!(identity1.to_did().unwrap(), did_str);
+		assert_eq!(identity2.to_did().unwrap(), did_str);
+		assert_eq!(identity3.to_did().unwrap(), did_str);
+		assert_eq!(Identity::from_did(did_str).unwrap(), identity1); // only to lowercase identity1
 	}
 
 	#[test]
@@ -998,18 +988,22 @@ mod tests {
 
 	#[test]
 	fn test_email_to_omni_account() {
-		let identity = Identity::Email(IdentityString::new("test@test.com".as_bytes().to_vec()));
-		let client_id = "test_client";
-		let omni_account = identity.to_omni_account(client_id);
-		assert_eq!(
-			omni_account,
-			AccountId::new(
-				decode_hex("0x8267cb415b1d1fdcd66852a367e933160b84cf3c8f90303d1e6dd5b9be2fc604")
-					.unwrap()
-					.try_into()
-					.unwrap()
-			)
+		let identity1 =
+			Identity::Email(IdentityString::new("hello.world@test.com".as_bytes().to_vec()));
+		let identity2 =
+			Identity::Email(IdentityString::new("HELLO.WORLD@TEST.COM".as_bytes().to_vec()));
+		let identity3 =
+			Identity::Email(IdentityString::new("hELLo.WorLd@teST.COM".as_bytes().to_vec()));
+		let client_id = "wildmeta";
+		let expected = AccountId::new(
+			decode_hex("0x5a0194d421e69bb2fb2fa9659628258d1d9d4f42d12ca74354819e65a14f8fae")
+				.unwrap()
+				.try_into()
+				.unwrap(),
 		);
+		assert_eq!(identity1.to_omni_account(client_id), expected);
+		assert_eq!(identity2.to_omni_account(client_id), expected);
+		assert_eq!(identity3.to_omni_account(client_id), expected);
 	}
 
 	#[test]

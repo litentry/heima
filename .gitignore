@@ -21,6 +21,13 @@ rococo-fork.json
 **/__pycache__/
 **/.env
 
+# Chopsticks database files
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
 rust-analyzer.json
 
 *.local.md
+
+CLAUDE.md

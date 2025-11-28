@@ -22,14 +22,14 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout codes on ${{ github.event.inputs.ref || github.ref }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
           fetch-depth: 0
 
       - name: Build ${{ github.event.inputs.chain }} wasm with srtool
         id: srtool_build
-        uses: paritytech/srtool-actions@v0.9.3
+        uses: paritytech/srtool-actions@v0.9.4
         env:
           # optional: will override the parachain pallet ID and authorize_upgrade call ID,
           #           which will result in a different parachain_authorize_upgrade_hash
@@ -49,7 +49,7 @@ jobs:
           cp ${{ steps.srtool_build.outputs.wasm_compressed }} ${{ github.event.inputs.chain }}-runtime.compact.compressed.wasm
 
       - name: Upload wasm artefacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ github.event.inputs.chain }}-runtime
           path: |

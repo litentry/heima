@@ -2,7 +2,7 @@
 
 ### Builder Stage - Without Gramine
 ##################################################
-FROM rust:1.87-bookworm AS plain-builder
+FROM rust:1.89-bookworm AS plain-builder
 
 ARG CARGO_FEATURES=""
 
@@ -23,7 +23,7 @@ RUN if [ -n "$CARGO_FEATURES" ]; then \
 
 ### Deploy image (for CI - No Gramine)
 ##################################################
-FROM node:20-bookworm-slim AS executor-worker
+FROM node:20-bookworm-slim AS omni-executor
 
 ENV SRC_DIR=/home/ubuntu/tee-worker/omni-executor
 ENV BIN_DIR=/usr/local/bin
@@ -32,18 +32,24 @@ WORKDIR $BIN_DIR
 RUN apt update && apt install -y ca-certificates curl
 RUN corepack enable && corepack prepare pnpm@8.7.6 --activate && corepack enable pnpm
 
-COPY --from=plain-builder $SRC_DIR/target/release/executor-worker $BIN_DIR/executor-worker
+COPY --from=plain-builder $SRC_DIR/target/release/omni-executor $BIN_DIR/omni-executor
 COPY --from=plain-builder $SRC_DIR/local/keystore $BIN_DIR/local/keystore
 
-RUN chmod +x $BIN_DIR/executor-worker
+RUN chmod +x $BIN_DIR/omni-executor
 RUN ls -al $BIN_DIR
-RUN ldd $BIN_DIR/executor-worker && $BIN_DIR/executor-worker --version
-CMD ["$BIN_DIR/executor-worker"]
+RUN ldd $BIN_DIR/omni-executor && $BIN_DIR/omni-executor --version
+CMD ["$BIN_DIR/omni-executor"]
 
 
 ### Builder Stage - With Gramine (SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:stable-jammy AS sgx-builder
+FROM gramineproject/gramine:1.9-jammy AS sgx-builder
+
+ARG OE_WILDMETA_BACKEND_ECDSA_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
+ENV OE_WILDMETA_BACKEND_ECDSA_PUBKEY=$OE_WILDMETA_BACKEND_ECDSA_PUBKEY
+
+ARG OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
+ENV OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY=$OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY
 
 RUN apt-get update
 
@@ -72,8 +78,14 @@ RUN make SGX=1 SGX_DEBUG=0 SOURCE_DATE_EPOCH=1700000000 CARGO_PROFILE_RELEASE_DE
 
 ### Release image (with SGX Hardware)
 ##################################################
-FROM gramineproject/gramine:stable-jammy AS release
+FROM gramineproject/gramine:1.9-jammy AS release
 LABEL maintainer="Trust Computing GmbH <info@litentry.com>"
+
+ARG OE_WILDMETA_BACKEND_ECDSA_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
+ENV OE_WILDMETA_BACKEND_ECDSA_PUBKEY=$OE_WILDMETA_BACKEND_ECDSA_PUBKEY
+
+ARG OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY="020000000000000000000000000000000000000000000000000000000000000000"
+ENV OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY=$OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY
 
 ENV HOME=/home/ubuntu
 ENV BUILD_DIR=$HOME/tee-worker/omni-executor
@@ -92,7 +104,7 @@ RUN apt-get install -y \
     pkg-config \
     ca-certificates
 
-RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db 
+RUN mkdir -p /wkdir /wkdir/local /wkdir/storage_db
 
 COPY --from=sgx-builder $BUILD_DIR/omni-executor $BIN_DIR/omni-executor
 COPY --from=sgx-builder $BUILD_DIR/omni-executor.manifest.sgx $BIN_DIR/omni-executor.manifest.sgx

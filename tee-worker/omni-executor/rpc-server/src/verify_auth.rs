@@ -1,16 +1,25 @@
-use crate::server::RpcContext;
-use executor_primitives::{
-	signature::HeimaMultiSignature, utils::hex::ToHexPrefixed, Hashable, Identity, OAuth2Data,
-	OAuth2Provider, OmniAuth, VerificationCode, Web2IdentityType,
-};
-use executor_storage::{OAuth2StateVerifierStorage, Storage, StorageDB, VerificationCodeStorage};
-use heima_authentication::{
+use crate::{detailed_error::DetailedError, server::RpcContext};
+use base64::Engine;
+use oe_core::auth::{
 	auth_token::{AuthTokenClaims, AuthTokenValidator, Error as AuthTokenError, Validation},
 	constants::AUTH_TOKEN_ID_TYPE,
 	web3::HeimaMessagePayload,
 };
-use heima_identity_verification::web2::google::decode_id_token;
-use oauth_providers::google::GoogleOAuth2Client;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::oauth::{
+	AppleProviderConfig, GoogleProviderConfig, OAuth2Client, OAuth2ProviderConfig,
+};
+use oe_core::verify::web2::{apple, google, oauth2_common};
+use oe_crypto::hashing::blake2_256;
+use oe_primitives::{
+	signature::HeimaMultiSignature, utils::hex::hex_encode, Hash, Hashable, Identity, OAuth2Data,
+	OAuth2Provider, OmniAuth, PasskeyData, VerificationCode,
+};
+use oe_storage::{
+	OAuth2StateVerifierStorage, PasskeyChallengeStorage, Storage, StorageDB,
+	VerificationCodeStorage,
+};
+use parity_scale_codec::Encode;
 use std::{fmt::Display, sync::Arc};
 
 #[derive(Debug, PartialEq)]
@@ -19,7 +28,9 @@ pub enum AuthenticationError {
 	VerificationCodeNotFound,
 	InvalidVerificationCode,
 	OAuth2Error(String),
+	OAuth2SubClaimMismatch,
 	AuthTokenError(AuthTokenError),
+	PasskeyError(String),
 }
 
 impl Display for AuthenticationError {
@@ -37,14 +48,32 @@ impl Display for AuthenticationError {
 			AuthenticationError::OAuth2Error(msg) => {
 				write!(f, "OAuth2 error: {}", msg)
 			},
+			AuthenticationError::OAuth2SubClaimMismatch => {
+				write!(f, "OAuth2 sub claim mismatch between client and provider tokens")
+			},
 			AuthenticationError::AuthTokenError(err) => {
 				write!(f, "Auth token error: {:?}", err)
+			},
+			AuthenticationError::PasskeyError(msg) => {
+				write!(f, "Passkey error: {}", msg)
 			},
 		}
 	}
 }
 
-pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), AuthenticationError> {
+impl AuthenticationError {
+	/// Convert AuthenticationError to DetailedError with proper error codes and context
+	pub fn to_detailed_error(&self) -> DetailedError {
+		use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
+		DetailedError::new(AUTH_VERIFICATION_FAILED_CODE, "Authentication verification failed")
+			.with_reason(self.to_string())
+	}
+}
+
+pub async fn verify_auth<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
+	auth: &OmniAuth,
+) -> Result<(), AuthenticationError> {
 	match auth {
 		OmniAuth::Web3(ref client_id, ref signer, ref signature) => {
 			verify_web3_authentication(ctx.storage_db.clone(), client_id, signer, signature)
@@ -52,8 +81,8 @@ pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), Au
 		OmniAuth::Email(ref client_id, ref email, ref verification_code) => {
 			verify_email_authentication(ctx, client_id, email, verification_code)
 		},
-		OmniAuth::OAuth2(ref sender, ref oauth2_data) => {
-			verify_oauth2_authentication(ctx, sender, oauth2_data).await
+		OmniAuth::OAuth2(ref client_id, ref oauth2_data) => {
+			verify_oauth2_authentication(ctx, client_id, oauth2_data).await.map(|_| ())
 		},
 		OmniAuth::AuthToken(ref auth_token) => verify_auth_token_authentication(
 			&ctx.jwt_rsa_private_key,
@@ -62,8 +91,8 @@ pub async fn verify_auth(ctx: Arc<RpcContext>, auth: &OmniAuth) -> Result<(), Au
 			false,
 		)
 		.map(|_| ()),
-		OmniAuth::Passkey(ref _passkey_data) => {
-			todo!()
+		OmniAuth::Passkey(ref passkey_data) => {
+			verify_passkey_authentication(ctx, passkey_data).map(|_| ())
 		},
 	}
 }
@@ -85,7 +114,7 @@ pub fn verify_web3_authentication(
 		.map_err(|_| AuthenticationError::VerificationCodeNotFound)?;
 	let message = HeimaMessagePayload {
 		client_id: client_id.to_string(),
-		omni_account: omni_account.to_hex(),
+		omni_account: hex_encode(omni_account.as_ref()),
 		message_code,
 	};
 	let payload = serde_json::to_string(&message).expect("Failed to serialize payload");
@@ -97,14 +126,15 @@ pub fn verify_web3_authentication(
 	}
 }
 
-pub fn verify_email_authentication(
-	ctx: Arc<RpcContext>,
+pub fn verify_email_authentication<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
 	client_id: &str,
 	email: &str,
 	verification_code: &VerificationCode,
 ) -> Result<(), AuthenticationError> {
-	let email_identity = Identity::from_web2_account(email, Web2IdentityType::Email);
-	let omni_account = email_identity.to_omni_account(client_id);
+	let omni_account = Identity::Email(email.into()).to_omni_account(client_id);
 	let storage_key = omni_account.hash();
 	let verification_code_storage = VerificationCodeStorage::new(ctx.storage_db.clone());
 	let Ok(Some(code)) = verification_code_storage.get(&storage_key) else {
@@ -130,43 +160,283 @@ pub fn verify_auth_token_authentication(
 		.map_err(AuthenticationError::AuthTokenError)
 }
 
-pub async fn verify_oauth2_authentication(
-	ctx: Arc<RpcContext>,
-	sender: &Identity,
+pub async fn verify_oauth2_authentication<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
+	client_id: &str,
 	payload: &OAuth2Data,
-) -> Result<(), AuthenticationError> {
-	match payload.provider {
-		OAuth2Provider::Google => verify_google_oauth2(ctx, sender, payload).await,
-	}
-}
-
-async fn verify_google_oauth2(
-	ctx: Arc<RpcContext>,
-	sender: &Identity,
-	payload: &OAuth2Data,
-) -> Result<(), AuthenticationError> {
+) -> Result<Identity, AuthenticationError> {
 	let state_verifier_storage = OAuth2StateVerifierStorage::new(ctx.storage_db.clone());
-	let Ok(Some(state_verifier)) = state_verifier_storage.get(&sender.hash()) else {
+	let key: Hash = blake2_256((client_id, &payload.uid).encode().as_slice()).into();
+	let Ok(Some(verification_data)) = state_verifier_storage.get(&key) else {
 		return Err(AuthenticationError::OAuth2Error("State verifier not found".to_string()));
 	};
-	if state_verifier != payload.state {
+
+	if let Err(e) = state_verifier_storage.remove(&key) {
+		tracing::warn!("Failed to remove OAuth2 verification data: {:?}", e);
+	}
+
+	if verification_data.state != payload.state {
 		return Err(AuthenticationError::OAuth2Error("State verifier mismatch".to_string()));
 	}
-	let google_client =
-		GoogleOAuth2Client::new(ctx.google_client_id.clone(), ctx.google_client_secret.clone());
+
+	let provider_str = match payload.provider {
+		OAuth2Provider::Google => "google",
+		OAuth2Provider::Apple => "apple",
+	};
+
+	let oauth2_config =
+		ctx.oauth2_factory.get_config(client_id, payload.provider).map_err(|e| {
+			AuthenticationError::OAuth2Error(format!(
+				"Failed to get {} OAuth2 config for client '{}': {}",
+				provider_str, client_id, e
+			))
+		})?;
+
+	let client_sub = match payload.provider {
+		OAuth2Provider::Google => {
+			let id_token: google::IdToken = oauth2_common::decode_id_token(&payload.id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error("Could not decode Google id token".to_string())
+				})?;
+
+			verify_id_token_claims(
+				&id_token.aud,
+				id_token.nonce.as_deref(),
+				&oauth2_config.client_id,
+				&verification_data.nonce,
+			)?;
+
+			id_token.sub
+		},
+		OAuth2Provider::Apple => {
+			let id_token: apple::IdToken = oauth2_common::decode_id_token(&payload.id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error("Could not decode Apple id token".to_string())
+				})?;
+
+			verify_id_token_claims(
+				&id_token.aud,
+				id_token.nonce.as_deref(),
+				&oauth2_config.client_id,
+				&verification_data.nonce,
+			)?;
+
+			id_token.sub
+		},
+	};
+
+	let token_endpoint = match payload.provider {
+		OAuth2Provider::Google => GoogleProviderConfig.token_endpoint(),
+		OAuth2Provider::Apple => AppleProviderConfig.token_endpoint(),
+	};
+
+	let oauth2_client = OAuth2Client::new(
+		oauth2_config.client_id,
+		oauth2_config.client_secret,
+		token_endpoint.to_string(),
+	);
+
 	let code = payload.code.clone();
 	let redirect_uri = payload.redirect_uri.clone();
-	let token = google_client.exchange_code_for_token(code, redirect_uri).await.map_err(|_| {
-		AuthenticationError::OAuth2Error("Could not exchange code for token".to_string())
-	})?;
-	let id_token = decode_id_token(&token)
-		.map_err(|_| AuthenticationError::OAuth2Error("Could not decode id token".to_string()))?;
-	let google_identity = Identity::from_web2_account(&id_token.email, Web2IdentityType::Google);
+	let provider_id_token =
+		oauth2_client.exchange_code_for_token(code, redirect_uri).await.map_err(|e| {
+			AuthenticationError::OAuth2Error(format!("Could not exchange code for token: {}", e))
+		})?;
 
-	match sender.hash() == google_identity.hash() {
-		true => Ok(()),
-		false => Err(AuthenticationError::OAuth2Error("Identity mismatch".to_string())),
+	let provider_sub = match payload.provider {
+		OAuth2Provider::Google => {
+			let id_token: google::IdToken = oauth2_common::decode_id_token(&provider_id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error(
+						"Could not decode Google id token from provider".to_string(),
+					)
+				})?;
+
+			id_token.sub
+		},
+		OAuth2Provider::Apple => {
+			let id_token: apple::IdToken = oauth2_common::decode_id_token(&provider_id_token)
+				.map_err(|_| {
+					AuthenticationError::OAuth2Error(
+						"Could not decode Apple id token from provider".to_string(),
+					)
+				})?;
+
+			id_token.sub
+		},
+	};
+
+	if client_sub != provider_sub {
+		tracing::warn!(
+			"OAuth2 sub claim mismatch: client_sub={}, provider_sub={}",
+			client_sub,
+			provider_sub
+		);
+		return Err(AuthenticationError::OAuth2SubClaimMismatch);
 	}
+
+	let identity = match payload.provider {
+		OAuth2Provider::Google => Identity::Google(provider_sub.as_str().into()),
+		OAuth2Provider::Apple => Identity::Apple(provider_sub.as_str().into()),
+	};
+
+	Ok(identity)
+}
+
+fn verify_id_token_claims(
+	aud: &str,
+	nonce: Option<&str>,
+	client_id: &str,
+	expected_nonce: &str,
+) -> Result<(), AuthenticationError> {
+	if aud != client_id {
+		return Err(AuthenticationError::OAuth2Error(
+			"ID token audience does not match client_id".to_string(),
+		));
+	}
+	let Some(nonce) = nonce else {
+		return Err(AuthenticationError::OAuth2Error("ID token missing nonce".to_string()));
+	};
+	if nonce != expected_nonce {
+		return Err(AuthenticationError::OAuth2Error("ID token nonce mismatch".to_string()));
+	}
+	Ok(())
+}
+
+pub fn verify_passkey_authentication<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	ctx: Arc<RpcContext<CrossChainIntentExecutor>>,
+	passkey_data: &PasskeyData,
+) -> Result<(), AuthenticationError> {
+	use oe_crypto::passkey::{ClientData, PasskeyVerifier};
+	use oe_storage::PasskeyStorage;
+
+	let identity = Identity::try_from(passkey_data.user_id.clone())
+		.map_err(|_| AuthenticationError::PasskeyError("Invalid user ID format".to_string()))?;
+	let omni_account = identity.to_omni_account(&passkey_data.client_id);
+
+	let client_data: ClientData =
+		PasskeyVerifier::parse_client_data_json(&passkey_data.client_data_json).map_err(|e| {
+			AuthenticationError::PasskeyError(format!("Failed to parse client data: {}", e))
+		})?;
+
+	let allowed_origins =
+		ctx.config_loader.get_passkey_config(&passkey_data.client_id).allowed_origins;
+	if !allowed_origins.iter().any(|origin| origin == &client_data.origin) {
+		return Err(AuthenticationError::PasskeyError(
+			oe_crypto::passkey::PasskeyError::OriginVerificationFailed.to_string(),
+		));
+	}
+
+	const EXPECTED_PASSKEY_TYPE: &str = "webauthn.get";
+	if client_data.type_ != EXPECTED_PASSKEY_TYPE {
+		return Err(AuthenticationError::PasskeyError(format!(
+			"Invalid client data type: expected '{}', got '{}'",
+			EXPECTED_PASSKEY_TYPE,
+			client_data.type_.as_str()
+		)));
+	}
+
+	// Verify challenge
+	let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
+	challenge_storage
+		.verify_and_consume_challenge(&client_data.challenge, &omni_account)
+		.map_err(|e| {
+			use oe_storage::PasskeyChallengeError;
+			match e {
+				PasskeyChallengeError::ChallengeNotFound => {
+					AuthenticationError::PasskeyError("Challenge not found".to_string())
+				},
+				PasskeyChallengeError::ChallengeExpired => {
+					AuthenticationError::PasskeyError("Challenge expired".to_string())
+				},
+				PasskeyChallengeError::InvalidChallenge => {
+					AuthenticationError::PasskeyError("Invalid challenge".to_string())
+				},
+				_ => AuthenticationError::PasskeyError("Challenge verification failed".to_string()),
+			}
+		})?;
+
+	// Look up the stored passkey record using omni_account + credential_id
+	let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
+	let passkey_record = passkey_storage
+		.get_passkey(&omni_account, &passkey_data.credential_id)
+		.map_err(|_| AuthenticationError::PasskeyError("Storage error".to_string()))?
+		.ok_or_else(|| {
+			AuthenticationError::PasskeyError(
+				"Passkey not found for this account and credential".to_string(),
+			)
+		})?;
+	let public_key = PasskeyVerifier::from_sec1_bytes(&passkey_record.pubkey).map_err(|e| {
+		AuthenticationError::PasskeyError(format!("Invalid stored public key: {}", e))
+	})?;
+
+	// Parse auth_data bytes for validation
+	// auth_data is base64url-encoded as per WebAuthn spec
+	let auth_data_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+		.decode(&passkey_data.auth_data)
+		.map_err(|_| {
+			AuthenticationError::PasskeyError("Invalid auth data base64 format".to_string())
+		})?;
+
+	if auth_data_bytes.len() < 37 {
+		return Err(AuthenticationError::PasskeyError("Auth data too short".to_string()));
+	}
+
+	// CRITICAL SECURITY CHECK: Verify RP ID hash
+	// The first 32 bytes of auth data must be SHA-256(RP ID) to prevent phishing attacks
+	// This ensures the authenticator signed for the correct domain
+	let expected_rp_id = ctx.config_loader.get_passkey_config(&passkey_data.client_id).rp_id;
+	PasskeyVerifier::verify_rp_id_hash(&auth_data_bytes, &expected_rp_id).map_err(|e| {
+		AuthenticationError::PasskeyError(format!(
+			"RP ID validation failed: {}. Expected RP ID: '{}' for client_id: '{}'",
+			e, expected_rp_id, passkey_data.client_id
+		))
+	})?;
+
+	// Check flags (UP bit must be set, UV bit for security)
+	let flags = auth_data_bytes[32];
+	let up_flag = (flags & 0x01) != 0;
+	let uv_flag = (flags & 0x04) != 0;
+
+	if !up_flag {
+		return Err(AuthenticationError::PasskeyError("User presence flag not set".to_string()));
+	}
+
+	if !uv_flag {
+		return Err(AuthenticationError::PasskeyError(
+			"User verification flag not set".to_string(),
+		));
+	}
+
+	// Verify the passkey signature (pure cryptographic verification)
+	let is_valid = PasskeyVerifier::verify_passkey_signature_only(
+		&passkey_data.auth_data,
+		&passkey_data.client_data_json,
+		&passkey_data.signature,
+		&public_key,
+	)
+	.map_err(|e| {
+		AuthenticationError::PasskeyError(format!("Passkey signature verification failed: {}", e))
+	})?;
+
+	if !is_valid {
+		return Err(AuthenticationError::Web3InvalidSignature);
+	}
+
+	// Update the last_used timestamp for this passkey
+	passkey_storage
+		.update_last_used(&omni_account, &passkey_data.credential_id)
+		.map_err(|_| {
+			// Log the error but don't fail authentication if timestamp update fails
+			tracing::warn!("Failed to update last_used timestamp for passkey");
+		})
+		.ok();
+
+	Ok(())
 }
 
 #[cfg(test)]
@@ -174,11 +444,9 @@ mod tests {
 	use super::*;
 	use alloy_signer::SignerSync;
 	use alloy_signer_local::PrivateKeySigner;
-	use executor_crypto::{ed25519, sr25519, PairTrait};
-	use executor_primitives::{
-		signature::EthereumSignature, utils::hex::ToHexPrefixed, Hashable, Identity,
-	};
-	use heima_identity_verification::helpers::generate_otp;
+	use oe_core::verify::helpers::generate_otp;
+	use oe_crypto::{ed25519, sr25519, PairTrait};
+	use oe_primitives::{signature::EthereumSignature, utils::hex::hex_encode, Hashable, Identity};
 	use tempfile::tempdir;
 
 	#[test]
@@ -200,7 +468,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -234,7 +502,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: solana_omni_account.to_hex(),
+			omni_account: hex_encode(solana_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -267,7 +535,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: evm_omni_account.to_hex(),
+			omni_account: hex_encode(evm_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -303,7 +571,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -333,7 +601,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code,
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 
@@ -367,7 +635,7 @@ mod tests {
 
 		let message = HeimaMessagePayload {
 			message_code: "invalid_code".to_string(), // Use an invalid code
-			omni_account: alice_omni_account.to_hex(),
+			omni_account: hex_encode(alice_omni_account.as_ref()),
 			client_id: client_id.to_string(),
 		};
 

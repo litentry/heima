@@ -108,12 +108,13 @@ where
 				delegations: delegations_b,
 				prior: prior_b,
 			},
-		) =>
-			balance_a == balance_b &&
-				target_a == target_b &&
-				conviction_a == conviction_b &&
-				delegations_a == delegations_b &&
-				prior_a == prior_b,
+		) => {
+			balance_a == balance_b
+				&& target_a == target_b
+				&& conviction_a == conviction_b
+				&& delegations_a == delegations_b
+				&& prior_a == prior_b
+		},
 
 		_ => false,
 	}
@@ -179,8 +180,9 @@ where
 		.drain()
 		{
 			let new_ref_info = match ref_info {
-				ReferendumInfo::Finished { approved, end } =>
-					ReferendumInfo::Finished { approved, end },
+				ReferendumInfo::Finished { approved, end } => {
+					ReferendumInfo::Finished { approved, end }
+				},
 				ReferendumInfo::Ongoing(ref_status) => ReferendumInfo::Ongoing(ReferendumStatus {
 					end: ref_status.end,
 					proposal: ref_status.proposal,
@@ -320,9 +322,10 @@ where
 		let result: Vec<_> = <ReferendumInfoOf<T>>::iter()
 			.map(|(ref_index, ref_info)| {
 				let new_ref_info = match ref_info {
-					ReferendumInfo::Finished { approved, end } =>
-						ReferendumInfo::Finished { approved, end },
-					ReferendumInfo::Ongoing(ref_status) =>
+					ReferendumInfo::Finished { approved, end } => {
+						ReferendumInfo::Finished { approved, end }
+					},
+					ReferendumInfo::Ongoing(ref_status) => {
 						ReferendumInfo::Ongoing(ReferendumStatus {
 							end: ref_status.end,
 							proposal: ref_status.proposal,
@@ -342,7 +345,8 @@ where
 									.turnout
 									.saturating_mul(DECIMAL_CONVERTOR.into()),
 							},
-						}),
+						})
+					},
 				};
 
 				(ref_index, new_ref_info)
@@ -406,12 +410,13 @@ where
 										aye: aye.saturating_mul(DECIMAL_CONVERTOR.into()),
 										nay: nay.saturating_mul(DECIMAL_CONVERTOR.into()),
 									},
-									AccountVote::Standard { vote, balance } =>
+									AccountVote::Standard { vote, balance } => {
 										AccountVote::Standard {
 											vote,
 											balance: balance
 												.saturating_mul(DECIMAL_CONVERTOR.into()),
-										},
+										}
+									},
 								};
 								(id, new_vote)
 							})

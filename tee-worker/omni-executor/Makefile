@@ -3,6 +3,7 @@
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX ?= 1
+TEST_BUILD ?= 0
 
 BIN_NAME = omni-executor
 COMPILATION_FEATURES =
@@ -17,10 +18,14 @@ COMPILATION_FEATURES := $(COMPILATION_FEATURES),gramine-quote
 all: $(BIN_NAME).manifest.sgx $(BIN_NAME).sig
 endif
 
+ifeq ($(TEST_BUILD), 1)
+COMPILATION_FEATURES := $(COMPILATION_FEATURES),test-endpoints
+endif
+
 .PHONY: $(BIN_NAME)
 $(BIN_NAME):
 	cargo build --release --locked --features=$(COMPILATION_FEATURES)
-	cp target/release/executor-worker $(BIN_NAME)
+	cp target/release/omni-executor $(BIN_NAME)
 
 
 ifeq ($(DEBUG),1)
@@ -72,7 +77,7 @@ clean-data:
 
 .PHONY: build-docker
 build-docker:
-	docker build --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+	docker build --target omni-executor -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
 
 .PHONY: start-local
 start-local:
@@ -89,7 +94,12 @@ stop-local:
 
 .PHONY: build-docker-test
 build-docker-test:
-	docker build --build-arg CARGO_FEATURES="mock-server" --target executor-worker -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+	docker build --build-arg CARGO_FEATURES="mock-server,test-endpoints" --target omni-executor -t litentry/$(BIN_NAME):latest -f $(OMNI_DIR)/Dockerfile $(ROOTDIR)
+
+.PHONY: rebuild-docker-dev
+rebuild-docker-dev:
+	cargo build --release --features mock-server
+	cd docker/ && docker compose build --no-cache omni-executor
 
 .PHONY: start-test
 start-test:
@@ -106,3 +116,12 @@ get-metadata:
 .PHONY: generate-api-interface
 generate-api-interface: get-metadata
 	subxt codegen --file parentchain/api-interface/artifacts/metadata.scale | rustfmt > parentchain/api-interface/src/interface.rs
+
+.PHONY: fmt-solidity
+fmt-solidity:
+	@if ! command -v forge > /dev/null 2>&1; then \
+		echo "Forge not found. Please install Foundry using:"; \
+		echo "curl -L https://foundry.paradigm.xyz | bash"; \
+		exit 1; \
+	fi
+	@cd aa-contracts && forge fmt

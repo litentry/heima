@@ -54,8 +54,6 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 
 // for TEE
 pub use pallet_balances::Call as BalancesCall;
-// for CollabAI
-use pallet_collab_ai_common::EnsureSignedAndVerifiedCurator;
 
 use parachains_common::message_queue::NarrowOriginToSibling;
 use sp_api::impl_runtime_apis;
@@ -66,8 +64,8 @@ pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	generic, impl_opaque_keys,
 	traits::{
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto,
-		DispatchInfoOf, Dispatchable, PostDispatchInfoOf, UniqueSaturatedInto,
+		AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto, DispatchInfoOf, Dispatchable,
+		PostDispatchInfoOf, UniqueSaturatedInto,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
 	ApplyExtrinsicResult,
@@ -158,6 +156,8 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 pub type Migrations = (
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
+	// p9251: Remove old bridge storage after switching to omni-bridge
+	migration::p9251::RemoveOldBridgeStorage<Runtime>,
 );
 
 /// Executive: handles dispatch to the various modules.
@@ -248,7 +248,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9250,
+	spec_version: 9260,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -1244,87 +1244,6 @@ impl pallet_vc_management::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MinimumCuratorDeposit: Balance = 100 * DOLLARS;
-	pub const MinimumGuardianDeposit: Balance = 20 * DOLLARS;
-	// Declare the official AIUSDAssetId
-	pub const AIUSDAssetId: u128 = 1000;
-	pub OfficialGapPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 10 * MINUTES, "ROCOCO_OFFICIALGAPPERIOD");
-	pub MinimumProposalLastTime: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_MINIMUMPROPOSALLASTTIME");
-	pub const MinimumPoolDeposit: Balance = 1000 * DOLLARS;
-	pub const MaximumPoolProposed: u32 = 10000;
-	pub const MaximumInvestingPerProposal: u32 = 100000;
-	pub StandardEpoch: BlockNumber = prod_or_fast!(30 * DAYS, 10 * MINUTES, "ROCOCO_STANDARDEPOCH");
-	pub const MaxGuardianPerProposal: u32 = 1000;
-	pub const MaxGuardianSelectedPerProposal: u32 = 3;
-
-	pub const PoolProposalPalletId: PalletId = PalletId(*b"cbai/ipp");
-	pub PreInvestingPool: AccountId = PoolProposalPalletId::get().into_account_truncating();
-}
-
-impl pallet_curator::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type MinimumCuratorDeposit = MinimumCuratorDeposit;
-	type CuratorJudgeOrigin = EnsureRootOrHalfCouncil;
-}
-
-impl pallet_guardian::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type MinimumGuardianDeposit = MinimumGuardianDeposit;
-	type GuardianJudgeOrigin =
-		pallet_collective::EnsureMember<AccountId, CouncilMembershipInstance>;
-}
-
-impl pallet_pool_proposal::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type Fungibles = Assets;
-	type AIUSDAssetId = AIUSDAssetId;
-	type OfficialGapPeriod = OfficialGapPeriod;
-	type MinimumProposalLastTime = MinimumProposalLastTime;
-	type MinimumPoolDeposit = MinimumPoolDeposit;
-	type MaximumPoolProposed = MaximumPoolProposed;
-	type MaximumInvestingPerProposal = MaximumInvestingPerProposal;
-	type StandardEpoch = StandardEpoch;
-	type ProposalOrigin = EnsureSignedAndVerifiedCurator<AccountId, Curator>;
-	type PublicVotingOrigin = EnsureRootOrAllCouncil;
-	type GuardianVoteResource = Guardian;
-	type MaxGuardianPerProposal = MaxGuardianPerProposal;
-	type MaxGuardianSelectedPerProposal = MaxGuardianSelectedPerProposal;
-	type PreInvestingPool = PreInvestingPool;
-	type InvestmentInjector = InvestingPool;
-}
-
-parameter_types! {
-	pub const StableTokenBeneficiaryId: PalletId = PalletId(*b"cbai/sid");
-	pub const CANBeneficiaryId: PalletId = PalletId(*b"cbai/nid");
-}
-
-impl pallet_investing_pool::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type PoolProposalPalletOrigin = EnsureRoot<AccountId>;
-	// Equal to Proposal's admin is judged inside pallet
-	type RewardUpdateOrigin = EnsureSignedAndVerifiedCurator<AccountId, Curator>;
-	type InvestingPoolAdminOrigin = EnsureRoot<AccountId>;
-	type Fungibles = Assets;
-	type StableTokenBeneficiaryId = StableTokenBeneficiaryId;
-	type CANBeneficiaryId = CANBeneficiaryId;
-}
-
-parameter_types! {
-	pub const AIUSDConvertorPalletId: PalletId = PalletId(*b"cbai/scv");
-	pub ConvertingPool: AccountId = AIUSDConvertorPalletId::get().into_account_truncating();
-}
-
-impl pallet_aiusd_convertor::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type ConvertingPool = ConvertingPool;
-	type AIUSDAssetId = AIUSDAssetId;
-	type ManagerOrigin = EnsureRoot<AccountId>;
-}
-
-parameter_types! {
 	pub const DefaultYearlyInflation: Perbill = Perbill::from_perthousand(5);
 }
 
@@ -1435,13 +1354,6 @@ construct_runtime! {
 		EVM: pallet_evm = 120,
 		Ethereum: pallet_ethereum = 121,
 
-		// CollabAI
-		Curator: pallet_curator = 150,
-		Guardian: pallet_guardian = 151,
-		PoolProposal: pallet_pool_proposal = 152,
-		InvestingPool: pallet_investing_pool = 153,
-		AIUSDConvertor: pallet_aiusd_convertor = 154,
-
 		// OpenGov
 		ConvictionVoting: pallet_conviction_voting = 170,
 		Referenda: pallet_referenda = 171,
@@ -1545,13 +1457,7 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 			RuntimeCall::EvmAssertions(_) |
 			RuntimeCall::ScoreStaking(_) |
 			RuntimeCall::OmniAccount(_) |
-			RuntimeCall::OmniBridge(_) |
-			// CollabAI
-			RuntimeCall::Curator(_) |
-			RuntimeCall::Guardian(_) |
-			RuntimeCall::PoolProposal(_) |
-			RuntimeCall::InvestingPool(_) |
-			RuntimeCall::AIUSDConvertor(_)
+			RuntimeCall::OmniBridge(_)
 		)
 	}
 }
@@ -1989,179 +1895,6 @@ impl_runtime_apis! {
 			UncheckedExtrinsic::new_bare(
 				pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
 			)
-		}
-	}
-
-	impl moonbeam_rpc_primitives_debug::DebugRuntimeApi<Block> for Runtime {
-		fn trace_transaction(
-			extrinsics: Vec<<Block as BlockT>::Extrinsic>,
-			traced_transaction: &pallet_ethereum::Transaction,
-			header: &<Block as BlockT>::Header,
-		) -> Result<
-			(),
-			sp_runtime::DispatchError,
-		> {
-			use moonbeam_evm_tracer::tracer::EvmTracer;
-
-			// We need to follow the order when replaying the transactions.
-			// Block initialize happens first then apply_extrinsic.
-			Executive::initialize_block(header);
-
-			// Apply the a subset of extrinsics: all the substrate-specific or ethereum
-			// transactions that preceded the requested transaction.
-			for ext in extrinsics.into_iter() {
-				let _ = match &ext.0.function {
-					RuntimeCall::Ethereum(pallet_ethereum::Call::transact { transaction }) => {
-						if transaction == traced_transaction {
-							EvmTracer::new().trace(|| Executive::apply_extrinsic(ext));
-							return Ok(());
-						} else {
-							Executive::apply_extrinsic(ext)
-						}
-					}
-					_ => Executive::apply_extrinsic(ext),
-				};
-			}
-			Err(sp_runtime::DispatchError::Other(
-				"Failed to find Ethereum transaction among the extrinsics.",
-			))
-		}
-
-		fn trace_block(
-			extrinsics: Vec<<Block as BlockT>::Extrinsic>,
-			known_transactions: Vec<H256>,
-			header: &<Block as BlockT>::Header,
-		) -> Result<
-			(),
-			sp_runtime::DispatchError,
-		> {
-			use moonbeam_evm_tracer::tracer::EvmTracer;
-
-			// We need to follow the order when replaying the transactions.
-			// Block initialize happens first then apply_extrinsic.
-			Executive::initialize_block(header);
-
-			// Apply all extrinsics. Ethereum extrinsics are traced.
-			for ext in extrinsics.into_iter() {
-				match &ext.0.function {
-					RuntimeCall::Ethereum(pallet_ethereum::Call::transact { transaction }) => {
-						if known_transactions.contains(&transaction.hash()) {
-							// Each known extrinsic is a new call stack.
-							EvmTracer::emit_new();
-							EvmTracer::new().trace(|| Executive::apply_extrinsic(ext));
-						} else {
-							let _ = Executive::apply_extrinsic(ext);
-						}
-					}
-					_ => {
-						let _ = Executive::apply_extrinsic(ext);
-					}
-				};
-			}
-
-			Ok(())
-		}
-
-		fn trace_call(
-			header: &<Block as BlockT>::Header,
-			from: H160,
-			to: H160,
-			data: Vec<u8>,
-			value: U256,
-			gas_limit: U256,
-			max_fee_per_gas: Option<U256>,
-			max_priority_fee_per_gas: Option<U256>,
-			nonce: Option<U256>,
-			access_list: Option<Vec<(H160, Vec<H256>)>>,
-		) -> Result<(), sp_runtime::DispatchError> {
-			use moonbeam_evm_tracer::tracer::EvmTracer;
-
-			// Initialize block: calls the "on_initialize" hook on every pallet
-			// in AllPalletsWithSystem.
-			Executive::initialize_block(header);
-
-			EvmTracer::new().trace(|| {
-				let is_transactional = false;
-				let validate = true;
-				let without_base_extrinsic_weight = true;
-
-
-				// Estimated encoded transaction size must be based on the heaviest transaction
-				// type (EIP1559Transaction) to be compatible with all transaction types.
-				let mut estimated_transaction_len = data.len() +
-				// pallet ethereum index: 1
-				// transact call index: 1
-				// Transaction enum variant: 1
-				// chain_id 8 bytes
-				// nonce: 32
-				// max_priority_fee_per_gas: 32
-				// max_fee_per_gas: 32
-				// gas_limit: 32
-				// action: 21 (enum varianrt + call address)
-				// value: 32
-				// access_list: 1 (empty vec size)
-				// 65 bytes signature
-				258;
-
-				if access_list.is_some() {
-					estimated_transaction_len += access_list.encoded_size();
-				}
-
-				let gas_limit = gas_limit.min(u64::MAX.into()).low_u64();
-
-				let (weight_limit, proof_size_base_cost) =
-					match <Runtime as pallet_evm::Config>::GasWeightMapping::gas_to_weight(
-						gas_limit,
-						without_base_extrinsic_weight
-					) {
-						weight_limit if weight_limit.proof_size() > 0 => {
-							(Some(weight_limit), Some(estimated_transaction_len as u64))
-						}
-						_ => (None, None),
-					};
-
-				let _ = <Runtime as pallet_evm::Config>::Runner::call(
-					from,
-					to,
-					data,
-					value,
-					gas_limit,
-					max_fee_per_gas,
-					max_priority_fee_per_gas,
-					nonce,
-					access_list.unwrap_or_default(),
-					is_transactional,
-					validate,
-					weight_limit,
-					proof_size_base_cost,
-					<Runtime as pallet_evm::Config>::config(),
-				);
-			});
-			Ok(())
-		}
-	}
-
-	impl moonbeam_rpc_primitives_txpool::TxPoolRuntimeApi<Block> for Runtime {
-		fn extrinsic_filter(
-			xts_ready: Vec<<Block as BlockT>::Extrinsic>,
-			xts_future: Vec<<Block as BlockT>::Extrinsic>,
-		) -> moonbeam_rpc_primitives_txpool::TxPoolResponse {
-			moonbeam_rpc_primitives_txpool::TxPoolResponse {
-				ready: xts_ready
-					.into_iter()
-					.filter_map(|xt| match xt.0.function {
-						RuntimeCall::Ethereum(pallet_ethereum::Call::transact { transaction }) => Some(transaction),
-						_ => None,
-					})
-					.collect(),
-				future: xts_future
-					.into_iter()
-					.filter_map(|xt| match xt.0.function {
-						RuntimeCall::Ethereum(pallet_ethereum::Call::transact { transaction }) => Some(transaction),
-						_ => None,
-					})
-					.collect(),
-			}
 		}
 	}
 

@@ -6,10 +6,14 @@ import {
     GetWeb3SignInMessageParams,
     GetNextIntentIdParams,
     ExportWalletParams,
+    SubmitUserOpParams,
+    SubmitUserOpTestParams,
+    GetSmartWalletRootSignerParams,
     TransferWithdrawParams,
     SubmitSwapOrderParams,
     SignLimitOrderParams,
     NotifyLimitOrderResultParams,
+    GetHyperliquidSignatureDataParams,
 } from './request-types';
 import {
     RequestEmailVerificationCodeResponse,
@@ -19,10 +23,14 @@ import {
     GetNextIntentIdResponse,
     ExportWalletResponse,
     AddWalletResponse,
+    SubmitUserOpResponse,
+    SubmitUserOpTestResponse,
+    GetSmartWalletRootSignerResponse,
     TransferWithdrawResponse,
     SubmitSwapOrderResponse,
     SignLimitOrderResponse,
     NotifyLimitOrderResultResponse,
+    GetHyperliquidSignatureDataResponse,
 } from './response-types';
 
 export class OmniApi {
@@ -61,7 +69,9 @@ export class OmniApi {
     }
 
     async getWeb3SignInMessage(params: GetWeb3SignInMessageParams): Promise<GetWeb3SignInMessageResponse> {
-        const response = await this.client.call(JsonRpcMethods.OmniGetWeb3SignInMessage, params);
+        // Pass parameters as array for positional arguments (matching aa-demo-app)
+        const positionParams = [params.client_id, params.omni_account];
+        const response = await this.client.call(JsonRpcMethods.OmniGetWeb3SignInMessage, positionParams);
 
         return response;
     }
@@ -84,12 +94,6 @@ export class OmniApi {
         return response;
     }
 
-    async transferWithdraw(params: TransferWithdrawParams, token: string): Promise<TransferWithdrawResponse> {
-        const response = await this.client.call(JsonRpcMethods.OmniTransferWithdraw, params, token);
-
-        return response;
-    }
-
     async submitSwapOrder(params: SubmitSwapOrderParams, token: string): Promise<SubmitSwapOrderResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniSubmitSwapOrder, params, token);
 
@@ -107,6 +111,44 @@ export class OmniApi {
         token: string
     ): Promise<NotifyLimitOrderResultResponse> {
         const response = await this.client.call(JsonRpcMethods.OmniNotifyLimitOrderResult, params, token);
+
+        return response;
+    }
+    async submitUserOp(params: SubmitUserOpParams, token: string): Promise<SubmitUserOpResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSubmitUserOp, params, token);
+
+        return response;
+    }
+
+    async transferWithdraw(params: TransferWithdrawParams, token: string): Promise<TransferWithdrawResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniTransferWithdraw, params, token);
+
+        return response;
+    }
+
+    async getSmartWalletRootSigner(
+        omniAccount: string,
+        chainType: string = 'evm',
+        walletIndex: number = 0
+    ): Promise<GetSmartWalletRootSignerResponse> {
+        const params = {
+            omni_account: omniAccount,
+            chain_type: chainType,
+            wallet_index: walletIndex,
+        };
+        
+        const response = await this.client.call(JsonRpcMethods.OmniGetSmartWalletRootSigner, params);
+        return response;
+    }
+
+    async submitUserOpTest(params: SubmitUserOpTestParams): Promise<SubmitUserOpTestResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniSubmitUserOpTest, params);
+
+        return response;
+    }
+
+    async getHyperliquidSignatureData(params: GetHyperliquidSignatureDataParams, token?: string): Promise<GetHyperliquidSignatureDataResponse> {
+        const response = await this.client.call(JsonRpcMethods.OmniGetHyperliquidSignatureData, params, token);
 
         return response;
     }

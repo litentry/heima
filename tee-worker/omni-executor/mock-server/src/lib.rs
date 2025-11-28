@@ -1,7 +1,7 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
-use std::thread;
+use std::{net::Ipv4Addr, thread};
 use tokio::{
 	runtime::Builder,
 	select,
@@ -17,6 +17,7 @@ mod evm;
 mod pumpx;
 mod sendgrid;
 mod solana;
+mod wildmeta;
 
 // It should only works on UNIX.
 async fn shutdown_signal() {
@@ -50,18 +51,25 @@ pub fn run_with_shutdown_control(
 		let runtime = Builder::new_current_thread().enable_all().build().unwrap();
 		LocalSet::new().block_on(&runtime, async {
 			println!("Waiting for server to come up...");
-			let (addr, srv) = warp::serve(
+			let listener = tokio::net::TcpListener::bind((Ipv4Addr::UNSPECIFIED, port))
+				.await
+				.expect("failed to bind to address");
+			let addr = listener.local_addr().expect("failed to get local address");
+			let srv = warp::serve(
 				binance::handle()
 					.or(evm::handle())
 					.or(pumpx::handle())
 					.or(sendgrid::handle())
 					.or(solana::handle())
+					.or(wildmeta::handle())
 					.boxed(),
 			)
-			.bind_with_graceful_shutdown(([0, 0, 0, 0], port), async {
+			.incoming(listener)
+			.graceful(async {
 				shutdown_signal().await;
 				let _ = shutdown_in.send(());
-			});
+			})
+			.run();
 			tracing::info!("mock-server listen on addr:{:?}", addr);
 			let _ = result_in.send(format!("http://{:?}", addr));
 

@@ -22,11 +22,14 @@ Gramine is required for running inside TEE, please refer to [installation option
 2. Build omni-executor docker image:
 
    ```bash
-   # for local
+   # for local (production build - excludes test endpoints)
    make build-docker
-   # for integration test
+   # for integration test (includes test endpoints)
    make build-docker-test
    ```
+
+   **Note:** The `test-endpoints` feature flag controls test-only RPC methods like `omni_submitUserOpTest`. 
+   Production builds exclude these by default. Use `cargo build --release --features test-endpoints` to include them.
 
 3. Start omni-executor:
    ```bash

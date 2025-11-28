@@ -12,7 +12,6 @@
 
 - [ConnectionState](enumerations/ConnectionState.md)
 - [OmniRpcMethod](enumerations/OmniRpcMethod.md)
-- [PumpxRpcMethod](enumerations/PumpxRpcMethod.md)
 
 ## Classes
 

@@ -1,0 +1,21 @@
+[package]
+name = "oe-storage"
+version = "0.1.0"
+authors = ['Trust Computing GmbH <info@litentry.com>']
+edition.workspace = true
+
+[dependencies]
+parity-scale-codec = { workspace = true, features = ["derive"] }
+rocksdb = "0.24.0"
+serde = { workspace = true }
+tracing = { workspace = true }
+
+# Local dependencies
+oe-crypto = { workspace = true }
+oe-primitives = { workspace = true }
+
+[dev-dependencies]
+tracing-subscriber = { workspace = true }
+
+[lints]
+workspace = true

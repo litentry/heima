@@ -1,11 +1,11 @@
 use alloy::primitives::U256;
 use async_trait::async_trait;
 use base58::ToBase58;
-use ethereum_rpc::client::EthereumClient;
-use ethereum_rpc::signer::RemoteSigner as RemoteEvmSigner;
-use executor_primitives::{ChainAsset, EthereumToken, SolanaToken};
-use solana::signer::RemoteSigner as RemoteSolanaSigner;
-use solana::SolanaClient as SolanaClientTrait;
+use oe_client_ethereum::client::EthereumClient;
+use oe_client_ethereum::signer::RemoteSigner as RemoteEvmSigner;
+use oe_client_solana::signer::RemoteSigner as RemoteSolanaSigner;
+use oe_client_solana::SolanaClient as SolanaClientTrait;
+use oe_primitives::{ChainAsset, EthereumToken, SolanaToken};
 use std::{collections::HashMap, sync::Arc};
 
 use rust_decimal::Decimal;
@@ -141,7 +141,7 @@ pub trait FromChainAsset {
 impl FromChainAsset for BinanceAsset {
 	fn from_chain_asset(asset: &ChainAsset) -> Result<BinanceAsset, ()> {
 		match asset {
-			ChainAsset::Ethereum(pumpx::constants::BSC_CHAIN_ID, token) => {
+			ChainAsset::Ethereum(oe_client_pumpx::constants::BSC_CHAIN_ID, token) => {
 				let (coin, address) = match token {
 					EthereumToken::Native => (BinanceCoin::Bnb, String::new()),
 					EthereumToken::ERC20(address) => {

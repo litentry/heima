@@ -14,9 +14,7 @@ parachain_src: &parachain_src
 parachain_test: &parachain_test
   - "parachain/ts-tests/**"
   - "parachain/docker/**"
-  - "parachain/scripts/build-bridge.sh"
   - "parachain/scripts/launch-network.sh"
-  - "parachain/scripts/launch-bridge.sh"
 
 coverage_src: &coverage_src
   - *parachain_src
@@ -49,5 +47,5 @@ omni_executor_test: &omni_executor_test
   - "tee-worker/omni-executor/ts-tests/**"
 
 contract_src:
-  - "tee-worker/omni-executor/accounting-contract/**"
-  - "tee-worker/omni-executor/aa-contracts/**"
+  - "tee-worker/omni-executor/contracts/accounting/**"
+  - "tee-worker/omni-executor/contracts/aa/**"

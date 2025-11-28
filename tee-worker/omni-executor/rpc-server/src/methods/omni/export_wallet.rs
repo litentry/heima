@@ -1,21 +1,20 @@
 use crate::{
-	error_code::*,
-	methods::omni::{common::check_auth, PumpxRpcError},
-	server::RpcContext,
-	Deserialize, ErrorCode,
+	detailed_error::DetailedError, server::RpcContext, utils::omni::extract_omni_account,
+	utils::types::RpcResultExt, utils::validation::parse_rpc_params, Deserialize,
 };
+use ::oe_client_pumpx::signer_client::PumpxChainId as _;
 use ethers::types::Bytes;
-use executor_core::native_task::*;
-use executor_crypto::aes256::{aes_encrypt_default, Aes256Key, SerdeAesOutput};
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
-use heima_primitives::Address32;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use oe_client_signer::ChainType;
+use oe_core::auth::constants::AUTH_TOKEN_ACCESS_TYPE;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::native_task::*;
+use oe_crypto::aes256::{aes_decrypt, aes_encrypt_default, Aes256Key, SerdeAesOutput};
+use oe_primitives::PumpxAccountProfile;
+use oe_storage::{HeimaJwtStorage, PumpxProfileStorage, Storage};
 use rsa::Oaep;
 use sha2::Sha256;
 use tracing::{debug, error};
-
-use super::common::handle_omni_native_task;
 
 #[derive(Debug, Deserialize)]
 pub struct ExportWalletParams {
@@ -26,83 +25,101 @@ pub struct ExportWalletParams {
 	pub wallet_address: String,
 }
 
-impl ExportWalletParams {
-	pub fn into_native_task_wrapper(
-		self,
-		client_id: String,
-		omni_account: AccountId,
-	) -> NativeTaskWrapper<NativeTask> {
-		NativeTaskWrapper::new(
-			NativeTask::PumpxExportWallet(
-				omni_account,
-				self.google_code,
-				self.chain_id,
-				self.wallet_index,
-				self.wallet_address,
-			),
-			None,
-			None,
-			client_id,
-		)
-	}
-}
-
-pub fn register_export_wallet(module: &mut RpcModule<RpcContext>) {
+pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_async_method("omni_exportWallet", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
-			})?;
+			debug!("Received omni_exportWallet, params: {:?}", params);
 
-			let params = params.parse::<ExportWalletParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
-			})?;
-
-			debug!("Received omni_exportWallet, chain_id: {}, wallet_index: {}, expected_wallet_address: {}", params.chain_id, params.wallet_index, params.wallet_address);
-
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			};
-			let omni_account = AccountId::from(address);
+			let params = parse_rpc_params::<ExportWalletParams>(params)?;
+			let omni_account = extract_omni_account(&ext)?;
 
 			let aes_key = ctx
 				.shielding_key
 				.private_key()
 				.decrypt(Oaep::new::<Sha256>(), &params.key)
-				.map_err(|e| {
-					error!("Failed to decrypt shielded value: {:?}", e);
-					PumpxRpcError::from_code_and_message(
-						DECRYPT_REQUEST_FAILED_CODE,
-						"Shielded value decryption failed".into(),
+				.map_err_internal("Failed to decrypt shielded value")?;
+
+			let aes_key: Aes256Key =
+				aes_key.try_into().map_err_internal("Failed to convert AesKey")?;
+
+			// Inlined handler logic from handle_pumpx_export_wallet
+			let storage = HeimaJwtStorage::new(ctx.storage_db.clone());
+			let Ok(Some(access_token)) =
+				storage.get(&(omni_account.clone(), AUTH_TOKEN_ACCESS_TYPE))
+			else {
+				error!("Failed to get {}_jwt_token", AUTH_TOKEN_ACCESS_TYPE);
+				return Err(DetailedError::storage_service_error("get access token").to_rpc_error());
+			};
+
+			// Inline verify_google_code logic
+			debug!("Calling pumpx verify_google_code, code: {}", params.google_code);
+			let verify_result =
+				ctx.pumpx_api.verify_google_code(&access_token, params.google_code, None).await;
+			let verify_success = verify_result.map_or_else(
+				|e| {
+					error!("Google code verification request failed: {:?}", e);
+					false
+				},
+				|res| {
+					res.data.result.map_or_else(
+						|| {
+							error!("Google code verification response result is none");
+							false
+						},
+						|success| success,
 					)
-				})?;
-			let aes_key: Aes256Key = aes_key.try_into().map_err(|_| {
-				error!("Failed to convert AesKey");
-				PumpxRpcError::from_code_and_message(
-					AES_KEY_CONVERT_FAILED_CODE,
-					"AesKey convert failed".into(),
+				},
+			);
+			if !verify_success {
+				let msg = "Failed to verify google code within ExportWallet";
+				error!(msg);
+				return Err(DetailedError::internal_error(msg).to_rpc_error());
+			}
+
+			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
+				error!("Failed to map pumpx chain_id {}", params.chain_id);
+				return Err(DetailedError::invalid_chain_id(params.chain_id.into()).to_rpc_error());
+			};
+
+			let mut wallet = ctx
+				.signer_client
+				.export_wallet(
+					chain,
+					params.wallet_index,
+					omni_account.clone().into(),
+					ctx.aes256_key.to_vec(),
+					params.wallet_address,
 				)
-			})?;
+				.await
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
 
-			let wrapper = params.into_native_task_wrapper(user.client_id, omni_account);
+			let decrypted_wallet = aes_decrypt(&ctx.aes256_key, &mut wallet)
+				.ok_or(DetailedError::internal_error("Failed to decrypt wallet").to_rpc_error())?;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxExportWallet(wallet) => {
-					let encrypted_wallet: SerdeAesOutput =
-						aes_encrypt_default(&aes_key, &wallet).into();
-					Ok(encrypted_wallet)
-				},
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
-			})
-			.await
+			let omni_account_profile_storage = PumpxProfileStorage::new(ctx.storage_db.clone());
+			if let Ok(maybe_profile) = omni_account_profile_storage.get(&omni_account) {
+				let profile = maybe_profile
+					.map(|mut p| {
+						p.wallet_exported = true;
+						p
+					})
+					.unwrap_or_else(|| PumpxAccountProfile { wallet_exported: true });
+				omni_account_profile_storage.insert(&omni_account, profile).map_err(|e| {
+					error!("Failed to update pumpx account profile: {:?}", e);
+					DetailedError::storage_service_error("insert account profile").to_rpc_error()
+				})?;
+			} else {
+				error!("Failed to get pumpx account profile");
+				return Err(
+					DetailedError::storage_service_error("get account profile").to_rpc_error()
+				);
+			}
+
+			let encrypted_wallet: SerdeAesOutput =
+				aes_encrypt_default(&aes_key, &decrypted_wallet).into();
+			Ok(encrypted_wallet)
 		})
 		.expect("Failed to register omni_exportWallet method");
 }

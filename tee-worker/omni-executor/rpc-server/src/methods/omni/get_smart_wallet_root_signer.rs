@@ -1,11 +1,13 @@
-use crate::{error_code::*, methods::omni::PumpxRpcError, server::RpcContext, ErrorCode};
-use executor_primitives::utils::hex::FromHexPrefixed;
-use heima_primitives::Address32;
-use jsonrpsee::RpcModule;
-use pumpx::pubkey_to_address;
+use crate::{
+	detailed_error::DetailedError, server::RpcContext, utils::omni::to_omni_account,
+	utils::types::RpcResultExt, utils::validation::parse_rpc_params,
+};
+use jsonrpsee::{types::ErrorObjectOwned, RpcModule};
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
+use oe_core::intent::executor::IntentExecutor;
 use serde::Deserialize;
-use signer_client::ChainType;
-use tracing::{debug, error};
+use tracing::debug;
 
 // used in rpc with backend only
 #[derive(Debug, Copy, Deserialize, Clone, PartialEq)]
@@ -33,44 +35,30 @@ pub struct GetSmartWalletRootSignerParams {
 	pub wallet_index: u32,
 }
 
-pub fn register_get_smart_wallet_root_signer(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_smart_wallet_root_signer<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_async_method("omni_getSmartWalletRootSigner", |params, ctx, _| async move {
-			let params = params.parse::<GetSmartWalletRootSignerParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
-			})?;
+			let params = parse_rpc_params::<GetSmartWalletRootSignerParams>(params)?;
 
 			debug!("Received omni_getSmartWalletRootSigner, params: {:?}", params);
 
-			let Ok(address) = Address32::from_hex(&params.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
-			};
+			let omni_account = to_omni_account(&params.omni_account)?;
 
-			let pubkey = ctx
+			let address = ctx
 				.signer_client
-				.request_wallet(
-					params.chain_type.into(),
-					params.wallet_index,
-					address.as_ref().to_owned(),
-				)
+				.request_wallet(params.chain_type.into(), params.wallet_index, omni_account.into())
 				.await
-				.map_err(|_| {
-					error!("Failed to request wallet from signer client");
-					PumpxRpcError::from_error_code(ErrorCode::ServerError(
-						PUMPX_SIGNER_REQUEST_WALLET_FAILED_CODE,
-					))
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())
+				.and_then(|pk| {
+					pubkey_to_address(params.chain_type.into(), &pk)
+						.map_err_internal("Failed to convert pubkey to address")
 				})?;
 
-			let address = pubkey_to_address(params.chain_type.into(), &pubkey).map_err(|_| {
-				error!("Failed to convert pubkey to address");
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					PUMPX_SIGNER_PUBKEY_TO_ADDRESS_FAILED_CODE,
-				))
-			})?;
-
-			Ok::<String, _>(address)
+			Ok::<String, ErrorObjectOwned>(address)
 		})
 		.expect("Failed to register omni_addWallet method");
 }

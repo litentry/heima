@@ -14,22 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::handle_omni_native_task;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
-use crate::methods::omni::common::check_auth;
-use crate::methods::omni::PumpxRpcError;
+use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
+use crate::utils::omni::extract_omni_account;
+use crate::utils::validation::parse_rpc_params;
 use ethers::types::Bytes;
-use executor_core::native_task::NativeTask;
-use executor_core::native_task::NativeTaskWrapper;
-use executor_core::native_task::PumpxChainId;
-use executor_core::native_task::PumxWalletIndex;
-use executor_primitives::{utils::hex::FromHexPrefixed, AccountId};
-use heima_primitives::Address32;
 use heima_primitives::IntentId;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
+use oe_client_pumpx::signer_client::PumpxChainId as _;
+use oe_client_signer::ChainType;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::native_task::{PumpxChainId, PumxWalletIndex};
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::{debug, error};
@@ -51,53 +46,44 @@ pub struct SignLimitOrderResponse {
 	pub signed_tx: Vec<Bytes>,
 }
 
-pub fn register_sign_limit_order_params(module: &mut RpcModule<RpcContext>) {
+pub fn register_sign_limit_order_params<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_async_method("omni_signLimitOrder", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
-			})?;
-
-			let params = params.parse::<SignLimitOrderParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
-			})?;
-
 			debug!("Received omni_signLimitOrder, params: {:?}", params);
 
-			let Ok(address) = Address32::from_hex(&user.omni_account) else {
-				error!("Failed to parse from omni account token");
-				return Err(PumpxRpcError::from_error_code(ErrorCode::InternalError));
+			let params = parse_rpc_params::<SignLimitOrderParams>(params)?;
+
+			let omni_account = extract_omni_account(&ext)?;
+
+			// Inline handle_pumpx_sign_limit_order logic
+			let Some(chain) = ChainType::from_pumpx_chain_id(params.chain_id) else {
+				error!("Failed to map pumpx chain_id {}", params.chain_id);
+				return Err(DetailedError::invalid_chain_id(params.chain_id.into()).to_rpc_error());
 			};
 
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::PumpxSignLimitOrder(
-					AccountId::from(address),
-					params.chain_id,
+			let unsigned_tx_vec: Vec<Vec<u8>> =
+				params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect();
+			let signed_txs = ctx
+				.signer_client
+				.request_signatures(
+					chain,
 					params.wallet_index,
-					params.unsigned_tx.iter().map(|tx| tx.to_vec()).collect(),
-				),
-				None,
-				None,
-				user.client_id,
-			);
+					omni_account.into(),
+					unsigned_tx_vec,
+				)
+				.await
+				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::PumpxSignLimitOrder(signed_txs) => Ok(SignLimitOrderResponse {
-					intent_id: params.intent_id,
-					order_id: params.order_id,
-					chain_id: params.chain_id,
-					signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
-				}),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
-				},
+			Ok(SignLimitOrderResponse {
+				intent_id: params.intent_id,
+				order_id: params.order_id,
+				chain_id: params.chain_id,
+				signed_tx: signed_txs.into_iter().map(Bytes::from).collect(),
 			})
-			.await
 		})
 		.expect("Failed to register omni_signLimitOrder method");
 }

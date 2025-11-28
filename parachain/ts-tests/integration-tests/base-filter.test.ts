@@ -1,11 +1,10 @@
-import { expect } from 'chai';
-import { step } from 'mocha-steps';
-import { signAndSend, describeLitentry } from '../common/utils';
+import { expect, test } from 'vitest';
+import { signAndSend, describeLitentry } from '../common/utils/index.js';
 
 describeLitentry('Test Base Filter', ``, (context) => {
     console.log(`Test Base Filter`);
 
-    step('Transfer 1000 unit from Eve to Bob', async function () {
+    test('Transfer 1000 unit from Eve to Bob', async () => {
         // Get the initial balance of Eve and Bob
         const { nonce: eveInitNonce, data: eveInitBalance } = await context.api.query.system.account(
             context.eve.address
@@ -24,12 +23,12 @@ describeLitentry('Test Base Filter', ``, (context) => {
             context.bob.address
         );
 
-        expect(eveCurrentNonce.toNumber()).to.equal(eveInitNonce.toNumber() + 1);
+        expect(eveCurrentNonce.toNumber()).toBe(eveInitNonce.toNumber() + 1);
         // the balance transfer should work for rococo and litentry
-        expect(bobCurrentBalance.free.toBigInt()).to.equal(bobInitBalance.free.toBigInt() + BigInt(1000));
+        expect(bobCurrentBalance.free.toBigInt()).toBe(bobInitBalance.free.toBigInt() + BigInt(1000));
     });
 
-    step('Transfer 1000 unit from Eve to Bob with Sudo', async function () {
+    test('Transfer 1000 unit from Eve to Bob with Sudo', async () => {
         // only work for rococo
         const parachain = (await context.api.rpc.system.chain()).toString().toLowerCase();
         if (parachain !== 'rococo-dev') {
@@ -58,7 +57,7 @@ describeLitentry('Test Base Filter', ``, (context) => {
         );
 
         // The transfer should always succeed
-        expect(aliceCurrentNonce.toNumber()).to.equal(aliceInitNonce.toNumber() + 1);
-        expect(bobCurrentBalance.free.toBigInt()).to.equal(bobInitBalance.free.toBigInt() + BigInt(1000));
+        expect(aliceCurrentNonce.toNumber()).toBe(aliceInitNonce.toNumber() + 1);
+        expect(bobCurrentBalance.free.toBigInt()).toBe(bobInitBalance.free.toBigInt() + BigInt(1000));
     });
 });

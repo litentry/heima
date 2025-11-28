@@ -14,29 +14,61 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::common::handle_omni_native_task;
-use crate::error_code::AUTH_VERIFICATION_FAILED_CODE;
-use crate::methods::omni::common::check_auth;
-use crate::methods::omni::PumpxRpcError;
+use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
-use crate::ErrorCode;
-use alloy::primitives::Address;
-use executor_core::native_task::{NativeTask, NativeTaskWrapper};
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::{AccountId, ChainId};
+use crate::utils::gas_estimation::estimate_user_op_gas;
+use crate::utils::omni::to_omni_account;
+use crate::utils::user_op::convert_to_packed_user_op;
+use crate::utils::validation::{parse_rpc_params, validate_evm_address};
+use alloy::primitives::utils::format_units;
 use jsonrpsee::RpcModule;
-use native_task_handler::NativeTaskOk;
-use parity_scale_codec::Decode;
+use oe_core::intent::executor::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
-const OMNI_ACCOUNT_BYTES_LENGTH: usize = 32;
+/// Format a token amount with decimals to a human-readable string
+fn format_token_amount(amount: u128, decimals: u8) -> String {
+	match format_units(amount, decimals) {
+		Ok(mut value) => {
+			if value.contains('.') {
+				while value.ends_with('0') {
+					value.pop();
+				}
+				if value.ends_with('.') {
+					value.pop();
+				}
+			}
+			if value.is_empty() {
+				"0".to_string()
+			} else {
+				value
+			}
+		},
+		Err(_) => amount.to_string(),
+	}
+}
 
 #[derive(Debug, Deserialize)]
 pub struct EstimateUserOpGasParams {
 	pub user_operation: SerializablePackedUserOperation,
 	pub chain_id: ChainId,
 	pub wallet_index: u32,
+	pub omni_account: String,
+	#[allow(dead_code)]
+	pub client_id: String,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenCostInfo {
+	pub token_address: String,
+	pub amount: String,     // Decimal string
+	pub amount_hex: String, // Hex string
+	pub decimals: u8,
+	pub exchange_rate: String,    // Decimal string
+	pub formatted_amount: String, // Human readable (e.g., "2.5")
 }
 
 #[derive(Serialize, Clone)]
@@ -47,206 +79,100 @@ pub struct EstimateUserOpGasResponse {
 	pub pre_verification_gas: String,
 	pub paymaster_verification_gas_limit: String,
 	pub paymaster_post_op_gas_limit: String,
+	pub max_fee_per_gas: String,
+	pub max_priority_fee_per_gas: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub estimated_token_cost: Option<TokenCostInfo>,
 }
 
-pub fn register_estimate_user_op_gas(module: &mut RpcModule<RpcContext>) {
+pub fn register_estimate_user_op_gas<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
-		.register_async_method("omni_estimateUserOpGas", |params, ctx, ext| async move {
-			let user = check_auth(&ext).map_err(|e| {
-				error!("Authentication check failed: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ServerError(
-					AUTH_VERIFICATION_FAILED_CODE,
-				))
-			})?;
-
-			let params = params.parse::<EstimateUserOpGasParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				PumpxRpcError::from_error_code(ErrorCode::ParseError)
-			})?;
+		.register_async_method("omni_estimateUserOpGas", |params, ctx, _ext| async move {
+			let params = parse_rpc_params::<EstimateUserOpGasParams>(params)?;
 
 			debug!("Received omni_estimateUserOpGas, params: {:?}", params);
 
-			let account_id =
-				decode_account_id(&user.omni_account).map_err(PumpxRpcError::from_error_code)?;
+			let omni_account = to_omni_account(&params.omni_account)?;
+			validate_evm_address(&params.user_operation.sender, "user_operation.sender")?;
 
-			validate_sender_address(&params.user_operation.sender)
-				.map_err(PumpxRpcError::from_error_code)?;
-
-			let wrapper = NativeTaskWrapper::new(
-				NativeTask::EstimateUserOpGas(
-					account_id,
-					params.user_operation.clone(),
-					params.chain_id,
-					params.wallet_index,
-				),
-				None,
-				None,
-				user.client_id,
+			// Inlined handler logic from handle_estimate_user_op_gas
+			info!(
+				"Processing EstimateUserOpGas for account {:?}, wallet_index: {}, chain_id: {}",
+				omni_account, params.wallet_index, params.chain_id
 			);
 
-			handle_omni_native_task(&ctx, wrapper, |task_ok| match task_ok {
-				NativeTaskOk::EstimateUserOpGas {
-					call_gas_limit,
-					verification_gas_limit,
-					pre_verification_gas,
-					paymaster_verification_gas_limit,
-					paymaster_post_op_gas_limit,
-				} => Ok(EstimateUserOpGasResponse {
-					call_gas_limit: call_gas_limit.to_string(),
-					verification_gas_limit: verification_gas_limit.to_string(),
-					pre_verification_gas: pre_verification_gas.to_string(),
-					paymaster_verification_gas_limit: paymaster_verification_gas_limit.to_string(),
-					paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.to_string(),
-				}),
-				_ => {
-					error!("Unexpected response type");
-					Err(PumpxRpcError::from_error_code(ErrorCode::InternalError))
+			// Get EntryPoint client for this chain
+			let entry_point_client =
+				ctx.entry_point_clients.get(&params.chain_id).ok_or_else(|| {
+					error!("No EntryPoint client configured for chain_id: {}", params.chain_id);
+					DetailedError::invalid_chain_id(params.chain_id).to_rpc_error()
+				})?;
+
+			// Convert SerializablePackedUserOperation to PackedUserOperation
+			let packed_user_op =
+				convert_to_packed_user_op(params.user_operation.clone()).map_err(|e| {
+					error!("Failed to convert UserOperation: {}", e);
+					DetailedError::invalid_user_op(&e).to_rpc_error()
+				})?;
+
+			// Perform gas estimation
+			let result = estimate_user_op_gas(
+				entry_point_client.clone(),
+				packed_user_op,
+				params.chain_id,
+				ctx.oe_client_binance_client.as_ref(),
+			)
+			.await;
+
+			// Process response
+			match result {
+				Ok(gas_estimate) => {
+					// Convert token cost estimate to RPC format if present
+					let token_cost_info = gas_estimate.estimated_token_cost.map(|cost| {
+						// Format the amount as a human-readable value
+						let formatted_amount = format_token_amount(cost.amount, cost.decimals);
+
+						TokenCostInfo {
+							token_address: cost.token_address,
+							amount: cost.amount.to_string(),
+							amount_hex: format!("0x{:x}", cost.amount),
+							decimals: cost.decimals,
+							exchange_rate: cost.exchange_rate.to_string(),
+							formatted_amount,
+						}
+					});
+
+					Ok(EstimateUserOpGasResponse {
+						call_gas_limit: gas_estimate.call_gas_limit.to_string(),
+						verification_gas_limit: gas_estimate.verification_gas_limit.to_string(),
+						pre_verification_gas: gas_estimate.pre_verification_gas.to_string(),
+						paymaster_verification_gas_limit: gas_estimate
+							.paymaster_verification_gas_limit
+							.to_string(),
+						paymaster_post_op_gas_limit: gas_estimate
+							.paymaster_post_op_gas_limit
+							.to_string(),
+						max_fee_per_gas: gas_estimate.max_fee_per_gas.to_string(),
+						max_priority_fee_per_gas: gas_estimate.max_priority_fee_per_gas.to_string(),
+						estimated_token_cost: token_cost_info,
+					})
 				},
-			})
-			.await
+				Err(e) => {
+					error!("Gas estimation failed: {}", e);
+					Err(DetailedError::gas_estimation_failed().to_rpc_error())
+				},
+			}
 		})
 		.expect("Failed to register omni_estimateUserOpGas method");
-}
-
-fn decode_account_id(hex_str: &str) -> Result<AccountId, ErrorCode> {
-	let bytes = hex::decode(hex_str.strip_prefix("0x").unwrap_or(hex_str)).map_err(|e| {
-		error!("Failed to decode omni account hex string: {}", e);
-		ErrorCode::ParseError
-	})?;
-
-	if bytes.len() != OMNI_ACCOUNT_BYTES_LENGTH {
-		error!(
-			"Invalid omni account length: expected {} bytes, got {}",
-			OMNI_ACCOUNT_BYTES_LENGTH,
-			bytes.len()
-		);
-		return Err(ErrorCode::ParseError);
-	}
-
-	AccountId::decode(&mut &bytes[..]).map_err(|e| {
-		error!("Failed to decode AccountId from bytes: {}", e);
-		ErrorCode::ParseError
-	})
-}
-
-fn validate_sender_address(sender: &str) -> Result<Address, ErrorCode> {
-	sender.parse::<Address>().map_err(|e| {
-		error!("Invalid sender address '{}': {}", sender, e);
-		ErrorCode::ParseError
-	})
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-
-	#[test]
-	fn test_decode_account_id_valid() {
-		// Valid 32-byte hex string
-		let hex_str = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let result = decode_account_id(hex_str);
-		assert!(result.is_ok(), "Should decode valid 32-byte hex");
-
-		let _account_id = result.unwrap();
-		// AccountId is decoded successfully - internal structure is opaque
-	}
-
-	#[test]
-	fn test_decode_account_id_with_0x_prefix() {
-		// Test with 0x prefix
-		let with_prefix = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let without_prefix = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-
-		let result1 = decode_account_id(with_prefix);
-		let result2 = decode_account_id(without_prefix);
-
-		assert!(result1.is_ok(), "Should handle 0x prefix");
-		assert!(result2.is_ok(), "Should handle without 0x prefix");
-		assert_eq!(result1.unwrap(), result2.unwrap(), "Results should be identical");
-	}
-
-	#[test]
-	fn test_decode_account_id_invalid_hex() {
-		// Invalid hex characters
-		let invalid_hex = "0xgggggggg90abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-		let result = decode_account_id(invalid_hex);
-
-		assert!(result.is_err(), "Should reject invalid hex");
-		assert_eq!(result.unwrap_err(), ErrorCode::ParseError);
-	}
-
-	#[test]
-	fn test_decode_account_id_wrong_length() {
-		// Too short (31 bytes)
-		let too_short = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd";
-		let result_short = decode_account_id(too_short);
-		assert!(result_short.is_err(), "Should reject too short");
-
-		// Too long (33 bytes)
-		let too_long = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef00";
-		let result_long = decode_account_id(too_long);
-		assert!(result_long.is_err(), "Should reject too long");
-
-		// Empty
-		let empty = "";
-		let result_empty = decode_account_id(empty);
-		assert!(result_empty.is_err(), "Should reject empty string");
-	}
-
-	#[test]
-	fn test_validate_sender_address_valid() {
-		// Valid Ethereum addresses
-		let addresses = vec![
-			"0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9",
-			"0x0000000000000000000000000000000000000000",
-			"0xffffffffffffffffffffffffffffffffffffffff",
-			"0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae",
-		];
-
-		for addr in addresses {
-			let result = validate_sender_address(addr);
-			assert!(result.is_ok(), "Should accept valid address: {}", addr);
-		}
-	}
-
-	#[test]
-	fn test_validate_sender_address_checksummed() {
-		// Checksummed addresses should work
-		let checksummed = "0x5aAeb6053f3E94C9b9A09f33669435E7Ef1BeAed";
-		let result = validate_sender_address(checksummed);
-		assert!(result.is_ok(), "Should accept checksummed address");
-	}
-
-	#[test]
-	fn test_validate_sender_address_invalid_format() {
-		// Invalid formats
-		let invalid_addresses = vec![
-			"not_an_address",
-			"0x",
-			"0xZZZZ35Cc6634C0532925a3b844Bc9e7595f0bEb9", // Invalid hex
-			// Note: Address without 0x prefix is actually valid in alloy
-			"",
-		];
-
-		for addr in invalid_addresses {
-			let result = validate_sender_address(addr);
-			assert!(result.is_err(), "Should reject invalid address: {}", addr);
-			assert_eq!(result.unwrap_err(), ErrorCode::ParseError);
-		}
-	}
-
-	#[test]
-	fn test_validate_sender_address_wrong_length() {
-		// Wrong length addresses
-		let too_short = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bE"; // 39 chars
-		let too_long = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb900"; // 43 chars
-
-		let result_short = validate_sender_address(too_short);
-		assert!(result_short.is_err(), "Should reject too short address");
-
-		let result_long = validate_sender_address(too_long);
-		assert!(result_long.is_err(), "Should reject too long address");
-	}
 
 	#[test]
 	fn test_parse_estimate_params_valid() {
@@ -264,14 +190,41 @@ mod tests {
 				"signature": "0x1234"
 			},
 			"chain_id": 1,
-			"wallet_index": 0
+			"wallet_index": 0,
+			"omni_account": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"client_id": "test-client-123"
 		});
 
 		let params: EstimateUserOpGasParams = serde_json::from_value(json).unwrap();
 		assert_eq!(params.chain_id, 1);
 		assert_eq!(params.wallet_index, 0);
+		assert_eq!(
+			params.omni_account,
+			"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+		);
+		assert_eq!(params.client_id, "test-client-123");
 		assert_eq!(params.user_operation.sender, "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb9");
 		assert_eq!(params.user_operation.nonce, 42);
+	}
+
+	#[test]
+	fn test_format_token_amount() {
+		// Test with 6 decimals (USDC)
+		assert_eq!(format_token_amount(1_000_000, 6), "1");
+		assert_eq!(format_token_amount(1_500_000, 6), "1.5");
+		assert_eq!(format_token_amount(1_234_567, 6), "1.234567");
+		assert_eq!(format_token_amount(1_230_000, 6), "1.23");
+		assert_eq!(format_token_amount(500_000, 6), "0.5");
+		assert_eq!(format_token_amount(0, 6), "0");
+
+		// Test with 18 decimals (DAI)
+		assert_eq!(format_token_amount(1_000_000_000_000_000_000, 18), "1");
+		assert_eq!(format_token_amount(1_500_000_000_000_000_000, 18), "1.5");
+		assert_eq!(format_token_amount(500_000_000_000_000_000, 18), "0.5");
+
+		// Test with 0 decimals
+		assert_eq!(format_token_amount(100, 0), "100");
+		assert_eq!(format_token_amount(0, 0), "0");
 	}
 
 	#[test]
@@ -289,7 +242,9 @@ mod tests {
 				"paymaster_and_data": "0x",
 				"signature": null
 			},
-			"wallet_index": 0
+			"wallet_index": 0,
+			"omni_account": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"client_id": "test-client-123"
 			// Missing chain_id
 		});
 

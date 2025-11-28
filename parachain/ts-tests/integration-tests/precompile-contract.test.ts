@@ -1,5 +1,4 @@
-import { expect } from 'chai';
-import { step } from 'mocha-steps';
+import { expect, test } from 'vitest';
 import {
     sleep,
     signAndSend,
@@ -8,7 +7,7 @@ import {
     subscribeToEvents,
     sudoWrapperGc,
     sudoWrapperTc,
-} from '../common/utils';
+} from '../common/utils/index.js';
 import precompileStakingContractAbi from '../common/abi/precompile/Staking.json';
 import precompileBridgeContractAbi from '../common/abi/precompile/Bridge.json';
 import precompileOmniBridgeContractAbi from '../common/abi/precompile/OmniBridge.json';
@@ -18,7 +17,6 @@ import { encodeAddress, evmToAddress } from '@polkadot/util-crypto';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { HexString } from '@polkadot/util/types';
 import { ethers } from 'ethers';
-import { destResourceId } from '../common/utils/consts';
 
 const toBigInt = (int: number) => BigInt(int) * BigInt(1e18);
 const bn1e18 = new BN(10).pow(new BN(18));
@@ -43,7 +41,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
     // transform to bytes32(public key) reference:https://polkadot.subscan.io/tools/format_transform?input=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY&type=All
     const collatorPublicKey = '0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d';
 
-    const provider = new ethers.providers.WebSocketProvider(config.parachain_ws);
+    const provider = new ethers.WebSocketProvider(config.parachain_ws);
     const wallet = new ethers.Wallet(evmAccountRaw.privateKey, provider);
 
     const precompileStakingContract = new ethers.Contract(
@@ -69,12 +67,13 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
     const executeTransaction = async (delegateTransaction: any, contractAddress: HexString, label = '') => {
         console.log(`=== Executing ${label} ===`);
+        const feeData = await provider.getFeeData();
         const tx = await wallet.sendTransaction({
             to: contractAddress,
             data: delegateTransaction,
             gasLimit: 1000000,
-            nonce: await wallet.getTransactionCount(),
-            gasPrice: await provider.getGasPrice(),
+            nonce: await wallet.getNonce(),
+            gasPrice: feeData.gasPrice,
         });
         await tx.wait();
         return tx;
@@ -130,35 +129,36 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         return collators[0];
     };
 
-    step('Set ExtrinsicFilter mode to Test', async function () {
+    test('Set ExtrinsicFilter mode to Test', async () => {
         let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Test'));
         await signAndSend(extrinsic, context.alice);
     });
 
-    step('Address with insufficient amount of tokens', async function () {
-        const randomEvmWallet = ethers.Wallet.createRandom();
+    test('Address with insufficient amount of tokens', async () => {
+        const randomEvmWallet = ethers.Wallet.createRandom().connect(provider);
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
             'delegateWithAutoCompound',
-            [collatorPublicKey, ethers.utils.parseUnits('60', 18), 1]
+            [collatorPublicKey, ethers.parseUnits('60', 18), 1]
         );
 
         try {
+            const feeData = await provider.getFeeData();
             const tx = await randomEvmWallet.sendTransaction({
                 to: precompileStakingContractAddress,
                 data: delegateWithAutoCompound,
                 gasLimit: 1000000,
-                nonce: await randomEvmWallet.getTransactionCount(),
-                gasPrice: await provider.getGasPrice(),
+                nonce: await randomEvmWallet.getNonce(),
+                gasPrice: feeData.gasPrice,
             });
             await tx.wait();
 
-            expect(true).to.eq(false); // test should fail here
+            expect(true).toBe(false); // test should fail here
         } catch (e) {
-            expect(e).to.be.instanceof(Error);
+            expect(e).toBeInstanceOf(Error);
         }
     });
 
-    step('Test precompile omni bridge contract', async function () {
+    test('Test precompile omni bridge contract', async () => {
         console.time('Test precompile omni bridge contract');
 
         const dest_address = '0xaaafb3972b05630fccee866ec69cdadd9bac2772'; // random address
@@ -168,7 +168,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         if (parseInt(balance.free.toString()) < parseInt('10000000000000000')) {
             await transferTokens(context.alice, evmAccountRaw);
 
-            expect(parseInt(balance.free.toString())).to.gt(parseInt('10000000000000000'));
+            expect(parseInt(balance.free.toString())).toBeGreaterThan(parseInt('10000000000000000'));
         }
 
         // Set admin
@@ -190,7 +190,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         // The above two steps are necessary, otherwise the contract transaction will be reverted.
         // transfer native token
         const payInTx = precompileOmniBridgeContract.interface.encodeFunctionData('payIn', [
-            ethers.utils.parseUnits('0.01', 18).toString(),
+            ethers.parseUnits('0.01', 18).toString(),
             0,
             true,
             0x0000000000000000000000000000000000000000000000000000000000000000, // Does not matter since native = true, but make sure it does not overflow u128
@@ -201,7 +201,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         const eventsPromise = subscribeToEvents('omniBridge', 'PaidIn', context.api);
         const events = (await eventsPromise).map(({ event }) => event);
 
-        expect(events.length).to.eq(1);
+        expect(events.length).toBe(1);
         const event_data = events[0].toHuman().data! as {
             sourceAccount: string;
             nonce: number;
@@ -216,18 +216,18 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // PaidIn(source_account, nonce, asset, resource_id, dest_chain, dest_account, amount)
-        expect(event_data.destChain).to.deep.equal({ Ethereum: '0' });
-        expect(event_data.destAccount).to.eq(dest_address);
+        expect(event_data.destChain).toEqual({ Ethereum: '0' });
+        expect(event_data.destAccount).toBe(dest_address);
 
         // 0.01 - 0.001 = 0.009
         const expectedBalance = bn1e18.div(bn100).sub(bn1e18.div(bn1000));
-        expect(event_data.amount.replace(/,/g, '')).to.eq(expectedBalance.toString());
+        expect(event_data.amount.replace(/,/g, '')).toBe(expectedBalance.toString());
 
         console.timeEnd('Test precompile omni bridge contract');
     });
 
     // To see full params types for the interfaces, check notion page: https://web3builders.notion.site/Parachain-Precompile-Contract-0c34929e5f16408084446dcf3dd36006
-    step('Test precompile staking contract', async function () {
+    test('Test precompile staking contract', async () => {
         console.time('Test precompile staking contract');
 
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
@@ -258,7 +258,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
             console.log('Alice not candidate? Try joining');
             // 5001 will be big enough for both Litentry and Rococo
             let join_extrinsic = context.api.tx.parachainStaking.joinCandidates(
-                ethers.utils.parseUnits('5001', 18).toString()
+                ethers.parseUnits('5001', 18).toString()
             );
             await signAndSend(join_extrinsic, context.alice);
         }
@@ -267,7 +267,7 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         // delegateWithAutoCompound(collator, amount, percent)
         const delegateWithAutoCompound = precompileStakingContract.interface.encodeFunctionData(
             'delegateWithAutoCompound',
-            [collatorPublicKey, ethers.utils.parseUnits('60', 18).toString(), autoCompoundPercent]
+            [collatorPublicKey, ethers.parseUnits('60', 18).toString(), autoCompoundPercent]
         );
 
         let afterDelegateBalance = balance;
@@ -281,21 +281,21 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
             afterDelegateBalance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
 
-            expect(afterDelegateBalance.reserved.toString()).to.eq(toBigInt(60).toString());
+            expect(afterDelegateBalance.reserved.toString()).toBe(toBigInt(60).toString());
             const collator = await collatorDetails();
-            expect(collator.value).to.eq(autoCompoundPercent);
+            expect(collator.value).toBe(autoCompoundPercent);
         }
 
         // delegatorBondMore(collator, amount)
         const delegatorBondMore = precompileStakingContract.interface.encodeFunctionData('delegatorBondMore', [
             collatorPublicKey,
-            ethers.utils.parseUnits('1', 18).toString(),
+            ethers.parseUnits('1', 18).toString(),
         ]);
         await executeTransaction(delegatorBondMore, precompileStakingContractAddress, 'delegatorBondMore');
 
         const { data: balanceAfterBondMore } = await context.api.query.system.account(evmAccountRaw.mappedAddress);
 
-        expect(balanceAfterBondMore.reserved.toBigInt()).to.eq(afterDelegateBalance.reserved.toBigInt() + toBigInt(1));
+        expect(balanceAfterBondMore.reserved.toBigInt()).toBe(afterDelegateBalance.reserved.toBigInt() + toBigInt(1));
 
         const setAutoCompound = precompileStakingContract.interface.encodeFunctionData('setAutoCompound', [
             collatorPublicKey,
@@ -304,14 +304,14 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
 
         await executeTransaction(setAutoCompound, precompileStakingContractAddress, 'setAutoCompound');
         const collatorAfterCompound = await collatorDetails();
-        expect(collatorAfterCompound.value).to.eq(autoCompoundPercent + 5);
+        expect(collatorAfterCompound.value).toBe(autoCompoundPercent + 5);
 
         // scheduleDelegatorBondLess(collator, amount)
-        expect(await isPendingRequest()).to.be.false;
+        expect(await isPendingRequest()).toBe(false);
 
         const scheduleDelegatorBondLess = precompileStakingContract.interface.encodeFunctionData(
             'scheduleDelegatorBondLess',
-            [collatorPublicKey, ethers.utils.parseUnits('5', 18).toString()]
+            [collatorPublicKey, ethers.parseUnits('5', 18).toString()]
         );
         await executeTransaction(
             scheduleDelegatorBondLess,
@@ -320,12 +320,12 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         );
 
         // Zero delay impl will make execution immediately
-        expect(await isPendingRequest()).to.be.false;
+        expect(await isPendingRequest()).toBe(false);
 
         console.timeEnd('Test precompile staking contract');
     });
 
-    step('Test precompile vesting contract', async function () {
+    test('Test precompile vesting contract', async () => {
         console.time('Test precompile vesting contract');
 
         let balance = (await context.api.query.system.account(evmAccountRaw.mappedAddress)).data;
@@ -364,19 +364,19 @@ describeLitentry('Test Parachain Precompile Contract', ``, (context) => {
         const eventsPromise = subscribeToEvents('vesting', 'VestingCompleted', context.api);
         const events = (await eventsPromise).map(({ event }) => event);
 
-        expect(events.length).to.eq(1);
+        expect(events.length).toBe(1);
         const event_data = events[0].toHuman().data! as {
             account: string;
         };
         console.log(`Print Event data: ${JSON.stringify(event_data)}`);
 
         // VestingCompleted Event
-        expect(encodeAddress(event_data.account, 42)).to.eq(evmToAddress(evmAccountRaw.address, 42));
+        expect(encodeAddress(event_data.account, 42)).toBe(evmToAddress(evmAccountRaw.address, 42));
 
         console.timeEnd('Test precompile vesting contract');
     });
 
-    step('Set ExtrinsicFilter mode to Normal', async function () {
+    test('Set ExtrinsicFilter mode to Normal', async () => {
         let extrinsic = await sudoWrapperTc(context.api, context.api.tx.extrinsicFilter.setMode('Normal'));
         await signAndSend(extrinsic, context.alice);
     });

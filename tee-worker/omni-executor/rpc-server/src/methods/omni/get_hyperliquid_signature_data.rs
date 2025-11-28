@@ -1,24 +1,24 @@
 use crate::{
-	auth_utils::{verify_payload_timestamp, verify_wildmeta_signature},
-	error_code::*,
+	detailed_error::DetailedError,
 	server::RpcContext,
+	utils::auth::{verify_payload_timestamp, verify_wildmeta_signature},
+	utils::types::RpcResultExt,
+	utils::validation::{parse_rpc_params, validate_evm_address},
 	verify_auth::verify_auth,
-	ErrorCode,
-};
-use alloy::{
-	dyn_abi::Eip712Domain,
-	primitives::{keccak256, Address, B256},
-	sol_types::{eip712_domain, SolValue},
+	RpcResult,
 };
 use chrono::Utc;
-use executor_primitives::{
-	to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, Identity, UserAuth, UserId,
+use hyperliquid_rust_sdk::{
+	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
 };
-use jsonrpsee::{types::ErrorObject, RpcModule};
-use pumpx::pubkey_to_address;
-use serde::{Deserialize, Serialize, Serializer};
-use signer_client::ChainType;
-use std::{convert::TryFrom, str::FromStr};
+use jsonrpsee::RpcModule;
+use oe_client_pumpx::pubkey_to_address;
+use oe_client_signer::ChainType;
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::passkey::{AttestationResult, PasskeyVerifier};
+use oe_primitives::{to_omni_auth, utils::hex::hex_encode, ChainId, ClientAuth, UserAuth, UserId};
+use oe_storage::{PasskeyChallengeError, PasskeyChallengeStorage, PasskeyStorage};
+use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
 
 #[derive(Debug, Deserialize)]
@@ -29,14 +29,47 @@ pub struct GetHyperliquidSignatureDataParams {
 	pub client_auth: Option<ClientAuth>,
 	pub action_type: HyperliquidActionType,
 	pub chain_id: ChainId,
+	pub attach_passkey: Option<AttachPasskeyData>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AttachPasskeyData {
+	/// The attestation object from the WebAuthn registration ceremony (base64url encoded)
+	/// This contains the credential public key, credential ID, and attestation statement
+	pub attestation_object: String,
+	/// The client data JSON from the WebAuthn registration ceremony (base64url encoded)
+	/// This contains the challenge, origin, and other client-side data
+	pub client_data_json: String,
+	pub alias_name: Option<String>, // Optional alias name for the passkey
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HyperliquidActionType {
-	ApproveAgent { agent_address: String, agent_name: Option<String> },
-	Withdraw3 { amount: String, destination: String },
-	ApproveBuilderFee { max_fee_rate: String, builder: String },
+	ApproveAgent {
+		agent_address: String,
+		agent_name: Option<String>,
+	},
+	Withdraw3 {
+		amount: String,
+		destination: String,
+	},
+	ApproveBuilderFee {
+		max_fee_rate: String,
+		builder: String,
+	},
+	SendAsset {
+		destination: String,
+		source_dex: String,
+		destination_dex: String,
+		token: String,
+		amount: String,
+		from_sub_account: String,
+	},
+	UserDexAbstraction {
+		user: String,
+		enabled: bool,
+	},
 }
 
 #[derive(Serialize, Clone)]
@@ -55,42 +88,11 @@ pub struct HyperliquidSignatureData {
 #[derive(Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HyperliquidAction {
-	ApproveAgent(ApproveAgentAction),
-	Withdraw3(Withdraw3Action),
-	ApproveBuilderFee(ApproveBuilderFeeAction),
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ApproveAgentAction {
-	#[serde(serialize_with = "serialize_hex")]
-	pub signature_chain_id: u64,
-	pub hyperliquid_chain: String,
-	pub agent_address: Address,
-	pub agent_name: Option<String>,
-	pub nonce: u64,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct Withdraw3Action {
-	#[serde(serialize_with = "serialize_hex")]
-	pub signature_chain_id: u64,
-	pub hyperliquid_chain: String,
-	pub amount: String,
-	pub time: u64,
-	pub destination: Address,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct ApproveBuilderFeeAction {
-	#[serde(serialize_with = "serialize_hex")]
-	pub signature_chain_id: u64,
-	pub hyperliquid_chain: String,
-	pub max_fee_rate: String,
-	pub builder: Address,
-	pub nonce: u64,
+	ApproveAgent(ApproveAgent),
+	Withdraw3(Withdraw3),
+	ApproveBuilderFee(ApproveBuilderFee),
+	SendAsset(SendAsset),
+	UserDexAbstraction(UserDexAbstraction),
 }
 
 fn is_testnet_chain(chain_id: ChainId) -> bool {
@@ -116,123 +118,136 @@ fn is_testnet_chain(chain_id: ChainId) -> bool {
 	}
 }
 
-trait HyperliquidEip712Signature {
-	fn signature_chain_id(&self) -> u64;
-	fn struct_hash(&self) -> B256;
-
-	fn domain(&self) -> Eip712Domain {
-		eip712_domain! {
-			name: "HyperliquidSignTransaction",
-			version: "1",
-			chain_id: self.signature_chain_id(),
-			verifying_contract: Address::ZERO,
-		}
-	}
-
-	fn eip712_signing_hash(&self) -> B256 {
-		let mut digest_input = [0u8; 2 + 32 + 32];
-		digest_input[0] = 0x19;
-		digest_input[1] = 0x01;
-		digest_input[2..34].copy_from_slice(&self.domain().hash_struct()[..]);
-		digest_input[34..66].copy_from_slice(&self.struct_hash()[..]);
-		keccak256(digest_input)
-	}
-}
-
-impl HyperliquidEip712Signature for ApproveAgentAction {
-	fn signature_chain_id(&self) -> u64 {
-		self.signature_chain_id
-	}
-
-	fn struct_hash(&self) -> B256 {
-		let items = (
-			keccak256("HyperliquidTransaction:ApproveAgent(string hyperliquidChain,address agentAddress,string agentName,uint64 nonce)"),
-			keccak256(&self.hyperliquid_chain),
-			&self.agent_address,
-			keccak256(self.agent_name.as_deref().unwrap_or("")),
-			&self.nonce
-		);
-		keccak256(items.abi_encode())
-	}
-}
-
-impl HyperliquidEip712Signature for Withdraw3Action {
-	fn signature_chain_id(&self) -> u64 {
-		self.signature_chain_id
-	}
-
-	fn struct_hash(&self) -> B256 {
-		let items = (
-			keccak256("HyperliquidTransaction:Withdraw3(string hyperliquidChain,string amount,uint64 time,address destination)"),
-			keccak256(&self.hyperliquid_chain),
-			keccak256(&self.amount),
-			&self.time,
-			&self.destination
-		);
-		keccak256(items.abi_encode())
-	}
-}
-
-impl HyperliquidEip712Signature for ApproveBuilderFeeAction {
-	fn signature_chain_id(&self) -> u64 {
-		self.signature_chain_id
-	}
-
-	fn struct_hash(&self) -> B256 {
-		let items = (
-			keccak256("HyperliquidTransaction:ApproveBuilderFee(string hyperliquidChain,string maxFeeRate,address builder,uint64 nonce)"),
-			keccak256(&self.hyperliquid_chain),
-			keccak256(&self.max_fee_rate),
-			&self.builder,
-			&self.nonce
-		);
-		keccak256(items.abi_encode())
-	}
-}
-
-pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext>) {
+pub fn register_get_hyperliquid_signature_data<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+>(
+	module: &mut RpcModule<RpcContext<CrossChainIntentExecutor>>,
+) {
 	module
 		.register_async_method("omni_getHyperliquidSignatureData", |params, ctx, _| async move {
-			let params = params.parse::<GetHyperliquidSignatureDataParams>().map_err(|e| {
-				error!("Failed to parse params: {:?}", e);
-				ErrorCode::ParseError
-			})?;
+			let params = parse_rpc_params::<GetHyperliquidSignatureDataParams>(params)?;
 
 			debug!("Received omni_getHyperliquidSignatureData, params: {:?}", params);
+
+			// Make sure `user_id` is non-evm type
+			if matches!(params.user_id, UserId::Evm(_)) {
+				error!("Invalid user_id type, expected non-evm");
+				return Err(
+					DetailedError::invalid_params("user_id", "expect non-evm").to_rpc_error()
+				);
+			}
+
+			let omni_account = params
+				.user_id
+				.to_omni_account(&params.client_id)
+				.map_err_parse("Failed to convert to omni_account")?;
+
+			if let Some(attach_passkey_data) = &params.attach_passkey {
+				// Reject UserId::Passkey type - passkeys cannot be attached to passkey identities
+				if matches!(params.user_id, UserId::Passkey(_)) {
+					error!("Cannot attach passkey to a Passkey user_id type");
+					return Err(DetailedError::invalid_params(
+						"user_id",
+						"UserId::Passkey type is not allowed for passkey attachment",
+					)
+					.with_reason("Passkeys can only be attached to non-passkey identity types")
+					.with_suggestion("Use a different identity type (e.g. Email) as user_id")
+					.to_rpc_error());
+				}
+
+				let user_auth = params.user_auth.as_ref().ok_or_else(|| {
+					error!("user_auth is required when attach_passkey is provided");
+					DetailedError::invalid_params("user_auth", "required when attaching a passkey")
+						.to_rpc_error()
+				})?;
+				let auth = to_omni_auth(user_auth, &params.user_id, &params.client_id)
+					.map_err_parse("Failed to convert to OmniAuth")?;
+
+				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
+					error!("Failed to verify user authentication: {:?}", e);
+					e.to_detailed_error().to_rpc_error()
+				})?;
+
+				// Get allowed origins for the client (supports web, iOS, and Android)
+				let allowed_origins =
+					ctx.config_loader.get_passkey_config(&params.client_id).allowed_origins;
+				let allowed_origins_refs: Vec<&str> =
+					allowed_origins.iter().map(|s| s.as_str()).collect();
+
+				// Verify client data JSON and consume challenge
+				let challenge_storage = PasskeyChallengeStorage::new(ctx.storage_db.clone());
+				PasskeyVerifier::verify_client_data_json(
+					&attach_passkey_data.client_data_json,
+					omni_account.as_ref(),
+					&allowed_origins_refs,
+					"webauthn.create", // For passkey registration/attachment
+					|challenge, omni_account| {
+						challenge_storage
+							.verify_and_consume_challenge(challenge, &(*omni_account).into())
+							.map_err(|e| {
+								match e {
+									PasskeyChallengeError::ChallengeNotFound => {
+										error!("Challenge not found for passkey attachment");
+									},
+									PasskeyChallengeError::ChallengeExpired => {
+										error!("Challenge expired for passkey attachment");
+									},
+									PasskeyChallengeError::InvalidChallenge => {
+										error!("Invalid challenge for passkey attachment");
+									},
+									_ => {
+										error!("Challenge verification failed during passkey attachment: {:?}", e);
+									},
+								}
+								oe_crypto::passkey::PasskeyError::ChallengeVerificationFailed
+							})
+					},
+				)
+				.map_err_internal("Client data verification failed")?;
+
+				// Verify attestation and extract credential_id and public_key
+				let AttestationResult { credential_id, public_key } =
+					PasskeyVerifier::verify_attestation(&attach_passkey_data.attestation_object)
+						.map_err_parse("Attestation verification failed")?;
+
+				// Store public key as direct SEC1 bytes for direct usage without parsing
+				let public_key_sec1_bytes = public_key.verifying_key.to_sec1_bytes();
+
+				// Store the new passkey to the authenticated user's account
+				let passkey_storage = PasskeyStorage::new(ctx.storage_db.clone());
+				passkey_storage
+					.add_passkey(
+						&omni_account,
+						&credential_id,
+						&public_key_sec1_bytes,
+						attach_passkey_data.alias_name.clone(),
+					)
+					.map_err_internal("Failed to attach passkey")?;
+			}
 
 			// Unified authentication logic
 			let main_address = if let Some(user_auth) = &params.user_auth {
 				// User authentication provided
-				let auth =
-					to_omni_auth(user_auth, &params.user_id, &params.client_id).map_err(|e| {
-						error!("Failed to convert to OmniAuth: {:?}", e);
-						ErrorObject::from(ErrorCode::ParseError)
-					})?;
+				let auth = to_omni_auth(user_auth, &params.user_id, &params.client_id)
+					.map_err_parse("Failed to convert to OmniAuth")?;
 
 				verify_auth(ctx.clone(), &auth).await.map_err(|e| {
 					error!("Failed to verify user authentication: {:?}", e);
-					ErrorObject::from(ErrorCode::ServerError(AUTH_VERIFICATION_FAILED_CODE))
+					e.to_detailed_error().to_rpc_error()
 				})?;
 
 				// Get main address from derived wallet
-				let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-					error!("Failed to convert user ID to identity: {}", e);
-					ErrorObject::from(ErrorCode::ParseError)
-				})?;
-				let omni_account = identity.to_omni_account(&params.client_id);
-
-				let derived_pubkey = ctx
-					.signer_client
+				ctx.signer_client
 					.request_wallet(ChainType::Evm, 0, *omni_account.as_ref())
 					.await
 					.map_err(|_| {
 						error!("Failed to derive EVM address");
-						ErrorObject::from(ErrorCode::InternalError)
-					})?;
-				pubkey_to_address(ChainType::Evm, &derived_pubkey).map_err(|_| {
-					error!("Failed to convert derived pubkey to address");
-					ErrorObject::from(ErrorCode::InternalError)
-				})?
+						DetailedError::signer_service_error().to_rpc_error()
+					})
+					.and_then(|pk| {
+						pubkey_to_address(ChainType::Evm, &pk)
+							.map_err_internal("Failed to convert pubkey to address")
+					})?
 			} else if let Some(client_auth) = &params.client_auth {
 				// Client authentication provided (WildMeta)
 				match client_auth {
@@ -246,17 +261,15 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 						verify_wildmeta_signature(agent_address, business_json, signature)?;
 
 						let business_data: serde_json::Value = serde_json::from_str(business_json)
-							.map_err(|e| {
-								error!("Failed to parse business_json: {:?}", e);
-								ErrorObject::from(ErrorCode::ParseError)
-							})?;
+							.map_err_parse("Failed to parse business_json")?;
 
 						let timestamp = business_data
 							.get("timestamp")
 							.and_then(|v| v.as_u64())
 							.ok_or_else(|| {
 								error!("Missing timestamp in business_json");
-								ErrorObject::from(ErrorCode::ParseError)
+								DetailedError::invalid_params("business_json", "missing timestamp")
+									.to_rpc_error()
 							})?;
 
 						verify_payload_timestamp(
@@ -270,35 +283,37 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 							.verify_hyperliquid_link(agent_address, main_address, *login_type)
 							.await
 							.map_err(|_| {
-								error!("Failed to verify hyperliquid link");
-								ErrorObject::from(ErrorCode::InternalError)
+								let msg = "Failed to verify hyperliquid link";
+								error!(msg);
+								DetailedError::wildmeta_service_error("verify_hyperliquid_link")
+									.to_rpc_error()
 							})?;
 
 						if !linked {
-							error!("Agent and main addresses are not linked");
-							return Err(ErrorObject::from(ErrorCode::ServerError(
-								AUTH_VERIFICATION_FAILED_CODE,
-							)));
+							let msg = "Agent and main addresses are not linked";
+							error!(msg);
+							return Err(DetailedError::internal_error(msg).to_rpc_error());
 						}
 
 						main_address.clone()
 					},
 					_ => {
 						error!("Invalid client auth type");
-						return Err(ErrorObject::from(ErrorCode::ParseError));
+						return Err(DetailedError::invalid_params(
+							"client_auth",
+							"expect wildmeta_hl",
+						)
+						.to_rpc_error());
 					},
 				}
 			} else {
 				error!("Either user_auth or client_auth must be provided");
-				return Err(ErrorObject::from(ErrorCode::InvalidParams));
+				return Err(DetailedError::invalid_params(
+					"auth",
+					"expect either user_auth or client_auth",
+				)
+				.to_rpc_error());
 			};
-
-			// Derive omni_account for signing (works for both auth methods)
-			let identity = Identity::try_from(params.user_id.clone()).map_err(|e| {
-				error!("Failed to convert user ID to identity: {}", e);
-				ErrorObject::from(ErrorCode::ParseError)
-			})?;
-			let omni_account = identity.to_omni_account(&params.client_id);
 
 			let nonce = Utc::now().timestamp_millis() as u64;
 
@@ -310,13 +325,10 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 
 			let (action, signature) = match params.action_type {
 				HyperliquidActionType::ApproveAgent { agent_address, agent_name } => {
-					let action = ApproveAgentAction {
+					let action = ApproveAgent {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
-						agent_address: Address::from_str(&agent_address).map_err(|_| {
-							error!("Invalid agent address format");
-							ErrorObject::from(ErrorCode::ParseError)
-						})?,
+						agent_address: validate_evm_address(&agent_address, "agent_address")?,
 						agent_name,
 						nonce,
 					};
@@ -325,36 +337,73 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 					(HyperliquidAction::ApproveAgent(action), signature)
 				},
 				HyperliquidActionType::Withdraw3 { amount, destination } => {
-					let action = Withdraw3Action {
+					let _ = validate_evm_address(&destination, "destination")?;
+					let action = Withdraw3 {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						amount,
 						time: nonce,
-						destination: Address::from_str(&destination).map_err(|_| {
-							error!("Invalid destination address format");
-							ErrorObject::from(ErrorCode::ParseError)
-						})?,
+						destination,
 					};
 					let signature =
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::Withdraw3(action), signature)
 				},
 				HyperliquidActionType::ApproveBuilderFee { max_fee_rate, builder } => {
-					let action = ApproveBuilderFeeAction {
+					let action = ApproveBuilderFee {
 						signature_chain_id: params.chain_id,
 						hyperliquid_chain,
 						max_fee_rate,
-						builder: Address::from_str(&builder).map_err(|_| {
-							error!("Invalid builder address format");
-							ErrorObject::from(ErrorCode::ParseError)
-						})?,
+						builder: validate_evm_address(&builder, "builder")?,
 						nonce,
 					};
 					let signature =
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::ApproveBuilderFee(action), signature)
 				},
+				HyperliquidActionType::SendAsset {
+					destination,
+					source_dex,
+					destination_dex,
+					token,
+					amount,
+					from_sub_account,
+				} => {
+					let _ = validate_evm_address(&destination, "destination")?;
+					// Validate from_sub_account if it's not empty
+					if !from_sub_account.is_empty() {
+						let _ = validate_evm_address(&from_sub_account, "from_sub_account")?;
+					}
+					let action = SendAsset {
+						signature_chain_id: params.chain_id,
+						hyperliquid_chain,
+						destination,
+						source_dex,
+						destination_dex,
+						token,
+						amount,
+						from_sub_account,
+						nonce,
+					};
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					(HyperliquidAction::SendAsset(action), signature)
+				},
+				HyperliquidActionType::UserDexAbstraction { user, enabled } => {
+					let action = UserDexAbstraction {
+						signature_chain_id: params.chain_id,
+						hyperliquid_chain,
+						user: validate_evm_address(&user, "user")?,
+						enabled,
+						nonce,
+					};
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					(HyperliquidAction::UserDexAbstraction(action), signature)
+				},
 			};
+
+			debug!("main_address: {:?}", main_address);
 
 			Ok(GetHyperliquidSignatureDataResponse {
 				main_address,
@@ -364,18 +413,14 @@ pub fn register_get_hyperliquid_signature_data(module: &mut RpcModule<RpcContext
 		.expect("Failed to register omni_getHyperliquidSignatureData method");
 }
 
-fn serialize_hex<S>(val: &u64, s: S) -> Result<S::Ok, S::Error>
-where
-	S: Serializer,
-{
-	s.serialize_str(&format!("0x{val:x}"))
-}
-
-async fn generate_eip712_signature<T: HyperliquidEip712Signature>(
-	ctx: &RpcContext,
+async fn generate_eip712_signature<
+	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
+	T: Eip712 + Send + Sync,
+>(
+	ctx: &RpcContext<CrossChainIntentExecutor>,
 	action: &T,
 	omni_account: &[u8; 32],
-) -> Result<String, ErrorObject<'static>> {
+) -> RpcResult<String> {
 	let message_hash = action.eip712_signing_hash();
 
 	let signature_bytes = ctx
@@ -383,8 +428,9 @@ async fn generate_eip712_signature<T: HyperliquidEip712Signature>(
 		.request_signature(ChainType::Evm, 0, *omni_account, message_hash.to_vec())
 		.await
 		.map_err(|_| {
-			error!("Failed to sign message");
-			ErrorObject::from(ErrorCode::InternalError)
+			let msg = "Failed to sign message";
+			error!(msg);
+			DetailedError::signer_service_error().to_rpc_error()
 		})?;
 
 	Ok(hex_encode(&signature_bytes))
@@ -393,11 +439,13 @@ async fn generate_eip712_signature<T: HyperliquidEip712Signature>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use executor_primitives::VerificationCode;
+	use alloy::primitives::Address;
+	use oe_primitives::VerificationCode;
+	use std::str::FromStr;
 
 	#[test]
 	fn test_approve_agent_action_signature() {
-		let action = ApproveAgentAction {
+		let action = ApproveAgent {
 			signature_chain_id: 1,
 			hyperliquid_chain: "Mainnet".to_string(),
 			agent_address: Address::from_str("0x1234567890123456789012345678901234567890").unwrap(),
@@ -422,12 +470,12 @@ mod tests {
 
 	#[test]
 	fn test_withdraw_action_signature() {
-		let action = Withdraw3Action {
+		let action = Withdraw3 {
 			signature_chain_id: 1,
 			hyperliquid_chain: "Mainnet".to_string(),
 			amount: "100.0".to_string(),
 			time: 1234567890,
-			destination: Address::from_str("0x1234567890123456789012345678901234567890").unwrap(),
+			destination: "0x1234567890123456789012345678901234567890".to_string(),
 		};
 
 		// Test domain generation
@@ -447,7 +495,7 @@ mod tests {
 
 	#[test]
 	fn test_approve_builder_fee_action_signature() {
-		let action = ApproveBuilderFeeAction {
+		let action = ApproveBuilderFee {
 			signature_chain_id: 1,
 			hyperliquid_chain: "Mainnet".to_string(),
 			max_fee_rate: "0.01".to_string(),
@@ -544,6 +592,163 @@ mod tests {
 			HyperliquidActionType::ApproveBuilderFee { max_fee_rate, builder }
 			if max_fee_rate == "0.01" && builder == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
 		));
+	}
+
+	#[test]
+	fn test_send_asset_action_signature() {
+		let action = SendAsset {
+			signature_chain_id: 998,
+			hyperliquid_chain: "Testnet".to_string(),
+			destination: "0x1234567890123456789012345678901234567890".to_string(),
+			source_dex: "".to_string(),
+			destination_dex: "".to_string(),
+			token: "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2".to_string(),
+			amount: "100.0".to_string(),
+			from_sub_account: "".to_string(),
+			nonce: 1234567890,
+		};
+
+		// Test domain generation
+		let domain = action.domain();
+		assert_eq!(domain.name, Some("HyperliquidSignTransaction".into()));
+		assert_eq!(domain.version, Some("1".into()));
+		assert_eq!(domain.chain_id, Some(alloy::primitives::U256::from(998)));
+
+		// Test struct hash generation
+		let struct_hash = action.struct_hash();
+		assert_eq!(struct_hash.len(), 32);
+
+		// Test EIP-712 signing hash generation
+		let signing_hash = action.eip712_signing_hash();
+		assert_eq!(signing_hash.len(), 32);
+	}
+
+	#[test]
+	fn test_params_deserialization_send_asset() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "send_asset",
+			"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"source_dex": "",
+			"destination_dex": "spot",
+			"token": "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2",
+			"amount": "50.5",
+			"from_sub_account": ""
+		},
+		"chain_id": 998
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::SendAsset {
+				destination,
+				source_dex,
+				destination_dex,
+				token,
+				amount,
+				from_sub_account
+			}
+			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+				&& source_dex.is_empty()
+				&& destination_dex == "spot"
+				&& token == "PURR:0xc4bf3f870c0e9465323c0b6ed28096c2"
+				&& amount == "50.5"
+				&& from_sub_account.is_empty()
+		));
+		assert_eq!(params.chain_id, 998);
+	}
+
+	#[test]
+	fn test_params_deserialization_send_asset_with_sub_account() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "send_asset",
+			"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"source_dex": "hyperliquid",
+			"destination_dex": "",
+			"token": "USDC:0x0",
+			"amount": "1000.0",
+			"from_sub_account": "0x9876543210987654321098765432109876543210"
+		},
+		"chain_id": 998
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::SendAsset {
+				destination,
+				source_dex,
+				destination_dex,
+				token,
+				amount,
+				from_sub_account
+			}
+			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+				&& source_dex == "hyperliquid"
+				&& destination_dex.is_empty()
+				&& token == "USDC:0x0"
+				&& amount == "1000.0"
+				&& from_sub_account == "0x9876543210987654321098765432109876543210"
+		));
+	}
+
+	#[test]
+	fn test_user_dex_abstraction_action_signature() {
+		let action = UserDexAbstraction {
+			signature_chain_id: 1,
+			hyperliquid_chain: "Mainnet".to_string(),
+			user: Address::from_str("0x1234567890123456789012345678901234567890").unwrap(),
+			enabled: true,
+			nonce: 1234567890,
+		};
+
+		// Test domain generation
+		let domain = action.domain();
+		assert_eq!(domain.name, Some("HyperliquidSignTransaction".into()));
+		assert_eq!(domain.version, Some("1".into()));
+		assert_eq!(domain.chain_id, Some(alloy::primitives::U256::from(1)));
+
+		// Test struct hash generation
+		let struct_hash = action.struct_hash();
+		assert_eq!(struct_hash.len(), 32);
+
+		// Test EIP-712 signing hash generation
+		let signing_hash = action.eip712_signing_hash();
+		assert_eq!(signing_hash.len(), 32);
+	}
+
+	#[test]
+	fn test_params_deserialization_user_dex_abstraction() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "user_dex_abstraction",
+			"user": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"enabled": true
+		},
+		"chain_id": 42161
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::UserDexAbstraction { user, enabled }
+			if user == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10" && enabled
+		));
+		assert_eq!(params.chain_id, 42161);
 	}
 
 	#[test]

@@ -33,13 +33,45 @@ fn ethereum_to_substrate_signature(ethereum_sig: &[u8]) -> [u8; 65] {
 	substrate_sig
 }
 
-fn get_mock_wallet_address() -> String {
-	// This will return the address corresponding to MOCK_PRIVATE_KEY
-	// Address: 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720
-	let private_key_bytes = hex::decode(&MOCK_PRIVATE_KEY[2..]).expect("Invalid private key");
-	let private_key = B256::from_slice(&private_key_bytes);
-	let signer = PrivateKeySigner::from_bytes(&private_key).expect("Invalid private key");
-	signer.address().to_string()
+fn get_mock_pubkey_bytes(chain_type: &str) -> Vec<u8> {
+	match chain_type {
+		"Evm" | "Tron" => {
+			// Calculate the compressed public key from MOCK_PRIVATE_KEY for EVM/Tron chains
+			// We'll use secp256k1 to derive the public key properly
+			let private_key_bytes =
+				hex::decode(&MOCK_PRIVATE_KEY[2..]).expect("Invalid private key");
+
+			// Use secp256k1 to get the compressed public key
+			let secret_key = libsecp256k1::SecretKey::parse_slice(&private_key_bytes)
+				.expect("Invalid private key for secp256k1");
+			let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
+
+			// Serialize as compressed (33 bytes)
+			public_key.serialize_compressed().to_vec()
+		},
+		"Solana" => {
+			// For Solana, we use a derived 32-byte Ed25519-style key
+			// Since the actual signer service would derive this differently for Solana,
+			// we'll use a deterministic derivation from the MOCK_PRIVATE_KEY
+			let private_key_bytes =
+				hex::decode(&MOCK_PRIVATE_KEY[2..]).expect("Invalid private key");
+
+			// Use keccak256 hash of the private key as a mock Ed25519 public key (32 bytes)
+			let ed25519_pubkey = keccak_256(&private_key_bytes);
+			ed25519_pubkey.to_vec()
+		},
+		_ => {
+			// Default to EVM format for unknown chain types
+			let private_key_bytes =
+				hex::decode(&MOCK_PRIVATE_KEY[2..]).expect("Invalid private key");
+
+			let secret_key = libsecp256k1::SecretKey::parse_slice(&private_key_bytes)
+				.expect("Invalid private key for secp256k1");
+			let public_key = libsecp256k1::PublicKey::from_secret_key(&secret_key);
+
+			public_key.serialize_compressed().to_vec()
+		},
+	}
 }
 
 fn build_success_response(body: Value) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
@@ -63,14 +95,24 @@ pub async fn handle_dex_method(request: Value) -> Result<Box<dyn warp::Reply>, w
 			build_success_response(response)
 		},
 		"dex_getWallet" => {
-			// Return the wallet address derived from the private key
-			let wallet_address = get_mock_wallet_address();
+			// Extract chain type from the request params
+			let empty_params = json!({});
+			let params = request.get("params").unwrap_or(&empty_params);
+			let empty_payload = json!({});
+			let payload = params.get("payload").unwrap_or(&empty_payload);
+			let empty_wallet = json!({});
+			let wallet = payload.get("wallet").unwrap_or(&empty_wallet);
+			let chain_type = wallet.get("chain_type").and_then(|ct| ct.as_str()).unwrap_or("Evm");
 
-			tracing::info!("Returning wallet address: {}", wallet_address);
+			// Return the public key bytes as hex string (instead of address)
+			let pubkey_bytes = get_mock_pubkey_bytes(chain_type);
+			let pubkey_hex = hex::encode(&pubkey_bytes);
+
+			tracing::info!("Returning public key for chain type {}: 0x{}", chain_type, pubkey_hex);
 
 			let response = json!({
 				"jsonrpc": "2.0",
-				"result": wallet_address.to_string(),
+				"result": pubkey_hex,
 				"id": id
 			});
 			build_success_response(response)

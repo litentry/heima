@@ -39,6 +39,25 @@ export interface ExportWalletParams {
     wallet_address: string;
 }
 
+export interface SubmitUserOpParams {
+    user_op: {
+        sender: string;
+        nonce: string;
+        initCode: string;
+        callData: string;
+        accountGasLimits: string;
+        preVerificationGas: string;
+        gasFees: string;
+        paymasterAndData: string;
+        signature: string;
+    };
+}
+
+export interface GetSmartWalletRootSignerParams {
+    omni_account: string;
+    chain_type: string;
+    wallet_index: number;
+}
 export interface TransferWithdrawParams {
     request_id?: number;
     chain_id: number;
@@ -80,4 +99,54 @@ export interface NotifyLimitOrderResultParams {
     intent_id: number;
     result: string;
     message?: string;
+}
+
+export interface SubmitUserOpTestParams {
+    user_operations: Array<{
+        sender: string;
+        nonce: number;
+        init_code: string;
+        call_data: string;
+        account_gas_limits: string;
+        pre_verification_gas: number;
+        gas_fees: string;
+        paymaster_and_data: string;
+        signature?: string;
+    }>;
+    chain_id: number;
+    wallet_index: number;
+    omni_account: string;
+    client_id: string;
+}
+
+export interface GetHyperliquidSignatureDataParams {
+    user_id: {
+        type: string;
+        value: string;
+    };
+    user_auth?: {
+        type: string;
+        value: string;
+    };
+    client_id: string;
+    client_auth?: {
+        type: string;
+        value: {
+            agent_address: string;
+            business_json: string;
+            main_address: string;
+            signature: string;
+            login_type: number;
+        };
+    };
+    action_type: {
+        type: 'approve_agent' | 'withdraw3' | 'approve_builder_fee';
+        agent_address?: string;
+        agent_name?: string;
+        amount?: string;
+        destination?: string;
+        max_fee_rate?: string;
+        builder?: string;
+    };
+    chain_id: number;
 }
