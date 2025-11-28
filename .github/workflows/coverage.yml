@@ -8,58 +8,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-file-change:
+  debug:
     runs-on: ubuntu-22.04
-    # see https://github.com/orgs/community/discussions/25722
-    if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}
-    outputs:
-      coverage_src: ${{ steps.filter.outputs.coverage_src }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      # Checks to see if any files in the PR/commit match one of the listed file types.
-      # We can use this filter to decide whether or not to build docker images
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: .github/file-filter.yml
-          list-files: shell
-
-  test:
-    name: Coverage Report
-    runs-on: [ubuntu-22.04]
-    needs:
-      - check-file-change
-    if: >
-      needs.check-file-change.outputs.coverage_src == 'true'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install toolchain
-        run: rustup show
-
-      - name: Install additional dependencies
+      - name: Debug
         run: |
-          sudo apt update -y &&
-          sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential git clang libclang-dev
-
-      - name: Install cargo-tarpaulin
-        run: |
-          cargo install cargo-tarpaulin
-
-      - name: Run cargo-tarpaulin
-        run: |
-          PACKAGES=$(find pallets/ -name "Cargo.toml" | while read -r f; do pn=$(grep name "$f" | \
-                     tr '"' "'" | sed "s/'$//;s/.*'//"); f="file://$(pwd)/${f//\/Cargo.toml/#$pn}"; \
-                     cargo pkgid "$f"; done | paste -s -d "," -)
-          cargo tarpaulin --no-fail-fast -o Xml -p "$PACKAGES" \
-          --exclude-files **/mock.rs **/weights.rs **/benchmarking.rs **/weights/* node/* runtime/*
-
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5
-        with:
-          fail_ci_if_error: false
-          verbose: true
+          REPO=https://github.com/litentry/heima
+          echo "repo is $REPO"
