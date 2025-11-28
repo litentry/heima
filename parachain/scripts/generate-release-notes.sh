@@ -66,6 +66,9 @@ SUBSTRATE_LINE=$(grep 'frame-system' parachain/Cargo.toml | head -n1)
 SUBSTRATE_GIT=$(echo "$SUBSTRATE_LINE" | sed -n 's/.*git = "\([^"]*\)".*/\1/p' | sed 's|https://github.com/||')
 SUBSTRATE_REF=$(echo "$SUBSTRATE_LINE" | sed -n 's/.*branch = "\([^"]*\)".*/\1/p')
 if [ -z "$SUBSTRATE_REF" ]; then
+    SUBSTRATE_REF=$(echo "$SUBSTRATE_LINE" | sed -n 's/.*tag = "\([^"]*\)".*/\1/p')
+fi
+if [ -z "$SUBSTRATE_REF" ]; then
     SUBSTRATE_REF=$(echo "$SUBSTRATE_LINE" | sed -n 's/.*rev = "\([^"]\{8\}\).*/\1/p')
 fi
 SUBSTRATE_DEP="$SUBSTRATE_GIT - $SUBSTRATE_REF"
@@ -73,6 +76,9 @@ SUBSTRATE_DEP="$SUBSTRATE_GIT - $SUBSTRATE_REF"
 FRONTIER_LINE=$(grep 'fc-api' parachain/Cargo.toml | head -n1)
 FRONTIER_GIT=$(echo "$FRONTIER_LINE" | sed -n 's/.*git = "\([^"]*\)".*/\1/p' | sed 's|https://github.com/||')
 FRONTIER_REF=$(echo "$FRONTIER_LINE" | sed -n 's/.*branch = "\([^"]*\)".*/\1/p')
+if [ -z "$FRONTIER_REF" ]; then
+    FRONTIER_REF=$(echo "$FRONTIER_LINE" | sed -n 's/.*tag = "\([^"]*\)".*/\1/p')
+fi
 if [ -z "$FRONTIER_REF" ]; then
     FRONTIER_REF=$(echo "$FRONTIER_LINE" | sed -n 's/.*rev = "\([^"]\{8\}\).*/\1/p')
 fi
