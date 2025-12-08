@@ -9,7 +9,7 @@ use oe_client_aa::{
 };
 use oe_client_ethereum::{AlloyRpcProvider, RpcProvider};
 use oe_core::types::SerializablePackedUserOperation;
-use oe_primitives::ChainId;
+use oe_primitives::{ChainId, UserId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};
@@ -343,6 +343,25 @@ enum Commands {
 		#[arg(long, help = "Gas limit for call execution (decimal)")]
 		call_gas: u64,
 	},
+
+	/// Generate OmniAccount bytes from user identity and client ID
+	GenerateOABytes {
+		#[arg(
+			long,
+			help = "User identifier - format depends on user_type (e.g., 0x1234... for Evm, email@example.com for Email, base58 for Solana)"
+		)]
+		user_id: String,
+
+		#[arg(long, default_value = "wildmeta")]
+		client_id: String,
+
+		#[arg(
+			long,
+			default_value = "evm",
+			help = "User ID type: Evm, Substrate, Solana, Bitcoin, Email, Twitter, Discord, Google, Apple, Pumpx, Passkey"
+		)]
+		user_type: String,
+	},
 }
 
 struct RpcClient {
@@ -437,6 +456,23 @@ fn parse_owner_type(oa_type_str: &str) -> Result<OwnerType> {
 		"pumpx" => Ok(OwnerType::Pumpx),
 		"passkey" => Ok(OwnerType::Passkey),
 		_ => anyhow::bail!("Invalid owner type '{}'. Valid types are: Email, Evm, Substrate, Bitcoin, Solana, Twitter, Discord, Apple, Google, Pumpx, Passkey", oa_type_str),
+	}
+}
+
+fn parse_user_id(user_type_str: &str, user_id_str: &str) -> Result<UserId> {
+	match user_type_str.to_lowercase().as_str() {
+		"email" => Ok(UserId::Email(user_id_str.to_string())),
+		"evm" => Ok(UserId::Evm(user_id_str.to_string())),
+		"substrate" => Ok(UserId::Substrate(user_id_str.to_string())),
+		"bitcoin" => Ok(UserId::Bitcoin(user_id_str.to_string())),
+		"solana" => Ok(UserId::Solana(user_id_str.to_string())),
+		"twitter" => Ok(UserId::Twitter(user_id_str.to_string())),
+		"discord" => Ok(UserId::Discord(user_id_str.to_string())),
+		"apple" => Ok(UserId::Apple(user_id_str.to_string())),
+		"google" => Ok(UserId::Google(user_id_str.to_string())),
+		"pumpx" => Ok(UserId::Pumpx(user_id_str.to_string())),
+		"passkey" => Ok(UserId::Passkey(user_id_str.to_string())),
+		_ => anyhow::bail!("Invalid user type '{}'. Valid types are: Email, Evm, Substrate, Bitcoin, Solana, Twitter, Discord, Apple, Google, Pumpx, Passkey", user_type_str),
 	}
 }
 
@@ -881,6 +917,39 @@ fn handle_pack_gas_limits(verification_gas: u64, call_gas: u64) -> Result<()> {
 	Ok(())
 }
 
+fn handle_generate_oa_bytes(
+	user_id_str: String,
+	client_id: String,
+	user_type: String,
+) -> Result<()> {
+	// Parse the user ID based on the user type
+	let user_id = parse_user_id(&user_type, &user_id_str)?;
+
+	info!("Generating OA bytes for user_id: {:?}, client_id: {}", user_id, client_id);
+
+	// Generate the OmniAccount bytes using the to_omni_account method
+	let oa = user_id
+		.to_omni_account(&client_id)
+		.map_err(|e| anyhow::anyhow!("Failed to generate OmniAccount: {}", e))?;
+
+	let oa_bytes: &[u8] = oa.as_ref();
+
+	// Convert to hex string
+	let oa_hex = format!("0x{}", hex::encode(&oa_bytes));
+
+	info!(
+		"Generated OA bytes for user_type '{}', user_id '{}', client_id '{}': {}",
+		user_type, user_id_str, client_id, oa_hex
+	);
+
+	println!("OA Bytes: {}", oa_hex);
+	println!("\nYou can use this value with:");
+	println!("  --oa-bytes {} for generate-aa-address command", oa_hex);
+	println!("  --oa-bytes {} for generate-init-code command", oa_hex);
+
+	Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
 	tracing_subscriber::fmt::init();
@@ -1019,6 +1088,9 @@ async fn main() -> Result<()> {
 		},
 		Commands::PackGasLimits { verification_gas, call_gas } => {
 			handle_pack_gas_limits(verification_gas, call_gas)?;
+		},
+		Commands::GenerateOABytes { user_id, client_id, user_type } => {
+			handle_generate_oa_bytes(user_id, client_id, user_type)?;
 		},
 	}
 
