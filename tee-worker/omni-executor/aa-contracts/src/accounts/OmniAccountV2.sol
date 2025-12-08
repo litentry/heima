@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "../core/BaseAccount.sol";
 import "../interfaces/OwnerType.sol";
 import "../interfaces/UserOpSigner.sol";
@@ -19,7 +20,7 @@ import "./callback/TokenCallbackHandler.sol";
 import "../utils/Exec.sol";
 import "../core/LibModuleManager.sol";
 
-contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
+contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable, IERC1271 {
     using Passkey for Passkey.PublicKey;
     using LibModuleManager for LibModuleManager.ModuleStorage;
 
@@ -36,7 +37,8 @@ contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     bytes4 private constant ADD_ROOT_SIGNER_SELECTOR = bytes4(keccak256("addRootSigner(address)"));
     bytes4 private constant REMOVE_ROOT_SIGNER_SELECTOR = bytes4(keccak256("removeRootSigner(address)"));
     bytes4 private constant ADD_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("addPasskeySigner((uint256,uint256))"));
-    bytes4 private constant REMOVE_PASSKEY_SIGNER_SELECTOR = bytes4(keccak256("removePasskeySigner((uint256,uint256))"));
+    bytes4 private constant REMOVE_PASSKEY_SIGNER_SELECTOR =
+        bytes4(keccak256("removePasskeySigner((uint256,uint256))"));
     bytes4 private constant WITHDRAW_DEPOSIT_SELECTOR = bytes4(keccak256("withdrawDepositTo(address,uint256)"));
     bytes4 private constant UPGRADE_TO_AND_CALL_SELECTOR = bytes4(keccak256("upgradeToAndCall(address,bytes)"));
     bytes4 private constant REGISTER_MODULE_SELECTOR = bytes4(keccak256("registerModule(address)"));
@@ -71,22 +73,22 @@ contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     function _onlyOwner() internal view {
         require(
             _determineOa(msg.sender) == owner || msg.sender == address(entryPoint())
-            || (ownerType != OwnerType.Evm && passkeySignerCount == 0 && isRootSigner(msg.sender)),
+                || (ownerType != OwnerType.Evm && passkeySignerCount == 0 && isRootSigner(msg.sender)),
             "only owner"
         );
     }
 
     function initialize(bytes32 anOwner, OwnerType anOwnerType, bytes memory aClientId, address aRoot)
-    public
-    virtual
-    initializer
+        public
+        virtual
+        initializer
     {
         _initialize(anOwner, anOwnerType, aClientId, aRoot);
     }
 
     function _initialize(bytes32 anOwner, OwnerType anOwnerType, bytes memory aClientId, address aRoot)
-    internal
-    virtual
+        internal
+        virtual
     {
         owner = anOwner;
         rootSigners[aRoot] = true;
@@ -105,10 +107,10 @@ contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     }
 
     function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
-    internal
-    virtual
-    override
-    returns (uint256 validationData)
+        internal
+        virtual
+        override
+        returns (uint256 validationData)
     {
         require(userOp.signature.length >= 1, "signature too short");
 
@@ -156,9 +158,9 @@ contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
     }
 
     function _validateSessionKey(bytes32 userOpHash, bytes calldata sig)
-    internal
-    view
-    returns (uint256 validationData)
+        internal
+        view
+        returns (uint256 validationData)
     {
         require(sig.length == 162, "SessionKey signature length invalid");
         bytes memory sessionSig = sig[:65];
@@ -247,9 +249,9 @@ contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         bytes4 selector = bytes4(callData[0:4]);
 
         return selector == ADD_ROOT_SIGNER_SELECTOR || selector == REMOVE_ROOT_SIGNER_SELECTOR
-        || selector == ADD_PASSKEY_SIGNER_SELECTOR || selector == REMOVE_PASSKEY_SIGNER_SELECTOR
-        || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_AND_CALL_SELECTOR
-        || selector == REGISTER_MODULE_SELECTOR || selector == UNREGISTER_MODULE_SELECTOR;
+            || selector == ADD_PASSKEY_SIGNER_SELECTOR || selector == REMOVE_PASSKEY_SIGNER_SELECTOR
+            || selector == WITHDRAW_DEPOSIT_SELECTOR || selector == UPGRADE_TO_AND_CALL_SELECTOR
+            || selector == REGISTER_MODULE_SELECTOR || selector == UNREGISTER_MODULE_SELECTOR;
     }
 
     function registerModule(address module) external onlyOwner {
@@ -276,6 +278,63 @@ contract OmniAccountV2 is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, In
         }
 
         return Exec.getReturnData(0);
+    }
+
+    /**
+     * @dev ERC-1271 signature validation
+     * @param hash Hash of the data to be signed
+     * @param signature Signature byte array
+     * @return magicValue 0x1626ba7e if signature is valid, 0xffffffff otherwise
+     */
+    function isValidSignature(bytes32 hash, bytes memory signature) external view override returns (bytes4 magicValue) {
+        if (signature.length < 1) {
+            return 0xffffffff;
+        }
+
+        UserOpSigner signer = UserOpSigner(uint8(signature[0]));
+
+        bool isValid = false;
+
+        if (signer == UserOpSigner.Owner) {
+            if (signature.length == 66) {
+                // 1 byte signer type + 65 bytes signature
+                bytes memory sig = new bytes(65);
+                for (uint256 i = 0; i < 65; i++) {
+                    sig[i] = signature[i + 1];
+                }
+                address recovered = ECDSA.recover(hash, sig);
+                isValid = (owner == _determineOa(recovered));
+            }
+        } else if (signer == UserOpSigner.RootKey) {
+            if (signature.length == 66) {
+                // 1 byte signer type + 65 bytes signature
+                bytes memory sig = new bytes(65);
+                for (uint256 i = 0; i < 65; i++) {
+                    sig[i] = signature[i + 1];
+                }
+                address recovered = ECDSA.recover(hash, sig);
+                isValid = isRootSigner(recovered);
+            }
+        } else if (signer == UserOpSigner.Passkey) {
+            if (signature.length > 1) {
+                bytes memory sig = new bytes(signature.length - 1);
+                for (uint256 i = 0; i < signature.length - 1; i++) {
+                    sig[i] = signature[i + 1];
+                }
+
+                (
+                    Passkey.PublicKey memory publicKey,
+                    Passkey.Signature memory passkeySignature,
+                    Passkey.Metadata memory metadata
+                ) = abi.decode(sig, (Passkey.PublicKey, Passkey.Signature, Passkey.Metadata));
+
+                if (passkeySigners[publicKey.toKey()]) {
+                    isValid = Passkey.verify(hash, metadata, passkeySignature, publicKey);
+                }
+            }
+        }
+
+        return isValid ? bytes4(0x1626ba7e) : bytes4(0xffffffff);
     }
 
     function version() public pure virtual returns (string memory) {

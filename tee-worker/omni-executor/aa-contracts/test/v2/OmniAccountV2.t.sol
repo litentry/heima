@@ -23,6 +23,9 @@ contract OmniAccountV2Test is Test {
     address rootAddress = 0x0000000000000000000000000000000000000001;
     bytes clientId = bytes("test_client");
 
+    bytes4 constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 constant ERC1271_INVALID_SIGNATURE = 0xffffffff;
+
     function setUp() public {
         (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, rootAddress);
     }
@@ -79,5 +82,54 @@ contract OmniAccountV2Test is Test {
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
         assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    // ============ ERC-1271 Edge Cases and Invalid Input Tests ============
+
+    function test_ERC1271_EmptySignature() public view {
+        bytes32 messageHash = keccak256("Test message");
+        bytes memory signature = "";
+
+        bytes4 result = account.isValidSignature(messageHash, signature);
+        assertEq(result, ERC1271_INVALID_SIGNATURE);
+    }
+
+    function test_ERC1271_InvalidSignerType() public {
+        bytes32 messageHash = keccak256("Test message");
+        (, uint256 pk) = makeAddrAndKey("signer");
+
+        // Use invalid signer type (99) - this will cause a panic in enum conversion
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, messageHash);
+        bytes memory signature = abi.encodePacked(uint8(99), r, s, v);
+
+        // Expect a panic (0x21 is the panic code for invalid enum conversion)
+        vm.expectRevert();
+        account.isValidSignature(messageHash, signature);
+    }
+
+    function test_ERC1271_OnlySignerTypeByte() public view {
+        bytes32 messageHash = keccak256("Test message");
+        bytes memory signature = abi.encodePacked(uint8(UserOpSigner.Owner));
+
+        bytes4 result = account.isValidSignature(messageHash, signature);
+        assertEq(result, ERC1271_INVALID_SIGNATURE);
+    }
+
+    function test_ERC1271_MultipleSignatureTypesForSameMessage() public {
+        (address owner, uint256 ownerPk) = makeAddrAndKey("owner");
+        (address root, uint256 rootPk) = makeAddrAndKey("root");
+        (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(owner, clientId, root);
+
+        bytes32 messageHash = keccak256("Shared message");
+
+        // Owner signature
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(ownerPk, messageHash);
+        bytes memory ownerSig = abi.encodePacked(uint8(UserOpSigner.Owner), r1, s1, v1);
+        assertEq(account.isValidSignature(messageHash, ownerSig), ERC1271_MAGIC_VALUE);
+
+        // Root key signature
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(rootPk, messageHash);
+        bytes memory rootSig = abi.encodePacked(uint8(UserOpSigner.RootKey), r2, s2, v2);
+        assertEq(account.isValidSignature(messageHash, rootSig), ERC1271_MAGIC_VALUE);
     }
 }
