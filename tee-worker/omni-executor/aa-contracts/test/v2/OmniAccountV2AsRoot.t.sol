@@ -21,10 +21,15 @@ contract OmniAccountV2AsRoot is Test {
     MockModule public module;
 
     address ownerAddress = 0x0000000000000000000000000000000000000000;
-    address rootAddress = 0x0000000000000000000000000000000000000001;
+    address rootAddress;
+    uint256 rootPk;
     bytes clientId = bytes("test_client");
 
+    bytes4 constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 constant ERC1271_INVALID_SIGNATURE = 0xffffffff;
+
     function setUp() public {
+        (rootAddress, rootPk) = makeAddrAndKey("root");
         (counter, entryPoint, account) = OmniAccountV2TestUtils.setUp(ownerAddress, clientId, rootAddress);
         module = new MockModule();
     }
@@ -536,5 +541,29 @@ contract OmniAccountV2AsRoot is Test {
         vm.prank(address(entryPoint));
         uint256 validationData = account.validateUserOp(packedOp, packedOpHash, 0);
         assertEq(SIG_VALIDATION_FAILED, validationData);
+    }
+
+    // ============ ERC-1271 Signature Validation Tests ============
+
+    function test_ERC1271_RootKeyValidSignature() public view {
+        bytes32 messageHash = keccak256("Root message");
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(rootPk, messageHash);
+        bytes memory signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        bytes4 result = account.isValidSignature(messageHash, signature);
+        assertEq(result, ERC1271_MAGIC_VALUE);
+    }
+
+    function test_ERC1271_RootKeyInvalidSignatureRejected() public {
+        bytes32 messageHash = keccak256("Root message");
+
+        // Sign with non-root key
+        (, uint256 wrongPk) = makeAddrAndKey("notRoot");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPk, messageHash);
+        bytes memory signature = abi.encodePacked(uint8(UserOpSigner.RootKey), r, s, v);
+
+        bytes4 result = account.isValidSignature(messageHash, signature);
+        assertEq(result, ERC1271_INVALID_SIGNATURE);
     }
 }
