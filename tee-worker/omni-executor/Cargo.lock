@@ -502,7 +502,7 @@ dependencies = [
  "lru",
  "parking_lot",
  "pin-project",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
@@ -546,7 +546,7 @@ dependencies = [
  "alloy-transport-http",
  "futures",
  "pin-project",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "serde_json",
  "tokio",
@@ -759,7 +759,7 @@ checksum = "4198a1ee82e562cab85e7f3d5921aab725d9bd154b6ad5017f82df1695877c97"
 dependencies = [
  "alloy-json-rpc",
  "alloy-transport",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde_json",
  "tower",
  "tracing",
@@ -2612,7 +2612,7 @@ dependencies = [
  "oe-primitives",
  "oe-storage",
  "parity-scale-codec",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "rust_decimal",
  "serde_json",
  "solana-sdk",
@@ -3391,7 +3391,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5058,8 +5058,8 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.1",
- "system-configuration 0.6.1",
+ "socket2 0.5.10",
+ "system-configuration",
  "tokio",
  "tower-service",
  "tracing",
@@ -5077,7 +5077,7 @@ dependencies = [
  "futures-util",
  "lazy_static",
  "log",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "rmp-serde",
  "serde",
  "serde_json",
@@ -6380,7 +6380,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6639,7 +6639,7 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "mockall",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "sha2 0.10.9",
  "tracing",
@@ -6676,7 +6676,7 @@ dependencies = [
  "ethabi",
  "hex",
  "oe-primitives",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "serde_json",
  "tokio",
@@ -6700,7 +6700,7 @@ dependencies = [
  "oe-primitives",
  "parity-scale-codec",
  "rand 0.9.2",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "rsa",
  "serde",
  "serde_json",
@@ -6750,7 +6750,7 @@ dependencies = [
  "async-trait",
  "mockall",
  "parity-scale-codec",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "tokio",
  "tracing",
@@ -6773,7 +6773,7 @@ dependencies = [
  "parity-scale-codec",
  "rand 0.9.2",
  "regex",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "rsa",
  "ruint",
  "rust_decimal",
@@ -6867,7 +6867,7 @@ dependencies = [
  "oe-client-signer",
  "oe-core",
  "oe-primitives",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "serde_json",
  "tokio",
@@ -7733,7 +7733,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls 0.23.35",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -7772,9 +7772,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "tracing",
- "windows-sys 0.60.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8061,7 +8061,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sync_wrapper 0.1.2",
- "system-configuration 0.5.1",
+ "system-configuration",
  "tokio",
  "tokio-rustls 0.24.1",
  "tower-service",
@@ -8075,11 +8075,10 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.24"
+version = "0.12.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d0946410b9f7b082a427e4ef5c8ff541a88b357bc6c637c40db3a68ac70a36f"
+checksum = "3b4c14b2d9afca6a60277086b0cc6a6ae0b568f6f7916c943a8cdc79f8be240f"
 dependencies = [
- "async-compression",
  "base64 0.22.1",
  "bytes",
  "encoding_rs",
@@ -8110,7 +8109,6 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.26.4",
- "tokio-util",
  "tower",
  "tower-http",
  "tower-service",
@@ -8130,7 +8128,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "http 1.4.0",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "thiserror 1.0.69",
  "tower-service",
@@ -8465,7 +8463,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8566,7 +8564,7 @@ dependencies = [
  "security-framework 3.5.1",
  "security-framework-sys",
  "webpki-root-certs 1.0.4",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8981,7 +8979,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "338e7f7246766f6c931c6eed46e49cf6ef8f7c9b00f272b07822151b762281e9"
 dependencies = [
  "data-encoding",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "serde",
  "serde_json",
  "thiserror 2.0.17",
@@ -10144,7 +10142,7 @@ dependencies = [
  "crossbeam-channel",
  "gethostname",
  "log",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "solana-cluster-type",
  "solana-sha256-hasher",
  "solana-time-utils",
@@ -10632,7 +10630,7 @@ dependencies = [
  "futures",
  "indicatif",
  "log",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "reqwest-middleware",
  "semver 1.0.27",
  "serde",
@@ -10667,7 +10665,7 @@ checksum = "2dbc138685c79d88a766a8fd825057a74ea7a21e1dd7f8de275ada899540fff7"
 dependencies = [
  "anyhow",
  "jsonrpc-core",
- "reqwest 0.12.24",
+ "reqwest 0.12.26",
  "reqwest-middleware",
  "serde",
  "serde_derive",
@@ -12957,18 +12955,7 @@ checksum = "ba3a3adc5c275d719af8cb4272ea1c4a6d668a777f37e115f6d11ddbc1c8e0e7"
 dependencies = [
  "bitflags 1.3.2",
  "core-foundation 0.9.4",
- "system-configuration-sys 0.5.0",
-]
-
-[[package]]
-name = "system-configuration"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c879d448e9d986b661742763247d3693ed13609438cf3d006f51f5368a5ba6b"
-dependencies = [
- "bitflags 2.10.0",
- "core-foundation 0.9.4",
- "system-configuration-sys 0.6.0",
+ "system-configuration-sys",
 ]
 
 [[package]]
@@ -12976,16 +12963,6 @@ name = "system-configuration-sys"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a75fb188eb626b924683e3b95e3a48e63551fcfb51949de2f06a9d91dbee93c9"
-dependencies = [
- "core-foundation-sys",
- "libc",
-]
-
-[[package]]
-name = "system-configuration-sys"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e1d1b10ced5ca923a1fcb8d03e96b8d3268065d724548c0211415ff6ac6bac4"
 dependencies = [
  "core-foundation-sys",
  "libc",
@@ -13007,7 +12984,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -13404,15 +13381,20 @@ version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4e6559d53cc268e5031cd8429d05415bc4cb4aefc4aa5d6cc35fbf5b924a1f8"
 dependencies = [
+ "async-compression",
  "base64 0.22.1",
  "bitflags 2.10.0",
  "bytes",
+ "futures-core",
  "futures-util",
  "http 1.4.0",
  "http-body 1.0.1",
+ "http-body-util",
  "iri-string",
  "mime",
  "pin-project-lite",
+ "tokio",
+ "tokio-util",
  "tower",
  "tower-layer",
  "tower-service",
@@ -14024,7 +14006,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
