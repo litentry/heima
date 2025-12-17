@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 // solhint-disable no-inline-assembly
 
 import "../interfaces/PackedUserOperation.sol";
-import "../core/UserOperationLib.sol";
+import "./UserOperationLib.sol";
 
 library Eip7702Support {
     // EIP-7702 code prefix before delegate address.

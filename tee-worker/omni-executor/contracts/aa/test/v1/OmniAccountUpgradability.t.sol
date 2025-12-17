@@ -4,10 +4,10 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {OmniAccountV1} from "../../src/accounts/v1/OmniAccountV1.sol";
-import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
-import {OwnerType} from "../../src/interfaces/OwnerType.sol";
-import {Passkey} from "../../src/interfaces/Passkey.sol";
+import {OmniAccountV1} from "../../src/v1/accounts/OmniAccountV1.sol";
+import {EntryPointV1} from "../../src/v1/core/EntryPointV1.sol";
+import {OwnerType} from "../../src/v1/interfaces/OwnerType.sol";
+import {Passkey} from "../../src/v1/interfaces/Passkey.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "../TestUtils.sol";
 

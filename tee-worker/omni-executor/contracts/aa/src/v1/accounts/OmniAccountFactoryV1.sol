@@ -4,8 +4,8 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import "../../interfaces/ISenderCreator.sol";
-import "../../interfaces/OwnerType.sol";
+import "../interfaces/ISenderCreator.sol";
+import "../interfaces/OwnerType.sol";
 import "./OmniAccountV1.sol";
 
 /**

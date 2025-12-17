@@ -3,12 +3,13 @@ pragma solidity ^0.8.28;
 
 import {Counter} from "../../src/Counter.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {OmniAccountV2 as OmniAccount} from "../../src/accounts/v2/OmniAccountV2.sol";
-import {BaseAccount} from "../../src/core/BaseAccount.sol";
-import {EntryPointV1 as EntryPoint} from "../../src/core/EntryPointV1.sol";
-import {OwnerType} from "../../src/interfaces/OwnerType.sol";
+import {OmniAccountV2 as OmniAccount} from "../../src/v2/accounts/OmniAccountV2.sol";
+import {BaseAccount} from "../../src/v2/core/BaseAccount.sol";
+import {EntryPointV1 as EntryPoint} from "../../src/v2/core/EntryPointV1.sol";
+import {IEntryPoint} from "../../src/v2/interfaces/IEntryPoint.sol";
+import {OwnerType} from "../../src/v2/interfaces/OwnerType.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {TestUtils} from "../TestUtils.sol";
+import {TestUtilsV2 as TestUtils} from "./TestUtilsV2.sol";
 
 library OmniAccountV2TestUtils {
     function setUpWithOwnerType(address ownerAddress, bytes memory clientId, address rootAddress, OwnerType ownerType)
@@ -17,7 +18,7 @@ library OmniAccountV2TestUtils {
     {
         Counter counter = new Counter();
         EntryPoint entryPoint = new EntryPoint();
-        OmniAccount accountImpl = new OmniAccount(entryPoint);
+        OmniAccount accountImpl = new OmniAccount(IEntryPoint(address(entryPoint)));
         bytes32 oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
         OmniAccount account = OmniAccount(
             payable(new ERC1967Proxy{salt: oa}(
@@ -34,7 +35,7 @@ library OmniAccountV2TestUtils {
     {
         Counter counter = new Counter();
         EntryPoint entryPoint = new EntryPoint();
-        OmniAccount accountImpl = new OmniAccount(entryPoint);
+        OmniAccount accountImpl = new OmniAccount(IEntryPoint(address(entryPoint)));
         bytes32 oa = TestUtils.prepare_evm_oa(ownerAddress, clientId);
         OmniAccount account = OmniAccount(
             payable(new ERC1967Proxy{salt: oa}(

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SimplePaymaster} from "../src/core/SimplePaymaster.sol";
-import {EntryPointV1} from "../src/core/EntryPointV1.sol";
-import {IPaymaster} from "../src/interfaces/IPaymaster.sol";
-import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
+import {SimplePaymaster} from "../src/v1/core/SimplePaymaster.sol";
+import {EntryPointV1} from "../src/v1/core/EntryPointV1.sol";
+import {IPaymaster} from "../src/v1/interfaces/IPaymaster.sol";
+import {PackedUserOperation} from "../src/v1/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
 
 contract SimplePaymasterTest is Test {

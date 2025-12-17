@@ -4,15 +4,16 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {OmniAccountV2} from "../../src/accounts/v2/OmniAccountV2.sol";
-import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
-import {OwnerType} from "../../src/interfaces/OwnerType.sol";
-import {Passkey} from "../../src/interfaces/Passkey.sol";
+import {OmniAccountV2} from "../../src/v2/accounts/OmniAccountV2.sol";
+import {EntryPointV1} from "../../src/v2/core/EntryPointV1.sol";
+import {IEntryPoint} from "../../src/v2/interfaces/IEntryPoint.sol";
+import {OwnerType} from "../../src/v2/interfaces/OwnerType.sol";
+import {Passkey} from "../../src/v2/interfaces/Passkey.sol";
 import {OmniAccountV2TestUtils} from "./OmniAccountV2TestUtils.sol";
-import {TestUtils} from "../TestUtils.sol";
+import {TestUtilsV2 as TestUtils} from "./TestUtilsV2.sol";
 
 contract OmniAccountV3 is OmniAccountV2 {
-    constructor(EntryPointV1 anEntryPoint) OmniAccountV2(anEntryPoint) {}
+    constructor(EntryPointV1 anEntryPoint) OmniAccountV2(IEntryPoint(address(anEntryPoint))) {}
 
     function version() public pure override returns (string memory) {
         return "3.0.0";

@@ -2,15 +2,15 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {OmniAccountV1} from "../../src/accounts/v1/OmniAccountV1.sol";
-import {BaseAccount} from "../../src/core/BaseAccount.sol";
-import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
-import {UserOpSigner} from "../../src/interfaces/UserOpSigner.sol";
+import {OmniAccountV1} from "../../src/v1/accounts/OmniAccountV1.sol";
+import {BaseAccount} from "../../src/v1/core/BaseAccount.sol";
+import {EntryPointV1} from "../../src/v1/core/EntryPointV1.sol";
+import {UserOpSigner} from "../../src/v1/interfaces/UserOpSigner.sol";
 import {Counter} from "../../src/Counter.sol";
 import {OmniAccountTestUtils} from "./OmniAccountTestUtils.sol";
 import {TestUtils} from "../TestUtils.sol";
-import {PackedUserOperation} from "../../src/interfaces/PackedUserOperation.sol";
-import {SIG_VALIDATION_FAILED} from "../../src//core/Helpers.sol";
+import {PackedUserOperation} from "../../src/v1/interfaces/PackedUserOperation.sol";
+import {SIG_VALIDATION_FAILED} from "../../src/v1/core/Helpers.sol";
 
 // add test cases for revert if called by non authorized address
 

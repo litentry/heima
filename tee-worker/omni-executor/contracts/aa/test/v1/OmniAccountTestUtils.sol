@@ -3,10 +3,10 @@ pragma solidity ^0.8.28;
 
 import {Counter} from "../../src/Counter.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {OmniAccountV1 as OmniAccount} from "../../src/accounts/v1/OmniAccountV1.sol";
-import {BaseAccount} from "../../src/core/BaseAccount.sol";
-import {EntryPointV1 as EntryPoint} from "../../src/core/EntryPointV1.sol";
-import {OwnerType} from "../../src/interfaces/OwnerType.sol";
+import {OmniAccountV1 as OmniAccount} from "../../src/v1/accounts/OmniAccountV1.sol";
+import {BaseAccount} from "../../src/v1/core/BaseAccount.sol";
+import {EntryPointV1 as EntryPoint} from "../../src/v1/core/EntryPointV1.sol";
+import {OwnerType} from "../../src/v1/interfaces/OwnerType.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestUtils} from "../TestUtils.sol";
 

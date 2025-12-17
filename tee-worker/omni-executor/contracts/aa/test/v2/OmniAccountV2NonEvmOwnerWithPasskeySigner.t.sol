@@ -2,17 +2,17 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {OmniAccountV2 as OmniAccount} from "../../src/accounts/v2/OmniAccountV2.sol";
-import {BaseAccount} from "../../src/core/BaseAccount.sol";
-import {EntryPointV1 as EntryPoint} from "../../src/core/EntryPointV1.sol";
-import {UserOpSigner} from "../../src/interfaces/UserOpSigner.sol";
-import {OwnerType} from "../../src/interfaces/OwnerType.sol";
-import {Passkey} from "../../src/interfaces/Passkey.sol";
+import {OmniAccountV2 as OmniAccount} from "../../src/v2/accounts/OmniAccountV2.sol";
+import {BaseAccount} from "../../src/v2/core/BaseAccount.sol";
+import {EntryPointV1 as EntryPoint} from "../../src/v2/core/EntryPointV1.sol";
+import {UserOpSigner} from "../../src/v2/interfaces/UserOpSigner.sol";
+import {OwnerType} from "../../src/v2/interfaces/OwnerType.sol";
+import {Passkey} from "../../src/v2/interfaces/Passkey.sol";
 import {Counter} from "../../src/Counter.sol";
 import {OmniAccountV2TestUtils} from "./OmniAccountV2TestUtils.sol";
-import {TestUtils} from "../TestUtils.sol";
-import {PackedUserOperation} from "../../src/interfaces/PackedUserOperation.sol";
-import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../../src/core/Helpers.sol";
+import {TestUtilsV2 as TestUtils} from "./TestUtilsV2.sol";
+import {PackedUserOperation} from "../../src/v2/interfaces/PackedUserOperation.sol";
+import {SIG_VALIDATION_SUCCESS, SIG_VALIDATION_FAILED} from "../../src/v1/core/Helpers.sol";
 
 contract OmniAccountV2NonEvmOwnerWithPasskeySigner is Test {
     OmniAccount public account;

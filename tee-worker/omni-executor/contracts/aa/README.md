@@ -133,4 +133,5 @@ Also see [DEPLOYMENT.md](./DEPLOYMENT.md) for more information.
 ### Versioning
 
 All changes resulting in bytecode change should be properly versioned using new files suffixed with V{N} where N is a version number.
+Each version directory should contain all files required to build contracts, there should be no cross version imports.
 Work on new version begins when first change is introduced after previous version deployment and continues until deployment.

@@ -2,14 +2,14 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {ERC20PaymasterV1} from "../src/core/ERC20PaymasterV1.sol";
-import {EntryPointV1} from "../src/core/EntryPointV1.sol";
+import {ERC20PaymasterV1} from "../src/v1/core/ERC20PaymasterV1.sol";
+import {EntryPointV1} from "../src/v1/core/EntryPointV1.sol";
 import {TestToken} from "../src/TestToken.sol";
-import {IPaymaster} from "../src/interfaces/IPaymaster.sol";
-import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
+import {IPaymaster} from "../src/v1/interfaces/IPaymaster.sol";
+import {PackedUserOperation} from "../src/v1/interfaces/PackedUserOperation.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {BaseAccount} from "../src/core/BaseAccount.sol";
+import {BaseAccount} from "../src/v1/core/BaseAccount.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ERC20PaymasterV1Test is Test {

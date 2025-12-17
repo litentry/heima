@@ -4,13 +4,18 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {OmniAccountV1} from "../../src/accounts/v1/OmniAccountV1.sol";
-import {OmniAccountV2} from "../../src/accounts/v2/OmniAccountV2.sol";
-import {EntryPointV1} from "../../src/core/EntryPointV1.sol";
-import {OwnerType} from "../../src/interfaces/OwnerType.sol";
-import {Passkey} from "../../src/interfaces/Passkey.sol";
-import {TestUtils} from "../TestUtils.sol";
+import {OmniAccountV1} from "../../src/v1/accounts/OmniAccountV1.sol";
+import {OmniAccountV2} from "../../src/v2/accounts/OmniAccountV2.sol";
+// we need to use v1 types here ....
+import {EntryPointV1 as EntryPointV1} from "../../src/v1/core/EntryPointV1.sol";
+import {IEntryPoint as IEntryPointV1} from "../../src/v1/interfaces/IEntryPoint.sol";
+import {OwnerType as OwnerTypeV1} from "../../src/v1/interfaces/OwnerType.sol";
+import {Passkey as PasskeyV1} from "../../src/v1/interfaces/Passkey.sol";
+import {TestUtilsV2 as TestUtils} from "./TestUtilsV2.sol";
 import {StorageTestModule} from "./StorageTestModule.sol";
+import {EntryPointV1 as EntryPointV2} from "../../src/v2/core/EntryPointV1.sol";
+import {OwnerType} from "../../src/v2/interfaces/OwnerType.sol";
+import {Passkey} from "../../src/v2/interfaces/Passkey.sol";
 
 /**
  * Comprehensive test for upgrading OmniAccountV1 to V2 with full state verification.
@@ -35,7 +40,10 @@ contract OmniAccountV1ToV2Upgrade is Test {
     address public rootSigner3 = address(0x4444);
     bytes public clientId = bytes("comprehensive_test_client_v1_to_v2");
 
-    // Passkey signers
+    // Passkey signers v1
+    PasskeyV1.PublicKey public passkey1V1 = PasskeyV1.PublicKey({x: 111111, y: 222222});
+    PasskeyV1.PublicKey public passkey2V1 = PasskeyV1.PublicKey({x: 333333, y: 444444});
+
     Passkey.PublicKey public passkey1 = Passkey.PublicKey({x: 111111, y: 222222});
     Passkey.PublicKey public passkey2 = Passkey.PublicKey({x: 333333, y: 444444});
 
@@ -47,18 +55,19 @@ contract OmniAccountV1ToV2Upgrade is Test {
         entryPoint = new EntryPointV1();
 
         // Deploy V1 implementation and create proxy
-        OmniAccountV1 v1Implementation = new OmniAccountV1(entryPoint);
+        OmniAccountV1 v1Implementation = new OmniAccountV1(IEntryPointV1(address(entryPoint)));
         expectedOwner = TestUtils.prepare_evm_oa(owner, clientId);
 
         accountV1 = OmniAccountV1(
             payable(new ERC1967Proxy{salt: expectedOwner}(
                     address(v1Implementation),
-                    abi.encodeCall(OmniAccountV1.initialize, (expectedOwner, OwnerType.Evm, clientId, rootSigner1))
+                    abi.encodeCall(OmniAccountV1.initialize, (expectedOwner, OwnerTypeV1.Evm, clientId, rootSigner1))
                 ))
         );
 
         // Prepare V2 implementation for upgrade
-        accountV2Implementation = new OmniAccountV2(entryPoint);
+        // EntryPointV1 and EntryPointV2 are identical so we use old deployment with V2 type
+        accountV2Implementation = new OmniAccountV2(EntryPointV2(payable(address(entryPoint))));
 
         // Prepare module
         module = new StorageTestModule();
@@ -75,9 +84,9 @@ contract OmniAccountV1ToV2Upgrade is Test {
 
         // Add passkey signers
         vm.prank(owner);
-        accountV1.addPasskeySigner(passkey1);
+        accountV1.addPasskeySigner(passkey1V1);
         vm.prank(owner);
-        accountV1.addPasskeySigner(passkey2);
+        accountV1.addPasskeySigner(passkey2V1);
 
         // Add deposit to EntryPoint
         vm.deal(address(accountV1), 10 ether);
@@ -87,12 +96,12 @@ contract OmniAccountV1ToV2Upgrade is Test {
         // Verify V1 initial state
         assertEq(accountV1.owner(), expectedOwner, "V1 owner mismatch");
         assertEq(accountV1.clientId(), clientId, "V1 clientId mismatch");
-        assertEq(uint256(accountV1.ownerType()), uint256(OwnerType.Evm), "V1 ownerType mismatch");
+        assertEq(uint256(accountV1.ownerType()), uint256(OwnerTypeV1.Evm), "V1 ownerType mismatch");
         assertTrue(accountV1.isRootSigner(rootSigner1), "rootSigner1 not registered");
         assertTrue(accountV1.isRootSigner(rootSigner2), "rootSigner2 not registered");
         assertTrue(accountV1.isRootSigner(rootSigner3), "rootSigner3 not registered");
-        assertTrue(accountV1.passkeySigners(Passkey.toKey(passkey1)), "passkey1 not registered");
-        assertTrue(accountV1.passkeySigners(Passkey.toKey(passkey2)), "passkey2 not registered");
+        assertTrue(accountV1.passkeySigners(PasskeyV1.toKey(passkey1V1)), "passkey1 not registered");
+        assertTrue(accountV1.passkeySigners(PasskeyV1.toKey(passkey2V1)), "passkey2 not registered");
         assertEq(accountV1.passkeySignerCount(), 2, "passkey count mismatch");
         assertEq(accountV1.getDeposit(), depositAmount, "deposit mismatch");
         assertEq(accountV1.version(), "1.0.0", "V1 version mismatch");
@@ -172,12 +181,12 @@ contract OmniAccountV1ToV2Upgrade is Test {
         // All V1 state should remain intact
         assertEq(accountV2.owner(), expectedOwner, "Owner corrupted after module execution");
         assertEq(accountV2.clientId(), clientId, "ClientId corrupted after module execution");
-        assertEq(uint256(accountV2.ownerType()), uint256(OwnerType.Evm), "OwnerType corrupted after module execution");
+        assertEq(uint256(accountV2.ownerType()), uint256(OwnerTypeV1.Evm), "OwnerType corrupted after module execution");
         assertTrue(accountV2.isRootSigner(rootSigner1), "rootSigner1 corrupted");
         assertTrue(accountV2.isRootSigner(rootSigner2), "rootSigner2 corrupted");
         assertTrue(accountV2.isRootSigner(rootSigner3), "rootSigner3 corrupted");
-        assertTrue(accountV2.passkeySigners(Passkey.toKey(passkey1)), "passkey1 corrupted");
-        assertTrue(accountV2.passkeySigners(Passkey.toKey(passkey2)), "passkey2 corrupted");
+        assertTrue(accountV2.passkeySigners(PasskeyV1.toKey(passkey1V1)), "passkey1 corrupted");
+        assertTrue(accountV2.passkeySigners(PasskeyV1.toKey(passkey2V1)), "passkey2 corrupted");
         assertEq(accountV2.passkeySignerCount(), 2, "Passkey count corrupted");
         assertEq(accountV2.getDeposit(), depositAmount, "Deposit corrupted");
 
@@ -208,7 +217,8 @@ contract OmniAccountV1ToV2Upgrade is Test {
 
         // Remove a passkey signer
         vm.prank(owner);
-        accountV2.removePasskeySigner(passkey1);
+        Passkey.PublicKey memory passkey1V2 = Passkey.PublicKey({x: passkey1.x, y: passkey1.y});
+        accountV2.removePasskeySigner(passkey1V2);
         assertFalse(accountV2.passkeySigners(Passkey.toKey(passkey1)), "Cannot remove passkey after upgrade");
         assertEq(accountV2.passkeySignerCount(), 2, "Passkey count not updated after removal");
 
@@ -266,14 +276,14 @@ contract OmniAccountV1ToV2Upgrade is Test {
 
     function test_V1ToV2UpgradeNonEvmAccount() public {
         // Test upgrade with non-EVM account type
-        OmniAccountV1 v1Implementation = new OmniAccountV1(entryPoint);
+        OmniAccountV1 v1Implementation = new OmniAccountV1(IEntryPointV1(address(entryPoint)));
         bytes32 substrateOwner = keccak256("substrate_owner");
 
         OmniAccountV1 substrateAccount = OmniAccountV1(
             payable(new ERC1967Proxy{salt: substrateOwner}(
                     address(v1Implementation),
                     abi.encodeCall(
-                        OmniAccountV1.initialize, (substrateOwner, OwnerType.Substrate, clientId, rootSigner1)
+                        OmniAccountV1.initialize, (substrateOwner, OwnerTypeV1.Substrate, clientId, rootSigner1)
                     )
                 ))
         );
@@ -284,7 +294,7 @@ contract OmniAccountV1ToV2Upgrade is Test {
 
         // Verify V1 state
         assertEq(substrateAccount.owner(), substrateOwner);
-        assertEq(uint256(substrateAccount.ownerType()), uint256(OwnerType.Substrate));
+        assertEq(uint256(substrateAccount.ownerType()), uint256(OwnerTypeV1.Substrate));
         assertTrue(substrateAccount.isRootSigner(rootSigner1));
         assertTrue(substrateAccount.isRootSigner(rootSigner2));
 
