@@ -29,7 +29,12 @@ contract DemoPaymaster is BasePaymaster {
         bytes32,
         /* userOpHash */
         uint256 maxCost
-    ) internal view override returns (bytes memory context, uint256 validationData) {
+    )
+        internal
+        view
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
         // Check if we have enough deposit to cover the cost
         uint256 ourDeposit = entryPoint.balanceOf(address(this));
         if (ourDeposit < maxCost) {

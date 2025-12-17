@@ -33,7 +33,12 @@ contract SimplePaymaster is BasePaymaster {
         bytes32,
         /* userOpHash */
         uint256 maxCost
-    ) internal view override returns (bytes memory context, uint256 validationData) {
+    )
+        internal
+        view
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
         // Check if the transaction is being submitted by an authorized bundler
         if (!authorizedBundlers[tx.origin]) {
             // Reject - not from an authorized bundler

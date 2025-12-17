@@ -88,7 +88,11 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
         bytes32,
         /* userOpHash */
         uint256 maxCost
-    ) internal override returns (bytes memory context, uint256 validationData) {
+    )
+        internal
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
         // Check if the transaction is being submitted by an authorized bundler
         if (!authorizedBundlers[tx.origin]) {
             revert UnauthorizedBundler();
