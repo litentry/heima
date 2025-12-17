@@ -23,5 +23,4 @@ enum OwnerType {
     Solana, // 0x08
     Google, // 0x09
     Passkey // 0x0a
-
 }

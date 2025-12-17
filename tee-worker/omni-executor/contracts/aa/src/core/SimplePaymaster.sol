@@ -28,12 +28,12 @@ contract SimplePaymaster is BasePaymaster {
      * Validate a user operation.
      * Only sponsor operations submitted by authorized bundlers.
      */
-    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32, /* userOpHash */ uint256 maxCost)
-        internal
-        view
-        override
-        returns (bytes memory context, uint256 validationData)
-    {
+    function _validatePaymasterUserOp(
+        PackedUserOperation calldata userOp,
+        bytes32,
+        /* userOpHash */
+        uint256 maxCost
+    ) internal view override returns (bytes memory context, uint256 validationData) {
         // Check if the transaction is being submitted by an authorized bundler
         if (!authorizedBundlers[tx.origin]) {
             // Reject - not from an authorized bundler
@@ -61,7 +61,10 @@ contract SimplePaymaster is BasePaymaster {
         bytes calldata context,
         uint256 actualGasCost,
         uint256 /* actualUserOpFeePerGas */
-    ) internal override {
+    )
+        internal
+        override
+    {
         // Decode sender from context
         address sender = abi.decode(context, (address));
 

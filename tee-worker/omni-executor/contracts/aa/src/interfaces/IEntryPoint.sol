@@ -144,8 +144,7 @@ interface IEntryPoint is IStakeManager, INonceManager {
      * @param opsPerAggregator - The operations to execute, grouped by aggregator (or address(0) for no-aggregator accounts).
      * @param beneficiary      - The address to receive the fees.
      */
-    function handleAggregatedOps(UserOpsPerAggregator[] calldata opsPerAggregator, address payable beneficiary)
-        external;
+    function handleAggregatedOps(UserOpsPerAggregator[] calldata opsPerAggregator, address payable beneficiary) external;
 
     /**
      * Generate a request Id - unique identifier for this request.

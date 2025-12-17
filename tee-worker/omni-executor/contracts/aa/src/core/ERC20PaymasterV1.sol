@@ -28,10 +28,10 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     struct PaymasterData {
         address token; // ERC20 token address (must not be address(0))
         uint256 exchangeRate; // Exchange rate: how many token units per 1 wei of ETH
-            // For tokens with different decimals, this should account for the difference
-            // Example: For 6-decimal USDC at $2000/ETH: rate = 2000 * 10^6 = 2000000000
-            // Example: For 18-decimal token at 1500:1 ratio: rate = 1500 * 10^18
-            // Set to 0 for full sponsorship (no token charge)
+        // For tokens with different decimals, this should account for the difference
+        // Example: For 6-decimal USDC at $2000/ETH: rate = 2000 * 10^6 = 2000000000
+        // Example: For 18-decimal token at 1500:1 ratio: rate = 1500 * 10^18
+        // Set to 0 for full sponsorship (no token charge)
         uint256 validUntil; // Timestamp until when this exchange rate is valid
         uint256 validAfter; // Timestamp after which this exchange rate is valid
     }
@@ -83,11 +83,12 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
     /**
      * Validate a user operation and handle ERC20 token prefunding
      */
-    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32, /* userOpHash */ uint256 maxCost)
-        internal
-        override
-        returns (bytes memory context, uint256 validationData)
-    {
+    function _validatePaymasterUserOp(
+        PackedUserOperation calldata userOp,
+        bytes32,
+        /* userOpHash */
+        uint256 maxCost
+    ) internal override returns (bytes memory context, uint256 validationData) {
         // Check if the transaction is being submitted by an authorized bundler
         if (!authorizedBundlers[tx.origin]) {
             revert UnauthorizedBundler();
@@ -207,11 +208,12 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
                 // since no prefunding occurred during validation
                 if (actualTokenCost > 0) {
                     // Use low-level call to prevent revert on failed charge
-                    (bool success,) = postOpContext.token.call(
-                        abi.encodeWithSelector(
-                            IERC20.transferFrom.selector, postOpContext.sender, beneficiary, actualTokenCost
-                        )
-                    );
+                    (bool success,) = postOpContext.token
+                        .call(
+                            abi.encodeWithSelector(
+                                IERC20.transferFrom.selector, postOpContext.sender, beneficiary, actualTokenCost
+                            )
+                        );
                     if (!success) {
                         // Charge failed, but don't revert the entire operation
                         // The approval succeeded, but gas payment failed
@@ -227,9 +229,8 @@ contract ERC20PaymasterV1 is BasePaymaster, ReentrancyGuard {
                 if (beneficiary == address(this)) {
                     // If beneficiary is this contract, we can refund directly
                     // Use low-level call to prevent revert on failed refund
-                    (bool success,) = postOpContext.token.call(
-                        abi.encodeWithSelector(IERC20.transfer.selector, postOpContext.sender, refundAmount)
-                    );
+                    (bool success,) = postOpContext.token
+                        .call(abi.encodeWithSelector(IERC20.transfer.selector, postOpContext.sender, refundAmount));
                     if (!success) {
                         // Refund failed, but don't revert the entire operation
                         emit UserOpSponsored(

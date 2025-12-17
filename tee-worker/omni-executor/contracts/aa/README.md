@@ -7,6 +7,10 @@ licensed under the GNU General Public License v3.0.
 
 ## Compiling
 
+Install all required git submodules with 
+
+`git submodule update --init --recursive`
+
 `forge compile`
 
 ## Running tests

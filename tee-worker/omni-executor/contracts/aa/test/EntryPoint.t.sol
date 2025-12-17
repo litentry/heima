@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Test, console} from "forge-std/Test.sol";
 import {EntryPointV1} from "../src/core/EntryPointV1.sol";
 import {UserOpSigner} from "../src/interfaces/UserOpSigner.sol";
-import {OmniAccountFactoryV1} from "../src/accounts/OmniAccountFactoryV1.sol";
+import {OmniAccountFactoryV1} from "../src/accounts/v1/OmniAccountFactoryV1.sol";
 import {PackedUserOperation} from "../src/interfaces/PackedUserOperation.sol";
 import {OwnerType} from "../src/interfaces/OwnerType.sol";
 import {TestUtils} from "./TestUtils.sol";

@@ -376,7 +376,15 @@ library DeploymentHelper {
      * @notice Reads the ABI from Foundry artifacts
      * @return The ABI as a JSON string
      */
-    function getContractAbi(Vm, /* vm */ string memory /* contractName */ ) internal pure returns (string memory) {
+    function getContractAbi(
+        Vm,
+        /* vm */
+        string memory /* contractName */
+    )
+        internal
+        pure
+        returns (string memory)
+    {
         // Due to Solidity limitations with JSON parsing, especially for arrays,
         // we'll return a placeholder. In production, use a post-deployment script
         // to enrich the deployment artifacts with ABIs from the Foundry artifacts.
@@ -481,8 +489,9 @@ library DeploymentHelper {
         returns (uint256)
     {
         try vm.projectRoot() returns (string memory root) {
-            string memory broadcastPath =
-                string(abi.encodePacked(root, "/broadcast/", scriptName, "/", vm.toString(chainId), "/run-latest.json"));
+            string memory broadcastPath = string(
+                abi.encodePacked(root, "/broadcast/", scriptName, "/", vm.toString(chainId), "/run-latest.json")
+            );
 
             try vm.readFile(broadcastPath) returns (string memory json) {
                 return parseBlockNumberFromBroadcast(vm, json, contractAddress);
@@ -517,26 +526,34 @@ library DeploymentHelper {
             return block.number;
         } catch {
             // .receipts should be an array, try to get its length
-            try vm.parseJson(broadcastJson, ".receipts") returns (bytes memory /* receiptsData */ ) {
+            try vm.parseJson(broadcastJson, ".receipts") returns (
+                bytes memory /* receiptsData */
+            ) {
                 // Look for transactions that created contracts
                 // We'll check the first few receipts for contract creation (to field is null or empty)
                 for (uint256 i = 0; i < 20; i++) {
                     // Check up to 20 transactions
                     try vm.parseJsonString(
                         broadcastJson, string(abi.encodePacked(".receipts[", vm.toString(i), "].to"))
-                    ) returns (string memory toAddr) {
+                    ) returns (
+                        string memory toAddr
+                    ) {
                         // If 'to' is null/empty, this is a contract creation transaction
                         if (bytes(toAddr).length == 0 || keccak256(bytes(toAddr)) == keccak256(bytes("null"))) {
                             try vm.parseJsonString(
                                 broadcastJson,
                                 string(abi.encodePacked(".receipts[", vm.toString(i), "].contractAddress"))
-                            ) returns (string memory contractAddr) {
+                            ) returns (
+                                string memory contractAddr
+                            ) {
                                 if (keccak256(bytes(toLowerCase(contractAddr))) == keccak256(bytes(addressLower))) {
                                     // Found our contract! Get its block number
                                     try vm.parseJsonString(
                                         broadcastJson,
                                         string(abi.encodePacked(".receipts[", vm.toString(i), "].blockNumber"))
-                                    ) returns (string memory blockHex) {
+                                    ) returns (
+                                        string memory blockHex
+                                    ) {
                                         return hexStringToUint(blockHex);
                                     } catch {
                                         return block.number;

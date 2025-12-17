@@ -22,5 +22,4 @@ enum UserOpSigner {
     RootKey, // 0x01
     SessionKey, // 0x02
     Passkey // 0x03
-
 }

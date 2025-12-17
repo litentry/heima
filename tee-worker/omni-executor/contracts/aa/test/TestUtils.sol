@@ -10,11 +10,7 @@ library TestUtils {
         return sha256(abi.encodePacked(clientId, oaType, account));
     }
 
-    function preparePackedOp(address sender, bytes memory initCode)
-        internal
-        pure
-        returns (PackedUserOperation memory)
-    {
+    function preparePackedOp(address sender, bytes memory initCode) internal pure returns (PackedUserOperation memory) {
         uint256 nonce = 0;
         bytes memory callData = "";
         bytes32 accountGasLimits = 0x0000000000000000000000000004e20000000000000000000000000000005b8d;
@@ -23,8 +19,7 @@ library TestUtils {
         bytes memory paymasterAndData = "";
         bytes memory signature = "";
 
-        return (
-            PackedUserOperation(
+        return (PackedUserOperation(
                 sender,
                 nonce,
                 initCode,
@@ -34,7 +29,6 @@ library TestUtils {
                 gasFees,
                 paymasterAndData,
                 signature
-            )
-        );
+            ));
     }
 }
