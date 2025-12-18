@@ -271,8 +271,8 @@ importers:
         specifier: ^4.0.1
         version: 4.0.1
       systeminformation:
-        specifier: ^5.27.11
-        version: 5.27.11
+        specifier: ^5.27.14
+        version: 5.27.14
       table:
         specifier: ^6.8.1
         version: 6.9.0
@@ -2884,8 +2884,8 @@ packages:
     resolution: {integrity: sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==}
     engines: {node: '>=10'}
 
-  systeminformation@5.27.11:
-    resolution: {integrity: sha512-K3Lto/2m3K2twmKHdgx5B+0in9qhXK4YnoT9rIlgwN/4v7OV5c8IjbeAUkuky/6VzCQC7iKCAqi8rZathCdjHg==}
+  systeminformation@5.27.14:
+    resolution: {integrity: sha512-3DoNDYSZBLxBwaJtQGWNpq0fonga/VZ47HY1+7/G3YoIPaPz93Df6egSzzTKbEMmlzUpy3eQ0nR9REuYIycXGg==}
     engines: {node: '>=8.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
@@ -6405,7 +6405,7 @@ snapshots:
     dependencies:
       has-flag: 4.0.0
 
-  systeminformation@5.27.11: {}
+  systeminformation@5.27.14: {}
 
   table@6.9.0:
     dependencies:
