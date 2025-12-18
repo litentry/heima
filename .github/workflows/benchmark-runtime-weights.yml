@@ -170,7 +170,7 @@ jobs:
           rm -f gha-creds-*
 
       - name: Create auto PR
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "[benchmarking bot] Auto commit generated weights files"
           committer: benchmarking bot <noreply@github.com>
