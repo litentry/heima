@@ -25,11 +25,11 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
-    "express": "^5.1.0",
+    "express": "^5.2.0",
     "js-sha256": "^0.11.1",
     "ora": "^9.0.0",
     "pidusage": "^4.0.1",
-    "systeminformation": "^5.27.11",
+    "systeminformation": "^5.27.14",
     "table": "^6.8.1",
     "viem": "^2.40.3",
     "ws": "^8.18.0"
