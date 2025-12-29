@@ -390,7 +390,7 @@ jobs:
       - name: Check solana accounting contracts
         working-directory: ./tee-worker/omni-executor/contracts/accounting/solana
         run: |
-          anchor b
+          anchor b --ignore-keys
           # TODO: P-1575 tests fail randomly in CI
           # anchor t -- --features test-skip-auth
 
