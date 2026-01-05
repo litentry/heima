@@ -2,7 +2,7 @@
 
 ### Builder Stage - Without Gramine
 ##################################################
-FROM rust:1.89-bookworm AS plain-builder
+FROM rust:1.92 AS plain-builder
 
 ARG CARGO_FEATURES=""
 
