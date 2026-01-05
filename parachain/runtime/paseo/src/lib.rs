@@ -333,10 +333,12 @@ impl pallet_multisig::Config for Runtime {
 	RuntimeDebug,
 	MaxEncodedLen,
 	scale_info::TypeInfo,
+	Default,
 )]
 pub enum ProxyType {
 	/// Fully permissioned proxy. Can execute any call on behalf of _proxied_.
 	#[codec(index = 0)]
+	#[default]
 	Any,
 	/// Can execute any call that does not transfer funds, including asset transfers.
 	#[codec(index = 1)]
@@ -350,12 +352,6 @@ pub enum ProxyType {
 	/// Governance
 	#[codec(index = 4)]
 	Governance,
-}
-
-impl Default for ProxyType {
-	fn default() -> Self {
-		Self::Any
-	}
 }
 
 impl InstanceFilter<RuntimeCall> for ProxyType {
