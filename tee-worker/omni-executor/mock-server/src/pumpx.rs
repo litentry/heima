@@ -2,16 +2,16 @@
 
 use crate::dex;
 use serde_json::{json, Value};
-use warp::{http::Response, Filter};
+use warp::{
+	http::StatusCode,
+	reply::{json as reply_json, with_status, Json, WithStatus},
+	Filter,
+};
 
 const BASE_PATH: &str = "pumpx";
 
-fn build_success_response(response: serde_json::Value) -> Response<warp::hyper::Body> {
-	Response::builder()
-		.status(200)
-		.header("content-type", "application/json")
-		.body(warp::hyper::Body::from(response.to_string()))
-		.unwrap()
+fn build_success_response(response: serde_json::Value) -> WithStatus<Json> {
+	with_status(reply_json(&response), StatusCode::OK)
 }
 
 pub(crate) fn handle() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone

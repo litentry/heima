@@ -20,7 +20,7 @@ pub use server::{start_server, RpcContext};
 pub mod utils;
 mod verify_auth;
 
-pub use executor_crypto::shielding_key::ShieldingKey;
+pub use oe_crypto::shielding_key::ShieldingKey;
 
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::types::ErrorCode;

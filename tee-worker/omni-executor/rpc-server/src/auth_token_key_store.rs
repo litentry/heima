@@ -1,5 +1,5 @@
-use executor_core::key_store::KeyStore;
-use executor_crypto::rsa::RsaPrivateKey;
+use oe_core::key_store::KeyStore;
+use oe_crypto::rsa::{rand_core::OsRng, RsaPrivateKey};
 use rsa::pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey};
 use tracing::{error, info};
 
@@ -29,7 +29,7 @@ impl AuthTokenKeyStore {
 
 impl KeyStore<Vec<u8>> for AuthTokenKeyStore {
 	fn generate_key() -> Result<Vec<u8>, ()> {
-		let mut rng = rand::thread_rng();
+		let mut rng = OsRng;
 		let rsa_private_key = RsaPrivateKey::new(&mut rng, 2048).map_err(|e| {
 			error!("Failed to generate RSA key: {:?}", e);
 		})?;

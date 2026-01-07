@@ -59,11 +59,6 @@ on:
         description: rebuild-contract
         required: true
         default: false
-      rebuild-identity:
-        type: boolean
-        description: rebuild-identity
-        required: true
-        default: false
       push-docker:
         type: boolean
         description: push-docker
@@ -92,15 +87,13 @@ jobs:
     if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}
     outputs:
       rebuild_parachain: ${{ steps.env.outputs.rebuild_parachain }}
-      rebuild_identity: ${{ steps.env.outputs.rebuild_identity }}
       rebuild_omni_executor: ${{ steps.env.outputs.rebuild_omni_executor }}
       rebuild_contract: ${{ steps.env.outputs.rebuild_contract }}
       push_docker: ${{ steps.env.outputs.push_docker }}
       run_parachain_test: ${{ steps.env.outputs.run_parachain_test }}
-      run_identity_test: ${{ steps.env.outputs.run_identity_test }}
       run_omni_executor_test: ${{ steps.env.outputs.run_omni_executor_test }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -116,18 +109,13 @@ jobs:
         id: env
         run: |
           rebuild_parachain=false
-          rebuild_identity=false
           rebuild_omni_executor=false
           rebuild_contract=false
           push_docker=false
           run_parachain_test=false
-          run_identity_test=false
           run_omni_executor_test=false
           if [ "${{ github.event.inputs.rebuild-parachain }}" = "true" ] || [ "${{ steps.filter.outputs.parachain_src }}" = "true" ]; then
             rebuild_parachain=true
-          fi
-          if [ "${{ github.event.inputs.rebuild-identity }}" = "true" ] || [ "${{ steps.filter.outputs.identity_src }}" = "true" ]; then
-            rebuild_identity=true
           fi
           if [ "${{ github.event.inputs.rebuild-omni-executor }}" = "true" ] || [ "${{ steps.filter.outputs.omni_executor_src }}" = "true" ]; then
             rebuild_omni_executor=true
@@ -143,26 +131,21 @@ jobs:
           if [ "${{ steps.filter.outputs.parachain_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ]; then
             run_parachain_test=true
           fi
-          if [ "${{ steps.filter.outputs.identity_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_identity" = "true" ]; then
-            run_identity_test=true
-          fi
           if [ "${{ steps.filter.outputs.omni_executor_test }}" = "true" ] || [ "$rebuild_parachain" = "true" ] || [ "$rebuild_omni_executor" = "true" ]; then
             run_omni_executor_test=true
           fi
 
           echo "rebuild_parachain=$rebuild_parachain" | tee -a $GITHUB_OUTPUT
-          echo "rebuild_identity=$rebuild_identity" | tee -a $GITHUB_OUTPUT
           echo "rebuild_omni_executor=$rebuild_omni_executor" | tee -a $GITHUB_OUTPUT
           echo "rebuild_contract=$rebuild_contract" | tee -a $GITHUB_OUTPUT
           echo "push_docker=$push_docker" | tee -a $GITHUB_OUTPUT
           echo "run_parachain_test=$run_parachain_test" | tee -a $GITHUB_OUTPUT
-          echo "run_identity_test=$run_identity_test" | tee -a $GITHUB_OUTPUT
           echo "run_omni_executor_test=$run_omni_executor_test" | tee -a $GITHUB_OUTPUT
 
   fmt:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install rust toolchain
         run: rustup show
@@ -225,7 +208,7 @@ jobs:
       - sequentialise
     if: needs.set-condition.outputs.rebuild_omni_executor == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -251,7 +234,7 @@ jobs:
       - set-condition
       - sequentialise
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -278,7 +261,7 @@ jobs:
           docker save litentry/heima:latest | gzip > heima.tar.gz
 
       - name: Upload parachain docker image
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: heima
           path: heima.tar.gz
@@ -295,7 +278,7 @@ jobs:
       - set-condition
       - sequentialise
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -316,7 +299,7 @@ jobs:
           context: .
           file: tee-worker/omni-executor/Dockerfile
           tags: litentry/omni-executor:latest
-          target: executor-worker
+          target: omni-executor
           build-args: |
             CARGO_FEATURES=mock-server
 
@@ -324,7 +307,7 @@ jobs:
         if: needs.set-condition.outputs.rebuild_omni_executor == 'false'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: litentry
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Pull omni-executor image optionally
@@ -339,7 +322,7 @@ jobs:
           docker save litentry/omni-executor:latest | gzip > litentry-omni.tar.gz
 
       - name: Upload docker image
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: litentry-omni
           path: litentry-omni.tar.gz
@@ -353,7 +336,7 @@ jobs:
       - sequentialise
     if: needs.set-condition.outputs.rebuild_contract == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
@@ -362,14 +345,14 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Show Forge version
-        working-directory: ./tee-worker/omni-executor/aa-contracts
+        working-directory: ./tee-worker/omni-executor/contracts/aa
         run: forge --version
 
       - name: Check AA contracts
-        working-directory: ./tee-worker/omni-executor/aa-contracts
+        working-directory: ./tee-worker/omni-executor/contracts/aa
         run: |
           forge b
-          forge t --gas-report > ./../../../gasreport.ansi
+          forge t --gas-report > ./../../../../gasreport.ansi
         env:
           FOUNDRY_FUZZ_SEED: 0x${{ github.event.pull_request.base.sha || github.sha }}
 
@@ -399,15 +382,15 @@ jobs:
           solana -V
 
       - name: Check bsc accounting contracts
-        working-directory: ./tee-worker/omni-executor/accounting-contract/bsc
+        working-directory: ./tee-worker/omni-executor/contracts/accounting/bsc
         run: |
           forge b
           forge t
 
       - name: Check solana accounting contracts
-        working-directory: ./tee-worker/omni-executor/accounting-contract/solana
+        working-directory: ./tee-worker/omni-executor/contracts/accounting/solana
         run: |
-          anchor b
+          anchor b --ignore-keys
           # TODO: P-1575 tests fail randomly in CI
           # anchor t -- --features test-skip-auth
 
@@ -423,9 +406,9 @@ jobs:
           - paseo
     name: ${{ matrix.chain }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: heima
 
@@ -461,7 +444,7 @@ jobs:
           dest: docker-logs
 
       - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: ${{ matrix.chain }}-ts-tests-docker-logs
@@ -470,7 +453,7 @@ jobs:
           retention-days: 3
 
       - name: Archive logs if test fails
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: ${{ matrix.chain }}-ts-tests-artifact
@@ -491,7 +474,7 @@ jobs:
     # run_parachain_test is related to ts-tests only
     if: needs.set-condition.outputs.rebuild_parachain == 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Free up disk space
         if: startsWith(runner.name, 'GitHub Actions')
@@ -550,9 +533,9 @@ jobs:
           # - test_name: omni-account-test
     name: ${{ matrix.test_name }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: litentry-omni
 
@@ -581,7 +564,7 @@ jobs:
           dest: docker-logs
 
       - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: ${{ matrix.test_name }}-docker-logs
@@ -611,18 +594,18 @@ jobs:
       - omni-executor-test
     if: ${{ !failure() && needs.set-condition.outputs.push_docker == 'true' }}
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: heima
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: litentry-omni
 
       - name: Dockerhub login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: litentry
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Push parachain image

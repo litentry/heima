@@ -74,6 +74,8 @@ loader.env.OE_GOOGLE_CLIENT_ID_WILDMETA = { passthrough = true }
 loader.env.OE_GOOGLE_CLIENT_SECRET_WILDMETA = { passthrough = true }
 loader.env.OE_APPLE_CLIENT_ID_WILDMETA = { passthrough = true }
 loader.env.OE_APPLE_CLIENT_SECRET_WILDMETA = { passthrough = true }
+loader.env.OE_PASSKEY_RP_ID_WILDMETA = { passthrough = true }
+loader.env.OE_PASSKEY_ALLOWED_ORIGINS_WILDMETA = { passthrough = true }
 loader.env.OE_ETHEREUM_URL = { passthrough = true }
 loader.env.OE_SOLANA_URL = { passthrough = true }
 loader.env.OE_BSC_URL = { passthrough = true }

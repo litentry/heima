@@ -2,11 +2,11 @@ use crate::{
 	detailed_error::DetailedError, methods::omni::check_backend_response, server::RpcContext,
 	utils::omni::extract_omni_account,
 };
-use executor_core::intent_executor::IntentExecutor;
-use executor_storage::{HeimaJwtStorage, Storage};
-use heima_authentication::constants::AUTH_TOKEN_ACCESS_TYPE;
 use jsonrpsee::RpcModule;
-use pumpx::methods::add_wallet::AddWalletResponse;
+use oe_client_pumpx::methods::add_wallet::AddWalletResponse;
+use oe_core::auth::constants::AUTH_TOKEN_ACCESS_TYPE;
+use oe_core::intent::executor::IntentExecutor;
+use oe_storage::{HeimaJwtStorage, Storage};
 use serde::Serialize;
 use tracing::{debug, error};
 

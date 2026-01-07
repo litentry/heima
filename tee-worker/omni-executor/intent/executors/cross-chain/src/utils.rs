@@ -16,22 +16,24 @@
 
 use crate::types::Chain;
 use crate::*;
-use accounting_contract_client::{AccountingContractApi, Plus};
-use ethereum_rpc::AlloyRpcProvider;
-use intent_token_query::{query_ethereum, query_solana, EthereumAddress, SolanaPubkey};
+use alloy::primitives::Address as EthereumAddress;
+use oe_client_accounting::{AccountingContractApi, Plus};
+use oe_client_ethereum::{query_balance as query_ethereum, AlloyRpcProvider};
+use oe_client_solana::{query_balance as query_solana, SolanaClient as SolanaClientTrait};
 use rust_decimal::Decimal;
+use solana_sdk::pubkey::Pubkey as SolanaPubkey;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::{debug, error};
 
 pub async fn estimate_asset_value_in_usdt<BinanceClient: BinanceApi>(
-	binance_api: &Arc<BinanceClient>,
+	oe_client_binance: &Arc<BinanceClient>,
 	trade_symbol: &str,
 	binance_coin_name: &str,
 	from_amount_decimal: Decimal,
 ) -> Result<Decimal, ()> {
-	let price_str = SpotTradingApi::new(binance_api.as_ref())
+	let price_str = SpotTradingApi::new(oe_client_binance.as_ref())
 		.get_symbol_price(trade_symbol)
 		.await
 		.map_err(|_| {
@@ -120,12 +122,12 @@ pub fn determine_trade_symbol_and_order_side(
 }
 
 pub async fn estimate_payout_amount<BinanceClient: BinanceApi>(
-	binance_api: &Arc<BinanceClient>,
+	oe_client_binance: &Arc<BinanceClient>,
 	trade_symbol: &str,
 	binance_coin: BinanceCoin,
 	from_amount_decimal: Decimal,
 ) -> Result<String, ()> {
-	let price_str = SpotTradingApi::new(binance_api.as_ref())
+	let price_str = SpotTradingApi::new(oe_client_binance.as_ref())
 		.get_symbol_price(trade_symbol)
 		.await
 		.map_err(|_| {
@@ -148,12 +150,14 @@ pub async fn estimate_payout_amount<BinanceClient: BinanceApi>(
 }
 
 pub async fn get_binance_deposit_info<BinanceClient: BinanceApi>(
-	binance_api: Arc<BinanceClient>,
+	oe_client_binance: Arc<BinanceClient>,
 	swap_order_from_asset: &ChainAsset,
 	from_amount: &str,
 ) -> Result<(String, BinanceAsset, Decimal, Decimal), ()> {
-	let coins_info =
-		WalletApi::new(binance_api.as_ref()).get_all_coins_info().await.map_err(|e| {
+	let coins_info = WalletApi::new(oe_client_binance.as_ref())
+		.get_all_coins_info()
+		.await
+		.map_err(|e| {
 			error!("Failed to get all coins info, {:?}", e);
 		})?;
 
@@ -185,7 +189,7 @@ pub async fn get_binance_deposit_info<BinanceClient: BinanceApi>(
 		return Err(());
 	};
 
-	let deposit_address = WalletApi::new(binance_api.as_ref())
+	let deposit_address = WalletApi::new(oe_client_binance.as_ref())
 		.get_deposit_address(binance_asset.coin.name(), binance_asset.network.name())
 		.await
 		.map_err(|e| {
@@ -235,7 +239,7 @@ where
 }
 
 pub async fn do_binance_swap<A, N, BinanceClient: BinanceApi>(
-	binance_api: Arc<BinanceClient>,
+	oe_client_binance: Arc<BinanceClient>,
 	contract_client: &Arc<Box<dyn AccountingContractApi<A, N>>>,
 	from_asset: ChainAsset,
 	from_amount: String,
@@ -247,7 +251,7 @@ where
 	N: Plus<u64, Output = N> + std::fmt::Debug,
 {
 	let (deposit_address, binance_asset, from_amount_decimal, _amount_to_transfer_decimal) =
-		get_binance_deposit_info(binance_api.clone(), &from_asset, &from_amount).await?;
+		get_binance_deposit_info(oe_client_binance.clone(), &from_asset, &from_amount).await?;
 
 	let binance_network = binance_asset.network;
 	let binance_coin = binance_asset.coin;
@@ -260,7 +264,7 @@ where
 
 	// init `payout_amount` with estimated-amount-to-receive
 	let payout_amount = estimate_payout_amount(
-		&binance_api,
+		&oe_client_binance,
 		&trade_symbol,
 		binance_coin.clone(),
 		from_amount_decimal,

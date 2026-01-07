@@ -5,25 +5,29 @@ use crate::{
 	middlewares::{HttpMiddleware, RpcMiddleware},
 	ShieldingKey,
 };
-use aa_contracts_client::EntryPointClient;
-use binance_api::BinancePaymasterApi;
-use config_loader::ConfigLoader;
-use ethereum_rpc::AlloyRpcProvider;
-use executor_core::intent_executor::IntentExecutor;
-use executor_crypto::aes256::Aes256Key;
-use executor_storage::{LoanRecordStorage, StorageDB, WildmetaTimestampStorage};
-use jsonrpsee::{server::Server, RpcModule};
-use pumpx::PumpxApi;
-use signer_client::SignerClient;
+use jsonrpsee::{
+	server::{Server, ServerConfig},
+	RpcModule,
+};
+use oe_client_aa::EntryPointClient;
+use oe_client_binance::BinancePaymasterApi;
+use oe_client_ethereum::AlloyRpcProvider;
+use oe_client_pumpx::PumpxApi;
+use oe_client_signer::SignerClient;
+use oe_client_wildmeta::WildmetaApi;
+use oe_core::config::ConfigLoader;
+use oe_core::intent::executor::IntentExecutor;
+use oe_crypto::aes256::Aes256Key;
+use oe_storage::{LoanRecordStorage, StorageDB, WildmetaTimestampStorage};
 use std::collections::HashMap;
 use std::marker::{Send, Sync};
 use std::{env, net::SocketAddr, sync::Arc};
 use tracing::info;
-use wildmeta_api::WildmetaApi;
 
 pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static> {
 	pub shielding_key: ShieldingKey,
 	pub storage_db: Arc<StorageDB>,
+	pub config_loader: Arc<ConfigLoader>,
 	pub mailer_factory: Arc<MailerFactory>,
 	pub oauth2_factory: Arc<OAuth2ConfigFactory>,
 	pub jwt_rsa_private_key: Vec<u8>,
@@ -31,7 +35,7 @@ pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	// we could save copying client (and other objects) around when P-1527 is done
 	// there could some a single `handler` that wraps up all accessible member variables
 	pub signer_client: Arc<Box<dyn SignerClient>>,
-	pub binance_api_client: Arc<dyn BinancePaymasterApi>,
+	pub oe_client_binance_client: Arc<dyn BinancePaymasterApi>,
 	pub wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	#[cfg_attr(not(feature = "test-endpoints"), allow(dead_code))]
@@ -51,12 +55,13 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 	pub fn new(
 		shielding_key: ShieldingKey,
 		storage_db: Arc<StorageDB>,
+		config_loader: Arc<ConfigLoader>,
 		mailer_factory: Arc<MailerFactory>,
 		oauth2_factory: Arc<OAuth2ConfigFactory>,
 		jwt_rsa_private_key: Vec<u8>,
 		pumpx_api: Arc<Box<dyn PumpxApi>>,
 		signer_client: Arc<Box<dyn SignerClient>>,
-		binance_api_client: Arc<dyn BinancePaymasterApi>,
+		oe_client_binance_client: Arc<dyn BinancePaymasterApi>,
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 		loan_record_storage: Arc<LoanRecordStorage>,
@@ -69,13 +74,14 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 	) -> Self {
 		Self {
 			shielding_key,
+			config_loader,
 			storage_db,
 			mailer_factory,
 			oauth2_factory,
 			jwt_rsa_private_key,
 			pumpx_api,
 			signer_client,
-			binance_api_client,
+			oe_client_binance_client,
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
@@ -98,7 +104,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	jwt_rsa_private_key: Vec<u8>,
 	config_loader: &ConfigLoader,
 	signer_client: Arc<Box<dyn SignerClient>>,
-	binance_api_client: Arc<dyn BinancePaymasterApi>,
+	oe_client_binance_client: Arc<dyn BinancePaymasterApi>,
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	loan_record_storage: Arc<LoanRecordStorage>,
@@ -111,17 +117,18 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let config_loader_arc = Arc::new(config_loader.clone());
 	let mailer_factory = Arc::new(MailerFactory::new(config_loader_arc.clone()));
-	let oauth2_factory = Arc::new(OAuth2ConfigFactory::new(config_loader_arc));
+	let oauth2_factory = Arc::new(OAuth2ConfigFactory::new(config_loader_arc.clone()));
 
 	let ctx = RpcContext::new(
 		shielding_key,
 		storage_db,
+		config_loader_arc,
 		mailer_factory,
 		oauth2_factory,
 		jwt_rsa_private_key.clone(),
 		pumpx_api,
 		signer_client,
-		binance_api_client,
+		oe_client_binance_client,
 		wildmeta_api,
 		wildmeta_timestamp_storage,
 		loan_record_storage,
@@ -138,8 +145,9 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	let address = format!("0.0.0.0:{}", port);
 	let max_connections: u32 =
 		env::var("OE_RPC_SERVER_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse()?;
+	let config = ServerConfig::builder().max_connections(max_connections).build();
 	let server = Server::builder()
-		.max_connections(max_connections)
+		.set_config(config)
 		.set_http_middleware(HttpMiddleware::create_builder())
 		.set_rpc_middleware(RpcMiddleware::create_builder(jwt_rsa_private_key))
 		.build(address.parse::<SocketAddr>()?)

@@ -1,9 +1,9 @@
 use crate::error_code::INVALID_RPC_EXTENSION;
 use crate::middlewares::RpcExtensions;
-use executor_primitives::utils::hex::decode_hex;
-use executor_primitives::AccountId;
 use jsonrpsee::core::RpcResult;
 use jsonrpsee::Extensions;
+use oe_primitives::utils::hex::decode_hex;
+use oe_primitives::AccountId;
 
 use crate::detailed_error::DetailedError;
 

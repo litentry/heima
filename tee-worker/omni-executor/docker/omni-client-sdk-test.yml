@@ -5,18 +5,18 @@ services:
     volumes:
       - ../client-sdk:/client-sdk
       - ../../client-api:/client-api
-      - ../cli:/usr/local/executor-worker-cli
+      - ../ts-tests/cli:/usr/local/omni-executor-cli
     build:
       context: ${PWD}/../../
       dockerfile: tee-worker/omni-executor/Dockerfile
-      target: executor-worker
+      target: omni-executor
     depends_on:
       omni-executor:
         condition: service_healthy
         restart: true
     networks:
       - litentry-test-network
-    entrypoint: "sh -c '/usr/local/executor-worker-cli/ts_client_sdk_test.sh 3>&1' "
+    entrypoint: "sh -c '/usr/local/omni-executor-cli/ts_client_sdk_test.sh 3>&1' "
     restart: "no"
 networks:
   litentry-test-network:

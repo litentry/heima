@@ -18,13 +18,13 @@ use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::user_op::convert_to_packed_user_op;
 use crate::utils::validation::parse_rpc_params;
-use aa_contracts_client::calculate_user_operation_hash;
-use executor_core::intent_executor::IntentExecutor;
-use executor_core::types::SerializablePackedUserOperation;
-use executor_primitives::signature::recover_evm_address;
-use executor_primitives::ChainId;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
+use oe_client_aa::calculate_user_operation_hash;
+use oe_core::intent::IntentExecutor;
+use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::signature::recover_evm_address;
+use oe_primitives::ChainId;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 
@@ -80,8 +80,7 @@ pub fn register_verify_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 				packed_user_op.sender, packed_user_op.nonce, params.chain_id
 			);
 
-			// Convert to aa_contracts_client::PackedUserOperation
-			let user_op = aa_contracts_client::PackedUserOperation {
+			let user_op = oe_client_aa::PackedUserOperation {
 				sender: packed_user_op.sender,
 				nonce: packed_user_op.nonce,
 				initCode: packed_user_op.initCode.clone(),

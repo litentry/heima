@@ -305,22 +305,9 @@ pub fn run() -> Result<()> {
 			let collator_options = cli.run.collator_options();
 			let is_standalone = runner.config().chain_spec.is_standalone();
 
-			let evm_tracing_config = crate::evm_tracing_types::EvmTracingConfig {
-				ethapi: cli.eth_api_options.ethapi,
-				ethapi_max_permits: cli.eth_api_options.ethapi_max_permits,
-				ethapi_trace_max_count: cli.eth_api_options.ethapi_trace_max_count,
-				ethapi_trace_cache_duration: cli.eth_api_options.ethapi_trace_cache_duration,
-				eth_log_block_cache: cli.eth_api_options.eth_log_block_cache,
-				eth_statuses_cache: cli.eth_api_options.eth_statuses_cache,
-				max_past_logs: cli.eth_api_options.max_past_logs,
-				tracing_raw_max_memory_usage: cli.eth_api_options.tracing_raw_max_memory_usage,
-			};
-
 			runner.run_node_until_exit(|config| async move {
 				if is_standalone {
-					return start_standalone_node(config, evm_tracing_config)
-						.await
-						.map_err(Into::into);
+					return start_standalone_node(config).await.map_err(Into::into);
 				}
 
 				let hwbench = if !cli.no_hardware_benchmarks {
@@ -360,8 +347,7 @@ pub fn run() -> Result<()> {
 				info!("Parachain Account: {}", parachain_account);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				let additional_config =
-					AdditionalConfig { evm_tracing_config, enable_evm_rpc: cli.enable_evm_rpc };
+				let additional_config = AdditionalConfig { enable_evm_rpc: cli.enable_evm_rpc };
 
 				if config.chain_spec.is_standalone() {
 					Err(UNSUPPORTED_CHAIN_MESSAGE.into())

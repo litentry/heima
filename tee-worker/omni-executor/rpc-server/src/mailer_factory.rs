@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use config_loader::{ConfigLoader, MailerConfig, MailerType};
-use heima_identity_verification::web2::email::mailer::MailerTrait;
-use heima_identity_verification::web2::email::{ConsoleMailer, Mailer};
+use oe_core::config::{ConfigLoader, MailerConfig, MailerType};
+use oe_core::verify::web2::email::mailer::MailerTrait;
+use oe_core::verify::web2::email::{ConsoleMailer, Mailer};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -98,7 +98,7 @@ impl MailerFactory {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use config_loader::ConfigLoader;
+	use oe_core::config::ConfigLoader;
 
 	#[test]
 	fn test_mailer_factory_caching() {

@@ -180,7 +180,7 @@ RUST_LOG=debug
 
 1. Check if the binary was built with mock-server feature:
    ```bash
-   ./target/release/executor-worker --help | grep mock
+   ./target/release/omni-executor --help | grep mock
    ```
 
 2. Check if mock server is starting:
@@ -241,7 +241,7 @@ For even faster development, you can run the omni-executor directly without Dock
 
 3. Run omni-executor:
    ```bash
-   ./target/release/executor-worker run --enable-mock-server
+   ./target/release/omni-executor run --enable-mock-server
    ```
 
 ## Account Funding and EntryPoint Deposits

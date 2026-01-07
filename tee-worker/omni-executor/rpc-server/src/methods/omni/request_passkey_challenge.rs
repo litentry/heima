@@ -2,10 +2,10 @@ use crate::{
 	server::RpcContext, utils::types::RpcResultExt, utils::validation::parse_rpc_params,
 	Deserialize, Serialize,
 };
-use executor_core::intent_executor::IntentExecutor;
-use executor_primitives::UserId;
-use executor_storage::PasskeyChallengeStorage;
 use jsonrpsee::{types::ErrorObject, RpcModule};
+use oe_core::intent::executor::IntentExecutor;
+use oe_primitives::UserId;
+use oe_storage::PasskeyChallengeStorage;
 use tracing::*;
 
 const CHALLENGE_TIMEOUT_SECONDS: u64 = 300; // 5 minutes
@@ -36,7 +36,7 @@ pub fn register_request_passkey_challenge<
 			// Generate a random 32-byte challenge
 			use rand::RngCore;
 			let mut challenge_bytes = [0u8; 32];
-			rand::thread_rng().fill_bytes(&mut challenge_bytes);
+			rand::rng().fill_bytes(&mut challenge_bytes);
 
 			// Base64 encode the challenge (URL-safe, no padding)
 			use base64::Engine;
