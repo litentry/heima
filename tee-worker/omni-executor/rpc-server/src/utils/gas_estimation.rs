@@ -176,7 +176,7 @@ async fn estimate_call_gas_limit(
 		pack_account_gas_limits(verification_gas.to::<u128>(), max_gas.to::<u128>());
 
 	let initial_result = entry_point_client
-		.simulate_handle_ops(&vec![test_user_op], Address::ZERO)
+		.simulate_handle_ops(&[test_user_op], Address::ZERO)
 		.await
 		.map_err(|e| format!("Initial simulation failed: {:?}", e))?;
 
@@ -222,7 +222,7 @@ async fn estimate_call_gas_limit(
 			pack_account_gas_limits(verification_gas.to::<u128>(), mid_gas.to::<u128>());
 
 		let test_result =
-			entry_point_client.simulate_handle_ops(&vec![test_user_op], Address::ZERO).await;
+			entry_point_client.simulate_handle_ops(&[test_user_op], Address::ZERO).await;
 
 		match test_result {
 			Ok(results) if !results.is_empty() && results[0].targetSuccess => {
