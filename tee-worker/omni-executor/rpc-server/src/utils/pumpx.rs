@@ -32,13 +32,10 @@ pub async fn verify_google_code(
 			false
 		},
 		|res| {
-			res.data.result.map_or_else(
-				|| {
-					error!("Google code verification response result is none");
-					false
-				},
-				|success| success,
-			)
+			res.data.result.unwrap_or_else(|| {
+				error!("Google code verification response result is none");
+				false
+			})
 		},
 	)
 }
