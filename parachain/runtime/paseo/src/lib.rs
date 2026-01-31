@@ -156,8 +156,6 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 pub type Migrations = (
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
-	// p9251: Remove old bridge storage after switching to omni-bridge
-	migration::p9251::RemoveOldBridgeStorage<Runtime>,
 );
 
 /// Executive: handles dispatch to the various modules.
@@ -248,7 +246,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9260,
+	spec_version: 9261,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -335,10 +333,12 @@ impl pallet_multisig::Config for Runtime {
 	RuntimeDebug,
 	MaxEncodedLen,
 	scale_info::TypeInfo,
+	Default,
 )]
 pub enum ProxyType {
 	/// Fully permissioned proxy. Can execute any call on behalf of _proxied_.
 	#[codec(index = 0)]
+	#[default]
 	Any,
 	/// Can execute any call that does not transfer funds, including asset transfers.
 	#[codec(index = 1)]
@@ -352,12 +352,6 @@ pub enum ProxyType {
 	/// Governance
 	#[codec(index = 4)]
 	Governance,
-}
-
-impl Default for ProxyType {
-	fn default() -> Self {
-		Self::Any
-	}
 }
 
 impl InstanceFilter<RuntimeCall> for ProxyType {

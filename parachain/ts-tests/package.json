@@ -24,13 +24,13 @@
     "author": "Heima Dev",
     "license": "ISC",
     "devDependencies": {
-        "@vitest/ui": "^4.0.16",
+        "@vitest/ui": "^4.0.18",
         "gts": "^7.0.0",
-        "prettier": "^3.7.4",
+        "prettier": "^3.8.1",
         "ts-node": "^10.9.2",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
-        "vitest": "^4.0.16"
+        "vitest": "^4.0.18"
     },
     "dependencies": {
         "@polkadot/api": "^16.5.4",

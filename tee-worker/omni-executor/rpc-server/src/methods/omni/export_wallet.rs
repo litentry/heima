@@ -63,13 +63,10 @@ pub fn register_export_wallet<CrossChainIntentExecutor: IntentExecutor + Send + 
 					false
 				},
 				|res| {
-					res.data.result.map_or_else(
-						|| {
-							error!("Google code verification response result is none");
-							false
-						},
-						|success| success,
-					)
+					res.data.result.unwrap_or_else(|| {
+						error!("Google code verification response result is none");
+						false
+					})
 				},
 			);
 			if !verify_success {

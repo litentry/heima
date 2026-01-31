@@ -27,12 +27,12 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "js-sha256": "^0.11.1",
-    "ora": "^9.0.0",
+    "ora": "^9.1.0",
     "pidusage": "^4.0.1",
-    "systeminformation": "^5.28.3",
+    "systeminformation": "^5.30.6",
     "table": "^6.8.1",
-    "viem": "^2.43.3",
-    "ws": "^8.18.0"
+    "viem": "^2.45.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",

@@ -95,7 +95,7 @@ pub mod pallet {
 	pub fn DefaultExternalBalances<T: Config>() -> BalanceOf<T> {
 		T::ExternalTotalIssuance::get()
 			.checked_sub(&pallet_balances::Pallet::<T>::total_issuance())
-			.map_or_else(|| 0u32.into(), |v| v)
+			.unwrap_or_else(|| 0u32.into())
 	}
 
 	// Native Token External Unlocked Total Balances of outside
