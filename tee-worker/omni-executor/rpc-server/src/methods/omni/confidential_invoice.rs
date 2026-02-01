@@ -263,6 +263,44 @@ pub fn register_confidential_invoice<
 			})
 		})
 		.expect("Failed to register omni_payConfidentialInvoice");
+
+	// Delete invoice (for testing/admin)
+	#[derive(Debug, Deserialize)]
+	struct DeleteInvoiceParams {
+		invoice_id: String,
+	}
+
+	module
+		.register_async_method("omni_deleteInvoice", |params, ctx, _ext| async move {
+			use oe_storage::Storage; // Import trait for remove/contains_key methods
+
+			let params = parse_rpc_params::<DeleteInvoiceParams>(params)?;
+
+			debug!("Received omni_deleteInvoice, invoice_id: {}", params.invoice_id);
+
+			// Check if invoice exists first
+			let key =
+				oe_storage::confidential_invoice::Key { invoice_id: params.invoice_id.clone() };
+
+			if !ctx.confidential_invoice_storage.contains_key(&key) {
+				return Err(
+					DetailedError::invalid_params("invoice_id", "Invoice not found").to_rpc_error()
+				);
+			}
+
+			// Delete from storage using remove method
+			ctx.confidential_invoice_storage
+				.remove(&key)
+				.map_err(|_| DetailedError::internal_error("Failed to delete invoice"))?;
+
+			info!("Deleted invoice: {}", params.invoice_id);
+
+			Ok::<serde_json::Value, ErrorObjectOwned>(serde_json::json!({
+				"success": true,
+				"message": format!("Invoice {} deleted", params.invoice_id)
+			}))
+		})
+		.expect("Failed to register omni_deleteInvoice");
 }
 
 #[cfg(test)]
