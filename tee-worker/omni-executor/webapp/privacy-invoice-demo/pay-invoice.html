@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pay Invoice - Heima Network</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <!-- Try multiple CDN sources for ethers.js -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"
+            onerror="this.onerror=null; this.src='https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js'"></script>
 </head>
 
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -159,6 +161,13 @@
         }
 
         async function connectWallet() {
+            // Check if ethers library is loaded
+            if (typeof ethers === 'undefined') {
+                showError('ethers.js library failed to load. Please check your internet connection and refresh the page.');
+                console.error('ethers is not defined - CDN may be blocked or failed to load');
+                return;
+            }
+
             if (!window.ethereum) {
                 showError('Please install MetaMask to continue');
                 return;
@@ -298,6 +307,16 @@
             document.getElementById('errorMessage').textContent = message;
             document.getElementById('error').classList.remove('hidden');
         }
+
+        // Diagnostic: Log library loading status
+        window.addEventListener('load', () => {
+            console.log('Page loaded');
+            console.log('ethers available:', typeof ethers !== 'undefined');
+            console.log('MetaMask available:', typeof window.ethereum !== 'undefined');
+            if (typeof ethers !== 'undefined') {
+                console.log('ethers version:', ethers.version);
+            }
+        });
     </script>
 </body>
 
