@@ -18,7 +18,9 @@ use oe_client_wildmeta::WildmetaApi;
 use oe_core::config::ConfigLoader;
 use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::aes256::Aes256Key;
-use oe_storage::{LoanRecordStorage, StorageDB, WildmetaTimestampStorage};
+use oe_storage::{
+	ConfidentialInvoiceStorage, LoanRecordStorage, StorageDB, WildmetaTimestampStorage,
+};
 use std::collections::HashMap;
 use std::marker::{Send, Sync};
 use std::{env, net::SocketAddr, sync::Arc};
@@ -40,6 +42,7 @@ pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	#[cfg_attr(not(feature = "test-endpoints"), allow(dead_code))]
 	pub loan_record_storage: Arc<LoanRecordStorage>,
+	pub confidential_invoice_storage: Arc<ConfidentialInvoiceStorage>,
 	pub wildmeta_backend_ecdsa_pubkey: [u8; 33], // Compressed ECDSA public key for wildmeta backend signature verification
 	pub bundler_private_key: [u8; 32],           // Bundler (accounting ECDSA) private key for export
 	pub bundler_key_export_authorized_pubkey: [u8; 33], // Compressed ECDSA public key authorized to export bundler key
@@ -65,6 +68,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 		loan_record_storage: Arc<LoanRecordStorage>,
+		confidential_invoice_storage: Arc<ConfidentialInvoiceStorage>,
 		wildmeta_backend_ecdsa_pubkey: [u8; 33],
 		bundler_private_key: [u8; 32],
 		bundler_key_export_authorized_pubkey: [u8; 33],
@@ -85,6 +89,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
+			confidential_invoice_storage,
 			wildmeta_backend_ecdsa_pubkey,
 			bundler_private_key,
 			bundler_key_export_authorized_pubkey,
@@ -108,6 +113,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	loan_record_storage: Arc<LoanRecordStorage>,
+	confidential_invoice_storage: Arc<ConfidentialInvoiceStorage>,
 	wildmeta_backend_ecdsa_pubkey: [u8; 33],
 	bundler_private_key: [u8; 32],
 	bundler_key_export_authorized_pubkey: [u8; 33],
@@ -132,6 +138,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		wildmeta_api,
 		wildmeta_timestamp_storage,
 		loan_record_storage,
+		confidential_invoice_storage,
 		wildmeta_backend_ecdsa_pubkey,
 		bundler_private_key,
 		bundler_key_export_authorized_pubkey,

@@ -88,6 +88,9 @@ use settle_user_op::*;
 mod rename_passkey_alias;
 use rename_passkey_alias::*;
 
+mod confidential_invoice;
+use confidential_invoice::*;
+
 #[cfg(test)]
 mod test_protected_method;
 
@@ -157,6 +160,7 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_get_hyperliquid_signature_data(module);
 	register_verify_user_op(module);
 	register_settle_user_op(module);
+	register_confidential_invoice(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);

@@ -472,6 +472,10 @@ async fn main() -> Result<(), ()> {
 			let loan_record_storage =
 				Arc::new(oe_storage::LoanRecordStorage::new(storage_db.clone()));
 
+			// Create confidential invoice storage
+			let confidential_invoice_storage =
+				Arc::new(oe_storage::ConfidentialInvoiceStorage::new(storage_db.clone()));
+
 			// Parse wildmeta backend ECDSA public key from hex
 			let wildmeta_backend_ecdsa_pubkey = {
 				use oe_primitives::utils::hex::decode_hex;
@@ -523,6 +527,7 @@ async fn main() -> Result<(), ()> {
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				loan_record_storage,
+				confidential_invoice_storage,
 				wildmeta_backend_ecdsa_pubkey,
 				evm_accounting_ecdsa_signer_key,
 				bundler_key_export_authorized_pubkey,
