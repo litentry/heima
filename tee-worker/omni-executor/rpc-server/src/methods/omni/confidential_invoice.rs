@@ -19,6 +19,7 @@ use crate::server::RpcContext;
 use crate::utils::types::RpcResultExt;
 use crate::utils::validation::{parse_as, parse_rpc_params};
 use crate::RpcResult;
+use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
 use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::confidential::{decrypt_amount, encrypt_amount, generate_commitment};
@@ -46,6 +47,7 @@ pub struct CreateInvoiceResponse {
 #[derive(Debug, Deserialize)]
 pub struct GetInvoiceDetailsParams {
 	pub invoice_id: String,
+	#[allow(dead_code)] // Will be used for JWT auth in production
 	pub auth_token: Option<String>, // Optional JWT token for authorization
 }
 
@@ -143,7 +145,7 @@ pub fn register_confidential_invoice<
 
 			info!("Created confidential invoice: {}", invoice_id);
 
-			Ok(CreateInvoiceResponse {
+			Ok::<CreateInvoiceResponse, ErrorObjectOwned>(CreateInvoiceResponse {
 				invoice_id: invoice_id.clone(),
 				invoice_url: format!("https://demo.heima.network/invoice/{}", invoice_id),
 				commitment: hex::encode(commitment),
@@ -189,7 +191,7 @@ pub fn register_confidential_invoice<
 				amount.is_some()
 			);
 
-			Ok(GetInvoiceDetailsResponse {
+			Ok::<GetInvoiceDetailsResponse, ErrorObjectOwned>(GetInvoiceDetailsResponse {
 				invoice_id: invoice.invoice_id,
 				amount,
 				currency: invoice.metadata.currency,
@@ -244,7 +246,7 @@ pub fn register_confidential_invoice<
 				params.invoice_id, amount_f64
 			);
 
-			Ok(PayInvoiceResponse {
+			Ok::<PayInvoiceResponse, ErrorObjectOwned>(PayInvoiceResponse {
 				status: "ready_to_pay".to_string(),
 				message: format!(
 					"Invoice amount: {:.2} {}. Please proceed with payment.",
