@@ -88,7 +88,10 @@ This demo showcases:
 - Direct WebSocket RPC call to `omni_getInvoiceDetails`
 - Displays decrypted invoice amount (only to authorized users)
 - Privacy indicator showing amount is hidden from others
-- Pay button (ready for `omni_settleUserOp` integration)
+- **Payment Integration**: Full x402 (ERC-4337) payment flow
+  - Builds ERC20 transfer UserOp
+  - Signs with MetaMask (EIP-712)
+  - Submits via `omni_settleUserOp`
 - Transaction success state with Arbiscan link
 
 **RPC Method**: `omni_getInvoiceDetails`
@@ -112,6 +115,51 @@ This demo showcases:
   seller_account: "seller@heima.network"
 }
 ```
+
+## Current MVP Status
+
+### ✅ Implemented Features
+- **Backend (Rust)**:
+  - AES-256-GCM encryption/decryption in TEE
+  - SHA256 commitment scheme
+  - RocksDB storage for confidential invoices
+  - RPC methods: `omni_createConfidentialInvoice`, `omni_getInvoiceDetails`, `omni_payConfidentialInvoice`
+  - Support for arbitrary ERC20 tokens (not just USDC)
+
+- **Frontend (HTML/JavaScript)**:
+  - Seller UI: Create invoices with any ERC20 token
+  - Token symbol/decimals lookup from blockchain
+  - Buyer UI: View encrypted invoices with MetaMask
+  - Full payment flow with x402 (ERC-4337):
+    - UserOp construction for ERC20 transfers
+    - EIP-712 signature with MetaMask
+    - Settlement via `omni_settleUserOp`
+
+### 🚧 Simplified for MVP
+- **Smart Wallet**: Currently uses user's EOA (MetaMask address) as sender
+  - In production: Would use OmniAccount factory for counterfactual addresses
+  - In production: Would include initCode for wallet deployment
+  - **Why simplified**: Reduces setup complexity for testing
+
+- **Paymaster**: Not configured (users must fund their wallets with ETH)
+  - In production: Would use Paymaster for gasless transactions
+  - **Why simplified**: Easier testing without paymaster deployment
+
+- **Authorization**: No JWT token validation
+  - MVP: Anyone can view any invoice
+  - In production: Only buyer/seller can decrypt amounts
+
+### 📝 Testing Notes
+1. **For Payment Testing**:
+   - Make sure your MetaMask wallet has ETH on Arbitrum Sepolia (for gas)
+   - Deploy a test ERC20 token, or use an existing one
+   - Fund your wallet with the test token
+   - The payment will use your EOA directly (no smart wallet deployment needed for MVP)
+
+2. **Privacy Verification**:
+   - After payment, check Arbiscan
+   - The transaction will show ERC20 transfer, but invoice amount is NOT stored on-chain
+   - Only the commitment hash is visible (if we add on-chain verification later)
 
 ## Setup
 
