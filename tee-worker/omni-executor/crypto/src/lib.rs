@@ -1,4 +1,5 @@
 pub mod aes256;
+pub mod confidential;
 pub mod jwt;
 pub mod passkey;
 pub mod secp256k1;
