@@ -253,14 +253,14 @@
                     jsonrpc: '2.0',
                     id: requestId,
                     method: 'omni_createConfidentialInvoice',
-                    params: [
-                        sellerAccount,      // seller_account
-                        buyerEmail,         // buyer_identifier
-                        amountUnits,        // amount (in smallest units)
-                        tokenAddress,       // token_address
-                        421614,             // chain_id (Arbitrum Sepolia)
-                        description         // description
-                    ]
+                    params: {
+                        seller_account: sellerAccount,
+                        buyer_identifier: buyerEmail,
+                        amount: amountUnits,        // amount (in smallest units)
+                        token_address: tokenAddress,
+                        chain_id: 421614,           // Arbitrum Sepolia
+                        description: description
+                    }
                 };
 
                 ws.send(JSON.stringify(request));

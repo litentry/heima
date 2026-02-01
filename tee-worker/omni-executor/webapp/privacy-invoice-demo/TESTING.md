@@ -53,21 +53,21 @@ curl http://localhost:8080/
 
 ```bash
 # Using websocat (one-liner)
-echo '{"jsonrpc":"2.0","id":1,"method":"omni_createConfidentialInvoice","params":["seller@test.com","buyer@test.com","100.50","USDC",421614,"Test Invoice"]}' | websocat ws://localhost:2100
+echo '{"jsonrpc":"2.0","id":1,"method":"omni_createConfidentialInvoice","params":{"seller_account":"seller@test.com","buyer_identifier":"buyer@test.com","amount":"1000000","token_address":"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d","chain_id":421614,"description":"Test Invoice"}}' | websocat ws://localhost:2100
 
 # Or using websocat interactively:
 websocat ws://localhost:2100
-# Then paste (params are: seller_account, buyer_identifier, amount, currency, chain_id, description):
-{"jsonrpc":"2.0","id":1,"method":"omni_createConfidentialInvoice","params":["seller@test.com","buyer@test.com","100.50","USDC",421614,"Test Invoice"]}
+# Then paste:
+{"jsonrpc":"2.0","id":1,"method":"omni_createConfidentialInvoice","params":{"seller_account":"seller@test.com","buyer_identifier":"buyer@test.com","amount":"1000000","token_address":"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d","chain_id":421614,"description":"Test Invoice"}}
 ```
 
-**Note**: The `params` field must be an array of individual values in order, NOT an object. The order is:
-1. `seller_account` (string)
-2. `buyer_identifier` (string)
-3. `amount` (string)
-4. `currency` (string)
-5. `chain_id` (number)
-6. `description` (string)
+**Note**: The `params` field must be an **object** with named fields (not an array). Fields:
+- `seller_account` (string): Seller's email or account identifier
+- `buyer_identifier` (string): Buyer's email or account identifier
+- `amount` (string): Token amount in smallest units (e.g., "1000000" for 1 USDC with 6 decimals)
+- `token_address` (string): ERC20 token contract address (0x...)
+- `chain_id` (number): Chain ID (421614 for Arbitrum Sepolia)
+- `description` (string): Invoice description
 
 **Expected Response**:
 ```json
@@ -97,15 +97,15 @@ websocat ws://localhost:2100
 
 ```bash
 # Using websocat (replace inv_... with actual invoice ID from Test 1)
-echo '{"jsonrpc":"2.0","id":2,"method":"omni_getInvoiceDetails","params":["inv_550e8400-e29b-41d4-a716-446655440000",null]}' | websocat ws://localhost:2100
+echo '{"jsonrpc":"2.0","id":2,"method":"omni_getInvoiceDetails","params":{"invoice_id":"inv_550e8400-e29b-41d4-a716-446655440000","auth_token":null}}' | websocat ws://localhost:2100
 
 # Or interactively:
 websocat ws://localhost:2100
-# Then paste (params are: invoice_id, auth_token):
-{"jsonrpc":"2.0","id":2,"method":"omni_getInvoiceDetails","params":["inv_550e8400-e29b-41d4-a716-446655440000",null]}
+# Then paste:
+{"jsonrpc":"2.0","id":2,"method":"omni_getInvoiceDetails","params":{"invoice_id":"inv_550e8400-e29b-41d4-a716-446655440000","auth_token":null}}
 ```
 
-**Note**: Params are `[invoice_id, auth_token]` - auth_token is `null` for MVP (will add JWT later)
+**Note**: Params must be an **object** with `invoice_id` and `auth_token` fields. The `auth_token` is `null` for MVP (will add JWT later).
 
 **Expected Response**:
 ```json
@@ -206,7 +206,7 @@ echo '{"jsonrpc":"2.0","id":5,"method":"omni_createConfidentialInvoice","params"
 **Test 4.3: Non-Existent Invoice**
 ```bash
 # Query non-existent invoice
-echo '{"jsonrpc":"2.0","id":6,"method":"omni_getInvoiceDetails","params":["inv_nonexistent",null]}' | websocat ws://localhost:2100
+echo '{"jsonrpc":"2.0","id":6,"method":"omni_getInvoiceDetails","params":{"invoice_id":"inv_nonexistent","auth_token":null}}' | websocat ws://localhost:2100
 ```
 
 **Expected**: Error with "Invoice not found"
