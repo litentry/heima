@@ -36,7 +36,7 @@ pub struct CreateInvoiceParams {
 	pub description: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct CreateInvoiceResponse {
 	pub invoice_id: String,
 	pub invoice_url: String,
@@ -49,7 +49,7 @@ pub struct GetInvoiceDetailsParams {
 	pub auth_token: Option<String>, // Optional JWT token for authorization
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct GetInvoiceDetailsResponse {
 	pub invoice_id: String,
 	pub amount: Option<String>, // Only if authorized
@@ -68,7 +68,7 @@ pub struct PayInvoiceParams {
 	pub buyer_account: String, // For verification
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct PayInvoiceResponse {
 	pub status: String,
 	pub message: String,
