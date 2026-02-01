@@ -48,8 +48,8 @@ For local development with Anvil:
 First, navigate to the parent directory and deploy the contracts:
 
 ```bash
-# From the aa-contracts directory (parent of aa-demo-app)
-cd /path/to/aa-contracts
+# From the contracts/aa directory
+cd /path/to/contracts/aa
 
 # Start Anvil (local Ethereum node) and deploy contracts
 ./deploy-local.sh
@@ -84,7 +84,7 @@ USDT:               <Set via NEXT_PUBLIC_USDT_ADDRESS>
 In a new terminal, update the demo app with the deployed contract addresses:
 
 ```bash
-# Still in the aa-contracts directory
+# Still in the contracts/aa directory
 ./update-demo-addresses.sh
 ```
 
@@ -247,7 +247,7 @@ To verify your OmniAccount was created and signers were added:
 
 ```bash
 # From the aa-contracts directory
-cd /path/to/aa-contracts
+cd /path/to/contracts/aa
 
 # Set your OmniAccount address (copy from the UI)
 ACCOUNT=0xYOUR_OMNI_ACCOUNT_ADDRESS

@@ -6,7 +6,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEMO_APP_DIR="$SCRIPT_DIR/aa-demo-app"
+DEMO_APP_DIR="$SCRIPT_DIR/../../webapp/aa-demo"
 ENV_FILE="$DEMO_APP_DIR/.env.local"
 DEPLOYMENT_ENV="${DEPLOYMENT_ENV:-local}"
 DEPLOYMENT_FILE="$SCRIPT_DIR/deployments/$DEPLOYMENT_ENV/$DEPLOYMENT_ENV.json"
@@ -154,7 +154,7 @@ show_next_steps() {
     echo "🎉 Demo app configuration updated!"
     echo ""
     echo "Next steps:"
-    echo "1. cd aa-demo-app"
+    echo "1. cd ../../webapp/aa-demo"
     echo "2. pnpm install (if not already done)"
     echo "3. pnpm dev"
     echo "4. Open http://localhost:3000"

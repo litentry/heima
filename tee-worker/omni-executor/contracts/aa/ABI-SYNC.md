@@ -20,7 +20,7 @@ This document explains the automated ABI synchronization system that keeps the d
   - `EntryPointV1` → `EntryPoint.json`
   - `OmniAccountFactoryV1` → `OmniAccountFactory.json`
 - Extracts `OmniAccountV1` ABI from compiled artifacts
-- Saves all ABIs to `aa-demo-app/src/contracts/abis/`
+- Saves all ABIs to `../../webapp/aa-demo/src/contracts/abis/`
 
 ### 3. Address Update (`update-demo-addresses.sh`)
 - Primary source: deployment artifacts (`deployments/local/local.json`)

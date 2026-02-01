@@ -60,7 +60,7 @@ This demo implements the following flow:
 
 1. **Navigate to the demo directory**:
    ```bash
-   cd ~/workspace/heima/tee-worker/omni-executor/aa-contracts/x402-demo-app
+   cd ~/workspace/heima/tee-worker/omni-executor/webapp/x402-demo
    ```
 
 2. **Install dependencies**:
