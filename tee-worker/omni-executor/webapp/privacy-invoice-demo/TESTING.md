@@ -26,15 +26,11 @@ const RPC_URL = 'ws://your-remote-host:2100';  // Update this
 # Check TEE Worker is running (WebSocket, not HTTP)
 # Replace localhost:2100 with your actual TEE Worker WebSocket URL
 
-# Option 1: Using websocat (install: cargo install websocat)
+# Using websocat (install: cargo install websocat)
 echo '{"jsonrpc":"2.0","method":"omni_getHealth","params":[],"id":1}' | websocat ws://localhost:2100
 # Expected: {"jsonrpc":"2.0","result":"OK","id":1}
 
-# Option 2: Using wscat (install: npm install -g wscat)
-# wscat -c ws://localhost:2100
-# Then send: {"jsonrpc":"2.0","method":"omni_getHealth","params":[],"id":1}
-
-# Option 3: Check if process is running (only works if TEE Worker is local)
+# Check if process is running (only works if TEE Worker is local)
 # ps aux | grep omni-executor
 
 # Check frontend server
@@ -56,24 +52,22 @@ curl http://localhost:8080/
 **Method**: `omni_createConfidentialInvoice`
 
 ```bash
-# Using wscat or websocat
-wscat -c ws://localhost:2100
+# Using websocat (one-liner)
+echo '{"jsonrpc":"2.0","id":1,"method":"omni_createConfidentialInvoice","params":["seller@test.com","buyer@test.com","100.50","USDC",421614,"Test Invoice"]}' | websocat ws://localhost:2100
 
-# Send:
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "omni_createConfidentialInvoice",
-  "params": [{
-    "seller_account": "seller@test.com",
-    "buyer_identifier": "buyer@test.com",
-    "amount": "100.50",
-    "currency": "USDC",
-    "chain_id": 421614,
-    "description": "Test Invoice"
-  }]
-}
+# Or using websocat interactively:
+websocat ws://localhost:2100
+# Then paste (params are: seller_account, buyer_identifier, amount, currency, chain_id, description):
+{"jsonrpc":"2.0","id":1,"method":"omni_createConfidentialInvoice","params":["seller@test.com","buyer@test.com","100.50","USDC",421614,"Test Invoice"]}
 ```
+
+**Note**: The `params` field must be an array of individual values in order, NOT an object. The order is:
+1. `seller_account` (string)
+2. `buyer_identifier` (string)
+3. `amount` (string)
+4. `currency` (string)
+5. `chain_id` (number)
+6. `description` (string)
 
 **Expected Response**:
 ```json
@@ -102,17 +96,16 @@ wscat -c ws://localhost:2100
 **Method**: `omni_getInvoiceDetails`
 
 ```bash
-# Use invoice_id from Test 1
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "omni_getInvoiceDetails",
-  "params": [{
-    "invoice_id": "inv_...",
-    "auth_token": null
-  }]
-}
+# Using websocat (replace inv_... with actual invoice ID from Test 1)
+echo '{"jsonrpc":"2.0","id":2,"method":"omni_getInvoiceDetails","params":["inv_550e8400-e29b-41d4-a716-446655440000",null]}' | websocat ws://localhost:2100
+
+# Or interactively:
+websocat ws://localhost:2100
+# Then paste (params are: invoice_id, auth_token):
+{"jsonrpc":"2.0","id":2,"method":"omni_getInvoiceDetails","params":["inv_550e8400-e29b-41d4-a716-446655440000",null]}
 ```
+
+**Note**: Params are `[invoice_id, auth_token]` - auth_token is `null` for MVP (will add JWT later)
 
 **Expected Response**:
 ```json
@@ -147,15 +140,13 @@ wscat -c ws://localhost:2100
 **Method**: `omni_payConfidentialInvoice`
 
 ```bash
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "method": "omni_payConfidentialInvoice",
-  "params": [{
-    "invoice_id": "inv_...",
-    "buyer_account": "buyer@test.com"
-  }]
-}
+# Using websocat
+echo '{"jsonrpc":"2.0","id":3,"method":"omni_payConfidentialInvoice","params":["inv_550e8400-e29b-41d4-a716-446655440000","buyer@test.com"]}' | websocat ws://localhost:2100
+
+# Or interactively:
+websocat ws://localhost:2100
+# Params are: invoice_id, buyer_account
+{"jsonrpc":"2.0","id":3,"method":"omni_payConfidentialInvoice","params":["inv_550e8400-e29b-41d4-a716-446655440000","buyer@test.com"]}
 ```
 
 **Expected Response**:
@@ -184,19 +175,8 @@ wscat -c ws://localhost:2100
 
 **Test 4.1: Invalid Amount**
 ```bash
-{
-  "jsonrpc": "2.0",
-  "id": 4,
-  "method": "omni_createConfidentialInvoice",
-  "params": [{
-    "seller_account": "seller@test.com",
-    "buyer_identifier": "buyer@test.com",
-    "amount": "-100.00",  # Negative amount
-    "currency": "USDC",
-    "chain_id": 421614,
-    "description": "Test"
-  }]
-}
+# Negative amount should fail
+echo '{"jsonrpc":"2.0","id":4,"method":"omni_createConfidentialInvoice","params":["seller@test.com","buyer@test.com","-100.00","USDC",421614,"Test"]}' | websocat ws://localhost:2100
 ```
 
 **Expected**: Error with "Amount must be positive"
@@ -210,19 +190,8 @@ wscat -c ws://localhost:2100
 
 **Test 4.2: Unsupported Currency**
 ```bash
-{
-  "jsonrpc": "2.0",
-  "id": 5,
-  "method": "omni_createConfidentialInvoice",
-  "params": [{
-    "seller_account": "seller@test.com",
-    "buyer_identifier": "buyer@test.com",
-    "amount": "100.00",
-    "currency": "BTC",  # Not supported
-    "chain_id": 421614,
-    "description": "Test"
-  }]
-}
+# BTC not supported, only USDC
+echo '{"jsonrpc":"2.0","id":5,"method":"omni_createConfidentialInvoice","params":["seller@test.com","buyer@test.com","100.00","BTC",421614,"Test"]}' | websocat ws://localhost:2100
 ```
 
 **Expected**: Error with "Only USDC is supported currently"
@@ -236,15 +205,8 @@ wscat -c ws://localhost:2100
 
 **Test 4.3: Non-Existent Invoice**
 ```bash
-{
-  "jsonrpc": "2.0",
-  "id": 6,
-  "method": "omni_getInvoiceDetails",
-  "params": [{
-    "invoice_id": "inv_nonexistent",
-    "auth_token": null
-  }]
-}
+# Query non-existent invoice
+echo '{"jsonrpc":"2.0","id":6,"method":"omni_getInvoiceDetails","params":["inv_nonexistent",null]}' | websocat ws://localhost:2100
 ```
 
 **Expected**: Error with "Invoice not found"
@@ -665,10 +627,11 @@ javascript:alert('XSS')
 
 **Test 17.1: Rapid Invoice Creation**
 ```bash
-# Create 100 invoices rapidly
+# Create 100 invoices rapidly using websocat
 for i in {1..100}; do
-  wscat -c ws://localhost:2100 <<< '{...}' &
+  echo '{"jsonrpc":"2.0","id":'$i',"method":"omni_createConfidentialInvoice","params":["seller@test.com","buyer'$i'@test.com","100.00","USDC",421614,"Load test invoice '$i'"]}' | websocat ws://localhost:2100 &
 done
+wait  # Wait for all background jobs to complete
 ```
 
 **Checklist**:

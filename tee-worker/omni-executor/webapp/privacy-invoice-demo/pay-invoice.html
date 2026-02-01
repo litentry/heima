@@ -220,13 +220,13 @@
 
                 const requestId = Math.floor(Math.random() * 1000000);
                 const request = {
-                    jsonrpsee: '2.0',
+                    jsonrpc: '2.0',
                     id: requestId,
                     method: 'omni_getInvoiceDetails',
-                    params: [{
-                        invoice_id: invoiceId,
-                        auth_token: null // MVP: no auth required
-                    }]
+                    params: [
+                        invoiceId,    // invoice_id
+                        null          // auth_token (MVP: no auth required)
+                    ]
                 };
 
                 ws.send(JSON.stringify(request));
