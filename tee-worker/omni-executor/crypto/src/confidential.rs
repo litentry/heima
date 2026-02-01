@@ -1,6 +1,3 @@
-/// Confidential invoice encryption utilities
-/// Uses AES-256-GCM for encryption and Keccak256 for commitment scheme
-use rand::RngCore;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
 use ring::rand::{SecureRandom, SystemRandom};
 use sha2::{Digest, Sha256};

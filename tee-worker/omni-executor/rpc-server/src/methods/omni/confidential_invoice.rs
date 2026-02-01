@@ -18,7 +18,6 @@ use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::types::RpcResultExt;
 use crate::utils::validation::{parse_as, parse_rpc_params};
-use crate::RpcResult;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
 use oe_core::intent::executor::IntentExecutor;
