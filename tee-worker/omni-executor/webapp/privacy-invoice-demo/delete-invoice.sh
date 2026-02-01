@@ -12,5 +12,5 @@ if [ -z "$INVOICE_ID" ]; then
 fi
 
 echo "Deleting invoice: $INVOICE_ID"
-echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"omni_deleteInvoice\",\"params\":\"$INVOICE_ID\"}" | websocat "$RPC_URL"
+echo "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"omni_deleteInvoice\",\"params\":{\"invoice_id\":\"$INVOICE_ID\"}}" | websocat "$RPC_URL"
 echo ""
