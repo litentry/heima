@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Confidential Invoice - Heima Network</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ethers v6 for token lookups -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
 </head>
 
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -30,15 +32,26 @@
         <form id="invoiceForm" class="bg-white rounded-xl shadow-lg p-8 space-y-6">
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Amount (USDC)
+                    Token Contract Address
                 </label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3 text-gray-500 text-lg">$</span>
-                    <input type="number" id="amount" step="0.01" min="0.01" required
-                        class="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        placeholder="50000.00" />
-                </div>
-                <p class="mt-1 text-xs text-gray-500">Enter the invoice amount in USDC</p>
+                <input type="text" id="tokenAddress" required
+                    class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"
+                    pattern="0x[a-fA-F0-9]{40}" />
+                <p class="mt-1 text-xs text-gray-500">
+                    ERC20 token address - <span id="tokenSymbol" class="font-semibold text-blue-600"></span>
+                    <span id="tokenDecimals" class="text-gray-400"></span>
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Amount
+                </label>
+                <input type="number" id="amount" step="any" min="0.000001" required
+                    class="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="100.50" />
+                <p class="mt-1 text-xs text-gray-500">Token amount (will be converted to smallest units automatically)</p>
             </div>
 
             <div>
@@ -97,15 +110,25 @@
                 <div class="bg-white p-4 rounded-lg border border-green-200">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm font-semibold text-gray-700">Payment Link:</span>
-                        <button onclick="copyLink()"
-                            class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-                                </path>
-                            </svg>
-                            Copy Link
-                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="openInvoice()"
+                                class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                Open
+                            </button>
+                            <button onclick="copyLink()"
+                                class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                Copy
+                            </button>
+                        </div>
                     </div>
                     <input type="text" id="invoiceUrl" readonly
                         class="w-full px-3 py-2 bg-gray-50 rounded border border-gray-300 text-sm font-mono cursor-pointer hover:bg-gray-100"
@@ -156,14 +179,60 @@
 
     <script>
         const RPC_URL = 'ws://localhost:2100'; // Update with your RPC server URL
+        let tokenDecimals = 18; // Default to 18 if lookup fails
+
+        // ERC20 ABI for symbol() and decimals()
+        const ERC20_ABI = [
+            'function symbol() view returns (string)',
+            'function decimals() view returns (uint8)'
+        ];
+
+        // Token lookup when address is entered
+        document.getElementById('tokenAddress').addEventListener('blur', async function() {
+            const address = this.value.trim();
+            if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                document.getElementById('tokenSymbol').textContent = '';
+                document.getElementById('tokenDecimals').textContent = '';
+                return;
+            }
+
+            try {
+                if (typeof ethers === 'undefined') {
+                    console.error('ethers.js not loaded');
+                    return;
+                }
+
+                const provider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
+                const contract = new ethers.Contract(address, ERC20_ABI, provider);
+
+                const [symbol, decimals] = await Promise.all([
+                    contract.symbol(),
+                    contract.decimals()
+                ]);
+
+                tokenDecimals = Number(decimals);
+                document.getElementById('tokenSymbol').textContent = symbol;
+                document.getElementById('tokenDecimals').textContent = `(${decimals} decimals)`;
+            } catch (error) {
+                console.error('Failed to fetch token info:', error);
+                document.getElementById('tokenSymbol').textContent = '(Unknown token)';
+                document.getElementById('tokenDecimals').textContent = '';
+                tokenDecimals = 18; // Default
+            }
+        });
 
         document.getElementById('invoiceForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const amount = document.getElementById('amount').value;
+            const tokenAddress = document.getElementById('tokenAddress').value.trim();
             const buyerEmail = document.getElementById('buyerEmail').value;
             const description = document.getElementById('description').value;
             const sellerAccount = document.getElementById('sellerAccount').value || 'seller@heima.network';
+
+            // Convert amount to smallest units (wei)
+            const amountFloat = parseFloat(amount);
+            const amountUnits = BigInt(Math.floor(amountFloat * Math.pow(10, tokenDecimals))).toString();
 
             // Show loading state
             document.getElementById('submitText').classList.add('hidden');
@@ -187,8 +256,8 @@
                     params: [
                         sellerAccount,      // seller_account
                         buyerEmail,         // buyer_identifier
-                        amount,             // amount
-                        'USDC',             // currency
+                        amountUnits,        // amount (in smallest units)
+                        tokenAddress,       // token_address
                         421614,             // chain_id (Arbitrum Sepolia)
                         description         // description
                     ]
@@ -229,6 +298,11 @@
                 document.getElementById('loadingText').classList.add('hidden');
             }
         });
+
+        function openInvoice() {
+            const url = document.getElementById('invoiceUrl').value;
+            window.open(url, '_blank');
+        }
 
         function copyLink() {
             const url = document.getElementById('invoiceUrl');

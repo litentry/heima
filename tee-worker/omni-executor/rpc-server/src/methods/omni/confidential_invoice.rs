@@ -30,8 +30,8 @@ use tracing::{debug, error, info};
 pub struct CreateInvoiceParams {
 	pub seller_account: String,
 	pub buyer_identifier: String, // Email or omni_account
-	pub amount: String,           // USD amount as string (e.g., "50000.00")
-	pub currency: String,         // "USDC", "USDT", etc.
+	pub amount: String,           // Token amount as string (e.g., "100.50")
+	pub token_address: String,    // ERC20 token contract address (e.g., "0x...")
 	pub chain_id: u64,
 	pub description: String,
 }
@@ -53,14 +53,15 @@ pub struct GetInvoiceDetailsParams {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetInvoiceDetailsResponse {
 	pub invoice_id: String,
-	pub amount: Option<String>, // Only if authorized
-	pub currency: String,
+	pub amount: Option<String>, // Only if authorized (raw token units as string)
+	pub token_address: String,  // ERC20 token contract address
 	pub description: String,
 	pub status: InvoiceStatus,
 	pub created_at: u64,
 	pub tx_hash: Option<String>,
 	pub seller_account: String,
 	pub buyer_identifier: String,
+	pub chain_id: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,26 +89,32 @@ pub fn register_confidential_invoice<
 			let params = parse_rpc_params::<CreateInvoiceParams>(params)?;
 
 			debug!(
-				"Received omni_createConfidentialInvoice, seller: {}, buyer: {}, amount: {}",
-				params.seller_account, params.buyer_identifier, params.amount
+				"Received omni_createConfidentialInvoice, seller: {}, buyer: {}, amount: {}, token: {}",
+				params.seller_account, params.buyer_identifier, params.amount, params.token_address
 			);
 
-			// Validate currency
-			if params.currency.to_uppercase() != "USDC" {
+			// Validate token address format (basic check)
+			if !params.token_address.starts_with("0x") || params.token_address.len() != 42 {
 				return Err(DetailedError::invalid_params(
-					"currency",
-					"Only USDC is supported currently",
+					"token_address",
+					"Invalid token address format (must be 0x... with 40 hex chars)",
 				)
 				.to_rpc_error());
 			}
 
-			// Parse amount (convert to smallest unit, USDC has 6 decimals)
-			let amount_f64: f64 = parse_as(&params.amount, "amount")?;
-			if amount_f64 <= 0.0 {
-				return Err(DetailedError::invalid_params("amount", "Amount must be positive")
-					.to_rpc_error());
+			// Parse amount as raw token units (no decimal conversion - frontend handles this)
+			// Amount is stored as string representation of wei/smallest unit
+			let amount_units: u128 = params.amount.parse().map_err(|_| {
+				DetailedError::invalid_params("amount", "Amount must be a valid number")
+			})?;
+
+			if amount_units == 0 {
+				return Err(DetailedError::invalid_params(
+					"amount",
+					"Amount must be greater than zero",
+				)
+				.to_rpc_error());
 			}
-			let amount_units = (amount_f64 * 1_000_000.0) as u128;
 
 			// Generate unique invoice ID
 			let invoice_id = format!("inv_{}", uuid::Uuid::new_v4());
@@ -122,7 +129,7 @@ pub fn register_confidential_invoice<
 			// Create invoice metadata
 			let metadata = InvoiceMetadata {
 				description: params.description,
-				currency: params.currency,
+				currency: params.token_address.clone(), // Store token address in currency field
 				chain_id: params.chain_id,
 				seller_name: None,
 			};
@@ -173,12 +180,11 @@ pub fn register_confidential_invoice<
 			// TODO: Implement proper JWT verification for buyer_identifier
 			let is_authorized = true; // Placeholder
 
-			// Decrypt amount if authorized
+			// Decrypt amount if authorized (return as raw units string)
 			let amount = if is_authorized {
 				let amount_units = decrypt_amount(&invoice.encrypted_amount, &ctx.aes256_key)
 					.map_err_internal("Failed to decrypt amount")?;
-				let amount_f64 = (amount_units as f64) / 1_000_000.0;
-				Some(format!("{:.2}", amount_f64))
+				Some(amount_units.to_string())
 			} else {
 				None
 			};
@@ -193,11 +199,12 @@ pub fn register_confidential_invoice<
 			Ok::<GetInvoiceDetailsResponse, ErrorObjectOwned>(GetInvoiceDetailsResponse {
 				invoice_id: invoice.invoice_id,
 				amount,
-				currency: invoice.metadata.currency,
+				token_address: invoice.metadata.currency.clone(), // currency field stores token address
 				description: invoice.metadata.description,
 				status: invoice.status,
 				created_at: invoice.created_at,
 				tx_hash: invoice.tx_hash,
+				chain_id: invoice.metadata.chain_id,
 				seller_account: invoice.seller_account,
 				buyer_identifier: invoice.buyer_identifier,
 			})
@@ -331,17 +338,17 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		// Create invoice
+		// Create invoice (amount in smallest units, e.g., 50000.00 USDC = 50000000000 units for 6 decimals)
 		let create_response: CreateInvoiceResponse = client
 			.request(
 				"omni_createConfidentialInvoice",
 				rpc_params![
-					"seller@example.com", // seller_account
-					"buyer@example.com",  // buyer_identifier
-					"50000.00",           // amount
-					"USDC",               // currency
-					421614u64,            // chain_id
-					"Test invoice"        // description
+					"seller@example.com",                         // seller_account
+					"buyer@example.com",                          // buyer_identifier
+					"50000000000",                                // amount (raw token units)
+					"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // token_address (example USDC on Arbitrum Sepolia)
+					421614u64,                                    // chain_id
+					"Test invoice"                                // description
 				],
 			)
 			.await
@@ -360,8 +367,9 @@ mod tests {
 			.unwrap();
 
 		assert_eq!(get_response.invoice_id, create_response.invoice_id);
-		assert_eq!(get_response.amount, Some("50000.00".to_string()));
-		assert_eq!(get_response.currency, "USDC");
+		assert_eq!(get_response.amount, Some("50000000000".to_string())); // Raw token units
+		assert_eq!(get_response.token_address, "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d");
+		assert_eq!(get_response.chain_id, 421614);
 		assert!(matches!(get_response.status, InvoiceStatus::Pending));
 	}
 }
