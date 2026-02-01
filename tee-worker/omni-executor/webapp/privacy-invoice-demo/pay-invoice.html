@@ -6,9 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pay Invoice - Heima Network</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Try multiple CDN sources for ethers.js -->
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"
-            onerror="this.onerror=null; this.src='https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js'"></script>
+    <!-- Use ethers v6 for MetaMask SES compatibility -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
 </head>
 
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -174,9 +173,10 @@
             }
 
             try {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send('eth_requestAccounts', []);
-                signer = provider.getSigner();
+                // ethers v6 syntax
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                signer = await provider.getSigner();
                 userAddress = await signer.getAddress();
 
                 // Switch to Arbitrum Sepolia
