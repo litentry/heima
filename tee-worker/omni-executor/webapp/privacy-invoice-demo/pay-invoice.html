@@ -103,9 +103,17 @@
                         <span class="text-sm font-medium text-gray-600">Created</span>
                         <span id="createdAt" class="text-sm text-gray-900"></span>
                     </div>
-                    <div class="flex justify-between items-center py-2">
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
                         <span class="text-sm font-medium text-gray-600">Network</span>
                         <span class="text-sm text-gray-900">Arbitrum Sepolia</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm font-medium text-gray-600">Your Wallet</span>
+                        <code id="walletAddress" class="text-xs bg-gray-100 px-2 py-1 rounded font-mono">Loading...</code>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-sm font-medium text-gray-600">Your Token Balance</span>
+                        <span id="tokenBalance" class="text-sm text-gray-900">Loading...</span>
                     </div>
                 </div>
 
@@ -375,14 +383,34 @@
                     formattedAmount = data.amount || 'ENCRYPTED';
                 }
 
+                // Fetch user's token balance
+                let formattedBalance = '0';
+                try {
+                    const balance = await tokenContract.balanceOf(userAddress);
+                    const balanceBigInt = BigInt(balance);
+                    const divisor = BigInt(10 ** Number(tokenDecimals));
+                    const wholePart = balanceBigInt / divisor;
+                    const fractionalPart = balanceBigInt % divisor;
+                    const fractionalStr = fractionalPart.toString().padStart(Number(tokenDecimals), '0');
+                    const trimmedFractional = fractionalStr.replace(/0+$/, '');
+                    formattedBalance = trimmedFractional ? `${wholePart}.${trimmedFractional}` : wholePart.toString();
+                } catch (error) {
+                    console.warn('Could not fetch token balance:', error);
+                    formattedBalance = 'Unknown';
+                }
+
                 // Display invoice details
                 document.getElementById('invoiceIdDisplay').textContent = invoiceId.substring(0, 20) + '...';
-                document.getElementById('sellerName').textContent = data.seller_account;
+                document.getElementById('sellerName').textContent = data.seller_account.substring(0, 10) + '...' + data.seller_account.substring(38);
                 document.getElementById('description').textContent = data.description;
                 document.getElementById('amount').textContent = formattedAmount;
                 document.getElementById('tokenSymbol').textContent = tokenSymbol;
                 document.getElementById('tokenAddress').textContent = data.token_address.substring(0, 10) + '...' + data.token_address.substring(38);
                 document.getElementById('createdAt').textContent = new Date(data.created_at * 1000).toLocaleDateString();
+
+                // Display wallet info
+                document.getElementById('walletAddress').textContent = userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+                document.getElementById('tokenBalance').textContent = `${formattedBalance} ${tokenSymbol}`;
 
                 // Show amount
                 document.getElementById('amountLoading').classList.add('hidden');

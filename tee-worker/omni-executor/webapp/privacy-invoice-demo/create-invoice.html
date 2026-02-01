@@ -76,12 +76,13 @@
 
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Seller Account (Optional)
+                    Seller Ethereum Address
                 </label>
-                <input type="text" id="sellerAccount"
-                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="seller@company.com" />
-                <p class="mt-1 text-xs text-gray-500">Your identifier (defaults to 'seller@heima.network')</p>
+                <input type="text" id="sellerAccount" required
+                    class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+                    pattern="0x[a-fA-F0-9]{40}" />
+                <p class="mt-1 text-xs text-gray-500">Your Ethereum address to receive payment</p>
             </div>
 
             <button type="submit"
@@ -228,7 +229,15 @@
             const tokenAddress = document.getElementById('tokenAddress').value.trim();
             const buyerEmail = document.getElementById('buyerEmail').value;
             const description = document.getElementById('description').value;
-            const sellerAccount = document.getElementById('sellerAccount').value || 'seller@heima.network';
+            const sellerAccount = document.getElementById('sellerAccount').value.trim();
+
+            // Validate seller address
+            if (!sellerAccount || !sellerAccount.match(/^0x[a-fA-F0-9]{40}$/)) {
+                showError('Please enter a valid Ethereum address for the seller account');
+                document.getElementById('submitText').classList.remove('hidden');
+                document.getElementById('loadingText').classList.add('hidden');
+                return;
+            }
 
             // Convert amount to smallest units (wei)
             const amountFloat = parseFloat(amount);
@@ -282,8 +291,10 @@
                 ws.close();
 
                 // Display success
+                // Use localhost:8080 for the invoice URL (overriding backend response)
+                const localInvoiceUrl = `http://localhost:8080/pay-invoice.html?id=${response.invoice_id}`;
                 document.getElementById('invoiceId').textContent = response.invoice_id;
-                document.getElementById('invoiceUrl').value = response.invoice_url;
+                document.getElementById('invoiceUrl').value = localInvoiceUrl;
                 document.getElementById('commitment').textContent = response.commitment.substring(0, 16) + '...';
                 document.getElementById('invoiceForm').classList.add('hidden');
                 document.getElementById('result').classList.remove('hidden');
