@@ -117,7 +117,7 @@ This demo showcases:
 
 ### Prerequisites
 
-1. **TEE Worker Running**: The RPC server must be running on `ws://localhost:2004`
+1. **TEE Worker Running**: The RPC server must be running on `ws://localhost:2100`
    ```bash
    cd /home/kai/workspace/heima/tee-worker/omni-executor
    make
@@ -256,7 +256,7 @@ Update in HTML files if TEE Worker is running on a different host/port:
 
 ```javascript
 // create-invoice.html and pay-invoice.html
-const RPC_URL = 'ws://localhost:2004';  // Change if needed
+const RPC_URL = 'ws://localhost:2100';  // Change if needed
 ```
 
 ### Invoice URL Base
@@ -351,9 +351,9 @@ cargo test --features=test-endpoints confidential_invoice
 ## Troubleshooting
 
 ### "Failed to connect to TEE Worker"
-- Ensure TEE Worker is running on `ws://localhost:2004`
+- Ensure TEE Worker is running on `ws://localhost:2100`
 - Check WebSocket connection in browser console
-- Verify no firewall blocking port 2004
+- Verify no firewall blocking port 2100
 
 ### "Invoice not found"
 - Check invoice ID in URL is correct

@@ -26,7 +26,7 @@ use oe_storage::confidential_invoice::{InvoiceMetadata, InvoiceStatus, NewConfid
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CreateInvoiceParams {
 	pub seller_account: String,
 	pub buyer_identifier: String, // Email or omni_account
@@ -36,21 +36,21 @@ pub struct CreateInvoiceParams {
 	pub description: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateInvoiceResponse {
 	pub invoice_id: String,
 	pub invoice_url: String,
 	pub commitment: String, // Hex-encoded
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GetInvoiceDetailsParams {
 	pub invoice_id: String,
 	#[allow(dead_code)] // Will be used for JWT auth in production
 	pub auth_token: Option<String>, // Optional JWT token for authorization
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetInvoiceDetailsResponse {
 	pub invoice_id: String,
 	pub amount: Option<String>, // Only if authorized
@@ -332,17 +332,18 @@ mod tests {
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
 		// Create invoice
-		let create_params = CreateInvoiceParams {
-			seller_account: "seller@example.com".to_string(),
-			buyer_identifier: "buyer@example.com".to_string(),
-			amount: "50000.00".to_string(),
-			currency: "USDC".to_string(),
-			chain_id: 421614, // Arbitrum Sepolia
-			description: "Test invoice".to_string(),
-		};
-
 		let create_response: CreateInvoiceResponse = client
-			.request("omni_createConfidentialInvoice", rpc_params![create_params])
+			.request(
+				"omni_createConfidentialInvoice",
+				rpc_params![
+					"seller@example.com", // seller_account
+					"buyer@example.com",  // buyer_identifier
+					"50000.00",           // amount
+					"USDC",               // currency
+					421614u64,            // chain_id
+					"Test invoice"        // description
+				],
+			)
 			.await
 			.unwrap();
 
@@ -350,13 +351,13 @@ mod tests {
 		assert!(!create_response.commitment.is_empty());
 
 		// Get invoice details
-		let get_params = GetInvoiceDetailsParams {
-			invoice_id: create_response.invoice_id.clone(),
-			auth_token: None,
-		};
-
-		let get_response: GetInvoiceDetailsResponse =
-			client.request("omni_getInvoiceDetails", rpc_params![get_params]).await.unwrap();
+		let get_response: GetInvoiceDetailsResponse = client
+			.request(
+				"omni_getInvoiceDetails",
+				rpc_params![create_response.invoice_id.clone(), None::<String>],
+			)
+			.await
+			.unwrap();
 
 		assert_eq!(get_response.invoice_id, create_response.invoice_id);
 		assert_eq!(get_response.amount, Some("50000.00".to_string()));

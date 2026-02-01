@@ -8,26 +8,43 @@ Complete testing guide for the privacy invoice demo implementation.
 
 ### Environment Setup
 
-- [ ] TEE Worker running on `ws://localhost:2004`
+- [ ] TEE Worker running (remote or local) - accessible via WebSocket
 - [ ] Frontend server running on `http://localhost:8080`
 - [ ] MetaMask installed in browser
 - [ ] Test wallet with Arbitrum Sepolia ETH (for future payment integration)
 - [ ] Browser console open (F12) for debugging
 
+**Note**: If TEE Worker is running remotely, update the RPC URL in HTML files:
+```javascript
+// In create-invoice.html and pay-invoice.html
+const RPC_URL = 'ws://your-remote-host:2100';  // Update this
+```
+
 ### Verification Commands
 
 ```bash
-# Check TEE Worker is running
-curl http://localhost:2004/health
-# Expected: {"status":"ok"}
+# Check TEE Worker is running (WebSocket, not HTTP)
+# Replace localhost:2100 with your actual TEE Worker WebSocket URL
+
+# Option 1: Using websocat (install: cargo install websocat)
+echo '{"jsonrpc":"2.0","method":"omni_getHealth","params":[],"id":1}' | websocat ws://localhost:2100
+# Expected: {"jsonrpc":"2.0","result":"OK","id":1}
+
+# Option 2: Using wscat (install: npm install -g wscat)
+# wscat -c ws://localhost:2100
+# Then send: {"jsonrpc":"2.0","method":"omni_getHealth","params":[],"id":1}
+
+# Option 3: Check if process is running (only works if TEE Worker is local)
+# ps aux | grep omni-executor
 
 # Check frontend server
 curl http://localhost:8080/
 # Expected: Directory listing or 404 (both OK)
 
-# Check RocksDB storage exists
-ls -la /tmp/rocksdb_test/confidential_invoices/
-# Expected: Directory exists
+# Check RocksDB storage (only works if TEE Worker is local)
+# Run on TEE Worker host:
+# ls -la /tmp/rocksdb_test/confidential_invoices/
+# Expected: Directory exists with invoice data
 ```
 
 ---
@@ -40,7 +57,7 @@ ls -la /tmp/rocksdb_test/confidential_invoices/
 
 ```bash
 # Using wscat or websocat
-wscat -c ws://localhost:2004
+wscat -c ws://localhost:2100
 
 # Send:
 {
@@ -650,7 +667,7 @@ javascript:alert('XSS')
 ```bash
 # Create 100 invoices rapidly
 for i in {1..100}; do
-  wscat -c ws://localhost:2004 <<< '{...}' &
+  wscat -c ws://localhost:2100 <<< '{...}' &
 done
 ```
 

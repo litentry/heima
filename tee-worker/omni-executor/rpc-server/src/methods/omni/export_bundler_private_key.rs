@@ -252,6 +252,8 @@ mod tests {
 		let wildmeta_timestamp_storage =
 			Arc::new(WildmetaTimestampStorage::new(storage_db.clone()));
 		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(storage_db.clone()));
+		let confidential_invoice_storage =
+			Arc::new(oe_storage::ConfidentialInvoiceStorage::new(storage_db.clone()));
 
 		let (cross_chain_intent_executor, _) = MockedIntentExecutor::new();
 
@@ -270,6 +272,7 @@ mod tests {
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
+			confidential_invoice_storage,
 			[0u8; 33],
 			bundler_key,
 			authorized_pubkey,

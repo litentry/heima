@@ -82,7 +82,7 @@ npm start
 **Setup:**
 - No build step required (vanilla HTML)
 - Serve via any static file server or open directly in browser
-- Configure TEE Worker RPC URL in HTML files (default: ws://localhost:2004)
+- Configure TEE Worker RPC URL in HTML files (default: ws://localhost:2100)
 
 **TEE Worker RPC Methods:**
 - `omni_createConfidentialInvoice` - Create encrypted invoice
@@ -145,5 +145,5 @@ npm start
 
 - **aa-demo:** http://localhost:3000
 - **x402-demo:** http://localhost:3001
-- **TEE Worker RPC:** ws://localhost:2004 (WebSocket) or http://localhost:2004 (HTTP)
+- **TEE Worker RPC:** ws://localhost:2100 (WebSocket) or http://localhost:2100 (HTTP)
 - **Anvil (local chain):** http://localhost:8545

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Confidential Invoice - Heima Network</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
     <div class="max-w-2xl mx-auto p-8">
         <!-- Header -->
@@ -16,7 +18,9 @@
             </p>
             <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
                 <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                    </path>
                 </svg>
                 <span class="text-sm text-purple-800 font-medium">TEE-Secured Encryption</span>
             </div>
@@ -30,15 +34,9 @@
                 </label>
                 <div class="relative">
                     <span class="absolute left-4 top-3 text-gray-500 text-lg">$</span>
-                    <input
-                        type="number"
-                        id="amount"
-                        step="0.01"
-                        min="0.01"
-                        required
+                    <input type="number" id="amount" step="0.01" min="0.01" required
                         class="w-full pl-8 pr-4 py-3 text-lg border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        placeholder="50000.00"
-                    />
+                        placeholder="50000.00" />
                 </div>
                 <p class="mt-1 text-xs text-gray-500">Enter the invoice amount in USDC</p>
             </div>
@@ -47,13 +45,9 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                     Buyer Email
                 </label>
-                <input
-                    type="email"
-                    id="buyerEmail"
-                    required
+                <input type="email" id="buyerEmail" required
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="buyer@company.com"
-                />
+                    placeholder="buyer@company.com" />
                 <p class="mt-1 text-xs text-gray-500">Buyer's email address to receive the invoice</p>
             </div>
 
@@ -61,13 +55,9 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                     Description
                 </label>
-                <textarea
-                    id="description"
-                    rows="3"
-                    required
+                <textarea id="description" rows="3" required
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"
-                    placeholder="Q4 2025 Consulting Services"
-                ></textarea>
+                    placeholder="Q4 2025 Consulting Services"></textarea>
                 <p class="mt-1 text-xs text-gray-500">Brief description of what this invoice is for</p>
             </div>
 
@@ -75,19 +65,14 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                     Seller Account (Optional)
                 </label>
-                <input
-                    type="text"
-                    id="sellerAccount"
+                <input type="text" id="sellerAccount"
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="seller@company.com"
-                />
+                    placeholder="seller@company.com" />
                 <p class="mt-1 text-xs text-gray-500">Your identifier (defaults to 'seller@heima.network')</p>
             </div>
 
-            <button
-                type="submit"
-                class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
+            <button type="submit"
+                class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                 <span id="submitText">Generate Confidential Invoice</span>
                 <span id="loadingText" class="hidden">Encrypting...</span>
             </button>
@@ -97,7 +82,8 @@
         <div id="result" class="hidden mt-8 bg-green-50 border-2 border-green-200 rounded-xl shadow-lg p-8">
             <div class="flex items-center gap-3 mb-6">
                 <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 <h2 class="text-2xl font-bold text-green-800">Invoice Created Successfully!</h2>
             </div>
@@ -111,46 +97,45 @@
                 <div class="bg-white p-4 rounded-lg border border-green-200">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm font-semibold text-gray-700">Payment Link:</span>
-                        <button
-                            onclick="copyLink()"
-                            class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                        >
+                        <button onclick="copyLink()"
+                            class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                </path>
                             </svg>
                             Copy Link
                         </button>
                     </div>
-                    <input
-                        type="text"
-                        id="invoiceUrl"
-                        readonly
+                    <input type="text" id="invoiceUrl" readonly
                         class="w-full px-3 py-2 bg-gray-50 rounded border border-gray-300 text-sm font-mono cursor-pointer hover:bg-gray-100"
-                        onclick="this.select()"
-                    />
+                        onclick="this.select()" />
                 </div>
 
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
                     <div class="flex items-start gap-2">
-                        <svg class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        <svg class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                            </path>
                         </svg>
                         <div>
                             <p class="text-sm font-semibold text-purple-900 mb-1">Amount Encrypted</p>
                             <p class="text-xs text-purple-800">
-                                Commitment: <code id="commitment" class="bg-purple-100 px-2 py-0.5 rounded font-mono text-xs"></code>
+                                Commitment: <code id="commitment"
+                                    class="bg-purple-100 px-2 py-0.5 rounded font-mono text-xs"></code>
                             </p>
                             <p class="text-xs text-purple-700 mt-2">
-                                Only the buyer can see the amount when they open this link. The invoice amount is encrypted by the TEE and cannot be viewed by anyone else.
+                                Only the buyer can see the amount when they open this link. The invoice amount is
+                                encrypted by the TEE and cannot be viewed by anyone else.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <button
-                    onclick="createAnother()"
-                    class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg transition"
-                >
+                <button onclick="createAnother()"
+                    class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg transition">
                     Create Another Invoice
                 </button>
             </div>
@@ -160,7 +145,8 @@
         <div id="error" class="hidden mt-8 bg-red-50 border-2 border-red-200 rounded-xl shadow-lg p-6">
             <div class="flex items-center gap-2 mb-2">
                 <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 <h3 class="text-lg font-semibold text-red-800">Error Creating Invoice</h3>
             </div>
@@ -169,7 +155,7 @@
     </div>
 
     <script>
-        const RPC_URL = 'ws://localhost:2004'; // Update with your RPC server URL
+        const RPC_URL = 'ws://localhost:2100'; // Update with your RPC server URL
 
         document.getElementById('invoiceForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -265,4 +251,5 @@
         }
     </script>
 </body>
+
 </html>
