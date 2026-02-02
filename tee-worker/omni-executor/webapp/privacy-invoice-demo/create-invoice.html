@@ -249,6 +249,19 @@
             document.getElementById('error').classList.add('hidden');
 
             try {
+                // Get seller's smart wallet nonce for deterministic invoice ID
+                let nonce = null;
+                try {
+                    // Note: In production, you'd calculate the smart wallet address from seller's EOA
+                    // For now, we'll fetch the nonce from the seller's EOA directly as a proxy
+                    const provider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
+                    const txCount = await provider.getTransactionCount(sellerAccount);
+                    nonce = txCount;
+                    console.log('Using seller transaction count as nonce:', nonce);
+                } catch (error) {
+                    console.warn('Could not fetch nonce, invoice ID will be random:', error);
+                }
+
                 // Call RPC method via WebSocket
                 const ws = new WebSocket(RPC_URL);
 
@@ -268,7 +281,8 @@
                         amount: amountUnits,        // amount (in smallest units)
                         token_address: tokenAddress,
                         chain_id: 421614,           // Arbitrum Sepolia
-                        description: description
+                        description: description,
+                        nonce: nonce                // deterministic invoice ID
                     }
                 };
 

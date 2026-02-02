@@ -34,6 +34,7 @@ pub struct CreateInvoiceParams {
 	pub token_address: String,    // ERC20 token contract address (e.g., "0x...")
 	pub chain_id: u64,
 	pub description: String,
+	pub nonce: Option<u64>, // Optional nonce for deterministic invoice ID
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -116,8 +117,21 @@ pub fn register_confidential_invoice<
 				.to_rpc_error());
 			}
 
-			// Generate unique invoice ID
-			let invoice_id = format!("inv_{}", uuid::Uuid::new_v4());
+			// Generate deterministic invoice ID based on seller + nonce
+			// This allows multiple invoices to the same buyer with same amount
+			// but ensures each invoice is unique based on the nonce
+			let invoice_id = if let Some(nonce) = params.nonce {
+				// Deterministic: SHA256(seller || nonce)
+				use sha2::{Digest, Sha256};
+				let mut hasher = Sha256::new();
+				hasher.update(params.seller_account.as_bytes());
+				hasher.update(nonce.to_le_bytes());
+				let hash = hasher.finalize();
+				format!("inv_{}", hex::encode(&hash[..16])) // Use first 16 bytes for readability
+			} else {
+				// Fallback to random UUID if nonce not provided
+				format!("inv_{}", uuid::Uuid::new_v4())
+			};
 
 			// Encrypt amount with TEE key
 			let encrypted_amount = encrypt_amount(amount_units, &ctx.aes256_key)
