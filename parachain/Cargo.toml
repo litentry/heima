@@ -63,7 +63,7 @@ base58 = { version = "0.2", default-features = false }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 bitflags = { version = "2.9.3" }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
-clap = { version = "4.5.53", features = ["derive"] }
+clap = { version = "4.5.57", features = ["derive"] }
 der = { version = "0.7", default-features = false }
 derive_more = { version = "2.1.1", features = ["full"] }
 env_logger = { version = "0.11.8" }
@@ -72,12 +72,12 @@ impl-trait-for-tuples = { version = "0.2.2" }
 log = { version = "0.4", default-features = false }
 proc-macro2 = { version = "1" }
 quote = { version = "1" }
-syn = { version = "2.0.111" }
+syn = { version = "2.0.114" }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
 parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
 paste = { version = "1.0" }
 serde = { version = "=1.0", default-features = false, features = ["derive", "alloc"] }
-serde_json = { version = "=1.0.148", default-features = false }
+serde_json = { version = "=1.0.149", default-features = false }
 slices = { version = "0.2.0" }
 hex = { version = "0.4", default-features = false }
 hex-literal = { version = "1.1.0", default-features = false }
