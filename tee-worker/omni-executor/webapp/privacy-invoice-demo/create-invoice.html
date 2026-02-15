@@ -179,7 +179,11 @@
     </div>
 
     <script>
-        const RPC_URL = 'ws://localhost:2100'; // Update with your RPC server URL
+        const RPC_URL = 'ws://localhost:2100';
+        const CLIENT_ID = 'wildmeta';
+        const FACTORY_ADDRESS = '0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e'; // OmniAccountFactory V1
+        const ENTRYPOINT_ADDRESS = '0xe6042188857a822DDfcFE5fd9E17118049Ab539a'; // EntryPoint V1
+        const CHAIN_ID = 421614; // Arbitrum Sepolia
         let tokenDecimals = 18; // Default to 18 if lookup fails
 
         // ERC20 ABI for symbol() and decimals()
@@ -187,6 +191,37 @@
             'function symbol() view returns (string)',
             'function decimals() view returns (uint8)'
         ];
+
+        // OmniAccount ABI for getNonce()
+        const ACCOUNT_ABI = [
+            {
+                "inputs": [],
+                "name": "getNonce",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // Factory ABI for getAddress()
+        const FACTORY_ABI = [
+            {
+                "type": "function",
+                "name": "getAddress",
+                "inputs": [
+                    {"name": "oa", "type": "bytes32"},
+                    {"name": "oaType", "type": "uint8"},
+                    {"name": "clientId", "type": "bytes"},
+                    {"name": "root", "type": "address"}
+                ],
+                "outputs": [{"name": "", "type": "address"}],
+                "stateMutability": "view"
+            }
+        ];
+
+        const OwnerType = {
+            Evm: 6  // 0x06 for EVM addresses
+        };
 
         // Token lookup when address is entered
         document.getElementById('tokenAddress').addEventListener('blur', async function() {
@@ -252,14 +287,51 @@
                 // Get seller's smart wallet nonce for deterministic invoice ID
                 let nonce = null;
                 try {
-                    // Note: In production, you'd calculate the smart wallet address from seller's EOA
-                    // For now, we'll fetch the nonce from the seller's EOA directly as a proxy
+                    console.log('Fetching smart wallet nonce for seller:', sellerAccount);
+
+                    // Step 1: Calculate OmniAccount hash
+                    const omniAccountHash = await calculateOmniAccount(sellerAccount, CLIENT_ID);
+                    console.log('OmniAccount hash:', omniAccountHash);
+
+                    // Step 2: Get root signer from TEE
+                    const rootSigner = await getRootSignerFromTEE(omniAccountHash);
+                    console.log('Root signer from TEE:', rootSigner);
+
+                    // Step 3: Get counterfactual smart wallet address from factory
                     const provider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
-                    const txCount = await provider.getTransactionCount(sellerAccount);
-                    nonce = txCount;
-                    console.log('Using seller transaction count as nonce:', nonce);
+
+                    if (FACTORY_ADDRESS === '0x0000000000000000000000000000000000000000') {
+                        console.warn('Factory address not configured, using seller EOA as fallback');
+                        nonce = 0;
+                    } else {
+                        const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
+                        const clientIdBytes = ethers.toUtf8Bytes(CLIENT_ID);
+
+                        const smartWalletAddress = await factoryContract.getAddress(
+                            omniAccountHash,
+                            OwnerType.Evm,
+                            clientIdBytes,
+                            rootSigner
+                        );
+                        console.log('Counterfactual smart wallet address:', smartWalletAddress);
+
+                        // Step 4: Get smart wallet's nonce from chain
+                        const code = await provider.getCode(smartWalletAddress);
+
+                        if (code !== '0x') {
+                            // Smart wallet is deployed, get its nonce
+                            const accountContract = new ethers.Contract(smartWalletAddress, ACCOUNT_ABI, provider);
+                            nonce = Number(await accountContract.getNonce());
+                            console.log('Smart wallet nonce:', nonce);
+                        } else {
+                            // Smart wallet not deployed yet, use 0
+                            nonce = 0;
+                            console.log('Smart wallet not deployed yet, using nonce 0');
+                        }
+                    }
                 } catch (error) {
-                    console.warn('Could not fetch nonce, invoice ID will be random:', error);
+                    console.warn('Could not fetch smart wallet nonce, invoice ID will be random:', error);
+                    console.error('Error details:', error);
                 }
 
                 // Call RPC method via WebSocket
@@ -347,6 +419,81 @@
             document.getElementById('invoiceForm').classList.remove('hidden');
             document.getElementById('result').classList.add('hidden');
             document.getElementById('invoiceForm').reset();
+        }
+
+        /**
+         * Calculate OmniAccount hash from EVM address
+         * Based on: sha256(clientId + "evm" + address)
+         */
+        async function calculateOmniAccount(address, clientId) {
+            const encoder = new TextEncoder();
+            const clientIdBytes = encoder.encode(clientId);
+            const identityTypeBytes = encoder.encode('evm');
+
+            // Convert address hex to bytes
+            const addressHex = address.slice(2).toLowerCase();
+            const addressBytes = new Uint8Array(20);
+            for (let i = 0; i < addressHex.length; i += 2) {
+                addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
+            }
+
+            // Combine all bytes
+            const combined = new Uint8Array(
+                clientIdBytes.length + identityTypeBytes.length + addressBytes.length
+            );
+            combined.set(clientIdBytes, 0);
+            combined.set(identityTypeBytes, clientIdBytes.length);
+            combined.set(addressBytes, clientIdBytes.length + identityTypeBytes.length);
+
+            // Calculate SHA256 hash
+            const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            return hashHex;
+        }
+
+        /**
+         * Get root signer from TEE worker
+         */
+        async function getRootSignerFromTEE(omniAccountHash) {
+            const ws = new WebSocket(RPC_URL);
+
+            await new Promise((resolve, reject) => {
+                ws.onopen = resolve;
+                ws.onerror = reject;
+            });
+
+            const requestId = Math.floor(Math.random() * 1000000);
+            const request = {
+                jsonrpc: '2.0',
+                id: requestId,
+                method: 'omni_getSmartWalletRootSigner',
+                params: {
+                    omni_account: omniAccountHash,
+                    chain_type: 'evm',
+                    wallet_index: 0,
+                }
+            };
+
+            ws.send(JSON.stringify(request));
+
+            const rootSigner = await new Promise((resolve, reject) => {
+                ws.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    if (response.id === requestId) {
+                        if (response.error) {
+                            reject(new Error(response.error.message || 'RPC error'));
+                        } else {
+                            resolve(response.result);
+                        }
+                    }
+                };
+                setTimeout(() => reject(new Error('Request timeout')), 10000);
+            });
+
+            ws.close();
+            return rootSigner;
         }
     </script>
 </body>
