@@ -935,7 +935,7 @@ fn handle_generate_oa_bytes(
 	let oa_bytes: &[u8] = oa.as_ref();
 
 	// Convert to hex string
-	let oa_hex = format!("0x{}", hex::encode(&oa_bytes));
+	let oa_hex = format!("0x{}", hex::encode(oa_bytes));
 
 	info!(
 		"Generated OA bytes for user_type '{}', user_id '{}', client_id '{}': {}",
