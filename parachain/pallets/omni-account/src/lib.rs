@@ -45,7 +45,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::Dispatchable;
-use sp_std::{boxed::Box, vec, vec::Vec};
+use sp_std::{boxed::Box, vec::Vec};
 
 // Customized origin for this pallet, to:
 // 1. to decouple `TEECallOrigin` and extrinsic that should be sent from `OmniAccount` origin only
