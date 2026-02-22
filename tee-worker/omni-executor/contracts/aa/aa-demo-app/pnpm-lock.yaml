@@ -2283,14 +2283,8 @@ packages:
   blakejs@1.2.1:
     resolution: {integrity: sha512-QXUSXI3QVc/gJME0dBpXrag1kbzOqCjCX8/b54ntNyW6sjtoqxqRk3LTmXzaJoh71zMsDCjM+47jS7XiwN/+fQ==}
 
-  bn.js@4.12.2:
-    resolution: {integrity: sha512-n4DSx829VRTRByMRGdjQ9iqsN0Bh4OolPsFnaZBLcbi8iXcB+kJ9s7EnRt4wILZNV3kPLHkRVfOc/HvhC3ovDw==}
-
   bn.js@4.12.3:
     resolution: {integrity: sha512-fGTi3gxV/23FTYdAoUtLYp6qySe2KE3teyZitipKNRuVYcBkoP/bB3guXN/XVKUe9mxCHXnc9C4ocyz8OmgN0g==}
-
-  bn.js@5.2.2:
-    resolution: {integrity: sha512-v2YAxEmKaBLahNwE1mjp4WON6huMNeuDvagFZW+ASCuA/ku0bXR9hSMw0XpiqMoA3+rmnyck/tPRSFQkoC9Cuw==}
 
   bn.js@5.2.3:
     resolution: {integrity: sha512-EAcmnPkxpntVL+DS7bO1zhcZNvCkxqtkd0ZY53h06GNQ3DEkkGZ/gKgmDv6DdZQGj9BgfSPKtJJ7Dp1GPP8f7w==}
@@ -2402,8 +2396,8 @@ packages:
   caniuse-lite@1.0.30001766:
     resolution: {integrity: sha512-4C0lfJ0/YPjJQHagaE9x2Elb69CIqEPZeG0anQt9SIvIoOH4a4uaRl73IavyO+0qZh6MDLH//DrXThEYKHkmYA==}
 
-  caniuse-lite@1.0.30001770:
-    resolution: {integrity: sha512-x/2CLQ1jHENRbHg5PSId2sXq1CIO1CISvwWAj027ltMVG2UNgW+w9oH2+HzgEIRFembL8bUlXtfbBHR1fCg2xw==}
+  caniuse-lite@1.0.30001772:
+    resolution: {integrity: sha512-mIwLZICj+ntVTw4BT2zfp+yu/AqV6GMKfJVJMx3MwPxs+uk/uj2GLl2dH8LQbjiLDX66amCga5nKFyDgRR43kg==}
 
   cashaddrjs@0.4.4:
     resolution: {integrity: sha512-xZkuWdNOh0uq/mxJIng6vYWfTowZLd9F4GMAlp2DwFHlcCqCm91NtuAc47RuV4L7r4PYcY5p6Cr2OKNb4hnkWA==}
@@ -2714,8 +2708,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  electron-to-chromium@1.5.286:
-    resolution: {integrity: sha512-9tfDXhJ4RKFNerfjdCcZfufu49vg620741MNs26a9+bhLThdB+plgMeou98CAaHu/WATj2iHOOHTp1hWtABj2A==}
+  electron-to-chromium@1.5.302:
+    resolution: {integrity: sha512-sM6HAN2LyK82IyPBpznDRqlTQAtuSaO+ShzFiWTvoMJLHyZ+Y39r8VMfHzwbU8MVBzQ4Wdn85+wlZl2TLGIlwg==}
 
   elliptic@6.6.1:
     resolution: {integrity: sha512-RaddvvMatK2LJHqFJ+YA4WysVN5Ita9E35botqIYspQ4TkRAlCicdzKOjlyv/1Za5RyTNn7di//eEV0uTAfe3g==}
@@ -3534,8 +3528,8 @@ packages:
   minimalistic-crypto-utils@1.0.1:
     resolution: {integrity: sha512-JIYlbt6g8i5jKfJ3xz7rF0LXmv2TkDxBLUkiBeZ7bAx4GnnNMr8xFpGnOxn6GhTEHx3SjRrZEoU+j04prX1ktg==}
 
-  minimatch@3.1.2:
-    resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
+  minimatch@3.1.3:
+    resolution: {integrity: sha512-M2GCs7Vk83NxkUyQV1bkABc4yxgz9kILhHImZiBPAZ9ybuvCb0/H7lEl5XvIg3g+9d4eNotkZA5IWwYl0tibaA==}
 
   minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
@@ -7090,7 +7084,7 @@ snapshots:
       '@solana/buffer-layout': 4.0.1
       '@solana/codecs-numbers': 2.3.0(typescript@5.8.3)
       agentkeepalive: 4.6.0
-      bn.js: 5.2.2
+      bn.js: 5.2.3
       borsh: 0.7.0
       bs58: 4.0.1
       buffer: 6.0.3
@@ -8941,17 +8935,13 @@ snapshots:
 
   blakejs@1.2.1: {}
 
-  bn.js@4.12.2: {}
-
   bn.js@4.12.3: {}
-
-  bn.js@5.2.2: {}
 
   bn.js@5.2.3: {}
 
   borsh@0.7.0:
     dependencies:
-      bn.js: 5.2.2
+      bn.js: 5.2.3
       bs58: 4.0.1
       text-encoding-utf-8: 1.0.2
 
@@ -8998,7 +8988,7 @@ snapshots:
 
   browserify-sign@4.2.3:
     dependencies:
-      bn.js: 5.2.2
+      bn.js: 5.2.3
       browserify-rsa: 4.1.1
       create-hash: 1.2.0
       create-hmac: 1.1.7
@@ -9012,8 +9002,8 @@ snapshots:
   browserslist@4.28.1:
     dependencies:
       baseline-browser-mapping: 2.10.0
-      caniuse-lite: 1.0.30001770
-      electron-to-chromium: 1.5.286
+      caniuse-lite: 1.0.30001772
+      electron-to-chromium: 1.5.302
       node-releases: 2.0.27
       update-browserslist-db: 1.2.3(browserslist@4.28.1)
 
@@ -9095,7 +9085,7 @@ snapshots:
 
   caniuse-lite@1.0.30001766: {}
 
-  caniuse-lite@1.0.30001770: {}
+  caniuse-lite@1.0.30001772: {}
 
   cashaddrjs@0.4.4:
     dependencies:
@@ -9223,7 +9213,7 @@ snapshots:
 
   create-ecdh@4.0.4:
     dependencies:
-      bn.js: 4.12.2
+      bn.js: 4.12.3
       elliptic: 6.6.1
 
   create-hash@1.1.3:
@@ -9372,7 +9362,7 @@ snapshots:
 
   diffie-hellman@5.0.3:
     dependencies:
-      bn.js: 4.12.2
+      bn.js: 4.12.3
       miller-rabin: 4.0.1
       randombytes: 2.1.0
 
@@ -9405,7 +9395,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-to-chromium@1.5.286: {}
+  electron-to-chromium@1.5.302: {}
 
   elliptic@6.6.1:
     dependencies:
@@ -9676,7 +9666,7 @@ snapshots:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 3.1.2
+      minimatch: 3.1.3
       once: 1.4.0
       path-is-absolute: 1.0.1
 
@@ -10365,7 +10355,7 @@ snapshots:
 
   minimalistic-crypto-utils@1.0.1: {}
 
-  minimatch@3.1.2:
+  minimatch@3.1.3:
     dependencies:
       brace-expansion: 1.1.12
 
@@ -10662,7 +10652,7 @@ snapshots:
 
   public-encrypt@4.0.3:
     dependencies:
-      bn.js: 4.12.2
+      bn.js: 4.12.3
       browserify-rsa: 4.1.1
       create-hash: 1.2.0
       parse-asn1: 5.1.7
@@ -11219,7 +11209,7 @@ snapshots:
     dependencies:
       '@istanbuljs/schema': 0.1.3
       glob: 7.2.3
-      minimatch: 3.1.2
+      minimatch: 3.1.3
 
   text-encoding-utf-8@1.0.2: {}
 
