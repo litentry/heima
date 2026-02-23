@@ -63,8 +63,8 @@ base58 = { version = "0.2", default-features = false }
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 bitflags = { version = "2.9.3" }
 chrono = { version = "0.4", default-features = false, features = ["serde"] }
-clap = { version = "4.5.53", features = ["derive"] }
-der = { version = "0.7", default-features = false }
+clap = { version = "4.5.60", features = ["derive"] }
+der = { version = "0.8", default-features = false }
 derive_more = { version = "2.1.1", features = ["full"] }
 env_logger = { version = "0.11.8" }
 environmental = { version = "1.1.2", default-features = false }
@@ -72,12 +72,12 @@ impl-trait-for-tuples = { version = "0.2.2" }
 log = { version = "0.4", default-features = false }
 proc-macro2 = { version = "1" }
 quote = { version = "1" }
-syn = { version = "2.0.111" }
+syn = { version = "2.0.117" }
 scale-info = { version = "2.11", default-features = false, features = ["derive"] }
 parity-scale-codec = { version = "3.6", default-features = false, features = ["derive", "max-encoded-len"] }
 paste = { version = "1.0" }
 serde = { version = "=1.0", default-features = false, features = ["derive", "alloc"] }
-serde_json = { version = "=1.0.148", default-features = false }
+serde_json = { version = "=1.0.149", default-features = false }
 slices = { version = "0.2.0" }
 hex = { version = "0.4", default-features = false }
 hex-literal = { version = "1.1.0", default-features = false }
@@ -86,11 +86,11 @@ sha3 = { version = "0.10", default-features = false }
 sha2 = { version = "0.10", default-features = false }
 p256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
 ecdsa = { version = "0.16", default-features = false }
-futures = { version = "0.3.30", features = ["compat"] }
+futures = { version = "0.3.32", features = ["compat"] }
 jsonrpsee = { version = "0.24.10", features = ["server"] }
 tokio = { version = "1.40.0", features = ["macros", "sync"] }
-strum = { version = "0.27.2", default-features = false }
-strum_macros = { version = "0.27.2", default-features = false }
+strum = { version = "0.28.0", default-features = false }
+strum_macros = { version = "0.28.0", default-features = false }
 libsecp256k1 = { version = "0.7", default-features = false }
 num_enum = { version = "0.7.3", default-features = false }
 num-integer = { version = "0.1", default-features = false }
