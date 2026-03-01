@@ -54,9 +54,9 @@ impl MailerTrait for Mailer {
 			.add_content(content)
 			.add_personalization(personalization);
 
-		let mut sender = Sender::new(self.api_key.clone(), None);
+		let mut sender = Sender::new(&self.api_key, None);
 		if let Some(api_host) = &self.api_host {
-			sender.set_host(api_host.to_string());
+			sender.set_host(api_host);
 		}
 
 		let start_time = std::time::Instant::now();
