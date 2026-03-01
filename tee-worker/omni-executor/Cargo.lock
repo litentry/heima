@@ -8384,7 +8384,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
- "uuid 1.20.0",
+ "uuid 1.21.0",
 ]
 
 [[package]]
