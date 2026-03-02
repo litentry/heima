@@ -1,6 +1,5 @@
 use ethers::types::Bytes;
 use parity_scale_codec::{Decode, Encode};
-use rand::Rng;
 use ring::{
 	aead::{
 		Aad, BoundKey, LessSafeKey, Nonce, NonceSequence, SealingKey, UnboundKey, AES_256_GCM,
@@ -122,7 +121,7 @@ impl RingAeadNonceSequence {
 impl NonceSequence for RingAeadNonceSequence {
 	fn advance(&mut self) -> core::result::Result<Nonce, Unspecified> {
 		let nonce = Nonce::assume_unique_for_key(self.nonce);
-		let nonce_vec = rand::rng().random::<Aes256KeyNonce>();
+		let nonce_vec: Aes256KeyNonce = rand::random();
 		self.nonce.copy_from_slice(&nonce_vec[0..NONCE_LEN]);
 		Ok(nonce)
 	}

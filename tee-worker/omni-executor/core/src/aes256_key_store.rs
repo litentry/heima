@@ -1,6 +1,6 @@
 use crate::key_store::KeyStore;
 use oe_crypto::aes256::Aes256Key;
-use rand::Rng;
+use rand::RngExt;
 
 pub struct Aes256KeyStore {
 	path: String,

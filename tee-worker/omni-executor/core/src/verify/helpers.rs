@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 use std::string::String;
 
 // This will be used for oauth2 authentication

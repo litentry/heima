@@ -34,7 +34,7 @@ pub fn register_request_passkey_challenge<
 			debug!("Received omni_requestPasskeyChallenge, params: {:?}", params);
 
 			// Generate a random 32-byte challenge
-			use rand::RngCore;
+			use rand::Rng;
 			let mut challenge_bytes = [0u8; 32];
 			rand::rng().fill_bytes(&mut challenge_bytes);
 
