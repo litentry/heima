@@ -261,7 +261,7 @@ jobs:
           docker save litentry/heima:latest | gzip > heima.tar.gz
 
       - name: Upload parachain docker image
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: heima
           path: heima.tar.gz
@@ -322,7 +322,7 @@ jobs:
           docker save litentry/omni-executor:latest | gzip > litentry-omni.tar.gz
 
       - name: Upload docker image
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: litentry-omni
           path: litentry-omni.tar.gz
@@ -408,7 +408,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: heima
 
@@ -444,7 +444,7 @@ jobs:
           dest: docker-logs
 
       - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: ${{ matrix.chain }}-ts-tests-docker-logs
@@ -453,7 +453,7 @@ jobs:
           retention-days: 3
 
       - name: Archive logs if test fails
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: ${{ matrix.chain }}-ts-tests-artifact
@@ -535,7 +535,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: litentry-omni
 
@@ -564,7 +564,7 @@ jobs:
           dest: docker-logs
 
       - name: Upload docker logs if test fails
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: ${{ matrix.test_name }}-docker-logs
@@ -594,11 +594,11 @@ jobs:
       - omni-executor-test
     if: ${{ !failure() && needs.set-condition.outputs.push_docker == 'true' }}
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: heima
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: litentry-omni
 
