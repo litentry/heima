@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw from Privacy Pool - Heima Network</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <div class="max-w-3xl mx-auto p-8">
+        <!-- Connect Wallet State -->
+        <div id="loginState" class="text-center">
+            <div class="bg-white rounded-xl shadow-lg p-12">
+                <div class="mb-6">
+                    <svg class="w-20 h-20 mx-auto text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                        </path>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Seller Withdrawal</h1>
+                <p class="text-gray-600 mb-8">
+                    Connect your wallet to claim your privately-held invoice payment
+                </p>
+                <button onclick="connectWallet()"
+                    class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 px-8 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Connect MetaMask
+                </button>
+            </div>
+        </div>
+
+        <!-- Withdrawal Form State -->
+        <div id="withdrawState" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <!-- Header -->
+                <div class="border-b border-gray-200 pb-6 mb-6">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                            </path>
+                        </svg>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Privacy Pool Withdrawal</h1>
+                            <p class="text-sm text-gray-600">Claim funds without revealing amount on-chain</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dark pool explanation -->
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6 flex gap-3">
+                    <svg class="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-sm text-purple-900">
+                        Your funds are held in a privacy pool. Withdrawal uses a nullifier — the blockchain sees no amounts,
+                        only that a previously deposited commitment has been claimed.
+                    </p>
+                </div>
+
+                <!-- Invoice ID Input -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Invoice ID</label>
+                    <div class="flex gap-3">
+                        <input type="text" id="invoiceIdInput" placeholder="inv_..."
+                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            value="">
+                        <button onclick="loadWithdrawal()"
+                            class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors text-sm">
+                            Look up
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Enter the invoice ID you received from the buyer</p>
+                </div>
+
+                <!-- Invoice Info (shown after lookup) -->
+                <div id="invoiceInfo" class="hidden mb-6 bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-600">Invoice ID</span>
+                        <code id="invoiceIdDisplay" class="text-xs bg-white px-2 py-1 rounded border font-mono"></code>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-600">Status</span>
+                        <span id="invoiceStatus" class="text-sm text-gray-900"></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-600">Pool Deposit</span>
+                        <span id="depositStatus" class="text-sm text-gray-900"></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-600">Your Wallet</span>
+                        <code id="sellerWallet" class="text-xs bg-white px-2 py-1 rounded border font-mono"></code>
+                    </div>
+                </div>
+
+                <!-- Withdraw Button -->
+                <button onclick="withdrawFromPool()" id="withdrawButton" disabled
+                    class="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="withdrawButtonText">Look up invoice to continue</span>
+                </button>
+
+                <p class="text-xs text-center text-gray-500 mt-4">
+                    Withdrawal uses a ZK nullifier — no amount visible to blockchain observers
+                </p>
+            </div>
+
+            <!-- Withdrawal Success -->
+            <div id="successState" class="hidden mt-8 bg-green-50 border-2 border-green-200 rounded-xl shadow-lg p-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <h2 class="text-2xl font-bold text-green-800">Funds Withdrawn Privately!</h2>
+                        <p class="text-sm text-green-700">Tokens transferred — amount never appeared on-chain</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-green-200 mt-4 space-y-3">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-1">Withdrawal Transaction:</p>
+                        <a id="txLink" href="#" target="_blank"
+                            class="text-sm text-blue-600 hover:text-blue-800 underline font-mono break-all"></a>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-1">Nullifier (proves claim, hides amount):</p>
+                        <code id="nullifierDisplay" class="text-xs bg-gray-100 px-2 py-1 rounded font-mono break-all block"></code>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mt-4 text-center">
+                    Arbiscan shows nullifier and recipient — no amount in calldata
+                </p>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden mt-8 bg-red-50 border-2 border-red-200 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-2 mb-2">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="text-lg font-semibold text-red-800">Error</h3>
+            </div>
+            <p id="errorMessage" class="text-sm text-red-700"></p>
+        </div>
+    </div>
+
+    <script>
+        const RPC_URL = 'ws://localhost:2100';
+        const CHAIN_ID = 421614; // Arbitrum Sepolia
+
+        let provider, signer, userAddress;
+        let withdrawInfo = null; // result from omni_withdrawFromPool
+
+        // Pre-populate invoice ID from URL param if present
+        const urlInvoiceId = new URLSearchParams(window.location.search).get('id');
+        if (urlInvoiceId) {
+            document.addEventListener('DOMContentLoaded', () => {
+                const input = document.getElementById('invoiceIdInput');
+                if (input) input.value = urlInvoiceId;
+            });
+        }
+
+        async function connectWallet() {
+            if (typeof ethers === 'undefined') {
+                showError('ethers.js failed to load. Please refresh the page.');
+                return;
+            }
+            if (!window.ethereum) {
+                showError('Please install MetaMask to continue');
+                return;
+            }
+
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+
+                console.log('Connected EOA:', userAddress);
+                await switchToArbitrumSepolia();
+
+                document.getElementById('sellerWallet').textContent =
+                    userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+
+                document.getElementById('loginState').classList.add('hidden');
+                document.getElementById('withdrawState').classList.remove('hidden');
+
+                // Auto-load if invoice ID was in URL
+                if (urlInvoiceId) {
+                    document.getElementById('invoiceIdInput').value = urlInvoiceId;
+                    await loadWithdrawal();
+                }
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                showError('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        async function switchToArbitrumSepolia() {
+            const chainId = '0x66eee';
+            try {
+                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] });
+            } catch (error) {
+                if (error.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId,
+                            chainName: 'Arbitrum Sepolia',
+                            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                            rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
+                            blockExplorerUrls: ['https://sepolia.arbiscan.io'],
+                        }],
+                    });
+                }
+            }
+        }
+
+        async function loadWithdrawal() {
+            const invoiceId = document.getElementById('invoiceIdInput').value.trim();
+            if (!invoiceId) {
+                showError('Please enter an invoice ID');
+                return;
+            }
+
+            hideError();
+
+            try {
+                const details = await callRpc('omni_getInvoiceDetails', {
+                    invoice_id: invoiceId,
+                    auth_token: null
+                });
+
+                document.getElementById('invoiceIdDisplay').textContent =
+                    invoiceId.substring(0, 20) + (invoiceId.length > 20 ? '...' : '');
+                document.getElementById('invoiceStatus').textContent = details.status;
+
+                // Check if deposit was prepared (pool_commitment exists indirectly via status)
+                const isReady = details.status === 'Pending';
+                document.getElementById('depositStatus').textContent =
+                    isReady ? '✓ Ready to withdraw' : '✗ Not deposited / already claimed';
+
+                document.getElementById('invoiceInfo').classList.remove('hidden');
+
+                if (isReady) {
+                    document.getElementById('withdrawButton').disabled = false;
+                    document.getElementById('withdrawButtonText').textContent = 'Withdraw Privately';
+                } else {
+                    document.getElementById('withdrawButtonText').textContent =
+                        details.status === 'Paid' ? 'Already withdrawn' : 'Invoice not ready';
+                }
+            } catch (error) {
+                showError('Failed to load invoice: ' + error.message);
+            }
+        }
+
+        async function withdrawFromPool() {
+            const invoiceId = document.getElementById('invoiceIdInput').value.trim();
+            if (!invoiceId) return;
+
+            const btn = document.getElementById('withdrawButton');
+            const btnText = document.getElementById('withdrawButtonText');
+            btn.disabled = true;
+            btnText.textContent = 'Preparing withdrawal...';
+
+            try {
+                console.log('\n=== Starting Privacy Pool Withdrawal ===');
+
+                // Step 1: Call omni_withdrawFromPool — TEE computes nullifier, builds calldata
+                // The seller_address is the EOA; the pool sends tokens directly to it.
+                btnText.textContent = 'Computing nullifier (TEE)...';
+                withdrawInfo = await callRpc('omni_withdrawFromPool', {
+                    invoice_id: invoiceId,
+                    seller_address: userAddress,
+                    chain_id: CHAIN_ID
+                });
+                console.log('Withdrawal info from TEE:', withdrawInfo);
+
+                // Step 2: Send plain transaction from EOA — no UserOp needed.
+                // The pool's withdraw() just needs the caller to pay gas; recipient is encoded in calldata.
+                btnText.textContent = 'Please confirm in MetaMask...';
+                const tx = await signer.sendTransaction({
+                    to: withdrawInfo.pool_address,
+                    data: withdrawInfo.calldata,
+                });
+                console.log('Sent tx:', tx.hash);
+
+                btnText.textContent = 'Waiting for confirmation...';
+                const receipt = await tx.wait();
+                console.log('Withdrawal confirmed! Tx hash:', receipt.hash);
+
+                // Step 3: Show success
+                document.getElementById('withdrawButton').classList.add('hidden');
+                document.getElementById('successState').classList.remove('hidden');
+                document.getElementById('txLink').href = `https://sepolia.arbiscan.io/tx/${receipt.hash}`;
+                document.getElementById('txLink').textContent = receipt.hash;
+                document.getElementById('nullifierDisplay').textContent = '0x' + withdrawInfo.nullifier_hex;
+
+                console.log('=== Privacy Pool Withdrawal Complete ===\n');
+                console.log('On-chain: only nullifier + recipient visible, no amount');
+
+            } catch (error) {
+                console.error('Withdrawal error:', error);
+                showError('Withdrawal failed: ' + error.message);
+                btn.disabled = false;
+                btnText.textContent = 'Withdraw Privately';
+            }
+        }
+
+        async function callRpc(method, params) {
+            const ws = new WebSocket(RPC_URL);
+            await new Promise((resolve, reject) => {
+                ws.onopen = resolve;
+                ws.onerror = reject;
+            });
+
+            const requestId = Math.floor(Math.random() * 1000000);
+            ws.send(JSON.stringify({ jsonrpc: '2.0', id: requestId, method, params }));
+
+            const result = await new Promise((resolve, reject) => {
+                ws.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    if (response.id === requestId) {
+                        if (response.error) {
+                            reject(new Error(response.error.message || 'RPC call failed'));
+                        } else {
+                            resolve(response.result);
+                        }
+                    }
+                };
+                setTimeout(() => reject(new Error('RPC timeout')), 30000);
+            });
+
+            ws.close();
+            return result;
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('error').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>

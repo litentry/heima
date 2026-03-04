@@ -540,17 +540,13 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			if let Err(e) = join.await {
-				error!("There was an error in associated task: {:?}", e);
-			};
-
 			match signal::ctrl_c().await {
 				Ok(()) => {},
-				Err(err) => {
-					eprintln!("Unable to listen for shutdown signal: {}", err);
-					// we also shut down in case of error
-				},
+				Err(err) => eprintln!("Unable to listen for shutdown signal: {}", err),
 			}
+			// spawn_blocking threads cannot be interrupted — abort() detaches the handle but the
+			// OS thread keeps sleeping for up to 1 hour. Force-exit the process instead.
+			std::process::exit(0);
 		},
 	}
 

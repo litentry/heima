@@ -49,8 +49,7 @@
                 <div class="border-b border-gray-200 pb-6 mb-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h1 class="text-2xl font-bold text-gray-900">Invoice from <span id="sellerName">Heima
-                                    Labs</span></h1>
+                            <h1 class="text-2xl font-bold text-gray-900">Invoice from <span id="sellerName" class="copyable cursor-pointer hover:underline" title="Click to copy address">Heima Labs</span></h1>
                             <p class="text-sm text-gray-600 mt-1" id="description"></p>
                         </div>
                         <div class="text-right">
@@ -78,7 +77,7 @@
                                 <span id="amount"></span>
                             </p>
                             <p class="text-lg text-gray-600" id="tokenSymbol"></p>
-                            <p class="text-xs text-gray-500 mt-2" id="tokenAddress"></p>
+                            <p class="copyable text-xs text-gray-500 mt-2 cursor-pointer hover:text-gray-700" id="tokenAddress" title="Click to copy token address"></p>
                         </div>
                     </div>
                     <div class="mt-6 flex items-center justify-center gap-2 px-4 py-3 bg-purple-100 rounded-lg">
@@ -97,7 +96,7 @@
                 <div class="space-y-3 mb-6">
                     <div class="flex justify-between items-center py-2 border-b border-gray-100">
                         <span class="text-sm font-medium text-gray-600">Invoice ID</span>
-                        <code id="invoiceIdDisplay" class="text-sm bg-gray-100 px-2 py-1 rounded font-mono"></code>
+                        <code id="invoiceIdDisplay" class="copyable text-sm bg-gray-100 px-2 py-1 rounded font-mono cursor-pointer hover:bg-gray-200" title="Click to copy"></code>
                     </div>
                     <div class="flex justify-between items-center py-2 border-b border-gray-100">
                         <span class="text-sm font-medium text-gray-600">Created</span>
@@ -108,11 +107,15 @@
                         <span class="text-sm text-gray-900">Arbitrum Sepolia</span>
                     </div>
                     <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span class="text-sm font-medium text-gray-600">Your Wallet</span>
-                        <code id="walletAddress" class="text-xs bg-gray-100 px-2 py-1 rounded font-mono">Loading...</code>
+                        <span class="text-sm font-medium text-gray-600">Your EOA</span>
+                        <code id="walletAddress" class="copyable text-xs bg-gray-100 px-2 py-1 rounded font-mono cursor-pointer hover:bg-gray-200" title="Click to copy">Loading...</code>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm font-medium text-gray-600">Smart Wallet (fund USDC here)</span>
+                        <code id="smartWalletDisplay" class="copyable text-xs bg-gray-100 px-2 py-1 rounded font-mono cursor-pointer hover:bg-gray-200" title="Click to copy">Computing...</code>
                     </div>
                     <div class="flex justify-between items-center py-2">
-                        <span class="text-sm font-medium text-gray-600">Your Token Balance</span>
+                        <span class="text-sm font-medium text-gray-600">Smart Wallet Token Balance</span>
                         <span id="tokenBalance" class="text-sm text-gray-900">Loading...</span>
                     </div>
                 </div>
@@ -120,11 +123,11 @@
                 <!-- Pay Button -->
                 <button onclick="payInvoice()" id="payButton"
                     class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span id="payButtonText">Pay with Smart Wallet</span>
+                    <span id="payButtonText">Pay into Privacy Pool</span>
                 </button>
 
                 <p class="text-xs text-center text-gray-500 mt-4">
-                    Payment will be processed via ERC-4337 Account Abstraction
+                    Funds deposited into privacy pool — amount hidden on-chain
                 </p>
             </div>
 
@@ -136,17 +139,23 @@
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <div>
-                        <h2 class="text-2xl font-bold text-green-800">Payment Confirmed!</h2>
-                        <p class="text-sm text-green-700">Your payment has been successfully processed</p>
+                        <h2 class="text-2xl font-bold text-green-800">Deposited into Privacy Pool!</h2>
+                        <p class="text-sm text-green-700">Amount hidden — only a commitment is visible on-chain</p>
                     </div>
                 </div>
-                <div class="bg-white p-4 rounded-lg border border-green-200 mt-4">
-                    <p class="text-sm font-semibold text-gray-700 mb-2">Transaction Hash:</p>
-                    <a id="txLink" href="#" target="_blank"
-                        class="text-sm text-blue-600 hover:text-blue-800 underline font-mono break-all"></a>
+                <div class="bg-white p-4 rounded-lg border border-green-200 mt-4 space-y-3">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-1">Pool Deposit Transaction:</p>
+                        <a id="txLink" href="#" target="_blank"
+                            class="text-sm text-blue-600 hover:text-blue-800 underline font-mono break-all"></a>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-1">On-chain Commitments (amounts are hidden):</p>
+                        <code id="commitmentDisplay" class="text-xs bg-gray-100 px-2 py-1 rounded font-mono break-all block whitespace-pre-line"></code>
+                    </div>
                 </div>
                 <p class="text-xs text-gray-600 mt-4 text-center">
-                    View your transaction on Arbiscan to verify privacy (amount is hidden)
+                    Arbiscan shows only the commitment hash — no amount visible to observers
                 </p>
             </div>
         </div>
@@ -170,6 +179,10 @@
         const FACTORY_ADDRESS = '0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e'; // OmniAccountFactory V1
         const ENTRYPOINT_ADDRESS = '0xe6042188857a822DDfcFE5fd9E17118049Ab539a'; // EntryPoint V1
         const CLIENT_ID = 'wildmeta';
+        const PAYMASTER_ADDRESS = '0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912'; // SimplePaymaster staging-v1
+        // Set OE_PRIVACY_POOL_ADDRESS env var on the TEE server to configure this.
+        // The frontend reads it back from omni_payInvoice response (pool_address field).
+        let PRIVACY_POOL_ADDRESS = null; // populated from omni_payInvoice response
 
         let provider, signer, userAddress;
         let invoiceData = null; // Store full invoice data including token info
@@ -188,6 +201,35 @@
             'function transfer(address to, uint256 amount) returns (bool)'
         ];
 
+        // OmniAccountFactory ABI — getAddress computes deterministic CREATE2 address,
+        // createAccount deploys it (used in initCode for first-use UserOps).
+        const FACTORY_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "bytes32", "name": "oa", "type": "bytes32"},
+                    {"internalType": "uint8",   "name": "oaType", "type": "uint8"},
+                    {"internalType": "bytes",   "name": "clientId", "type": "bytes"},
+                    {"internalType": "address", "name": "root", "type": "address"}
+                ],
+                "name": "getAddress",
+                "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "bytes32", "name": "oa", "type": "bytes32"},
+                    {"internalType": "uint8",   "name": "oaType", "type": "uint8"},
+                    {"internalType": "bytes",   "name": "clientId", "type": "bytes"},
+                    {"internalType": "address", "name": "root", "type": "address"}
+                ],
+                "name": "createAccount",
+                "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
         // OmniAccount ABI (simplified - only what we need)
         const ACCOUNT_ABI = [
             {
@@ -204,6 +246,24 @@
                     {"internalType": "bytes", "name": "func", "type": "bytes"}
                 ],
                 "name": "execute",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "components": [
+                            {"internalType": "address", "name": "target", "type": "address"},
+                            {"internalType": "uint256", "name": "value",  "type": "uint256"},
+                            {"internalType": "bytes",   "name": "data",   "type": "bytes"}
+                        ],
+                        "internalType": "struct BaseAccount.Call[]",
+                        "name": "calls",
+                        "type": "tuple[]"
+                    }
+                ],
+                "name": "executeBatch",
                 "outputs": [],
                 "stateMutability": "nonpayable",
                 "type": "function"
@@ -383,10 +443,25 @@
                     formattedAmount = data.amount || 'ENCRYPTED';
                 }
 
-                // Fetch user's token balance
+                // Resolve smart wallet address so we can show it and check its balance
+                let resolvedSmartWallet = null;
+                try {
+                    if (omniAccountHash) {
+                        const walletInfo = await getSmartWalletAddress(omniAccountHash);
+                        resolvedSmartWallet = walletInfo.address;
+                        smartWalletAddress = resolvedSmartWallet;
+                        setCopyable('smartWalletDisplay', resolvedSmartWallet, resolvedSmartWallet.substring(0, 10) + '...' + resolvedSmartWallet.substring(38));
+                    }
+                } catch (error) {
+                    console.warn('Could not resolve smart wallet address:', error);
+                    document.getElementById('smartWalletDisplay').textContent = 'Error';
+                }
+
+                // Fetch smart wallet's token balance (that's where the USDC must be)
+                const balanceTarget = resolvedSmartWallet || userAddress;
                 let formattedBalance = '0';
                 try {
-                    const balance = await tokenContract.balanceOf(userAddress);
+                    const balance = await tokenContract.balanceOf(balanceTarget);
                     const balanceBigInt = BigInt(balance);
                     const divisor = BigInt(10 ** Number(tokenDecimals));
                     const wholePart = balanceBigInt / divisor;
@@ -400,16 +475,17 @@
                 }
 
                 // Display invoice details
-                document.getElementById('invoiceIdDisplay').textContent = invoiceId.substring(0, 20) + '...';
-                document.getElementById('sellerName').textContent = data.seller_account.substring(0, 10) + '...' + data.seller_account.substring(38);
+                setCopyable('invoiceIdDisplay', invoiceId, invoiceId.substring(0, 20) + '...');
+                const creatorAddr = data.created_by || data.seller_account || 'Unknown';
+                setCopyable('sellerName', creatorAddr, creatorAddr.substring(0, 10) + '...' + creatorAddr.substring(38));
                 document.getElementById('description').textContent = data.description;
                 document.getElementById('amount').textContent = formattedAmount;
                 document.getElementById('tokenSymbol').textContent = tokenSymbol;
-                document.getElementById('tokenAddress').textContent = data.token_address.substring(0, 10) + '...' + data.token_address.substring(38);
+                setCopyable('tokenAddress', data.token_address, data.token_address.substring(0, 10) + '...' + data.token_address.substring(38));
                 document.getElementById('createdAt').textContent = new Date(data.created_at * 1000).toLocaleDateString();
 
                 // Display wallet info
-                document.getElementById('walletAddress').textContent = userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+                setCopyable('walletAddress', userAddress, userAddress.substring(0, 6) + '...' + userAddress.substring(38));
                 document.getElementById('tokenBalance').textContent = `${formattedBalance} ${tokenSymbol}`;
 
                 // Show amount
@@ -430,49 +506,187 @@
             payButtonText.textContent = 'Preparing payment...';
 
             try {
-                console.log('\n=== Starting Payment Process ===');
+                console.log('\n=== Starting Privacy Pool Deposit ===');
 
-                // Step 1: Get smart wallet address from TEE
+                // Step 1: Derive smart wallet address + build initCode if not yet deployed
                 payButtonText.textContent = 'Getting smart wallet...';
-                smartWalletAddress = await getSmartWalletAddress(omniAccountHash);
-                console.log('Smart wallet address:', smartWalletAddress);
+                const walletInfo = await getSmartWalletAddress(omniAccountHash);
+                smartWalletAddress = walletInfo.address;
+                const walletInitCode = walletInfo.initCode;
+                console.log('Smart wallet address:', smartWalletAddress, 'initCode:', walletInitCode !== '0x' ? '(deployment)' : '(already deployed)');
 
-                // Step 2: Build UserOp for ERC20 transfer
-                payButtonText.textContent = 'Building transaction...';
-                const userOp = await buildPaymentUserOp(
+                // Step 2: Call omni_payInvoice — TEE decrypts amount, generates commitment+secret
+                payButtonText.textContent = 'Preparing pool deposit (TEE)...';
+                const poolInfo = await callRpc('omni_payInvoice', {
+                    invoice_id: invoiceId,
+                    buyer_smart_wallet: smartWalletAddress,
+                    chain_id: CHAIN_ID
+                });
+                console.log('Pool deposit info from TEE:', poolInfo);
+                PRIVACY_POOL_ADDRESS = poolInfo.pool_address;
+
+                // Step 3: Build UserOp with executeBatch:
+                //   [approve(pool, total), deposit_0, deposit_1, ..., deposit_N]
+                // The approval must come from the smart wallet (msg.sender for the pool deposit),
+                // so we batch all calls in a single UserOp.
+                payButtonText.textContent = 'Building pool deposit UserOp...';
+                const userOp = await buildPoolDepositUserOp(
                     smartWalletAddress,
-                    invoiceData.seller_account, // recipient
+                    walletInitCode,
+                    PRIVACY_POOL_ADDRESS,
                     invoiceData.token_address,
-                    invoiceData.amount,
-                    omniAccountHash
+                    poolInfo.total_amount_raw,
+                    poolInfo.deposits
                 );
-                console.log('Built UserOp:', userOp);
+                console.log('Built pool deposit UserOp:', userOp);
 
-                // Step 3: Sign UserOp with MetaMask
+                // Step 4: Sign UserOp with MetaMask
                 payButtonText.textContent = 'Please sign in MetaMask...';
                 const signature = await signUserOperation(userOp, userAddress);
                 userOp.signature = signature;
                 console.log('Signed UserOp');
 
-                // Step 4: Submit to omni_settleUserOp
-                payButtonText.textContent = 'Submitting payment...';
+                // Step 5: Submit to omni_settleUserOp
+                payButtonText.textContent = 'Submitting to blockchain...';
                 const txHash = await settleUserOp(userOp);
-                console.log('Payment successful! Tx hash:', txHash);
+                console.log('Pool deposit successful! Tx hash:', txHash);
 
-                // Step 5: Show success
+                // Step 6: Show success — list all commitments (no amounts visible)
                 document.getElementById('payButton').classList.add('hidden');
                 document.getElementById('successState').classList.remove('hidden');
                 document.getElementById('txLink').href = `https://sepolia.arbiscan.io/tx/${txHash}`;
                 document.getElementById('txLink').textContent = txHash;
+                // Show one commitment per recipient
+                const commitLines = poolInfo.deposits
+                    .map((d, i) => `Recipient ${i + 1}: 0x${d.commitment_hex}`)
+                    .join('\n');
+                document.getElementById('commitmentDisplay').textContent = commitLines;
 
-                console.log('=== Payment Complete ===\n');
+                console.log('=== Privacy Pool Deposit Complete ===\n');
+                console.log(`On-chain: ${poolInfo.deposits.length} commitment(s) visible, amounts hidden`);
 
             } catch (error) {
                 console.error('Payment error:', error);
                 showError('Payment failed: ' + error.message);
                 payButton.disabled = false;
-                payButtonText.textContent = 'Pay with Smart Wallet';
+                payButtonText.textContent = 'Pay into Privacy Pool';
             }
+        }
+
+        /**
+         * Send a JSON-RPC call over WebSocket and return the result.
+         */
+        async function callRpc(method, params) {
+            const ws = new WebSocket(RPC_URL);
+            await new Promise((resolve, reject) => {
+                ws.onopen = resolve;
+                ws.onerror = reject;
+            });
+
+            const requestId = Math.floor(Math.random() * 1000000);
+            ws.send(JSON.stringify({ jsonrpc: '2.0', id: requestId, method, params }));
+
+            const result = await new Promise((resolve, reject) => {
+                ws.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    if (response.id === requestId) {
+                        if (response.error) {
+                            reject(new Error(response.error.message || 'RPC call failed'));
+                        } else {
+                            resolve(response.result);
+                        }
+                    }
+                };
+                setTimeout(() => reject(new Error('RPC timeout')), 30000);
+            });
+
+            ws.close();
+            return result;
+        }
+
+        /**
+         * Approve ERC20 token spending for a spender (direct MetaMask tx, not UserOp).
+         */
+        async function approveToken(tokenAddress, spender, amount) {
+            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+            const currentAllowance = await tokenContract.allowance(userAddress, spender);
+            if (BigInt(currentAllowance) >= BigInt(amount)) {
+                console.log('Allowance already sufficient:', currentAllowance.toString());
+                return;
+            }
+            const tx = await tokenContract.approve(spender, amount);
+            await tx.wait();
+            console.log('Approved tx:', tx.hash);
+        }
+
+        /**
+         * Build UserOp using executeBatch:
+         *   [0]   token.approve(pool, totalAmount)   — grant pool allowance from smart wallet
+         *   [1..N] pool.deposit(commitment_i, amount_i) — one deposit per recipient
+         *
+         * The approval MUST come from the smart wallet because deposit() calls
+         * token.safeTransferFrom(msg.sender, pool, amount), and msg.sender will
+         * be the smart wallet when routed through account.executeBatch().
+         *
+         * @param {Array} deposits — array of { calldata, amount_raw } from omni_payInvoice
+         */
+        async function buildPoolDepositUserOp(sender, initCode, poolAddress, tokenAddress, totalAmountRaw, deposits) {
+            const accountInterface = new ethers.Interface(ACCOUNT_ABI);
+            const tokenInterface = new ethers.Interface(ERC20_ABI);
+
+            // Call 0: approve pool to spend total tokens (from smart wallet)
+            const approveCalldata = tokenInterface.encodeFunctionData('approve', [
+                poolAddress,
+                BigInt(totalAmountRaw),
+            ]);
+
+            // Calls 1..N: one deposit per recipient
+            const depositCalls = deposits.map(d => ({
+                target: poolAddress,
+                value: 0,
+                data: d.calldata,
+            }));
+
+            const calls = [
+                { target: tokenAddress, value: 0, data: approveCalldata },
+                ...depositCalls,
+            ];
+
+            const callData = accountInterface.encodeFunctionData('executeBatch', [calls]);
+
+            const isDeployment = initCode && initCode !== '0x';
+
+            let nonce = 0;
+            if (!isDeployment) {
+                try {
+                    const accountContract = new ethers.Contract(sender, ACCOUNT_ABI, provider);
+                    nonce = Number(await accountContract.getNonce());
+                } catch (error) {
+                    console.warn('Could not fetch nonce, using 0:', error);
+                }
+            }
+
+            // Each deposit writes 20 cold Merkle tree slots on first use (400k gas) plus
+            // approve (~46k) + safeTransferFrom (~30k) + overhead.
+            // Budget 2M per deposit to be safe; minimum 2M total.
+            const callGasLimit = BigInt(Math.max(2000000, deposits.length * 2000000));
+            // Deployment needs more verification gas (account creation ~250k + validation)
+            const verificationGasLimit = isDeployment ? 800000n : 500000n;
+            const preVerificationGas = 50000n;
+            const maxFeePerGas = 300000000n;
+            const maxPriorityFeePerGas = 100000000n;
+
+            return {
+                sender,
+                nonce,
+                init_code: initCode,
+                call_data: callData,
+                account_gas_limits: packAccountGasLimits(callGasLimit, verificationGasLimit),
+                pre_verification_gas: Number(preVerificationGas),
+                gas_fees: packGasFees(maxFeePerGas, maxPriorityFeePerGas),
+                paymaster_and_data: buildPaymasterAndData(PAYMASTER_ADDRESS, 100000n, 50000n),
+                signature: '0x'
+            };
         }
 
         /**
@@ -507,52 +721,57 @@
         }
 
         /**
-         * Get smart wallet address from TEE worker
+         * Derive the deterministic OmniAccount smart wallet address via the factory,
+         * and build initCode for first-time deployment if the account doesn't exist yet.
+         *
+         * Returns { address, initCode } where initCode is '0x' if already deployed.
          */
         async function getSmartWalletAddress(omniAccountHash) {
-            const ws = new WebSocket(RPC_URL);
-            await new Promise((resolve, reject) => {
-                ws.onopen = resolve;
-                ws.onerror = reject;
+            // Ask TEE for the root signer address (EVM address derived from the bundler key)
+            const rootSignerAddress = await callRpc('omni_getSmartWalletRootSigner', {
+                omni_account: omniAccountHash,
+                chain_type: 'evm',
+                wallet_index: 0,
             });
+            console.log('Root signer address from TEE:', rootSignerAddress);
 
-            const requestId = Math.floor(Math.random() * 1000000);
-            const request = {
-                jsonrpc: '2.0',
-                id: requestId,
-                method: 'omni_getSmartWalletRootSigner',
-                params: {
-                    omni_account: omniAccountHash,
-                    chain_type: 'evm',
-                    wallet_index: 0,
-                }
-            };
+            // OwnerType.Evm = 0
+            const OA_TYPE_EVM = 0;
+            const clientIdBytes = ethers.toUtf8Bytes(CLIENT_ID);
 
-            ws.send(JSON.stringify(request));
-
-            const rootSigner = await new Promise((resolve, reject) => {
-                ws.onmessage = (event) => {
-                    const response = JSON.parse(event.data);
-                    if (response.id === requestId) {
-                        if (response.error) {
-                            reject(new Error(response.error.message || 'RPC error'));
-                        } else {
-                            resolve(response.result);
-                        }
-                    }
-                };
-                setTimeout(() => reject(new Error('Request timeout')), 10000);
+            // Call factory.getAddress(oa, oaType, clientId, root) — pure view, no tx
+            const factoryInterface = new ethers.Interface(FACTORY_ABI);
+            const getAddressCalldata = factoryInterface.encodeFunctionData('getAddress', [
+                omniAccountHash,
+                OA_TYPE_EVM,
+                clientIdBytes,
+                rootSignerAddress,
+            ]);
+            const addressResult = await provider.call({
+                to: FACTORY_ADDRESS,
+                data: getAddressCalldata,
             });
+            const [walletAddress] = factoryInterface.decodeFunctionResult('getAddress', addressResult);
+            console.log('Smart wallet address (CREATE2):', walletAddress);
 
-            ws.close();
+            // Check if already deployed
+            const code = await provider.getCode(walletAddress);
+            const isDeployed = code && code !== '0x';
 
-            // For MVP, we'll use the seller's account as the smart wallet
-            // In production, you would use the Factory contract to get counterfactual address
-            // For now, just return the user's EOA address as a placeholder
-            console.log('Root signer from TEE:', rootSigner);
+            let initCode = '0x';
+            if (!isDeployed) {
+                console.log('Account not deployed — building initCode for first-use deployment');
+                const createCalldata = factoryInterface.encodeFunctionData('createAccount', [
+                    omniAccountHash,
+                    OA_TYPE_EVM,
+                    clientIdBytes,
+                    rootSignerAddress,
+                ]);
+                // initCode = factory address (20 bytes) + createAccount calldata
+                initCode = FACTORY_ADDRESS + createCalldata.slice(2);
+            }
 
-            // Return user's address for testing (in production: use factory.getAddress())
-            return userAddress;
+            return { address: walletAddress, initCode };
         }
 
         /**
@@ -625,6 +844,17 @@
         function packAccountGasLimits(callGasLimit, verificationGasLimit) {
             const packed = (verificationGasLimit << 128n) | callGasLimit;
             return '0x' + packed.toString(16).padStart(64, '0');
+        }
+
+        /**
+         * Build paymasterAndData for SimplePaymaster:
+         * paymaster_address (20 bytes) + verificationGasLimit (16 bytes) + postOpGasLimit (16 bytes)
+         */
+        function buildPaymasterAndData(paymasterAddress, verificationGasLimit, postOpGasLimit) {
+            const addr = paymasterAddress.slice(2).toLowerCase(); // 40 hex chars
+            const vgl = verificationGasLimit.toString(16).padStart(32, '0'); // 16 bytes
+            const pogl = postOpGasLimit.toString(16).padStart(32, '0');      // 16 bytes
+            return '0x' + addr + vgl + pogl;
         }
 
         /**
@@ -703,41 +933,10 @@
          * Submit UserOp to TEE worker via omni_settleUserOp
          */
         async function settleUserOp(userOp) {
-            const ws = new WebSocket(RPC_URL);
-            await new Promise((resolve, reject) => {
-                ws.onopen = resolve;
-                ws.onerror = reject;
+            const result = await callRpc('omni_settleUserOp', {
+                user_operation: userOp,
+                chain_id: CHAIN_ID
             });
-
-            const requestId = Math.floor(Math.random() * 1000000);
-            const request = {
-                jsonrpc: '2.0',
-                id: requestId,
-                method: 'omni_settleUserOp',
-                params: {
-                    user_operation: userOp,
-                    chain_id: CHAIN_ID
-                }
-            };
-
-            ws.send(JSON.stringify(request));
-
-            const result = await new Promise((resolve, reject) => {
-                ws.onmessage = (event) => {
-                    const response = JSON.parse(event.data);
-                    if (response.id === requestId) {
-                        if (response.error) {
-                            reject(new Error(response.error.message || 'Settlement failed'));
-                        } else {
-                            resolve(response.result);
-                        }
-                    }
-                };
-                setTimeout(() => reject(new Error('Request timeout')), 30000);
-            });
-
-            ws.close();
-
             return result.transaction_hash;
         }
 
@@ -745,6 +944,40 @@
             document.getElementById('errorMessage').textContent = message;
             document.getElementById('error').classList.remove('hidden');
         }
+
+        /**
+         * Set element text to a truncated display value while storing the full
+         * value in data-full for click-to-copy.
+         */
+        function setCopyable(id, fullValue, displayValue) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = displayValue;
+            el.dataset.full = fullValue;
+        }
+
+        /**
+         * Copy the full value stored in data-full to clipboard and briefly show
+         * a "Copied!" tooltip next to the element.
+         */
+        async function copyFull(el) {
+            const value = el.dataset.full;
+            if (!value) return;
+            try {
+                await navigator.clipboard.writeText(value);
+                const prev = el.textContent;
+                el.textContent = 'Copied!';
+                setTimeout(() => { el.textContent = prev; }, 1200);
+            } catch (e) {
+                console.warn('Copy failed', e);
+            }
+        }
+
+        // Wire up click-to-copy on all .copyable elements (including dynamically populated ones)
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest('.copyable');
+            if (el && el.dataset.full) copyFull(el);
+        });
 
         // Diagnostic: Log library loading status
         window.addEventListener('load', () => {

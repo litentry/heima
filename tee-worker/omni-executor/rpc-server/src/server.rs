@@ -49,6 +49,8 @@ pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub aes256_key: Aes256Key,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
+	/// Deployed SimplePrivacyPool contract address (loaded from OE_PRIVACY_POOL_ADDRESS env var)
+	pub privacy_pool_address: String,
 }
 
 impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
@@ -75,6 +77,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		aes256_key: Aes256Key,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
+		privacy_pool_address: String,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -96,6 +99,7 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 			cross_chain_intent_executor,
 			aes256_key,
 			entry_point_clients,
+			privacy_pool_address,
 		}
 	}
 }
@@ -125,6 +129,9 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	let mailer_factory = Arc::new(MailerFactory::new(config_loader_arc.clone()));
 	let oauth2_factory = Arc::new(OAuth2ConfigFactory::new(config_loader_arc.clone()));
 
+	let privacy_pool_address = env::var("OE_PRIVACY_POOL_ADDRESS")
+		.unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
+
 	let ctx = RpcContext::new(
 		shielding_key,
 		storage_db,
@@ -145,6 +152,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		cross_chain_intent_executor,
 		aes256_key,
 		entry_point_clients,
+		privacy_pool_address,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

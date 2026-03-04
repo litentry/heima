@@ -91,6 +91,12 @@ use rename_passkey_alias::*;
 mod confidential_invoice;
 use confidential_invoice::*;
 
+mod pay_invoice;
+use pay_invoice::*;
+
+mod withdraw_pool;
+use withdraw_pool::*;
+
 #[cfg(test)]
 mod test_protected_method;
 
@@ -161,6 +167,8 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_verify_user_op(module);
 	register_settle_user_op(module);
 	register_confidential_invoice(module);
+	register_pay_invoice(module);
+	register_withdraw_from_pool(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);

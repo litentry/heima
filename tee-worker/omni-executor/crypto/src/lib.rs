@@ -2,6 +2,7 @@ pub mod aes256;
 pub mod confidential;
 pub mod jwt;
 pub mod passkey;
+pub mod privacy_pool;
 pub mod secp256k1;
 pub mod shielding_key;
 pub mod traits;

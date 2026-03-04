@@ -22,33 +22,56 @@ pub enum InvoiceStatus {
 #[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
 pub struct InvoiceMetadata {
 	pub description: String,
-	pub currency: String, // "USDC", "USDT", etc.
+	pub currency: String, // stores token address (e.g. "0x...")
 	pub chain_id: u64,
 	pub seller_name: Option<String>,
+}
+
+/// One recipient entry in a multi-seller invoice.
+/// Each recipient gets their own independent pool commitment + secret.
+#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
+pub struct Recipient {
+	/// Ethereum address of this recipient
+	pub address: String,
+	/// AES-256-GCM encrypted raw token amount for this recipient
+	pub encrypted_amount: Vec<u8>,
+	/// SHA256(invoice_id || recipient_index || amount || secret) — set on omni_payInvoice
+	pub pool_commitment: Option<[u8; 32]>,
+	/// TEE-only random secret — never leaves TEE in plaintext
+	pub pool_secret: Option<[u8; 32]>,
+	/// Merkle tree leaf index from on-chain Deposit event
+	pub leaf_index: Option<u32>,
 }
 
 #[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
 pub struct ConfidentialInvoice {
 	pub invoice_id: String,
-	pub seller_account: String,    // AccountId as string
-	pub buyer_identifier: String,  // Email or account
-	pub encrypted_amount: Vec<u8>, // AES-256 encrypted
-	pub commitment: [u8; 32],      // keccak256(invoice_id, amount)
+	/// Address of the invoice creator (may or may not be in recipients)
+	pub created_by: String,
+	pub buyer_identifier: String, // Email or account
+	/// Total encrypted amount (sum of all recipients' amounts)
+	pub encrypted_amount: Vec<u8>,
+	pub commitment: [u8; 32], // keccak256(invoice_id, total_amount)
 	pub metadata: InvoiceMetadata,
 	pub status: InvoiceStatus,
 	pub created_at: u64,
 	pub paid_at: Option<u64>,
 	pub tx_hash: Option<String>,
+	/// Per-recipient sub-commitments; one deposit per entry
+	pub recipients: Vec<Recipient>,
+	/// Deposit transaction hash (set after on-chain confirmation)
+	pub pool_tx_hash: Option<String>,
 }
 
 /// Parameters for creating a new confidential invoice
 pub struct NewConfidentialInvoice {
 	pub invoice_id: String,
-	pub seller_account: String,
+	pub created_by: String,
 	pub buyer_identifier: String,
 	pub encrypted_amount: Vec<u8>,
 	pub commitment: [u8; 32],
 	pub metadata: InvoiceMetadata,
+	pub recipients: Vec<Recipient>,
 }
 
 pub struct ConfidentialInvoiceStorage {
@@ -70,7 +93,7 @@ impl ConfidentialInvoiceStorage {
 
 		let invoice = ConfidentialInvoice {
 			invoice_id: params.invoice_id,
-			seller_account: params.seller_account,
+			created_by: params.created_by,
 			buyer_identifier: params.buyer_identifier,
 			encrypted_amount: params.encrypted_amount,
 			commitment: params.commitment,
@@ -79,6 +102,8 @@ impl ConfidentialInvoiceStorage {
 			created_at: current_timestamp(),
 			paid_at: None,
 			tx_hash: None,
+			recipients: params.recipients,
+			pool_tx_hash: None,
 		};
 
 		self.insert(&key, invoice)

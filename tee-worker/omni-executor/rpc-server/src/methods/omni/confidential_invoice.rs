@@ -17,31 +17,45 @@
 use crate::detailed_error::DetailedError;
 use crate::server::RpcContext;
 use crate::utils::types::RpcResultExt;
-use crate::utils::validation::{parse_as, parse_rpc_params};
+use crate::utils::validation::parse_rpc_params;
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
 use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::confidential::{decrypt_amount, encrypt_amount, generate_commitment};
-use oe_storage::confidential_invoice::{InvoiceMetadata, InvoiceStatus, NewConfidentialInvoice};
+use oe_storage::confidential_invoice::{
+	InvoiceMetadata, InvoiceStatus, NewConfidentialInvoice, Recipient,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 
+/// One recipient specified when creating an invoice.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RecipientInput {
+	/// Ethereum address of this recipient
+	pub address: String,
+	/// Amount this recipient should receive, as raw token units (string to avoid JS precision loss)
+	pub amount: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateInvoiceParams {
-	pub seller_account: String,
+	/// Address of the invoice creator (may differ from recipients, e.g. a billing admin)
+	pub created_by: String,
 	pub buyer_identifier: String, // Email or omni_account
-	pub amount: String,           // Token amount as string (e.g., "100.50")
 	pub token_address: String,    // ERC20 token contract address (e.g., "0x...")
 	pub chain_id: u64,
 	pub description: String,
 	pub nonce: Option<u64>, // Optional nonce for deterministic invoice ID
+	/// At least one recipient required
+	pub recipients: Vec<RecipientInput>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateInvoiceResponse {
 	pub invoice_id: String,
 	pub invoice_url: String,
-	pub commitment: String, // Hex-encoded
+	pub commitment: String,   // Hex-encoded total commitment
+	pub total_amount: String, // Total raw token units (sum of all recipients)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,17 +66,24 @@ pub struct GetInvoiceDetailsParams {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RecipientDetails {
+	pub address: String,
+	pub amount: Option<String>, // Decrypted raw amount (only shown when authorized)
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetInvoiceDetailsResponse {
 	pub invoice_id: String,
-	pub amount: Option<String>, // Only if authorized (raw token units as string)
+	pub amount: Option<String>, // Total amount (raw token units)
 	pub token_address: String,  // ERC20 token contract address
 	pub description: String,
 	pub status: InvoiceStatus,
 	pub created_at: u64,
 	pub tx_hash: Option<String>,
-	pub seller_account: String,
+	pub created_by: String,
 	pub buyer_identifier: String,
 	pub chain_id: u64,
+	pub recipients: Vec<RecipientDetails>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,7 +96,7 @@ pub struct PayInvoiceParams {
 pub struct PayInvoiceResponse {
 	pub status: String,
 	pub message: String,
-	pub amount: String, // Decrypted amount for buyer to confirm
+	pub amount: String, // Decrypted total amount for buyer to confirm
 	pub commitment: String,
 }
 
@@ -90,11 +111,13 @@ pub fn register_confidential_invoice<
 			let params = parse_rpc_params::<CreateInvoiceParams>(params)?;
 
 			debug!(
-				"Received omni_createConfidentialInvoice, seller: {}, buyer: {}, amount: {}, token: {}",
-				params.seller_account, params.buyer_identifier, params.amount, params.token_address
+				"Received omni_createConfidentialInvoice, created_by: {}, buyer: {}, recipients: {}",
+				params.created_by,
+				params.buyer_identifier,
+				params.recipients.len()
 			);
 
-			// Validate token address format (basic check)
+			// Validate token address format
 			if !params.token_address.starts_with("0x") || params.token_address.len() != 42 {
 				return Err(DetailedError::invalid_params(
 					"token_address",
@@ -103,72 +126,129 @@ pub fn register_confidential_invoice<
 				.to_rpc_error());
 			}
 
-			// Parse amount as raw token units (no decimal conversion - frontend handles this)
-			// Amount is stored as string representation of wei/smallest unit
-			let amount_units: u128 = params.amount.parse().map_err(|_| {
-				DetailedError::invalid_params("amount", "Amount must be a valid number")
-			})?;
-
-			if amount_units == 0 {
+			// Validate creator address
+			if !params.created_by.starts_with("0x") || params.created_by.len() != 42 {
 				return Err(DetailedError::invalid_params(
-					"amount",
-					"Amount must be greater than zero",
+					"created_by",
+					"Invalid Ethereum address format",
 				)
 				.to_rpc_error());
 			}
 
-			// Generate deterministic invoice ID based on seller + nonce
-			// This allows multiple invoices to the same buyer with same amount
-			// but ensures each invoice is unique based on the nonce
+			// Require at least one recipient
+			if params.recipients.is_empty() {
+				return Err(DetailedError::invalid_params(
+					"recipients",
+					"At least one recipient is required",
+				)
+				.to_rpc_error());
+			}
+
+			// Parse and validate all recipient amounts
+			let mut parsed_recipients: Vec<(String, u128)> = Vec::new();
+			let mut total_amount: u128 = 0;
+
+			for (i, r) in params.recipients.iter().enumerate() {
+				if !r.address.starts_with("0x") || r.address.len() != 42 {
+					return Err(DetailedError::invalid_params(
+						"recipients",
+						&format!("Recipient {}: invalid Ethereum address", i),
+					)
+					.to_rpc_error());
+				}
+
+				let amount: u128 = r.amount.parse().map_err(|_| {
+					DetailedError::invalid_params(
+						"recipients",
+						&format!("Recipient {}: amount must be a valid integer", i),
+					)
+				})?;
+
+				if amount == 0 {
+					return Err(DetailedError::invalid_params(
+						"recipients",
+						&format!("Recipient {}: amount must be greater than zero", i),
+					)
+					.to_rpc_error());
+				}
+
+				total_amount = total_amount.checked_add(amount).ok_or_else(|| {
+					DetailedError::invalid_params("recipients", "Total amount overflow")
+						.to_rpc_error()
+				})?;
+
+				parsed_recipients.push((r.address.clone(), amount));
+			}
+
+			// Generate deterministic invoice ID based on creator + nonce (or random UUID)
 			let invoice_id = if let Some(nonce) = params.nonce {
-				// Deterministic: SHA256(seller || nonce)
 				use sha2::{Digest, Sha256};
 				let mut hasher = Sha256::new();
-				hasher.update(params.seller_account.as_bytes());
+				hasher.update(params.created_by.as_bytes());
 				hasher.update(nonce.to_le_bytes());
 				let hash = hasher.finalize();
-				format!("inv_{}", hex::encode(&hash[..16])) // Use first 16 bytes for readability
+				format!("inv_{}", hex::encode(&hash[..16]))
 			} else {
-				// Fallback to random UUID if nonce not provided
 				format!("inv_{}", uuid::Uuid::new_v4())
 			};
 
-			// Encrypt amount with TEE key
-			let encrypted_amount = encrypt_amount(amount_units, &ctx.aes256_key)
-				.map_err_internal("Failed to encrypt amount")?;
+			// Encrypt total amount with TEE key (for the invoice-level commitment)
+			let encrypted_total = encrypt_amount(total_amount, &ctx.aes256_key)
+				.map_err_internal("Failed to encrypt total amount")?;
 
-			// Generate commitment
-			let commitment = generate_commitment(&invoice_id, amount_units);
+			// Generate invoice-level commitment over total amount
+			let commitment = generate_commitment(&invoice_id, total_amount);
+
+			// Build per-recipient Recipient structs (encrypt each sub-amount individually)
+			let mut recipients: Vec<Recipient> = Vec::new();
+			for (address, amount) in &parsed_recipients {
+				let encrypted_amount = encrypt_amount(*amount, &ctx.aes256_key)
+					.map_err_internal("Failed to encrypt recipient amount")?;
+
+				recipients.push(Recipient {
+					address: address.clone(),
+					encrypted_amount,
+					pool_commitment: None,
+					pool_secret: None,
+					leaf_index: None,
+				});
+			}
 
 			// Create invoice metadata
 			let metadata = InvoiceMetadata {
 				description: params.description,
-				currency: params.token_address.clone(), // Store token address in currency field
+				currency: params.token_address.clone(),
 				chain_id: params.chain_id,
 				seller_name: None,
 			};
 
-			// Create invoice record
+			// Store invoice
 			let new_invoice = NewConfidentialInvoice {
 				invoice_id: invoice_id.clone(),
-				seller_account: params.seller_account,
+				created_by: params.created_by,
 				buyer_identifier: params.buyer_identifier,
-				encrypted_amount,
+				encrypted_amount: encrypted_total,
 				commitment,
 				metadata,
+				recipients,
 			};
 
-			// Store invoice
 			ctx.confidential_invoice_storage
 				.create(new_invoice)
 				.map_err_internal("Failed to store invoice")?;
 
-			info!("Created confidential invoice: {}", invoice_id);
+			info!(
+				"Created confidential invoice: {}, recipients: {}, total: {}",
+				invoice_id,
+				parsed_recipients.len(),
+				total_amount
+			);
 
 			Ok::<CreateInvoiceResponse, ErrorObjectOwned>(CreateInvoiceResponse {
 				invoice_id: invoice_id.clone(),
 				invoice_url: format!("https://demo.heima.network/invoice/{}", invoice_id),
 				commitment: hex::encode(commitment),
+				total_amount: total_amount.to_string(),
 			})
 		})
 		.expect("Failed to register omni_createConfidentialInvoice");
@@ -180,7 +260,6 @@ pub fn register_confidential_invoice<
 
 			debug!("Received omni_getInvoiceDetails, invoice_id: {}", params.invoice_id);
 
-			// Retrieve invoice
 			let invoice = ctx
 				.confidential_invoice_storage
 				.get_by_id(&params.invoice_id)
@@ -190,11 +269,9 @@ pub fn register_confidential_invoice<
 					DetailedError::invalid_params("invoice_id", "Invoice not found")
 				})?;
 
-			// Check authorization - for MVP, allow anyone to view (in production, verify JWT)
-			// TODO: Implement proper JWT verification for buyer_identifier
-			let is_authorized = true; // Placeholder
+			// MVP: allow anyone to view (production: verify JWT)
+			let is_authorized = true;
 
-			// Decrypt amount if authorized (return as raw units string)
 			let amount = if is_authorized {
 				let amount_units = decrypt_amount(&invoice.encrypted_amount, &ctx.aes256_key)
 					.map_err_internal("Failed to decrypt amount")?;
@@ -203,29 +280,46 @@ pub fn register_confidential_invoice<
 				None
 			};
 
+			// Decrypt per-recipient amounts if authorized
+			let recipient_details: Vec<RecipientDetails> = invoice
+				.recipients
+				.iter()
+				.map(|r| {
+					let recipient_amount = if is_authorized {
+						decrypt_amount(&r.encrypted_amount, &ctx.aes256_key)
+							.ok()
+							.map(|a| a.to_string())
+					} else {
+						None
+					};
+					RecipientDetails { address: r.address.clone(), amount: recipient_amount }
+				})
+				.collect();
+
 			info!(
-				"Retrieved invoice details: {}, status: {:?}, amount_shown: {}",
+				"Retrieved invoice details: {}, status: {:?}, recipients: {}",
 				params.invoice_id,
 				invoice.status,
-				amount.is_some()
+				invoice.recipients.len()
 			);
 
 			Ok::<GetInvoiceDetailsResponse, ErrorObjectOwned>(GetInvoiceDetailsResponse {
 				invoice_id: invoice.invoice_id,
 				amount,
-				token_address: invoice.metadata.currency.clone(), // currency field stores token address
+				token_address: invoice.metadata.currency.clone(),
 				description: invoice.metadata.description,
 				status: invoice.status,
 				created_at: invoice.created_at,
 				tx_hash: invoice.tx_hash,
 				chain_id: invoice.metadata.chain_id,
-				seller_account: invoice.seller_account,
+				created_by: invoice.created_by,
 				buyer_identifier: invoice.buyer_identifier,
+				recipients: recipient_details,
 			})
 		})
 		.expect("Failed to register omni_getInvoiceDetails");
 
-	// Pay confidential invoice (returns amount for buyer to verify before paying)
+	// Pay confidential invoice (legacy helper — returns total amount for buyer to verify)
 	module
 		.register_async_method("omni_payConfidentialInvoice", |params, ctx, _ext| async move {
 			let params = parse_rpc_params::<PayInvoiceParams>(params)?;
@@ -235,7 +329,6 @@ pub fn register_confidential_invoice<
 				params.invoice_id, params.buyer_account
 			);
 
-			// Retrieve invoice
 			let invoice = ctx
 				.confidential_invoice_storage
 				.get_by_id(&params.invoice_id)
@@ -245,7 +338,6 @@ pub fn register_confidential_invoice<
 					DetailedError::invalid_params("invoice_id", "Invoice not found")
 				})?;
 
-			// Check status
 			if invoice.status != InvoiceStatus::Pending {
 				return Err(DetailedError::invalid_params(
 					"invoice_id",
@@ -254,25 +346,20 @@ pub fn register_confidential_invoice<
 				.to_rpc_error());
 			}
 
-			// Decrypt amount
 			let amount_units = decrypt_amount(&invoice.encrypted_amount, &ctx.aes256_key)
 				.map_err_internal("Failed to decrypt amount")?;
-			let amount_f64 = (amount_units as f64) / 1_000_000.0;
 
-			// Return decrypted amount and commitment for buyer to verify and pay
-			// The actual payment settlement will be handled by omni_settleUserOp
-			info!(
-				"Prepared payment info for invoice: {}, amount: {:.2}",
-				params.invoice_id, amount_f64
-			);
+			info!("Prepared payment info for invoice: {}", params.invoice_id);
 
+			// Return raw token units — the frontend knows the token decimals
+			// and must do the conversion itself to avoid hardcoding decimals here.
 			Ok::<PayInvoiceResponse, ErrorObjectOwned>(PayInvoiceResponse {
 				status: "ready_to_pay".to_string(),
 				message: format!(
-					"Invoice amount: {:.2} {}. Please proceed with payment.",
-					amount_f64, invoice.metadata.currency
+					"Invoice amount (raw units): {}. Please proceed with payment.",
+					amount_units
 				),
-				amount: format!("{:.2}", amount_f64),
+				amount: amount_units.to_string(),
 				commitment: hex::encode(invoice.commitment),
 			})
 		})
@@ -286,13 +373,12 @@ pub fn register_confidential_invoice<
 
 	module
 		.register_async_method("omni_deleteInvoice", |params, ctx, _ext| async move {
-			use oe_storage::Storage; // Import trait for remove/contains_key methods
+			use oe_storage::Storage;
 
 			let params = parse_rpc_params::<DeleteInvoiceParams>(params)?;
 
 			debug!("Received omni_deleteInvoice, invoice_id: {}", params.invoice_id);
 
-			// Check if invoice exists first
 			let key =
 				oe_storage::confidential_invoice::Key { invoice_id: params.invoice_id.clone() };
 
@@ -302,7 +388,6 @@ pub fn register_confidential_invoice<
 				);
 			}
 
-			// Delete from storage using remove method
 			ctx.confidential_invoice_storage
 				.remove(&key)
 				.map_err(|_| DetailedError::internal_error("Failed to delete invoice"))?;
@@ -361,7 +446,7 @@ mod tests {
 		let confidential_invoice_storage = Arc::new(ConfidentialInvoiceStorage::new(db.clone()));
 
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
-		let aes_key = [42u8; 32]; // Test key
+		let aes_key = [42u8; 32];
 		let entry_point_clients = HashMap::new();
 
 		start_server(
@@ -377,9 +462,9 @@ mod tests {
 			wildmeta_timestamp_storage,
 			loan_record_storage,
 			confidential_invoice_storage,
-			[0u8; 33], // Test ECDSA public key
-			[0u8; 32], // Test bundler private key
-			[0u8; 33], // Test bundler export authorized pubkey
+			[0u8; 33],
+			[0u8; 32],
+			[0u8; 33],
 			Arc::new(cross_chain_intent_executor),
 			aes_key,
 			Arc::new(entry_point_clients),
@@ -390,17 +475,20 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		// Create invoice (amount in smallest units, e.g., 50000.00 USDC = 50000000000 units for 6 decimals)
+		// Create invoice with two recipients
 		let create_response: CreateInvoiceResponse = client
 			.request(
 				"omni_createConfidentialInvoice",
 				rpc_params![
-					"seller@example.com",                         // seller_account
+					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", // created_by
 					"buyer@example.com",                          // buyer_identifier
-					"50000000000",                                // amount (raw token units)
-					"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // token_address (example USDC on Arbitrum Sepolia)
+					"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // token_address
 					421614u64,                                    // chain_id
-					"Test invoice"                                // description
+					"Test invoice",                               // description
+					serde_json::json!([
+						{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", "amount": "30000000000"},
+						{"address": "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01", "amount": "20000000000"}
+					])  // recipients
 				],
 			)
 			.await
@@ -408,6 +496,7 @@ mod tests {
 
 		assert!(create_response.invoice_id.starts_with("inv_"));
 		assert!(!create_response.commitment.is_empty());
+		assert_eq!(create_response.total_amount, "50000000000");
 
 		// Get invoice details
 		let get_response: GetInvoiceDetailsResponse = client
@@ -419,9 +508,12 @@ mod tests {
 			.unwrap();
 
 		assert_eq!(get_response.invoice_id, create_response.invoice_id);
-		assert_eq!(get_response.amount, Some("50000000000".to_string())); // Raw token units
+		assert_eq!(get_response.amount, Some("50000000000".to_string()));
 		assert_eq!(get_response.token_address, "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d");
 		assert_eq!(get_response.chain_id, 421614);
 		assert!(matches!(get_response.status, InvoiceStatus::Pending));
+		assert_eq!(get_response.recipients.len(), 2);
+		assert_eq!(get_response.recipients[0].amount, Some("30000000000".to_string()));
+		assert_eq!(get_response.recipients[1].amount, Some("20000000000".to_string()));
 	}
 }

@@ -16,7 +16,7 @@
         <div class="text-center mb-8">
             <h1 class="text-4xl font-bold text-gray-900 mb-2">Create Confidential Invoice</h1>
             <p class="text-gray-600">
-                Invoice amounts are encrypted by TEE - not even the server can see them.
+                Invoice amounts are encrypted by TEE — not even the server can see them.
             </p>
             <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
                 <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -30,59 +30,69 @@
 
         <!-- Invoice Form -->
         <form id="invoiceForm" class="bg-white rounded-xl shadow-lg p-8 space-y-6">
+
+            <!-- Token + chain -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Token Contract Address
-                </label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Token Contract Address</label>
                 <input type="text" id="tokenAddress" required
                     class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d"
+                    placeholder="0x60cA88a278AFBE727Fc92855e1D934F3E5C058Db"
                     pattern="0x[a-fA-F0-9]{40}" />
                 <p class="mt-1 text-xs text-gray-500">
-                    ERC20 token address - <span id="tokenSymbol" class="font-semibold text-blue-600"></span>
+                    ERC20 token address —
+                    <span id="tokenSymbol" class="font-semibold text-blue-600"></span>
                     <span id="tokenDecimals" class="text-gray-400"></span>
                 </p>
             </div>
 
+            <!-- Creator address -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Amount
-                </label>
-                <input type="number" id="amount" step="any" min="0.000001" required
-                    class="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="100.50" />
-                <p class="mt-1 text-xs text-gray-500">Token amount (will be converted to smallest units automatically)</p>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Your Ethereum Address (Invoice Creator)</label>
+                <input type="text" id="createdBy" required
+                    class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0"
+                    pattern="0x[a-fA-F0-9]{40}" />
+                <p class="mt-1 text-xs text-gray-500">Your address is used to generate a deterministic invoice ID. You don't have to be a recipient.</p>
             </div>
 
+            <!-- Buyer email -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Buyer Email
-                </label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Buyer Email</label>
                 <input type="email" id="buyerEmail" required
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     placeholder="buyer@company.com" />
-                <p class="mt-1 text-xs text-gray-500">Buyer's email address to receive the invoice</p>
+                <p class="mt-1 text-xs text-gray-500">Buyer's email to receive the invoice link</p>
             </div>
 
+            <!-- Description -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Description
-                </label>
-                <textarea id="description" rows="3" required
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <textarea id="description" rows="2" required
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"
                     placeholder="Q4 2025 Consulting Services"></textarea>
-                <p class="mt-1 text-xs text-gray-500">Brief description of what this invoice is for</p>
             </div>
 
+            <!-- Recipients -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Seller Ethereum Address
-                </label>
-                <input type="text" id="sellerAccount" required
-                    class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
-                    pattern="0x[a-fA-F0-9]{40}" />
-                <p class="mt-1 text-xs text-gray-500">Your Ethereum address to receive payment</p>
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-semibold text-gray-700">Recipients</label>
+                    <button type="button" onclick="addRecipient()"
+                        class="inline-flex items-center gap-1 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium px-3 py-1.5 rounded-lg border border-blue-200 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Add Recipient
+                    </button>
+                </div>
+
+                <div id="recipientList" class="space-y-3">
+                    <!-- Recipients are added dynamically -->
+                </div>
+
+                <div class="mt-3 flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Total:</span>
+                    <span id="totalDisplay" class="font-bold text-gray-900">0</span>
+                </div>
             </div>
 
             <button type="submit"
@@ -110,7 +120,7 @@
 
                 <div class="bg-white p-4 rounded-lg border border-green-200">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-semibold text-gray-700">Payment Link:</span>
+                        <span class="text-sm font-semibold text-gray-700">Payment Link (share with buyer):</span>
                         <div class="flex gap-2">
                             <button onclick="openInvoice()"
                                 class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium flex items-center gap-1">
@@ -136,6 +146,14 @@
                         onclick="this.select()" />
                 </div>
 
+                <div class="bg-white p-4 rounded-lg border border-green-200">
+                    <span class="text-sm font-semibold text-gray-700">Withdrawal Link (share with each recipient):</span>
+                    <p class="text-xs text-gray-500 mt-1 mb-2">Each recipient opens this link and enters their address to withdraw their share.</p>
+                    <input type="text" id="withdrawUrl" readonly
+                        class="w-full px-3 py-2 bg-gray-50 rounded border border-gray-300 text-sm font-mono cursor-pointer hover:bg-gray-100"
+                        onclick="this.select()" />
+                </div>
+
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
                     <div class="flex items-start gap-2">
                         <svg class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor"
@@ -151,8 +169,7 @@
                                     class="bg-purple-100 px-2 py-0.5 rounded font-mono text-xs"></code>
                             </p>
                             <p class="text-xs text-purple-700 mt-2">
-                                Only the buyer can see the amount when they open this link. The invoice amount is
-                                encrypted by the TEE and cannot be viewed by anyone else.
+                                Only the buyer can see the total amount. Individual recipient shares are hidden from each other.
                             </p>
                         </div>
                     </div>
@@ -181,319 +198,300 @@
     <script>
         const RPC_URL = 'ws://localhost:2100';
         const CLIENT_ID = 'wildmeta';
-        const FACTORY_ADDRESS = '0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e'; // OmniAccountFactory V1
-        const ENTRYPOINT_ADDRESS = '0xe6042188857a822DDfcFE5fd9E17118049Ab539a'; // EntryPoint V1
+        const FACTORY_ADDRESS = '0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e';
         const CHAIN_ID = 421614; // Arbitrum Sepolia
-        let tokenDecimals = 18; // Default to 18 if lookup fails
+        let tokenDecimals = 18;
+        let recipientCount = 0;
 
-        // ERC20 ABI for symbol() and decimals()
         const ERC20_ABI = [
             'function symbol() view returns (string)',
             'function decimals() view returns (uint8)'
         ];
 
-        // OmniAccount ABI for getNonce()
         const ACCOUNT_ABI = [
             {
                 "inputs": [],
                 "name": "getNonce",
-                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
                 "stateMutability": "view",
                 "type": "function"
             }
         ];
 
-        // Factory ABI for getAddress()
         const FACTORY_ABI = [
             {
                 "type": "function",
                 "name": "getAddress",
                 "inputs": [
-                    {"name": "oa", "type": "bytes32"},
-                    {"name": "oaType", "type": "uint8"},
-                    {"name": "clientId", "type": "bytes"},
-                    {"name": "root", "type": "address"}
+                    { "name": "oa", "type": "bytes32" },
+                    { "name": "oaType", "type": "uint8" },
+                    { "name": "clientId", "type": "bytes" },
+                    { "name": "root", "type": "address" }
                 ],
-                "outputs": [{"name": "", "type": "address"}],
+                "outputs": [{ "name": "", "type": "address" }],
                 "stateMutability": "view"
             }
         ];
 
-        const OwnerType = {
-            Evm: 6  // 0x06 for EVM addresses
-        };
+        const OwnerType = { Evm: 6 };
 
-        // Token lookup when address is entered
-        document.getElementById('tokenAddress').addEventListener('blur', async function() {
+        // Start with one recipient row
+        window.addEventListener('DOMContentLoaded', () => addRecipient());
+
+        // Token lookup on blur
+        document.getElementById('tokenAddress').addEventListener('blur', async function () {
             const address = this.value.trim();
-            if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
-                document.getElementById('tokenSymbol').textContent = '';
-                document.getElementById('tokenDecimals').textContent = '';
-                return;
-            }
-
+            if (!address.match(/^0x[a-fA-F0-9]{40}$/)) return;
             try {
-                if (typeof ethers === 'undefined') {
-                    console.error('ethers.js not loaded');
-                    return;
-                }
-
                 const provider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
                 const contract = new ethers.Contract(address, ERC20_ABI, provider);
-
-                const [symbol, decimals] = await Promise.all([
-                    contract.symbol(),
-                    contract.decimals()
-                ]);
-
+                const [symbol, decimals] = await Promise.all([contract.symbol(), contract.decimals()]);
                 tokenDecimals = Number(decimals);
                 document.getElementById('tokenSymbol').textContent = symbol;
                 document.getElementById('tokenDecimals').textContent = `(${decimals} decimals)`;
-            } catch (error) {
-                console.error('Failed to fetch token info:', error);
+                updateTotal();
+            } catch {
                 document.getElementById('tokenSymbol').textContent = '(Unknown token)';
-                document.getElementById('tokenDecimals').textContent = '';
-                tokenDecimals = 18; // Default
+                tokenDecimals = 18;
             }
         });
+
+        function addRecipient() {
+            const id = recipientCount++;
+            const list = document.getElementById('recipientList');
+            const row = document.createElement('div');
+            row.id = `recipient-${id}`;
+            row.className = 'flex gap-2 items-start p-3 bg-gray-50 rounded-lg border border-gray-200';
+            row.innerHTML = `
+                <div class="flex-1">
+                    <input type="text" id="raddr-${id}" required
+                        class="w-full px-3 py-2 font-mono text-xs border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition mb-1"
+                        placeholder="0xRecipientAddress" pattern="0x[a-fA-F0-9]{40}"
+                        oninput="updateTotal()" />
+                    <p class="text-xs text-gray-400">Recipient Ethereum address</p>
+                </div>
+                <div class="w-36">
+                    <input type="number" id="ramount-${id}" required min="0" step="any"
+                        class="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition mb-1"
+                        placeholder="Amount"
+                        oninput="updateTotal()" />
+                    <p class="text-xs text-gray-400">Token amount</p>
+                </div>
+                <button type="button" onclick="removeRecipient(${id})"
+                    class="mt-1.5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                    title="Remove recipient">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            list.appendChild(row);
+            updateTotal();
+        }
+
+        function removeRecipient(id) {
+            const row = document.getElementById(`recipient-${id}`);
+            if (row) row.remove();
+            updateTotal();
+        }
+
+        function updateTotal() {
+            let total = 0;
+            const symbol = document.getElementById('tokenSymbol').textContent || '';
+            for (const input of document.querySelectorAll('[id^="ramount-"]')) {
+                const v = parseFloat(input.value) || 0;
+                total += v;
+            }
+            document.getElementById('totalDisplay').textContent =
+                total > 0 ? `${total.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${symbol}` : '0';
+        }
+
+        function collectRecipients() {
+            const rows = document.querySelectorAll('[id^="recipient-"]');
+            const result = [];
+            for (const row of rows) {
+                const id = row.id.split('-')[1];
+                const address = document.getElementById(`raddr-${id}`).value.trim();
+                const amountStr = document.getElementById(`ramount-${id}`).value;
+                if (!address || !amountStr) continue;
+                const amountFloat = parseFloat(amountStr);
+                const amountUnits = BigInt(Math.round(amountFloat * Math.pow(10, tokenDecimals))).toString();
+                result.push({ address, amount: amountUnits });
+            }
+            return result;
+        }
 
         document.getElementById('invoiceForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const amount = document.getElementById('amount').value;
             const tokenAddress = document.getElementById('tokenAddress').value.trim();
+            const createdBy = document.getElementById('createdBy').value.trim();
             const buyerEmail = document.getElementById('buyerEmail').value;
             const description = document.getElementById('description').value;
-            const sellerAccount = document.getElementById('sellerAccount').value.trim();
 
-            // Validate seller address
-            if (!sellerAccount || !sellerAccount.match(/^0x[a-fA-F0-9]{40}$/)) {
-                showError('Please enter a valid Ethereum address for the seller account');
-                document.getElementById('submitText').classList.remove('hidden');
-                document.getElementById('loadingText').classList.add('hidden');
+            if (!createdBy.match(/^0x[a-fA-F0-9]{40}$/)) {
+                showError('Please enter a valid Ethereum address for Invoice Creator');
                 return;
             }
 
-            // Convert amount to smallest units (wei)
-            const amountFloat = parseFloat(amount);
-            const amountUnits = BigInt(Math.floor(amountFloat * Math.pow(10, tokenDecimals))).toString();
+            const recipients = collectRecipients();
+            if (recipients.length === 0) {
+                showError('Add at least one recipient with a valid address and amount');
+                return;
+            }
 
-            // Show loading state
+            for (const r of recipients) {
+                if (!r.address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                    showError(`Invalid recipient address: ${r.address}`);
+                    return;
+                }
+            }
+
             document.getElementById('submitText').classList.add('hidden');
             document.getElementById('loadingText').classList.remove('hidden');
             document.getElementById('error').classList.add('hidden');
 
             try {
-                // Get seller's smart wallet nonce for deterministic invoice ID
+                // Get creator smart wallet nonce for deterministic invoice ID
                 let nonce = null;
                 try {
-                    console.log('Fetching smart wallet nonce for seller:', sellerAccount);
-
-                    // Step 1: Calculate OmniAccount hash
-                    const omniAccountHash = await calculateOmniAccount(sellerAccount, CLIENT_ID);
-                    console.log('OmniAccount hash:', omniAccountHash);
-
-                    // Step 2: Get root signer from TEE
+                    const omniAccountHash = await calculateOmniAccount(createdBy, CLIENT_ID);
                     const rootSigner = await getRootSignerFromTEE(omniAccountHash);
-                    console.log('Root signer from TEE:', rootSigner);
-
-                    // Step 3: Get counterfactual smart wallet address from factory
                     const provider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
-
-                    if (FACTORY_ADDRESS === '0x0000000000000000000000000000000000000000') {
-                        console.warn('Factory address not configured, using seller EOA as fallback');
-                        nonce = 0;
+                    const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
+                    const clientIdBytes = ethers.toUtf8Bytes(CLIENT_ID);
+                    const smartWalletAddress = await factoryContract.getAddress(
+                        omniAccountHash, OwnerType.Evm, clientIdBytes, rootSigner
+                    );
+                    const code = await provider.getCode(smartWalletAddress);
+                    if (code !== '0x') {
+                        const accountContract = new ethers.Contract(smartWalletAddress, ACCOUNT_ABI, provider);
+                        nonce = Number(await accountContract.getNonce());
                     } else {
-                        const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
-                        const clientIdBytes = ethers.toUtf8Bytes(CLIENT_ID);
-
-                        const smartWalletAddress = await factoryContract.getAddress(
-                            omniAccountHash,
-                            OwnerType.Evm,
-                            clientIdBytes,
-                            rootSigner
-                        );
-                        console.log('Counterfactual smart wallet address:', smartWalletAddress);
-
-                        // Step 4: Get smart wallet's nonce from chain
-                        const code = await provider.getCode(smartWalletAddress);
-
-                        if (code !== '0x') {
-                            // Smart wallet is deployed, get its nonce
-                            const accountContract = new ethers.Contract(smartWalletAddress, ACCOUNT_ABI, provider);
-                            nonce = Number(await accountContract.getNonce());
-                            console.log('Smart wallet nonce:', nonce);
-                        } else {
-                            // Smart wallet not deployed yet, use 0
-                            nonce = 0;
-                            console.log('Smart wallet not deployed yet, using nonce 0');
-                        }
+                        nonce = 0;
                     }
-                } catch (error) {
-                    console.warn('Could not fetch smart wallet nonce, invoice ID will be random:', error);
-                    console.error('Error details:', error);
+                } catch (err) {
+                    console.warn('Could not fetch nonce, using random invoice ID:', err);
                 }
 
-                // Call RPC method via WebSocket
                 const ws = new WebSocket(RPC_URL);
-
-                await new Promise((resolve, reject) => {
-                    ws.onopen = resolve;
-                    ws.onerror = reject;
-                });
+                await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
 
                 const requestId = Math.floor(Math.random() * 1000000);
-                const request = {
+                ws.send(JSON.stringify({
                     jsonrpc: '2.0',
                     id: requestId,
                     method: 'omni_createConfidentialInvoice',
                     params: {
-                        seller_account: sellerAccount,
+                        created_by: createdBy,
                         buyer_identifier: buyerEmail,
-                        amount: amountUnits,        // amount (in smallest units)
                         token_address: tokenAddress,
-                        chain_id: 421614,           // Arbitrum Sepolia
-                        description: description,
-                        nonce: nonce                // deterministic invoice ID
+                        chain_id: CHAIN_ID,
+                        description,
+                        nonce,
+                        recipients,
                     }
-                };
-
-                ws.send(JSON.stringify(request));
+                }));
 
                 const response = await new Promise((resolve, reject) => {
                     ws.onmessage = (event) => {
                         const data = JSON.parse(event.data);
                         if (data.id === requestId) {
-                            if (data.error) {
-                                reject(new Error(data.error.message || 'RPC error'));
-                            } else {
-                                resolve(data.result);
-                            }
+                            if (data.error) reject(new Error(data.error.message || 'RPC error'));
+                            else resolve(data.result);
                         }
                     };
                     setTimeout(() => reject(new Error('Request timeout')), 10000);
                 });
-
                 ws.close();
 
-                // Display success
-                // Use localhost:8080 for the invoice URL (overriding backend response)
-                const localInvoiceUrl = `http://localhost:8080/pay-invoice.html?id=${response.invoice_id}`;
-                document.getElementById('invoiceId').textContent = response.invoice_id;
-                document.getElementById('invoiceUrl').value = localInvoiceUrl;
+                const invoiceId = response.invoice_id;
+                const localPayUrl = `http://localhost:8080/pay-invoice.html?id=${invoiceId}`;
+                const localWithdrawUrl = `http://localhost:8080/withdraw-invoice.html?id=${invoiceId}`;
+
+                document.getElementById('invoiceId').textContent = invoiceId;
+                document.getElementById('invoiceUrl').value = localPayUrl;
+                document.getElementById('withdrawUrl').value = localWithdrawUrl;
                 document.getElementById('commitment').textContent = response.commitment.substring(0, 16) + '...';
                 document.getElementById('invoiceForm').classList.add('hidden');
                 document.getElementById('result').classList.remove('hidden');
 
             } catch (error) {
                 console.error('Error creating invoice:', error);
-                document.getElementById('errorMessage').textContent = error.message;
-                document.getElementById('error').classList.remove('hidden');
-
-                // Reset button
+                showError(error.message);
+            } finally {
                 document.getElementById('submitText').classList.remove('hidden');
                 document.getElementById('loadingText').classList.add('hidden');
             }
         });
 
         function openInvoice() {
-            const url = document.getElementById('invoiceUrl').value;
-            window.open(url, '_blank');
+            window.open(document.getElementById('invoiceUrl').value, '_blank');
         }
 
         function copyLink() {
             const url = document.getElementById('invoiceUrl');
             url.select();
             document.execCommand('copy');
-
-            // Show feedback
             const btn = event.target.closest('button');
-            const originalText = btn.innerHTML;
+            const orig = btn.innerHTML;
             btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-            }, 2000);
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
         }
 
         function createAnother() {
             document.getElementById('invoiceForm').classList.remove('hidden');
             document.getElementById('result').classList.add('hidden');
             document.getElementById('invoiceForm').reset();
+            document.getElementById('recipientList').innerHTML = '';
+            recipientCount = 0;
+            addRecipient();
         }
 
-        /**
-         * Calculate OmniAccount hash from EVM address
-         * Based on: sha256(clientId + "evm" + address)
-         */
+        function showError(msg) {
+            document.getElementById('errorMessage').textContent = msg;
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('submitText').classList.remove('hidden');
+            document.getElementById('loadingText').classList.add('hidden');
+        }
+
         async function calculateOmniAccount(address, clientId) {
             const encoder = new TextEncoder();
             const clientIdBytes = encoder.encode(clientId);
             const identityTypeBytes = encoder.encode('evm');
-
-            // Convert address hex to bytes
             const addressHex = address.slice(2).toLowerCase();
             const addressBytes = new Uint8Array(20);
-            for (let i = 0; i < addressHex.length; i += 2) {
+            for (let i = 0; i < addressHex.length; i += 2)
                 addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
-            }
-
-            // Combine all bytes
-            const combined = new Uint8Array(
-                clientIdBytes.length + identityTypeBytes.length + addressBytes.length
-            );
+            const combined = new Uint8Array(clientIdBytes.length + identityTypeBytes.length + addressBytes.length);
             combined.set(clientIdBytes, 0);
             combined.set(identityTypeBytes, clientIdBytes.length);
             combined.set(addressBytes, clientIdBytes.length + identityTypeBytes.length);
-
-            // Calculate SHA256 hash
             const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-            return hashHex;
+            return '0x' + Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        /**
-         * Get root signer from TEE worker
-         */
         async function getRootSignerFromTEE(omniAccountHash) {
             const ws = new WebSocket(RPC_URL);
-
-            await new Promise((resolve, reject) => {
-                ws.onopen = resolve;
-                ws.onerror = reject;
-            });
-
+            await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
             const requestId = Math.floor(Math.random() * 1000000);
-            const request = {
-                jsonrpc: '2.0',
-                id: requestId,
+            ws.send(JSON.stringify({
+                jsonrpc: '2.0', id: requestId,
                 method: 'omni_getSmartWalletRootSigner',
-                params: {
-                    omni_account: omniAccountHash,
-                    chain_type: 'evm',
-                    wallet_index: 0,
-                }
-            };
-
-            ws.send(JSON.stringify(request));
-
-            const rootSigner = await new Promise((resolve, reject) => {
+                params: { omni_account: omniAccountHash, chain_type: 'evm', wallet_index: 0 }
+            }));
+            const result = await new Promise((resolve, reject) => {
                 ws.onmessage = (event) => {
-                    const response = JSON.parse(event.data);
-                    if (response.id === requestId) {
-                        if (response.error) {
-                            reject(new Error(response.error.message || 'RPC error'));
-                        } else {
-                            resolve(response.result);
-                        }
+                    const r = JSON.parse(event.data);
+                    if (r.id === requestId) {
+                        if (r.error) reject(new Error(r.error.message));
+                        else resolve(r.result);
                     }
                 };
                 setTimeout(() => reject(new Error('Request timeout')), 10000);
             });
-
             ws.close();
-            return rootSigner;
+            return result;
         }
     </script>
 </body>
