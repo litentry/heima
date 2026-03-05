@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/SimplePrivacyPool.sol";
 import "../src/MockVerifier.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "poseidon-solidity/PoseidonT3.sol";
 
 /// @dev Minimal ERC20 for testing
 contract MockUSDC is ERC20 {
@@ -23,13 +24,21 @@ contract SimplePrivacyPoolTest is Test {
     address buyer = makeAddr("buyer");
     address seller = makeAddr("seller");
 
-    bytes32 constant COMMITMENT = keccak256("test_commitment");
+    // Poseidon-based commitment and nullifier for tests
+    uint256 constant SECRET = 0xdeadbeef;
     uint256 constant AMOUNT = 1_000_000; // 1 USDC (6 decimals)
+    uint256 COMMITMENT;
+    uint256 NULLIFIER;
 
     function setUp() public {
         usdc = new MockUSDC();
         verifier = new MockVerifier();
         pool = new SimplePrivacyPool(address(usdc), address(verifier));
+
+        // commitment = Poseidon(secret, amount)
+        COMMITMENT = PoseidonT3.hash([SECRET, AMOUNT]);
+        // nullifier = Poseidon(secret, leaf_index=0)
+        NULLIFIER = PoseidonT3.hash([SECRET, uint256(0)]);
 
         usdc.mint(buyer, 100_000_000); // 100 USDC
         vm.prank(buyer);
@@ -76,26 +85,23 @@ contract SimplePrivacyPoolTest is Test {
         vm.prank(buyer);
         pool.deposit(COMMITMENT, AMOUNT);
 
-        bytes32 nullifier = keccak256("test_nullifier");
         uint256 sellerBalanceBefore = usdc.balanceOf(seller);
 
-        pool.withdraw(nullifier, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
+        pool.withdraw(NULLIFIER, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
 
         assertEq(usdc.balanceOf(seller), sellerBalanceBefore + AMOUNT);
         assertEq(usdc.balanceOf(address(pool)), 0);
-        assertTrue(pool.nullifiers(nullifier));
+        assertTrue(pool.nullifiers(NULLIFIER));
     }
 
     function test_withdraw_emits_event() public {
         vm.prank(buyer);
         pool.deposit(COMMITMENT, AMOUNT);
 
-        bytes32 nullifier = keccak256("test_nullifier");
-
         vm.expectEmit(true, true, false, true);
-        emit SimplePrivacyPool.Withdrawal(nullifier, seller, AMOUNT);
+        emit SimplePrivacyPool.Withdrawal(NULLIFIER, seller, AMOUNT);
 
-        pool.withdraw(nullifier, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
+        pool.withdraw(NULLIFIER, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
     }
 
     function test_withdraw_nullifier_reuse_reverts() public {
@@ -105,27 +111,30 @@ contract SimplePrivacyPoolTest is Test {
         // Mint more so second withdrawal doesn't revert on balance
         usdc.mint(address(pool), AMOUNT);
 
-        bytes32 nullifier = keccak256("test_nullifier");
-        pool.withdraw(nullifier, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
+        pool.withdraw(NULLIFIER, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
 
         vm.expectRevert(SimplePrivacyPool.NullifierAlreadyUsed.selector);
-        pool.withdraw(nullifier, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
+        pool.withdraw(NULLIFIER, AMOUNT, seller, "", [uint256(0), uint256(0), uint256(0)]);
     }
 
     // ─── Merkle tree tests ────────────────────────────────────────────────────
 
     function test_multiple_deposits_increment_index() public {
+        uint256 c1 = PoseidonT3.hash([uint256(1), AMOUNT]);
+        uint256 c2 = PoseidonT3.hash([uint256(2), AMOUNT]);
+        uint256 c3 = PoseidonT3.hash([uint256(3), AMOUNT]);
+
         vm.startPrank(buyer);
-        pool.deposit(keccak256("c1"), AMOUNT);
-        pool.deposit(keccak256("c2"), AMOUNT);
-        pool.deposit(keccak256("c3"), AMOUNT);
+        pool.deposit(c1, AMOUNT);
+        pool.deposit(c2, AMOUNT);
+        pool.deposit(c3, AMOUNT);
         vm.stopPrank();
 
         assertEq(pool.nextIndex(), 3);
     }
 
     function test_root_changes_after_deposit() public {
-        bytes32 rootBefore = pool.root();
+        uint256 rootBefore = pool.root();
 
         vm.prank(buyer);
         pool.deposit(COMMITMENT, AMOUNT);

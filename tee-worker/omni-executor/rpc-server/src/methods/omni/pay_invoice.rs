@@ -13,8 +13,8 @@ use oe_storage::confidential_invoice::InvoiceStatus;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 
-/// Keccak256("deposit(bytes32,uint256)")[0..4]
-const DEPOSIT_SELECTOR: [u8; 4] = [0x1d, 0xe2, 0x6e, 0x16];
+/// Keccak256("deposit(uint256,uint256)")[0..4]
+const DEPOSIT_SELECTOR: [u8; 4] = [0xe2, 0xbb, 0xb1, 0x58];
 
 #[derive(Debug, Deserialize)]
 pub struct PayInvoiceParams {
@@ -98,11 +98,11 @@ pub fn register_pay_invoice<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 					let secret =
 						generate_secret().map_err_internal("Failed to generate pool secret")?;
 
-					// Commitment input includes recipient index to prevent two recipients with
-					// identical amounts from producing the same commitment.
-					let commitment_input = format!("{}_r{}", params.invoice_id, idx);
-					let commitment =
-						generate_pool_commitment(&commitment_input, sub_amount, &secret);
+					// Poseidon(secret, amount) — unique secret per recipient prevents
+					// commitment collisions even when amounts are identical.
+					let _ = idx; // no longer needed in hash input
+					let commitment = generate_pool_commitment(&secret, sub_amount)
+						.map_err_internal("Failed to compute commitment")?;
 
 					// Persist secret + commitment for this recipient
 					let recipient_address = recipient.address.clone();
@@ -152,10 +152,10 @@ pub fn register_pay_invoice<CrossChainIntentExecutor: IntentExecutor + Send + Sy
 		.expect("Failed to register omni_payInvoice");
 }
 
-/// ABI-encode deposit(bytes32 commitment, uint256 amount) calldata.
+/// ABI-encode deposit(uint256 commitment, uint256 amount) calldata.
 fn build_deposit_calldata(commitment: &[u8; 32], amount: u128) -> String {
-	let encoded =
-		encode(&[Token::FixedBytes(commitment.to_vec()), Token::Uint(U256::from(amount))]);
+	let commitment_uint = U256::from_big_endian(commitment);
+	let encoded = encode(&[Token::Uint(commitment_uint), Token::Uint(U256::from(amount))]);
 	let mut calldata = DEPOSIT_SELECTOR.to_vec();
 	calldata.extend_from_slice(&encoded);
 	format!("0x{}", hex::encode(calldata))

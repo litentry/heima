@@ -51,6 +51,12 @@ pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 	/// Deployed SimplePrivacyPool contract address (loaded from OE_PRIVACY_POOL_ADDRESS env var)
 	pub privacy_pool_address: String,
+	/// Ethereum JSON-RPC URL for querying on-chain Merkle state at withdrawal time
+	pub eth_rpc_url: String,
+	/// Path to the circom withdraw_js/withdraw.wasm (Groth16 witness generator)
+	pub circuit_wasm_path: String,
+	/// Path to withdraw_final.zkey (Groth16 proving key)
+	pub circuit_zkey_path: String,
 }
 
 impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
@@ -78,6 +84,9 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 		aes256_key: Aes256Key,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
 		privacy_pool_address: String,
+		eth_rpc_url: String,
+		circuit_wasm_path: String,
+		circuit_zkey_path: String,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -100,6 +109,9 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 			aes256_key,
 			entry_point_clients,
 			privacy_pool_address,
+			eth_rpc_url,
+			circuit_wasm_path,
+			circuit_zkey_path,
 		}
 	}
 }
@@ -131,6 +143,12 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 
 	let privacy_pool_address = env::var("OE_PRIVACY_POOL_ADDRESS")
 		.unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
+	let eth_rpc_url = env::var("OE_ETH_RPC_URL")
+		.unwrap_or_else(|_| "https://sepolia-rollup.arbitrum.io/rpc".to_string());
+	let circuit_wasm_path = env::var("OE_CIRCUIT_WASM_PATH")
+		.unwrap_or_else(|_| "circuits/build/withdraw_js/withdraw.wasm".to_string());
+	let circuit_zkey_path = env::var("OE_CIRCUIT_ZKEY_PATH")
+		.unwrap_or_else(|_| "circuits/build/withdraw_final.zkey".to_string());
 
 	let ctx = RpcContext::new(
 		shielding_key,
@@ -153,6 +171,9 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		aes256_key,
 		entry_point_clients,
 		privacy_pool_address,
+		eth_rpc_url,
+		circuit_wasm_path,
+		circuit_zkey_path,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

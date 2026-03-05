@@ -4,6 +4,7 @@ out = "out"
 libs = ["lib"]
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "poseidon-solidity/=lib/poseidon-solidity/contracts/",
 ]
 
 # Automatically load .env so PRIVATE_KEY / RPC vars are available to forge script

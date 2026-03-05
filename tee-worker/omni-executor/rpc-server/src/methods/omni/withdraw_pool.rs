@@ -6,33 +6,30 @@ use ethers::abi::{encode, Token};
 use ethers::types::{Address, U256};
 use jsonrpsee::types::ErrorObjectOwned;
 use jsonrpsee::RpcModule;
+use num_bigint::BigUint;
 use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::confidential::decrypt_amount;
-use oe_crypto::privacy_pool::generate_nullifier;
+use oe_crypto::privacy_pool::{generate_nullifier, generate_withdrawal_proof};
 use oe_storage::confidential_invoice::InvoiceStatus;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tracing::{debug, error, info};
 
-/// Keccak256("withdraw(bytes32,uint256,address,bytes,uint256[3])")[0..4]
-const WITHDRAW_SELECTOR: [u8; 4] = [0x6a, 0x8b, 0x00, 0xa6];
+/// Keccak256("withdraw(uint256,uint256,address,bytes,uint256[3])")[0..4]
+const WITHDRAW_SELECTOR: [u8; 4] = [0x9f, 0xad, 0xd0, 0x25];
 
 #[derive(Debug, Deserialize)]
 pub struct WithdrawFromPoolParams {
 	pub invoice_id: String,
-	pub seller_address: String, // EOA or smart wallet that will receive the funds
+	pub seller_address: String,
 	pub chain_id: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct WithdrawFromPoolResponse {
-	/// ABI-encoded calldata for SimplePrivacyPool.withdraw(...)
 	pub calldata: String,
-	/// Pool contract address (for the transaction destination)
 	pub pool_address: String,
-	/// Raw token amount in smallest units
 	pub amount_raw: String,
-	/// Hex-encoded nullifier
 	pub nullifier_hex: String,
 }
 
@@ -50,7 +47,6 @@ pub fn register_withdraw_from_pool<
 				params.invoice_id, params.seller_address, params.chain_id
 			);
 
-			// Load invoice
 			let invoice = ctx
 				.confidential_invoice_storage
 				.get_by_id(&params.invoice_id)
@@ -60,7 +56,6 @@ pub fn register_withdraw_from_pool<
 					DetailedError::invalid_params("invoice_id", "Invoice not found")
 				})?;
 
-			// Only pending invoices can be withdrawn (on-chain nullifier guards double-spend)
 			if invoice.status != InvoiceStatus::Pending {
 				return Err(DetailedError::invalid_params(
 					"invoice_id",
@@ -69,7 +64,6 @@ pub fn register_withdraw_from_pool<
 				.to_rpc_error());
 			}
 
-			// Find the recipient entry that matches the calling seller address (case-insensitive)
 			let seller_lower = params.seller_address.to_lowercase();
 			let recipient = invoice
 				.recipients
@@ -83,7 +77,6 @@ pub fn register_withdraw_from_pool<
 					.to_rpc_error()
 				})?;
 
-			// Must have a pool secret — omni_payInvoice must have been called first
 			let pool_secret = recipient.pool_secret.ok_or_else(|| {
 				DetailedError::invalid_params(
 					"invoice_id",
@@ -92,29 +85,64 @@ pub fn register_withdraw_from_pool<
 				.to_rpc_error()
 			})?;
 
-			// Decrypt this recipient's sub-amount
+			let leaf_index = recipient.leaf_index.unwrap_or(0);
 			let amount = decrypt_amount(&recipient.encrypted_amount, &ctx.aes256_key)
 				.map_err_internal("Failed to decrypt recipient amount")?;
 
-			let leaf_index = recipient.leaf_index.unwrap_or(0);
-			let nullifier = generate_nullifier(&pool_secret, leaf_index);
+			let nullifier = generate_nullifier(&pool_secret, leaf_index)
+				.map_err_internal("Failed to compute nullifier")?;
 
-			// Parse seller address
 			let recipient_addr = Address::from_str(&params.seller_address).map_err(|_| {
 				DetailedError::invalid_params("seller_address", "Invalid Ethereum address")
 					.to_rpc_error()
 			})?;
 
-			// Build calldata: withdraw(nullifier, amount, recipient, proof=0x, pubSignals=[0,0,0])
-			// MockVerifier accepts any proof; real ZK proof will be substituted in Phase 2.
-			let calldata = build_withdraw_calldata(&nullifier, amount, recipient_addr);
+			info!(
+				"Querying Merkle state and generating ZK proof for invoice: {}, leaf: {}",
+				params.invoice_id, leaf_index
+			);
 
-			// Do NOT mark Paid here — the on-chain nullifier mapping is the authoritative
-			// double-spend guard. Marking before tx confirmation leaves the invoice stuck
-			// if the tx fails.
+			let (filled_subtrees, _next_index, root) =
+				query_merkle_state(&ctx.eth_rpc_url, &ctx.privacy_pool_address)
+					.await
+					.map_err_internal("Failed to query on-chain Merkle state")?;
+
+			let (path_elements, _path_indices) =
+				reconstruct_merkle_path(leaf_index, &filled_subtrees);
+
+			let proof = tokio::task::spawn_blocking({
+				let secret = pool_secret;
+				let wasm = ctx.circuit_wasm_path.clone();
+				let zkey = ctx.circuit_zkey_path.clone();
+				move || {
+					generate_withdrawal_proof(
+						&secret,
+						leaf_index,
+						amount,
+						&path_elements,
+						&root,
+						&wasm,
+						&zkey,
+					)
+				}
+			})
+			.await
+			.map_err(|e| {
+				DetailedError::internal_error(&format!("proof task panic: {e}")).to_rpc_error()
+			})?
+			.map_err_internal("Failed to generate ZK proof")?;
+
+			let calldata = build_withdraw_calldata(
+				&proof.pub_signals[1], // nullifier
+				&proof.pub_signals[0], // root
+				&proof.pub_signals[2], // commitment
+				amount,
+				recipient_addr,
+				&proof.proof_bytes,
+			);
 
 			info!(
-				"Issued withdrawal calldata for invoice: {}, recipient: {}, nullifier: 0x{}",
+				"Issued ZK withdrawal for invoice: {}, recipient: {}, nullifier: 0x{}",
 				params.invoice_id,
 				params.seller_address,
 				hex::encode(nullifier)
@@ -130,18 +158,140 @@ pub fn register_withdraw_from_pool<
 		.expect("Failed to register omni_withdrawFromPool");
 }
 
-/// ABI-encode withdraw(bytes32,uint256,address,bytes,uint256[3]) calldata.
-/// proof is empty bytes, pubSignals are all zeros (mock verifier accepts anything).
-fn build_withdraw_calldata(nullifier: &[u8; 32], amount: u128, recipient: Address) -> String {
+// ─── On-chain Merkle state query ──────────────────────────────────────────────
+
+async fn query_merkle_state(
+	rpc_url: &str,
+	pool_address: &str,
+) -> Result<([[u8; 32]; 20], u32, [u8; 32]), String> {
+	use serde_json::json;
+
+	let client = reqwest::Client::new();
+
+	let call = |data: String| {
+		let body = json!({
+			"jsonrpc": "2.0",
+			"id": 1,
+			"method": "eth_call",
+			"params": [{"to": pool_address, "data": data}, "latest"]
+		});
+		let c = client.clone();
+		let url = rpc_url.to_string();
+		async move {
+			let resp =
+				c.post(&url).json(&body).send().await.map_err(|e| format!("RPC request: {e}"))?;
+			let json: serde_json::Value =
+				resp.json().await.map_err(|e| format!("RPC parse: {e}"))?;
+			let hex = json["result"]
+				.as_str()
+				.ok_or_else(|| format!("No result: {:?}", json))?
+				.strip_prefix("0x")
+				.unwrap_or("")
+				.to_string();
+			Ok::<String, String>(hex)
+		}
+	};
+
+	// filledSubtrees(uint256) — selector 0xf178e47c
+	let mut filled_subtrees = [[0u8; 32]; 20];
+	for i in 0..20usize {
+		let data = format!("0xf178e47c{:064x}", i);
+		let hex = call(data).await?;
+		let bytes = hex::decode(&hex).map_err(|e| format!("decode subtree {i}: {e}"))?;
+		if bytes.len() >= 32 {
+			filled_subtrees[i].copy_from_slice(&bytes[bytes.len() - 32..]);
+		}
+	}
+
+	// nextIndex() — selector 0xfc7e9c6f
+	let next_hex = call("0xfc7e9c6f".to_string()).await?;
+	let next_bytes = hex::decode(&next_hex).map_err(|e| format!("decode nextIndex: {e}"))?;
+	let next_index = if next_bytes.len() >= 4 {
+		u32::from_be_bytes(next_bytes[next_bytes.len() - 4..].try_into().unwrap())
+	} else {
+		0
+	};
+
+	// root() — selector 0xebf0c717
+	let root_hex = call("0xebf0c717".to_string()).await?;
+	let root_bytes = hex::decode(&root_hex).map_err(|e| format!("decode root: {e}"))?;
+	let mut root = [0u8; 32];
+	if root_bytes.len() >= 32 {
+		root.copy_from_slice(&root_bytes[root_bytes.len() - 32..]);
+	}
+
+	Ok((filled_subtrees, next_index, root))
+}
+
+/// Reconstruct the Merkle authentication path for `leaf_index`.
+fn reconstruct_merkle_path(
+	leaf_index: u32,
+	filled_subtrees: &[[u8; 32]; 20],
+) -> ([[u8; 32]; 20], [bool; 20]) {
+	let mut path_elements = [[0u8; 32]; 20];
+	let mut path_indices = [false; 20];
+
+	for i in 0..20 {
+		let bit = (leaf_index >> i) & 1;
+		path_indices[i] = bit == 1;
+		if bit == 1 {
+			path_elements[i] = filled_subtrees[i];
+		} else {
+			path_elements[i] = poseidon_zero_hash(i as u32);
+		}
+	}
+
+	(path_elements, path_indices)
+}
+
+/// Poseidon zero hash at tree level. Level 0 = 0, level i = Poseidon(prev, prev).
+fn poseidon_zero_hash(level: u32) -> [u8; 32] {
+	use ark_ff::{BigInteger, PrimeField};
+	use light_poseidon::{Poseidon, PoseidonHasher};
+
+	let q: BigUint =
+		"21888242871839275222246405745257275088548364400416034343698204186575808495617"
+			.parse()
+			.unwrap();
+	let mut h = BigUint::from(0u32);
+
+	for _ in 0..level {
+		let f = ark_bn254::Fr::from(h.clone() % &q);
+		let mut pos = Poseidon::<ark_bn254::Fr>::new_circom(2).expect("poseidon init");
+		let hash = pos.hash(&[f, f]).expect("poseidon hash");
+		let bytes = hash.into_bigint().to_bytes_be();
+		let mut out = [0u8; 32];
+		let len = bytes.len().min(32);
+		out[32 - len..].copy_from_slice(&bytes[bytes.len() - len..]);
+		h = BigUint::from_bytes_be(&out);
+	}
+
+	let b = h.to_bytes_be();
+	let mut out = [0u8; 32];
+	let len = b.len().min(32);
+	out[32 - len..].copy_from_slice(&b[b.len() - len..]);
+	out
+}
+
+// ─── Calldata builder ─────────────────────────────────────────────────────────
+
+fn build_withdraw_calldata(
+	nullifier: &[u8; 32],
+	root: &[u8; 32],
+	commitment: &[u8; 32],
+	amount: u128,
+	recipient: Address,
+	proof_bytes: &[u8],
+) -> String {
 	let encoded = encode(&[
-		Token::FixedBytes(nullifier.to_vec()),
+		Token::Uint(U256::from_big_endian(nullifier)),
 		Token::Uint(U256::from(amount)),
 		Token::Address(recipient),
-		Token::Bytes(vec![]),
+		Token::Bytes(proof_bytes.to_vec()),
 		Token::FixedArray(vec![
-			Token::Uint(U256::zero()),
-			Token::Uint(U256::zero()),
-			Token::Uint(U256::zero()),
+			Token::Uint(U256::from_big_endian(root)),
+			Token::Uint(U256::from_big_endian(nullifier)),
+			Token::Uint(U256::from_big_endian(commitment)),
 		]),
 	]);
 	let mut calldata = WITHDRAW_SELECTOR.to_vec();

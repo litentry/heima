@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "poseidon-solidity/PoseidonT3.sol";
 
 interface IVerifier {
     function verifyProof(bytes calldata proof, uint256[3] calldata pubSignals) external view returns (bool);
@@ -10,11 +11,17 @@ interface IVerifier {
 
 /// @notice Simplified privacy pool for B2B invoice payments.
 ///
-/// Buyers deposit USDC with a commitment (hiding the amount on-chain).
-/// Sellers withdraw using a nullifier (+ ZK proof in Phase 5; mock verifier for Phase 1-4).
+/// Buyers deposit tokens with a commitment (hiding the amount on-chain).
+/// Sellers withdraw using a nullifier + Groth16 ZK proof.
 ///
-/// Merkle tree (depth 20) tracks all commitments. On-chain calldata only shows
-/// commitment hashes / nullifiers — no amounts are visible to observers.
+/// All hashing uses Poseidon2 (BN254) so the ZK circuit can prove
+/// membership with minimal constraints (~5k vs ~660k for SHA256).
+///
+/// Commitment: Poseidon([secret_lo | (secret_hi << 128), amount])
+/// Nullifier:  Poseidon([secret_lo | (secret_hi << 128), leaf_index])
+/// Merkle node: Poseidon([left, right])
+///
+/// Public signals for verifyProof: [root, nullifier, commitment]
 contract SimplePrivacyPool {
     using SafeERC20 for IERC20;
 
@@ -23,18 +30,18 @@ contract SimplePrivacyPool {
     IERC20 public immutable token;
     IVerifier public immutable verifier;
 
-    // Incremental Merkle tree state
-    bytes32[LEVELS] public filledSubtrees;
-    bytes32 public root;
+    // Incremental Merkle tree state (Poseidon field elements)
+    uint256[LEVELS] public filledSubtrees;
+    uint256 public root;
     uint32 public nextIndex;
 
-    mapping(bytes32 => bool) public commitments;
-    mapping(bytes32 => bool) public nullifiers;
-    // Store amount per commitment so withdrawal can retrieve it without on-chain exposure in calldata
-    mapping(bytes32 => uint256) public commitmentAmounts;
+    mapping(uint256 => bool) public commitments;
+    mapping(uint256 => bool) public nullifiers;
+    // Amount per commitment (retrieved without revealing it in withdrawal calldata)
+    mapping(uint256 => uint256) public commitmentAmounts;
 
-    event Deposit(bytes32 indexed commitment, uint32 indexed leafIndex, uint256 amount);
-    event Withdrawal(bytes32 indexed nullifier, address indexed recipient, uint256 amount);
+    event Deposit(uint256 indexed commitment, uint32 indexed leafIndex, uint256 amount);
+    event Withdrawal(uint256 indexed nullifier, address indexed recipient, uint256 amount);
 
     error CommitmentAlreadyUsed();
     error NullifierAlreadyUsed();
@@ -48,10 +55,10 @@ contract SimplePrivacyPool {
         _initZeroHashes();
     }
 
-    /// @notice Deposit tokens into the pool with a commitment.
-    /// @param commitment SHA256(invoice_id || amount || secret) — generated in TEE
-    /// @param amount Token amount in smallest units (e.g. USDC has 6 decimals)
-    function deposit(bytes32 commitment, uint256 amount) external {
+    /// @notice Deposit tokens into the pool.
+    /// @param commitment Poseidon([secret, amount]) — generated in TEE
+    /// @param amount Token amount in smallest units
+    function deposit(uint256 commitment, uint256 amount) external {
         if (commitments[commitment]) revert CommitmentAlreadyUsed();
         if (amount == 0) revert ZeroAmount();
 
@@ -64,14 +71,14 @@ contract SimplePrivacyPool {
         emit Deposit(commitment, leafIndex, amount);
     }
 
-    /// @notice Withdraw tokens using a nullifier and ZK proof.
-    /// @param nullifier SHA256(secret || leaf_index) — generated in TEE
+    /// @notice Withdraw tokens using a Groth16 ZK proof.
+    /// @param nullifier Poseidon([secret, leaf_index]) — generated in TEE
     /// @param amount Token amount to withdraw
-    /// @param recipient Address to send tokens to
-    /// @param proof ZK proof bytes (0x for Phase 1-4 with MockVerifier)
-    /// @param pubSignals Public signals [root, nullifier_as_uint, commitment_as_uint]
+    /// @param recipient Address to receive tokens
+    /// @param proof Groth16 proof (ABI-encoded G1,G2,G1 points)
+    /// @param pubSignals [root, nullifier, commitment]
     function withdraw(
-        bytes32 nullifier,
+        uint256 nullifier,
         uint256 amount,
         address recipient,
         bytes calldata proof,
@@ -88,50 +95,44 @@ contract SimplePrivacyPool {
 
     // ─── Internal Merkle tree ─────────────────────────────────────────────────
 
-    /// @dev Insert a leaf into the incremental Merkle tree.
-    function _insert(bytes32 leaf) internal returns (uint32 leafIndex) {
+    function _insert(uint256 leaf) internal returns (uint32 leafIndex) {
         if (nextIndex >= 2 ** LEVELS) revert TreeFull();
 
         leafIndex = nextIndex;
         nextIndex++;
 
-        bytes32 currentHash = leaf;
-        uint32 currentIndex = leafIndex;
+        uint256 current = leaf;
+        uint32 idx = leafIndex;
 
         for (uint32 i = 0; i < LEVELS; i++) {
-            if (currentIndex % 2 == 0) {
-                // Left node: store and hash with zero sibling
-                filledSubtrees[i] = currentHash;
-                currentHash = _hashPair(currentHash, _zeros(i));
+            if (idx % 2 == 0) {
+                filledSubtrees[i] = current;
+                current = _hashPair(current, _zeros(i));
             } else {
-                // Right node: hash with stored left sibling
-                currentHash = _hashPair(filledSubtrees[i], currentHash);
+                current = _hashPair(filledSubtrees[i], current);
             }
-            currentIndex /= 2;
+            idx /= 2;
         }
 
-        root = currentHash;
+        root = current;
     }
 
     function _initZeroHashes() internal {
-        // Pre-compute zero hashes bottom-up (not stored, just initialise filledSubtrees[0])
-        // filledSubtrees start all zeros; root starts as zero hash of full tree
-        bytes32 h = _zeros(0);
+        uint256 h = 0; // zero leaf
         for (uint32 i = 1; i < LEVELS; i++) {
             h = _hashPair(h, h);
         }
         root = _hashPair(h, h);
     }
 
-    function _hashPair(bytes32 left, bytes32 right) internal pure returns (bytes32) {
-        return sha256(abi.encodePacked(left, right));
+    function _hashPair(uint256 left, uint256 right) internal pure returns (uint256) {
+        return PoseidonT3.hash([left, right]);
     }
 
-    /// @dev Returns the zero hash for level i (all-zeros leaf hashed up i times).
-    function _zeros(uint32 level) internal pure returns (bytes32) {
-        bytes32 h = bytes32(0);
+    function _zeros(uint32 level) internal pure returns (uint256) {
+        uint256 h = 0;
         for (uint32 i = 0; i < level; i++) {
-            h = sha256(abi.encodePacked(h, h));
+            h = PoseidonT3.hash([h, h]);
         }
         return h;
     }

@@ -3,10 +3,10 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "../src/DemoUSDC.sol";
-import "../src/MockVerifier.sol";
+import "../src/PoolVerifier.sol";
 import "../src/SimplePrivacyPool.sol";
 
-/// @notice Deploy the full demo stack: DemoUSDC + MockVerifier + SimplePrivacyPool.
+/// @notice Deploy the full demo stack: DemoUSDC + PoolVerifier (Groth16) + SimplePrivacyPool.
 ///
 /// Setup:
 ///   cp .env.example .env   # fill in PRIVATE_KEY, optionally ARBISCAN_API_KEY
@@ -27,10 +27,11 @@ contract DeployScript is Script {
         DemoUSDC usdc = new DemoUSDC();
         console.log("DemoUSDC deployed at:         ", address(usdc));
 
-        MockVerifier mockVerifier = new MockVerifier();
-        console.log("MockVerifier deployed at:     ", address(mockVerifier));
+        PoolVerifier verifier = new PoolVerifier();
+        console.log("PoolVerifier deployed at:     ", address(verifier));
+        console.log("Groth16Verifier deployed at:  ", address(verifier.groth16()));
 
-        SimplePrivacyPool pool = new SimplePrivacyPool(address(usdc), address(mockVerifier));
+        SimplePrivacyPool pool = new SimplePrivacyPool(address(usdc), address(verifier));
         console.log("SimplePrivacyPool deployed at:", address(pool));
 
         vm.stopBroadcast();
