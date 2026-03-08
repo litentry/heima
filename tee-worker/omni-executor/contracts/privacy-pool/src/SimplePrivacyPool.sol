@@ -35,6 +35,9 @@ contract SimplePrivacyPool {
     uint256 public root;
     uint32 public nextIndex;
 
+    // Precomputed zero hashes: zeros[i] = Poseidon^i(0)
+    uint256[LEVELS] internal _zeroHashes;
+
     mapping(uint256 => bool) public commitments;
     mapping(uint256 => bool) public nullifiers;
     // Amount per commitment (retrieved without revealing it in withdrawal calldata)
@@ -119,8 +122,10 @@ contract SimplePrivacyPool {
 
     function _initZeroHashes() internal {
         uint256 h = 0; // zero leaf
+        _zeroHashes[0] = h;
         for (uint32 i = 1; i < LEVELS; i++) {
             h = _hashPair(h, h);
+            _zeroHashes[i] = h;
         }
         root = _hashPair(h, h);
     }
@@ -129,11 +134,7 @@ contract SimplePrivacyPool {
         return PoseidonT3.hash([left, right]);
     }
 
-    function _zeros(uint32 level) internal pure returns (uint256) {
-        uint256 h = 0;
-        for (uint32 i = 0; i < level; i++) {
-            h = PoseidonT3.hash([h, h]);
-        }
-        return h;
+    function _zeros(uint32 level) internal view returns (uint256) {
+        return _zeroHashes[level];
     }
 }

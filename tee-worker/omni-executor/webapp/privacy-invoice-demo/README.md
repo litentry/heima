@@ -8,27 +8,85 @@ A confidential multi-seller invoice system on Arbitrum Sepolia. Invoice amounts 
 |---|---|
 | EntryPoint | `0xe6042188857a822DDfcFE5fd9E17118049Ab539a` |
 | OmniAccountFactory | `0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e` |
-| SimplePrivacyPool | `0x3921f08067D3316f1AF35a87937b6E719Fc98c8E` |
-| PoolVerifier (Groth16) | `0x3706D75511518deaD16581a245e52b37212B743e` |
+| SimplePrivacyPool | `0xcdBc5c8C4A8c475712627cB5476edbede5cFf860` |
+| PoolVerifier (Groth16) | `0x9cfa2C1f4c84136a76823CC1886AE373174A8E75` |
 | SimplePaymaster | `0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912` |
-| DemoUSDC | `0xc76aab3623dCac3939ae5D771598d51A560381c8` |
+| DemoUSDC | `0xE7ECbb383987E374ceE676c89C81F41f6EEDC9fA` |
 
-## Running Locally
+## Building from Source
 
-### 1. Build and start the TEE binary
+### ZK Artifacts (circuit + proving key)
+
+Pre-built artifacts are committed at `contracts/privacy-pool/circuits/build/`. To regenerate from scratch (e.g. after changing the circuit):
+
+**Prerequisites:** [circom 2.x](https://docs.circom.io/getting-started/installation/) (install from source via `cargo install`), [snarkjs](https://github.com/iden3/snarkjs) (`npm install -g snarkjs`).
+
+```bash
+cd contracts/privacy-pool
+
+# Compile circuit
+circom circuits/withdraw.circom --r1cs --wasm --sym -o circuits/build/
+
+# Trusted setup — phase 1 (BN128, 2^14 = 16k constraints sufficient for this circuit)
+snarkjs powersoftau new bn128 14 circuits/build/pot14_0000.ptau -v
+snarkjs powersoftau contribute circuits/build/pot14_0000.ptau circuits/build/pot14_0001.ptau --name="contributor"
+snarkjs powersoftau prepare phase2 circuits/build/pot14_0001.ptau circuits/build/pot14_final.ptau -v
+
+# Trusted setup — phase 2
+snarkjs groth16 setup circuits/build/withdraw.r1cs circuits/build/pot14_final.ptau circuits/build/withdraw_0000.zkey
+snarkjs zkey contribute circuits/build/withdraw_0000.zkey circuits/build/withdraw_final.zkey --name="contributor"
+snarkjs zkey export verificationkey circuits/build/withdraw_final.zkey circuits/build/verification_key.json
+
+# Export Solidity verifier (overwrites src/Verifier.sol — redeploy after)
+snarkjs zkey export solidityverifier circuits/build/withdraw_final.zkey src/Verifier.sol
+```
+
+### Contract Deployment
+
+**Prerequisites:** [Foundry](https://book.getfoundry.sh/getting-started/installation).
+
+```bash
+cd contracts/privacy-pool
+
+# Install Solidity dependencies
+forge install
+
+# Run tests
+forge test
+
+# Deploy to Arbitrum Sepolia
+forge script script/Deploy.s.sol \
+  --rpc-url https://sepolia-rollup.arbitrum.io/rpc \
+  --private-key <deployer-key> \
+  --broadcast
+```
+
+The script deploys `DemoUSDC`, `PoolVerifier` (wraps the Groth16 verifier), and `SimplePrivacyPool`. Update the addresses in this README and in `create-invoice.html` after redeployment.
+
+### TEE Binary
+
+**Prerequisites:** Rust stable toolchain.
 
 ```bash
 cd tee-worker/omni-executor
 cargo build --release --features mock-server
+```
 
-# Wipe invoice state if needed (preserves bundler key)
+## Running Locally
+
+### 1. Start the TEE binary
+
+```bash
+cd tee-worker/omni-executor
+
+# Wipe invoice state if needed (preserves bundler key and AES key)
 rm -rf storage_db/
 
 source .env
-export OE_PRIVACY_POOL_ADDRESS=0x3921f08067D3316f1AF35a87937b6E719Fc98c8E
+export OE_PRIVACY_POOL_ADDRESS=0xcdBc5c8C4A8c475712627cB5476edbede5cFf860
 export OE_ETH_RPC_URL=https://sepolia-rollup.arbitrum.io/rpc
-export OE_CIRCUIT_WASM_PATH=/path/to/contracts/privacy-pool/circuits/build/withdraw_js/withdraw.wasm
-export OE_CIRCUIT_ZKEY_PATH=/path/to/contracts/privacy-pool/circuits/build/withdraw_final.zkey
+export OE_CIRCUIT_WASM_PATH=$(pwd)/contracts/privacy-pool/circuits/build/withdraw_js/withdraw.wasm
+export OE_CIRCUIT_ZKEY_PATH=$(pwd)/contracts/privacy-pool/circuits/build/withdraw_final.zkey
 ./target/release/omni-executor run \
   --local-directory-path ./local \
   --enable-mock-server \
@@ -99,7 +157,7 @@ Each recipient withdraws independently. There is no on-chain link between the bu
 
 **What is visible:** Token transfers to/from the pool contract, and their amounts. Privacy is meaningful only when the pool has enough traffic that timing and amount correlation is hard. In this single-user demo, correlation is trivially possible — the design is correct, the anonymity set is just small.
 
-**ZK proofs:** Currently using MockVerifier (accepts any proof). Real Groth16 proofs (Poseidon-based circuit) are planned for the next phase, which will require redeploying the pool contract.
+**ZK proofs:** Real Groth16 proofs using a Poseidon-based circom circuit (depth-20 Merkle tree). The TEE generates the proof at withdrawal time by querying the on-chain Merkle state and running `ark-groth16` over the `withdraw_final.zkey` proving key. The pool contract verifies via a snarkjs-generated `Groth16Verifier`.
 
 ## RPC Methods
 

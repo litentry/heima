@@ -176,6 +176,16 @@
     <script>
         const RPC_URL = 'ws://localhost:2100';
         const CHAIN_ID = 421614; // Arbitrum Sepolia
+        const CHAIN = {
+            id: CHAIN_ID,
+            name: 'Arbitrum Sepolia',
+            network: 'arbitrum-sepolia',
+            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: {
+                default: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] },
+                public: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] },
+            }
+        };
         const FACTORY_ADDRESS = '0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e'; // OmniAccountFactory V1
         const ENTRYPOINT_ADDRESS = '0xe6042188857a822DDfcFE5fd9E17118049Ab539a'; // EntryPoint V1
         const CLIENT_ID = 'wildmeta';
@@ -310,16 +320,7 @@
                 if (window.viem) {
                     const { createPublicClient, http } = window.viem;
                     publicClient = createPublicClient({
-                        chain: {
-                            id: CHAIN_ID,
-                            name: 'Arbitrum Sepolia',
-                            network: 'arbitrum-sepolia',
-                            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                            rpcUrls: {
-                                default: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] },
-                                public: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] },
-                            }
-                        },
+                        chain: CHAIN,
                         transport: http('https://sepolia-rollup.arbitrum.io/rpc')
                     });
                     console.log('Initialized viem public client');
@@ -912,7 +913,7 @@
 
             const walletClient = createWalletClient({
                 account: walletAddress,
-                chain: publicClient.chain,
+                chain: CHAIN,
                 transport: custom(window.ethereum),
             });
 

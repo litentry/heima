@@ -29,14 +29,16 @@
         </div>
 
         <!-- Invoice Form -->
-        <form id="invoiceForm" class="bg-white rounded-xl shadow-lg p-8 space-y-6">
+        <form id="invoiceForm" autocomplete="off" class="bg-white rounded-xl shadow-lg p-8 space-y-6">
 
             <!-- Token + chain -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Token Contract Address</label>
-                <input type="text" id="tokenAddress" required
+                <input type="text" id="tokenAddress" required autocomplete="off" readonly
+                    onfocus="this.removeAttribute('readonly')"
                     class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                    placeholder="0xc76aab3623dCac3939ae5D771598d51A560381c8"
+                    placeholder="0xE7ECbb383987E374ceE676c89C81F41f6EEDC9fA"
+                    value="0xE7ECbb383987E374ceE676c89C81F41f6EEDC9fA"
                     pattern="0x[a-fA-F0-9]{40}" />
                 <p class="mt-1 text-xs text-gray-500">
                     ERC20 token address —
@@ -48,7 +50,8 @@
             <!-- Creator address -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Your Ethereum Address (Invoice Creator)</label>
-                <input type="text" id="createdBy" required
+                <input type="text" id="createdBy" required autocomplete="off" readonly
+                    onfocus="this.removeAttribute('readonly')"
                     class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0"
                     pattern="0x[a-fA-F0-9]{40}" />
@@ -58,7 +61,7 @@
             <!-- Buyer email -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Buyer Email</label>
-                <input type="email" id="buyerEmail" required
+                <input type="email" id="buyerEmail" required autocomplete="off"
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                     placeholder="buyer@company.com" />
                 <p class="mt-1 text-xs text-gray-500">Buyer's email to receive the invoice link</p>
@@ -264,14 +267,15 @@
             row.className = 'flex gap-2 items-start p-3 bg-gray-50 rounded-lg border border-gray-200';
             row.innerHTML = `
                 <div class="flex-1">
-                    <input type="text" id="raddr-${id}" required
+                    <input type="text" id="raddr-${id}" required autocomplete="off" readonly
+                        onfocus="this.removeAttribute('readonly')"
                         class="w-full px-3 py-2 font-mono text-xs border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition mb-1"
                         placeholder="0xRecipientAddress" pattern="0x[a-fA-F0-9]{40}"
                         oninput="updateTotal()" />
                     <p class="text-xs text-gray-400">Recipient Ethereum address</p>
                 </div>
                 <div class="w-36">
-                    <input type="number" id="ramount-${id}" required min="0" step="any"
+                    <input type="number" id="ramount-${id}" required min="0" step="any" autocomplete="off"
                         class="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition mb-1"
                         placeholder="Amount"
                         oninput="updateTotal()" />

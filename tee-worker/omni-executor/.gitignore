@@ -1,6 +1,7 @@
 debug/
 target/
 .idea/
+run.sh
 **/*.bin
 !local/keystore/accounting_ecdsa_signer_key.bin
 

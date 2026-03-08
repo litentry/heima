@@ -9,7 +9,9 @@ use jsonrpsee::RpcModule;
 use num_bigint::BigUint;
 use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::confidential::decrypt_amount;
-use oe_crypto::privacy_pool::{generate_nullifier, generate_withdrawal_proof};
+use oe_crypto::privacy_pool::{
+	generate_nullifier, generate_pool_commitment, generate_withdrawal_proof,
+};
 use oe_storage::confidential_invoice::InvoiceStatus;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -85,9 +87,23 @@ pub fn register_withdraw_from_pool<
 				.to_rpc_error()
 			})?;
 
-			let leaf_index = recipient.leaf_index.unwrap_or(0);
 			let amount = decrypt_amount(&recipient.encrypted_amount, &ctx.aes256_key)
 				.map_err_internal("Failed to decrypt recipient amount")?;
+
+			// If leaf_index was stored after deposit, use it; otherwise query on-chain events.
+			let leaf_index = if let Some(idx) = recipient.leaf_index {
+				idx
+			} else {
+				let commitment = generate_pool_commitment(&pool_secret, amount)
+					.map_err_internal("Failed to compute commitment for leaf lookup")?;
+				query_leaf_index_for_commitment(
+					&ctx.eth_rpc_url,
+					&ctx.privacy_pool_address,
+					&commitment,
+				)
+				.await
+				.map_err_internal("Failed to query leaf index for commitment")?
+			};
 
 			let nullifier = generate_nullifier(&pool_secret, leaf_index)
 				.map_err_internal("Failed to compute nullifier")?;
@@ -221,6 +237,70 @@ async fn query_merkle_state(
 	}
 
 	Ok((filled_subtrees, next_index, root))
+}
+
+/// Query on-chain `Deposit` events to find the `leafIndex` for a given commitment.
+///
+/// The `Deposit(uint256 indexed commitment, uint32 indexed leafIndex, uint256 amount)` event
+/// is emitted on every `deposit()` call. We filter by the commitment topic.
+async fn query_leaf_index_for_commitment(
+	rpc_url: &str,
+	pool_address: &str,
+	commitment: &[u8; 32],
+) -> Result<u32, String> {
+	use serde_json::json;
+
+	// keccak256("Deposit(uint256,uint32,uint256)")
+	const DEPOSIT_TOPIC: &str =
+		"0x2813ca2762c14ad53880ef467c7448a9015904c20e064e6216ffb3f63390ec5d";
+
+	let commitment_topic = format!("0x{}", hex::encode(commitment));
+
+	let client = reqwest::Client::new();
+	let body = json!({
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "eth_getLogs",
+		"params": [{
+			"address": pool_address,
+			"topics": [DEPOSIT_TOPIC, commitment_topic],
+			"fromBlock": "0x0",
+			"toBlock": "latest"
+		}]
+	});
+
+	let resp = client
+		.post(rpc_url)
+		.json(&body)
+		.send()
+		.await
+		.map_err(|e| format!("eth_getLogs request: {e}"))?;
+	let json: serde_json::Value =
+		resp.json().await.map_err(|e| format!("eth_getLogs parse: {e}"))?;
+
+	let logs = json["result"]
+		.as_array()
+		.ok_or_else(|| format!("eth_getLogs no result: {json}"))?;
+
+	if logs.is_empty() {
+		return Err(format!("No Deposit event found for commitment 0x{}", hex::encode(commitment)));
+	}
+
+	// Take the most recent deposit (last log)
+	let log = &logs[logs.len() - 1];
+	let topics = log["topics"].as_array().ok_or("no topics in log")?;
+	// topics[1] = indexed leafIndex (padded to 32 bytes as uint256)
+	let leaf_topic = topics.get(2).and_then(|t| t.as_str()).ok_or("no leafIndex topic")?;
+	let leaf_bytes = hex::decode(leaf_topic.strip_prefix("0x").unwrap_or(leaf_topic))
+		.map_err(|e| format!("decode leafIndex topic: {e}"))?;
+	let leaf_index = if leaf_bytes.len() >= 4 {
+		u32::from_be_bytes(leaf_bytes[leaf_bytes.len() - 4..].try_into().unwrap())
+	} else {
+		0
+	};
+
+	info!("Found Deposit event for commitment: leaf_index={}", leaf_index);
+	Ok(leaf_index)
 }
 
 /// Reconstruct the Merkle authentication path for `leaf_index`.

@@ -75,6 +75,15 @@ async fn main() -> Result<(), ()> {
 			export_bundler_key(args).await?;
 		},
 		Commands::Run(args) => {
+			// Install a SIGINT handler early so Ctrl+C always terminates the process,
+			// even if a later panic leaves the async runtime in a broken state.
+			tokio::spawn(async {
+				match tokio::signal::ctrl_c().await {
+					Ok(()) => std::process::exit(0),
+					Err(e) => eprintln!("Unable to listen for shutdown signal: {e}"),
+				}
+			});
+
 			if args.enable_mock_server {
 				#[cfg(feature = "mock-server")]
 				{
@@ -516,7 +525,7 @@ async fn main() -> Result<(), ()> {
 				};
 
 			start_rpc_server(
-				worker_url.port().expect("Missing worker port"),
+				worker_url.port_or_known_default().expect("Missing worker port"),
 				shielding_key,
 				pumpx_api,
 				storage_db.clone(),
