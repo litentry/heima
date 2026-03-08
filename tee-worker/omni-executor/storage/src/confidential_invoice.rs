@@ -130,6 +130,34 @@ impl ConfidentialInvoiceStorage {
 		let key = Key { invoice_id: invoice_id.to_string() };
 		self.get(&key)
 	}
+
+	/// Get all invoices created by a given address (case-insensitive).
+	/// Scans the full storage prefix — acceptable for demo scale.
+	pub fn get_by_creator(&self, created_by: &str) -> Vec<ConfidentialInvoice> {
+		use oe_crypto::hashing::twox_128;
+		use rocksdb::{Direction, IteratorMode};
+
+		let prefix = twox_128(STORAGE_NAME.as_bytes()).to_vec();
+		let creator_lower = created_by.to_lowercase();
+		let mut results = Vec::new();
+
+		let db = self.db();
+		let iter = db.iterator(IteratorMode::From(&prefix, Direction::Forward));
+		for item in iter.flatten() {
+			let (k, v) = item;
+			if !k.starts_with(&prefix) {
+				break;
+			}
+			if let Ok(invoice) = ConfidentialInvoice::decode(&mut &v[..]) {
+				if invoice.created_by.to_lowercase() == creator_lower {
+					results.push(invoice);
+				}
+			}
+		}
+
+		results.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+		results
+	}
 }
 
 impl Storage<Key, ConfidentialInvoice> for ConfidentialInvoiceStorage {

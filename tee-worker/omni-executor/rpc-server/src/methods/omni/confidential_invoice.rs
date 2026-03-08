@@ -365,6 +365,62 @@ pub fn register_confidential_invoice<
 		})
 		.expect("Failed to register omni_payConfidentialInvoice");
 
+	// List invoices by creator address
+	#[derive(Debug, Deserialize)]
+	struct ListInvoicesByCreatorParams {
+		created_by: String,
+	}
+
+	#[derive(Debug, Clone, Serialize)]
+	struct InvoiceSummary {
+		invoice_id: String,
+		description: String,
+		status: String,
+		total_amount_raw: String,
+		created_at: u64,
+		token_address: String,
+		chain_id: u64,
+	}
+
+	#[derive(Debug, Clone, Serialize)]
+	struct ListInvoicesByCreatorResponse {
+		invoices: Vec<InvoiceSummary>,
+	}
+
+	module
+		.register_async_method("omni_listInvoicesByCreator", |params, ctx, _ext| async move {
+			let params = parse_rpc_params::<ListInvoicesByCreatorParams>(params)?;
+
+			debug!("Received omni_listInvoicesByCreator, created_by: {}", params.created_by);
+
+			let invoices = ctx.confidential_invoice_storage.get_by_creator(&params.created_by);
+
+			let summaries: Vec<InvoiceSummary> = invoices
+				.into_iter()
+				.map(|inv| {
+					let total_amount_raw = decrypt_amount(&inv.encrypted_amount, &ctx.aes256_key)
+						.map(|a| a.to_string())
+						.unwrap_or_default();
+					InvoiceSummary {
+						invoice_id: inv.invoice_id,
+						description: inv.metadata.description,
+						status: format!("{:?}", inv.status),
+						total_amount_raw,
+						created_at: inv.created_at,
+						token_address: inv.metadata.currency,
+						chain_id: inv.metadata.chain_id,
+					}
+				})
+				.collect();
+
+			info!("Listed {} invoices for creator: {}", summaries.len(), params.created_by);
+
+			Ok::<ListInvoicesByCreatorResponse, ErrorObjectOwned>(ListInvoicesByCreatorResponse {
+				invoices: summaries,
+			})
+		})
+		.expect("Failed to register omni_listInvoicesByCreator");
+
 	// Delete invoice (for testing/admin)
 	#[derive(Debug, Deserialize)]
 	struct DeleteInvoiceParams {
