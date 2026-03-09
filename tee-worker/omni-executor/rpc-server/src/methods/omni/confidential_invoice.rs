@@ -456,6 +456,54 @@ pub fn register_confidential_invoice<
 			}))
 		})
 		.expect("Failed to register omni_deleteInvoice");
+
+	// Mark invoice as paid after on-chain deposit confirms
+	#[derive(Debug, Deserialize)]
+	struct MarkInvoicePaidParams {
+		invoice_id: String,
+		tx_hash: String,
+	}
+
+	module
+		.register_async_method("omni_markInvoicePaid", |params, ctx, _ext| async move {
+			let params = parse_rpc_params::<MarkInvoicePaidParams>(params)?;
+
+			debug!(
+				"Received omni_markInvoicePaid, invoice_id: {}, tx_hash: {}",
+				params.invoice_id, params.tx_hash
+			);
+
+			let invoice = ctx
+				.confidential_invoice_storage
+				.get_by_id(&params.invoice_id)
+				.map_err_internal("Failed to get invoice")?
+				.ok_or_else(|| {
+					DetailedError::invalid_params("invoice_id", "Invoice not found").to_rpc_error()
+				})?;
+
+			if invoice.status != InvoiceStatus::Pending {
+				return Err(DetailedError::invalid_params(
+					"invoice_id",
+					"Invoice is not in pending status",
+				)
+				.to_rpc_error());
+			}
+
+			ctx.confidential_invoice_storage
+				.update(&params.invoice_id, |inv| {
+					inv.status = InvoiceStatus::Paid;
+					inv.tx_hash = Some(params.tx_hash.clone());
+				})
+				.map_err_internal("Failed to update invoice status")?;
+
+			info!("Invoice {} marked as paid, tx: {}", params.invoice_id, params.tx_hash);
+
+			Ok::<serde_json::Value, ErrorObjectOwned>(serde_json::json!({
+				"success": true,
+				"invoice_id": params.invoice_id
+			}))
+		})
+		.expect("Failed to register omni_markInvoicePaid");
 }
 
 #[cfg(test)]
