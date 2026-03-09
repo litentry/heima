@@ -86,20 +86,6 @@ pub struct GetInvoiceDetailsResponse {
 	pub recipients: Vec<RecipientDetails>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct PayInvoiceParams {
-	pub invoice_id: String,
-	pub buyer_account: String, // For verification
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct PayInvoiceResponse {
-	pub status: String,
-	pub message: String,
-	pub amount: String, // Decrypted total amount for buyer to confirm
-	pub commitment: String,
-}
-
 pub fn register_confidential_invoice<
 	CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static,
 >(
@@ -318,52 +304,6 @@ pub fn register_confidential_invoice<
 			})
 		})
 		.expect("Failed to register omni_getInvoiceDetails");
-
-	// Pay confidential invoice (legacy helper — returns total amount for buyer to verify)
-	module
-		.register_async_method("omni_payConfidentialInvoice", |params, ctx, _ext| async move {
-			let params = parse_rpc_params::<PayInvoiceParams>(params)?;
-
-			debug!(
-				"Received omni_payConfidentialInvoice, invoice_id: {}, buyer: {}",
-				params.invoice_id, params.buyer_account
-			);
-
-			let invoice = ctx
-				.confidential_invoice_storage
-				.get_by_id(&params.invoice_id)
-				.map_err_internal("Failed to get invoice")?
-				.ok_or_else(|| {
-					error!("Invoice not found: {}", params.invoice_id);
-					DetailedError::invalid_params("invoice_id", "Invoice not found")
-				})?;
-
-			if invoice.status != InvoiceStatus::Pending {
-				return Err(DetailedError::invalid_params(
-					"invoice_id",
-					"Invoice is not in pending status",
-				)
-				.to_rpc_error());
-			}
-
-			let amount_units = decrypt_amount(&invoice.encrypted_amount, &ctx.aes256_key)
-				.map_err_internal("Failed to decrypt amount")?;
-
-			info!("Prepared payment info for invoice: {}", params.invoice_id);
-
-			// Return raw token units — the frontend knows the token decimals
-			// and must do the conversion itself to avoid hardcoding decimals here.
-			Ok::<PayInvoiceResponse, ErrorObjectOwned>(PayInvoiceResponse {
-				status: "ready_to_pay".to_string(),
-				message: format!(
-					"Invoice amount (raw units): {}. Please proceed with payment.",
-					amount_units
-				),
-				amount: amount_units.to_string(),
-				commitment: hex::encode(invoice.commitment),
-			})
-		})
-		.expect("Failed to register omni_payConfidentialInvoice");
 
 	// List invoices by creator address
 	#[derive(Debug, Deserialize)]
