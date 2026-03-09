@@ -58,10 +58,10 @@ pub fn register_withdraw_from_pool<
 					DetailedError::invalid_params("invoice_id", "Invoice not found")
 				})?;
 
-			if invoice.status != InvoiceStatus::Pending {
+			if invoice.status != InvoiceStatus::Paid {
 				return Err(DetailedError::invalid_params(
 					"invoice_id",
-					"Invoice is not in pending status",
+					"Invoice is not in paid status",
 				)
 				.to_rpc_error());
 			}
