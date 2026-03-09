@@ -96,13 +96,20 @@ pub fn register_withdraw_from_pool<
 			} else {
 				let commitment = generate_pool_commitment(&pool_secret, amount)
 					.map_err_internal("Failed to compute commitment for leaf lookup")?;
-				query_leaf_index_for_commitment(
-					&ctx.eth_rpc_url,
-					&ctx.privacy_pool_address,
-					&commitment,
-				)
-				.await
-				.map_err_internal("Failed to query leaf index for commitment")?
+				// Prefer receipt lookup (targeted, no block-range limits) when tx_hash is available.
+				if let Some(ref tx_hash) = invoice.tx_hash {
+					query_leaf_index_from_receipt(&ctx.eth_rpc_url, tx_hash, &commitment)
+						.await
+						.map_err_internal("Failed to query leaf index from receipt")?
+				} else {
+					query_leaf_index_for_commitment(
+						&ctx.eth_rpc_url,
+						&ctx.privacy_pool_address,
+						&commitment,
+					)
+					.await
+					.map_err_internal("Failed to query leaf index for commitment")?
+				}
 			};
 
 			let nullifier = generate_nullifier(&pool_secret, leaf_index)
@@ -237,6 +244,72 @@ async fn query_merkle_state(
 	}
 
 	Ok((filled_subtrees, next_index, root))
+}
+
+/// Query on-chain `Deposit` events to find the `leafIndex` for a given commitment.
+///
+/// Extract the `leafIndex` from a known deposit transaction receipt by scanning its logs
+/// for the `Deposit(commitment, leafIndex, amount)` event matching the given commitment.
+/// Avoids block-range `eth_getLogs` queries that may fail on restricted RPC nodes.
+async fn query_leaf_index_from_receipt(
+	rpc_url: &str,
+	tx_hash: &str,
+	commitment: &[u8; 32],
+) -> Result<u32, String> {
+	use serde_json::json;
+
+	const DEPOSIT_TOPIC: &str =
+		"0x2813ca2762c14ad53880ef467c7448a9015904c20e064e6216ffb3f63390ec5d";
+	let commitment_topic = format!("0x{}", hex::encode(commitment));
+
+	let client = reqwest::Client::new();
+	let body = json!({
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "eth_getTransactionReceipt",
+		"params": [tx_hash]
+	});
+
+	let resp = client
+		.post(rpc_url)
+		.json(&body)
+		.send()
+		.await
+		.map_err(|e| format!("eth_getTransactionReceipt request: {e}"))?;
+	let json: serde_json::Value =
+		resp.json().await.map_err(|e| format!("eth_getTransactionReceipt parse: {e}"))?;
+
+	let logs = json["result"]["logs"]
+		.as_array()
+		.ok_or_else(|| format!("No logs in receipt for tx {tx_hash}"))?;
+
+	for log in logs {
+		let topics = match log["topics"].as_array() {
+			Some(t) => t,
+			None => continue,
+		};
+		let t0 = topics.get(0).and_then(|t| t.as_str()).unwrap_or("");
+		let t1 = topics.get(1).and_then(|t| t.as_str()).unwrap_or("");
+		if !t0.eq_ignore_ascii_case(DEPOSIT_TOPIC) || !t1.eq_ignore_ascii_case(&commitment_topic) {
+			continue;
+		}
+		// topics[2] = leafIndex (indexed uint32, padded to 32 bytes)
+		let leaf_topic = topics
+			.get(2)
+			.and_then(|t| t.as_str())
+			.ok_or("no leafIndex topic in receipt log")?;
+		let leaf_bytes = hex::decode(leaf_topic.strip_prefix("0x").unwrap_or(leaf_topic))
+			.map_err(|e| format!("decode leafIndex from receipt: {e}"))?;
+		let leaf_index = if leaf_bytes.len() >= 4 {
+			u32::from_be_bytes(leaf_bytes[leaf_bytes.len() - 4..].try_into().unwrap())
+		} else {
+			0
+		};
+		info!("Found Deposit in receipt {}: leaf_index={}", tx_hash, leaf_index);
+		return Ok(leaf_index);
+	}
+
+	Err(format!("No matching Deposit log in receipt for tx {tx_hash}"))
 }
 
 /// Query on-chain `Deposit` events to find the `leafIndex` for a given commitment.
