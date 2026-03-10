@@ -27,7 +27,7 @@ fs.mounts = [
 
 sgx.debug = {{ 'true' if env.get('SGX_DEBUG', '0') == '1' else 'false' }}
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-sgx.enclave_size = "2G"
+sgx.enclave_size = "4G"
 
 # dns
 sys.enable_extra_runtime_domain_names_conf = true
