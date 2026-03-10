@@ -2,8 +2,7 @@ use ark_ff::PrimeField;
 use num_bigint::BigInt;
 use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
 use wasmer::{Engine, Store};
-use wasmer::sys::{BaseTunables, EngineBuilder};
-use wasmer_compiler_singlepass::Singlepass;
+use wasmer::sys::{BaseTunables, EngineBuilder, NativeEngineExt, Singlepass};
 
 use super::{CircomCircuit, R1CS};
 
