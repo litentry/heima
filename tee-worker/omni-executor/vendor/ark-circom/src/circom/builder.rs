@@ -1,7 +1,9 @@
 use ark_ff::PrimeField;
 use num_bigint::BigInt;
 use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
-use wasmer::Store;
+use wasmer::{Engine, Store};
+use wasmer::sys::{BaseTunables, EngineBuilder};
+use wasmer_compiler_singlepass::Singlepass;
 
 use super::{CircomCircuit, R1CS};
 
@@ -10,6 +12,21 @@ use crate::{
     witness::{Wasm, WitnessCalculator},
 };
 use color_eyre::Result;
+
+/// Creates a Wasmer Store with singlepass compiler and a custom tunable that
+/// forces Dynamic memory style. The default BaseTunables on 64-bit sets
+/// static_memory_bound = 65536 pages, causing wasmer to reserve a single
+/// 4GB + 2GB guard mmap — which fails inside SGX enclaves.
+/// Setting static_memory_bound = 0 forces all wasm memories to Dynamic style,
+/// which only allocates the actual minimum pages + a small guard (~64KB).
+fn sgx_store() -> Store {
+    let mut engine: Engine = EngineBuilder::new(Singlepass::default()).into();
+    let mut tunables = BaseTunables::for_target(engine.target());
+    tunables.static_memory_bound = 0.into();
+    tunables.static_memory_offset_guard_size = 0;
+    engine.set_tunables(tunables);
+    Store::new(engine)
+}
 
 #[derive(Debug)]
 pub struct CircomBuilder<F: PrimeField> {
@@ -28,7 +45,7 @@ pub struct CircomConfig<F: PrimeField> {
 
 impl<F: PrimeField> CircomConfig<F> {
     pub fn new(wtns: impl AsRef<Path>, r1cs: impl AsRef<Path>) -> Result<Self> {
-        let mut store = Store::default();
+        let mut store = sgx_store();
         let wtns = WitnessCalculator::new(&mut store, wtns).unwrap();
         let reader = BufReader::new(File::open(r1cs)?);
         let r1cs = R1CSFile::new(reader)?.into();
@@ -41,7 +58,7 @@ impl<F: PrimeField> CircomConfig<F> {
     }
 
     pub fn new_from_wasm(wasm: Wasm, r1cs: impl AsRef<Path>) -> Result<Self> {
-        let mut store = Store::default();
+        let mut store = sgx_store();
         let wtns = WitnessCalculator::new_from_wasm(&mut store, wasm).unwrap();
         let reader = File::open(r1cs)?;
         let r1cs = R1CSFile::new(reader)?.into();

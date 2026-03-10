@@ -61,10 +61,7 @@ impl WitnessCalculator {
     }
 
     pub fn make_wasm_runtime(store: &mut Store, module: Module) -> Result<Wasm> {
-        // Use an explicit maximum to force wasmer into Dynamic memory style,
-        // which avoids a 4GB+ static mmap reservation incompatible with SGX enclaves.
-        // The withdraw circuit requires only 38 Wasm pages; 512 gives generous headroom.
-        let memory = Memory::new(store, MemoryType::new(38, Some(512), false)).unwrap();
+        let memory = Memory::new(store, MemoryType::new(2000, None, false)).unwrap();
         let import_object = imports! {
             "env" => {
                 "memory" => memory.clone(),
