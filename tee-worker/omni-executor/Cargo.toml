@@ -122,3 +122,8 @@ heima-utils = { path = "../../parachain/utils", default-features = false, featur
 
 [workspace.lints.clippy]
 result_unit_err = "allow"
+
+[patch.crates-io]
+# Patched to reduce initial Wasm memory from 2000 pages (128MB) to 150 pages (9.6MB)
+# The withdraw circuit only needs 38 pages; 2000 causes mmap failures inside SGX enclaves
+ark-circom = { path = "vendor/ark-circom" }

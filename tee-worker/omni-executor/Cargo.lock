@@ -1171,8 +1171,6 @@ dependencies = [
 [[package]]
 name = "ark-circom"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ebc2533f01222bf1ea7158ff32cb90102824f1e3b2c74415194ebfead6d2f34"
 dependencies = [
  "ark-bn254 0.5.0",
  "ark-crypto-primitives",
