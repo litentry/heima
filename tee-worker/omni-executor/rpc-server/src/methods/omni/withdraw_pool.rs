@@ -13,6 +13,7 @@ use oe_crypto::privacy_pool::{
 	generate_nullifier, generate_pool_commitment, generate_withdrawal_proof,
 };
 use oe_storage::confidential_invoice::InvoiceStatus;
+use oe_storage::RecipientWithdrawalStorage;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tracing::{debug, error, info};
@@ -78,6 +79,19 @@ pub fn register_withdraw_from_pool<
 					)
 					.to_rpc_error()
 				})?;
+
+			let withdrawal_storage = RecipientWithdrawalStorage::new(ctx.storage_db.clone());
+			if withdrawal_storage
+				.get_by_invoice_and_recipient(&params.invoice_id, &params.seller_address)
+				.map_err_internal("Failed to query withdrawal state")?
+				.is_some()
+			{
+				return Err(DetailedError::invalid_params(
+					"seller_address",
+					"Recipient has already withdrawn this invoice",
+				)
+				.to_rpc_error());
+			}
 
 			let pool_secret = recipient.pool_secret.ok_or_else(|| {
 				DetailedError::invalid_params(

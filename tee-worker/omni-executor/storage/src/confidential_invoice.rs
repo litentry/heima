@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 const STORAGE_NAME: &str = "confidential_invoice_storage";
+const WITHDRAWAL_STORAGE_NAME: &str = "confidential_invoice_withdrawal_storage";
 
 #[derive(Encode)]
 pub struct Key {
@@ -15,6 +16,7 @@ pub struct Key {
 pub enum InvoiceStatus {
 	Pending,
 	Paid,
+	Withdrawn,
 	Expired,
 	Cancelled,
 }
@@ -63,6 +65,20 @@ pub struct ConfidentialInvoice {
 	pub pool_tx_hash: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
+pub struct WithdrawalKey {
+	pub invoice_id: String,
+	pub recipient_address: String,
+}
+
+#[derive(Debug, Clone, Encode, Decode, Serialize, Deserialize)]
+pub struct RecipientWithdrawal {
+	pub invoice_id: String,
+	pub recipient_address: String,
+	pub tx_hash: String,
+	pub withdrawn_at: u64,
+}
+
 /// Parameters for creating a new confidential invoice
 pub struct NewConfidentialInvoice {
 	pub invoice_id: String,
@@ -75,6 +91,10 @@ pub struct NewConfidentialInvoice {
 }
 
 pub struct ConfidentialInvoiceStorage {
+	db: Arc<DB>,
+}
+
+pub struct RecipientWithdrawalStorage {
 	db: Arc<DB>,
 }
 
@@ -160,6 +180,80 @@ impl ConfidentialInvoiceStorage {
 	}
 }
 
+impl RecipientWithdrawalStorage {
+	pub fn new(db: Arc<DB>) -> Self {
+		Self { db }
+	}
+
+	pub fn create(
+		&self,
+		invoice_id: &str,
+		recipient_address: &str,
+		tx_hash: &str,
+	) -> Result<RecipientWithdrawal, String> {
+		let key = WithdrawalKey {
+			invoice_id: invoice_id.to_string(),
+			recipient_address: normalize_address(recipient_address),
+		};
+
+		if self.contains_key(&key) {
+			return Err(format!(
+				"Withdrawal already recorded for invoice {} and recipient {}",
+				invoice_id, recipient_address
+			));
+		}
+
+		let record = RecipientWithdrawal {
+			invoice_id: invoice_id.to_string(),
+			recipient_address: key.recipient_address.clone(),
+			tx_hash: tx_hash.to_string(),
+			withdrawn_at: current_timestamp(),
+		};
+
+		self.insert(&key, record.clone())
+			.map_err(|e| format!("Failed to insert withdrawal record: {:?}", e))?;
+
+		Ok(record)
+	}
+
+	pub fn get_by_invoice_and_recipient(
+		&self,
+		invoice_id: &str,
+		recipient_address: &str,
+	) -> Result<Option<RecipientWithdrawal>, ()> {
+		let key = WithdrawalKey {
+			invoice_id: invoice_id.to_string(),
+			recipient_address: normalize_address(recipient_address),
+		};
+		self.get(&key)
+	}
+
+	pub fn get_by_invoice(&self, invoice_id: &str) -> Vec<RecipientWithdrawal> {
+		use oe_crypto::hashing::twox_128;
+		use rocksdb::{Direction, IteratorMode};
+
+		let prefix = twox_128(WITHDRAWAL_STORAGE_NAME.as_bytes()).to_vec();
+		let mut results = Vec::new();
+
+		let db = self.db();
+		let iter = db.iterator(IteratorMode::From(&prefix, Direction::Forward));
+		for item in iter.flatten() {
+			let (k, v) = item;
+			if !k.starts_with(&prefix) {
+				break;
+			}
+			if let Ok(withdrawal) = RecipientWithdrawal::decode(&mut &v[..]) {
+				if withdrawal.invoice_id == invoice_id {
+					results.push(withdrawal);
+				}
+			}
+		}
+
+		results.sort_by(|a, b| a.recipient_address.cmp(&b.recipient_address));
+		results
+	}
+}
+
 impl Storage<Key, ConfidentialInvoice> for ConfidentialInvoiceStorage {
 	fn db(&self) -> Arc<crate::StorageDB> {
 		self.db.clone()
@@ -168,6 +262,20 @@ impl Storage<Key, ConfidentialInvoice> for ConfidentialInvoiceStorage {
 	fn name(&self) -> &'static str {
 		STORAGE_NAME
 	}
+}
+
+impl Storage<WithdrawalKey, RecipientWithdrawal> for RecipientWithdrawalStorage {
+	fn db(&self) -> Arc<crate::StorageDB> {
+		self.db.clone()
+	}
+
+	fn name(&self) -> &'static str {
+		WITHDRAWAL_STORAGE_NAME
+	}
+}
+
+fn normalize_address(address: &str) -> String {
+	address.to_lowercase()
 }
 
 /// Get current Unix timestamp in seconds

@@ -25,7 +25,9 @@ use oe_crypto::confidential::{decrypt_amount, encrypt_amount, generate_commitmen
 use oe_storage::confidential_invoice::{
 	InvoiceMetadata, InvoiceStatus, NewConfidentialInvoice, Recipient,
 };
+use oe_storage::{ConfidentialInvoice, RecipientWithdrawal, RecipientWithdrawalStorage};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tracing::{debug, error, info};
 
 /// One recipient specified when creating an invoice.
@@ -69,6 +71,8 @@ pub struct GetInvoiceDetailsParams {
 pub struct RecipientDetails {
 	pub address: String,
 	pub amount: Option<String>, // Decrypted raw amount (only shown when authorized)
+	pub withdrawal_tx_hash: Option<String>,
+	pub withdrawn_at: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -78,12 +82,68 @@ pub struct GetInvoiceDetailsResponse {
 	pub token_address: String,  // ERC20 token contract address
 	pub description: String,
 	pub status: InvoiceStatus,
+	pub withdrawn_at: Option<u64>,
 	pub created_at: u64,
 	pub tx_hash: Option<String>,
 	pub created_by: String,
 	pub buyer_identifier: String,
 	pub chain_id: u64,
 	pub recipients: Vec<RecipientDetails>,
+}
+
+fn withdrawals_by_recipient(
+	withdrawals: Vec<RecipientWithdrawal>,
+) -> HashMap<String, RecipientWithdrawal> {
+	withdrawals
+		.into_iter()
+		.map(|withdrawal| (withdrawal.recipient_address.clone(), withdrawal))
+		.collect()
+}
+
+fn aggregate_invoice_status(
+	invoice: &ConfidentialInvoice,
+	withdrawals: &HashMap<String, RecipientWithdrawal>,
+) -> InvoiceStatus {
+	if invoice.status != InvoiceStatus::Paid && invoice.status != InvoiceStatus::Withdrawn {
+		return invoice.status.clone();
+	}
+
+	let all_withdrawn = !invoice.recipients.is_empty()
+		&& invoice
+			.recipients
+			.iter()
+			.all(|recipient| withdrawals.contains_key(&recipient.address.to_lowercase()));
+
+	if all_withdrawn {
+		InvoiceStatus::Withdrawn
+	} else {
+		InvoiceStatus::Paid
+	}
+}
+
+fn invoice_withdrawn_at(
+	withdrawals: &HashMap<String, RecipientWithdrawal>,
+	recipient_count: usize,
+) -> Option<u64> {
+	if recipient_count == 0 || withdrawals.len() != recipient_count {
+		return None;
+	}
+
+	withdrawals.values().map(|withdrawal| withdrawal.withdrawn_at).max()
+}
+
+fn seller_display_status(
+	aggregate_status: &InvoiceStatus,
+	withdrawals: &HashMap<String, RecipientWithdrawal>,
+	viewer_address: Option<&str>,
+) -> String {
+	if let Some(viewer_address) = viewer_address {
+		if withdrawals.contains_key(&viewer_address.to_lowercase()) {
+			return "Withdrawn".to_string();
+		}
+	}
+
+	format!("{:?}", aggregate_status)
 }
 
 pub fn register_confidential_invoice<
@@ -257,6 +317,11 @@ pub fn register_confidential_invoice<
 
 			// MVP: allow anyone to view (production: verify JWT)
 			let is_authorized = true;
+			let withdrawal_storage = RecipientWithdrawalStorage::new(ctx.storage_db.clone());
+			let withdrawals =
+				withdrawals_by_recipient(withdrawal_storage.get_by_invoice(&invoice.invoice_id));
+			let aggregate_status = aggregate_invoice_status(&invoice, &withdrawals);
+			let withdrawn_at = invoice_withdrawn_at(&withdrawals, invoice.recipients.len());
 
 			let amount = if is_authorized {
 				let amount_units = decrypt_amount(&invoice.encrypted_amount, &ctx.aes256_key)
@@ -271,6 +336,7 @@ pub fn register_confidential_invoice<
 				.recipients
 				.iter()
 				.map(|r| {
+					let withdrawal = withdrawals.get(&r.address.to_lowercase());
 					let recipient_amount = if is_authorized {
 						decrypt_amount(&r.encrypted_amount, &ctx.aes256_key)
 							.ok()
@@ -278,7 +344,12 @@ pub fn register_confidential_invoice<
 					} else {
 						None
 					};
-					RecipientDetails { address: r.address.clone(), amount: recipient_amount }
+					RecipientDetails {
+						address: r.address.clone(),
+						amount: recipient_amount,
+						withdrawal_tx_hash: withdrawal.map(|record| record.tx_hash.clone()),
+						withdrawn_at: withdrawal.map(|record| record.withdrawn_at),
+					}
 				})
 				.collect();
 
@@ -294,7 +365,8 @@ pub fn register_confidential_invoice<
 				amount,
 				token_address: invoice.metadata.currency.clone(),
 				description: invoice.metadata.description,
-				status: invoice.status,
+				status: aggregate_status,
+				withdrawn_at,
 				created_at: invoice.created_at,
 				tx_hash: invoice.tx_hash,
 				chain_id: invoice.metadata.chain_id,
@@ -309,6 +381,7 @@ pub fn register_confidential_invoice<
 	#[derive(Debug, Deserialize)]
 	struct ListInvoicesByCreatorParams {
 		created_by: String,
+		viewer_address: Option<String>,
 	}
 
 	#[derive(Debug, Clone, Serialize)]
@@ -316,8 +389,11 @@ pub fn register_confidential_invoice<
 		invoice_id: String,
 		description: String,
 		status: String,
+		display_status: String,
 		total_amount_raw: String,
 		created_at: u64,
+		withdrawal_tx_hash: Option<String>,
+		withdrawn_at: Option<u64>,
 		token_address: String,
 		chain_id: u64,
 	}
@@ -334,19 +410,35 @@ pub fn register_confidential_invoice<
 			debug!("Received omni_listInvoicesByCreator, created_by: {}", params.created_by);
 
 			let invoices = ctx.confidential_invoice_storage.get_by_creator(&params.created_by);
+			let withdrawal_storage = RecipientWithdrawalStorage::new(ctx.storage_db.clone());
 
 			let summaries: Vec<InvoiceSummary> = invoices
 				.into_iter()
 				.map(|inv| {
+					let withdrawals = withdrawals_by_recipient(
+						withdrawal_storage.get_by_invoice(&inv.invoice_id),
+					);
+					let aggregate_status = aggregate_invoice_status(&inv, &withdrawals);
+					let viewer_withdrawal = params
+						.viewer_address
+						.as_ref()
+						.and_then(|viewer| withdrawals.get(&viewer.to_lowercase()));
 					let total_amount_raw = decrypt_amount(&inv.encrypted_amount, &ctx.aes256_key)
 						.map(|a| a.to_string())
 						.unwrap_or_default();
 					InvoiceSummary {
 						invoice_id: inv.invoice_id,
 						description: inv.metadata.description,
-						status: format!("{:?}", inv.status),
+						status: format!("{:?}", aggregate_status),
+						display_status: seller_display_status(
+							&aggregate_status,
+							&withdrawals,
+							params.viewer_address.as_deref(),
+						),
 						total_amount_raw,
 						created_at: inv.created_at,
+						withdrawal_tx_hash: viewer_withdrawal.map(|record| record.tx_hash.clone()),
+						withdrawn_at: viewer_withdrawal.map(|record| record.withdrawn_at),
 						token_address: inv.metadata.currency,
 						chain_id: inv.metadata.chain_id,
 					}
@@ -404,6 +496,13 @@ pub fn register_confidential_invoice<
 		tx_hash: String,
 	}
 
+	#[derive(Debug, Deserialize)]
+	struct MarkInvoiceWithdrawnParams {
+		invoice_id: String,
+		seller_address: String,
+		tx_hash: String,
+	}
+
 	module
 		.register_async_method("omni_markInvoicePaid", |params, ctx, _ext| async move {
 			let params = parse_rpc_params::<MarkInvoicePaidParams>(params)?;
@@ -444,6 +543,75 @@ pub fn register_confidential_invoice<
 			}))
 		})
 		.expect("Failed to register omni_markInvoicePaid");
+
+	module
+		.register_async_method("omni_markInvoiceWithdrawn", |params, ctx, _ext| async move {
+			let params = parse_rpc_params::<MarkInvoiceWithdrawnParams>(params)?;
+
+			debug!(
+				"Received omni_markInvoiceWithdrawn, invoice_id: {}, seller_address: {}, tx_hash: {}",
+				params.invoice_id, params.seller_address, params.tx_hash
+			);
+
+			let invoice = ctx
+				.confidential_invoice_storage
+				.get_by_id(&params.invoice_id)
+				.map_err_internal("Failed to get invoice")?
+				.ok_or_else(|| {
+					DetailedError::invalid_params("invoice_id", "Invoice not found").to_rpc_error()
+				})?;
+
+			if invoice.status != InvoiceStatus::Paid && invoice.status != InvoiceStatus::Withdrawn {
+				return Err(DetailedError::invalid_params(
+					"invoice_id",
+					"Invoice is not in paid status",
+				)
+				.to_rpc_error());
+			}
+
+			let seller_lower = params.seller_address.to_lowercase();
+			if !invoice
+				.recipients
+				.iter()
+				.any(|recipient| recipient.address.to_lowercase() == seller_lower)
+			{
+				return Err(DetailedError::invalid_params(
+					"seller_address",
+					"Address is not a recipient of this invoice",
+				)
+				.to_rpc_error());
+			}
+
+			let withdrawal_storage = RecipientWithdrawalStorage::new(ctx.storage_db.clone());
+			withdrawal_storage
+				.create(&params.invoice_id, &params.seller_address, &params.tx_hash)
+				.map_err(|message| {
+					DetailedError::invalid_params("seller_address", &message).to_rpc_error()
+				})?;
+
+			let withdrawals =
+				withdrawals_by_recipient(withdrawal_storage.get_by_invoice(&params.invoice_id));
+			let aggregate_status = aggregate_invoice_status(&invoice, &withdrawals);
+
+			ctx.confidential_invoice_storage
+				.update(&params.invoice_id, |inv| {
+					inv.status = aggregate_status.clone();
+				})
+				.map_err_internal("Failed to update invoice status")?;
+
+			info!(
+				"Invoice {} withdrawal recorded for seller {}, tx: {}",
+				params.invoice_id, params.seller_address, params.tx_hash
+			);
+
+			Ok::<serde_json::Value, ErrorObjectOwned>(serde_json::json!({
+				"success": true,
+				"invoice_id": params.invoice_id,
+				"status": format!("{:?}", aggregate_status),
+				"seller_address": params.seller_address
+			}))
+		})
+		.expect("Failed to register omni_markInvoiceWithdrawn");
 }
 
 #[cfg(test)]
@@ -559,5 +727,150 @@ mod tests {
 		assert_eq!(get_response.recipients.len(), 2);
 		assert_eq!(get_response.recipients[0].amount, Some("30000000000".to_string()));
 		assert_eq!(get_response.recipients[1].amount, Some("20000000000".to_string()));
+	}
+
+	#[tokio::test]
+	async fn test_mark_invoice_withdrawn_updates_status_and_summary() {
+		let tmp_dir = tempdir().unwrap();
+		let port = 2011;
+		let shielding_key = ShieldingKey::new();
+		let db = Arc::new(StorageDB::open_default(tmp_dir.path()).unwrap());
+
+		let mut rng = OsRng;
+		let rsa_private_key =
+			RsaPrivateKey::new(&mut rng, 2048).expect("Failed to generate private key");
+		let jwt_private_key = rsa_private_key.to_pkcs1_der().unwrap();
+		let pumpx_api = PumpxApiClient::new("https://api.pumpx.ai".to_string());
+		let config_loader = ConfigLoader::from_env();
+		let signer_client: Arc<Box<dyn SignerClient>> = Arc::new(Box::new(MockSignerClient::new()));
+		let oe_client_binance_client: Arc<dyn oe_client_binance::BinancePaymasterApi> =
+			Arc::new(MockBinanceApiClient::new());
+
+		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
+		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
+		let loan_record_storage = Arc::new(LoanRecordStorage::new(db.clone()));
+		let confidential_invoice_storage = Arc::new(ConfidentialInvoiceStorage::new(db.clone()));
+
+		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
+		let aes_key = [42u8; 32];
+		let entry_point_clients = HashMap::new();
+
+		start_server(
+			port,
+			shielding_key.clone(),
+			Arc::new(Box::new(pumpx_api)),
+			db,
+			jwt_private_key.as_bytes().to_vec(),
+			&config_loader,
+			signer_client,
+			oe_client_binance_client,
+			wildmeta_api,
+			wildmeta_timestamp_storage,
+			loan_record_storage,
+			confidential_invoice_storage,
+			[0u8; 33],
+			[0u8; 32],
+			[0u8; 33],
+			Arc::new(cross_chain_intent_executor),
+			aes_key,
+			Arc::new(entry_point_clients),
+		)
+		.await
+		.unwrap();
+
+		let url = format!("ws://127.0.0.1:{}", port);
+		let client = WsClientBuilder::default().build(&url).await.unwrap();
+
+		let create_response: CreateInvoiceResponse = client
+			.request(
+				"omni_createConfidentialInvoice",
+				rpc_params![
+					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0",
+					"buyer@example.com",
+					"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
+					421614u64,
+					"Test invoice",
+					serde_json::json!([
+						{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", "amount": "30000000000"},
+						{"address": "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01", "amount": "20000000000"}
+					])
+				],
+			)
+			.await
+			.unwrap();
+
+		let _: serde_json::Value = client
+			.request(
+				"omni_markInvoicePaid",
+				rpc_params![create_response.invoice_id.clone(), "0xpaidtx"],
+			)
+			.await
+			.unwrap();
+
+		let _: serde_json::Value = client
+			.request(
+				"omni_markInvoiceWithdrawn",
+				rpc_params![
+					create_response.invoice_id.clone(),
+					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0",
+					"0xwithdrawtx1"
+				],
+			)
+			.await
+			.unwrap();
+
+		let list_response: serde_json::Value = client
+			.request(
+				"omni_listInvoicesByCreator",
+				rpc_params![
+					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0",
+					Some("0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0".to_string())
+				],
+			)
+			.await
+			.unwrap();
+
+		assert_eq!(list_response["invoices"][0]["status"], "Paid");
+		assert_eq!(list_response["invoices"][0]["display_status"], "Withdrawn");
+		assert_eq!(list_response["invoices"][0]["withdrawal_tx_hash"], "0xwithdrawtx1");
+
+		let get_response: GetInvoiceDetailsResponse = client
+			.request(
+				"omni_getInvoiceDetails",
+				rpc_params![create_response.invoice_id.clone(), None::<String>],
+			)
+			.await
+			.unwrap();
+
+		assert!(matches!(get_response.status, InvoiceStatus::Paid));
+		assert_eq!(
+			get_response.recipients[0].withdrawal_tx_hash,
+			Some("0xwithdrawtx1".to_string())
+		);
+		assert!(get_response.recipients[0].withdrawn_at.is_some());
+		assert_eq!(get_response.recipients[1].withdrawal_tx_hash, None);
+
+		let _: serde_json::Value = client
+			.request(
+				"omni_markInvoiceWithdrawn",
+				rpc_params![
+					create_response.invoice_id.clone(),
+					"0xAbCdEf0123456789AbCdEf0123456789AbCdEf01",
+					"0xwithdrawtx2"
+				],
+			)
+			.await
+			.unwrap();
+
+		let final_response: GetInvoiceDetailsResponse = client
+			.request(
+				"omni_getInvoiceDetails",
+				rpc_params![create_response.invoice_id, None::<String>],
+			)
+			.await
+			.unwrap();
+
+		assert!(matches!(final_response.status, InvoiceStatus::Withdrawn));
+		assert!(final_response.withdrawn_at.is_some());
 	}
 }
