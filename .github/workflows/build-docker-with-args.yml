@@ -42,7 +42,7 @@ jobs:
           docker images
 
       - name: Dockerhub login
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: litentry
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
