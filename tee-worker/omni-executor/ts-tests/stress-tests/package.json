@@ -31,7 +31,7 @@
     "pidusage": "^4.0.1",
     "systeminformation": "^5.31.4",
     "table": "^6.8.1",
-    "viem": "^2.47.1",
+    "viem": "^2.47.4",
     "ws": "^8.19.0"
   },
   "devDependencies": {
