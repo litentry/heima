@@ -24,21 +24,21 @@
     "author": "Heima Dev",
     "license": "ISC",
     "devDependencies": {
-        "@vitest/ui": "^4.0.18",
+        "@vitest/ui": "^4.1.0",
         "gts": "^7.0.0",
         "prettier": "^3.8.1",
         "ts-node": "^10.9.2",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
-        "vitest": "^4.0.18"
+        "vitest": "^4.1.0"
     },
     "dependencies": {
         "@polkadot/api": "^16.5.4",
         "@polkadot/api-augment": "^16.5.4",
-        "@polkadot/keyring": "^14.0.1",
+        "@polkadot/keyring": "^14.0.2",
         "@polkadot/types": "^16.5.4",
-        "@polkadot/util": "^14.0.1",
-        "@polkadot/util-crypto": "^14.0.1",
+        "@polkadot/util": "^14.0.2",
+        "@polkadot/util-crypto": "^14.0.2",
         "@types/bn.js": "^5.2.0",
         "add": "^2.0.6",
         "bn.js": "^5.2.3",
