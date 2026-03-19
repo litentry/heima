@@ -1,10 +1,10 @@
-// run: pnpm exec ts-node move-vcregistry-snapshot.ts
+// run: pnpm exec tsx move-vcregistry-snapshot.ts
 
 import { initApi } from './initApis';
-const fs = require('fs');
-const path = require('path');
-const prettier = require('prettier');
 import colors from 'colors';
+import fs from 'node:fs';
+import path from 'node:path';
+import prettier from 'prettier';
 
 //set the maximal calls are 500 per batch
 const BATCH_SIZE = 500;
@@ -18,9 +18,10 @@ async function encodeExtrinsic() {
         return { index: res[0].toHuman(), vc: res[1].toHuman() };
     });
 
-    const filename = `VCRegistry-${new Date().toISOString().slice(0, 10)}.json`;
+    const dateSuffix = new Date().toISOString().slice(0, 10);
+    const filename = `VCRegistry-${dateSuffix}.json`;
     const filepath = path.join(__dirname, filename);
-    const formattedData = prettier.format(JSON.stringify(data), {
+    const formattedData = await prettier.format(JSON.stringify(data), {
         parser: 'json',
         printWidth: 120,
         tabWidth: 2,
@@ -53,10 +54,10 @@ async function encodeExtrinsic() {
             // console.log(colors.green(`extrinsic ${i} encode`), extrinsics.toHex());
             txs = [];
             if (data.length === 0) {
-                const extrinsicsFilename = `extrinsics-${new Date().toISOString().slice(0, 10)}.json`;
+                const extrinsicsFilename = `extrinsics-${dateSuffix}.json`;
                 const extrinsicsFilepath = path.join(__dirname, extrinsicsFilename);
 
-                const formattedHexData = prettier.format(JSON.stringify(hexData), {
+                const formattedHexData = await prettier.format(JSON.stringify(hexData), {
                     parser: 'json',
                     printWidth: 120,
                     tabWidth: 2,

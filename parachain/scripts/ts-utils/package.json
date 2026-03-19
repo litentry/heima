@@ -11,15 +11,16 @@
     "license": "ISC",
     "dependencies": {
         "@polkadot/api": "^16.4.3",
+        "@polkadot/util": "^14.0.2",
         "@polkadot/util-crypto": "^14.0.1"
     },
     "devDependencies": {
         "@types/node": "^25.0.3",
         "colors": "^1.4.0",
         "ethers": "^6.15.0",
-        "exceljs": "^4.4.0",
         "prettier": "^3.6.2",
-        "ts-node": "^10.9.2",
+        "read-excel-file": "^6.0.1",
+        "tsx": "^4.21.0",
         "typescript": "^5.9.2"
     },
     "packageManager": "pnpm@9.15.2"
