@@ -1,9 +1,9 @@
-//run: pnpm exec ts-node transfer-to-whitelist.ts
+//run: pnpm exec tsx transfer-to-whitelist.ts
 
 import { initApi } from './initApis';
 import colors from 'colors';
-let whiteList: any;
-import * as ExcelJS from 'exceljs';
+import readXlsxFile from 'read-excel-file/node';
+let whiteList: string[] = [];
 //100 token
 const transferAmount = '100000000000000';
 
@@ -32,14 +32,15 @@ async function main() {
     //download whitelist from google sheet (https://docs.google.com/spreadsheets/d/1QD0gVraqDDOkdJk-vhLMZEbdnbAOt_ogiJ3uHau_1Kw/edit#gid=950765040)
     //put the whitelist in the same folder as this script
     //read whitelist from excel
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile('Whitelist R1 & R2.xlsx');
+    const rows = await readXlsxFile('Whitelist R1 & R2.xlsx', {
+        sheet: 'Whitelisted Addresses for R1',
+    });
 
-    // Read sheet 'Whitelisted Addresses for R1'
-    const worksheet = workbook.getWorksheet('Whitelisted Addresses for R1');
-
-    // Read the second column of the sheet and skip the first row
-    whiteList = worksheet.getColumn(2).values.slice(1);
+    // Read the second column of the sheet and skip the first row.
+    whiteList = rows
+        .slice(1)
+        .map((row) => row[1])
+        .filter((value): value is string => typeof value === 'string' && value.length > 0);
 
     // params: source chain endpoint, destination chain endpoint
     const { sourceApi } = await initApi('ws://localhost:9944', 'ws://localhost:9944');

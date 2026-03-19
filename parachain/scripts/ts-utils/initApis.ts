@@ -1,5 +1,5 @@
-const { ApiPromise, WsProvider } = require('@polkadot/api');
-const { cryptoWaitReady } = require('@polkadot/util-crypto');
+import { ApiPromise, WsProvider } from '@polkadot/api';
+import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 import colors from 'colors';
 

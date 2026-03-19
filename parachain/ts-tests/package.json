@@ -24,10 +24,9 @@
     "author": "Heima Dev",
     "license": "ISC",
     "devDependencies": {
+        "@types/node": "^25.0.3",
         "@vitest/ui": "^4.1.0",
-        "gts": "^7.0.0",
         "prettier": "^3.8.1",
-        "ts-node": "^10.9.2",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
         "vitest": "^4.1.0"
