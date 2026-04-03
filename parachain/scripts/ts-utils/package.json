@@ -19,9 +19,9 @@
         "colors": "^1.4.0",
         "ethers": "^6.15.0",
         "prettier": "^3.6.2",
-        "read-excel-file": "^6.0.1",
+        "read-excel-file": "^8.0.2",
         "tsx": "^4.21.0",
-        "typescript": "^5.9.2"
+        "typescript": "^6.0.2"
     },
     "packageManager": "pnpm@9.15.2"
 }
