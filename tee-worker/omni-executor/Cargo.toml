@@ -52,7 +52,7 @@ metrics-exporter-prometheus = "0.18.1"
 mockall = "0.14.0"
 p256 = { version = "0.13", features = ["ecdsa"] }
 parity-scale-codec = "3.6.12"
-rand = "0.10.0"
+rand = "0.10.1"
 regex = "1.7"
 reqwest = { version = "0.13", features = ["json", "form", "query"] }
 ring = "0.17.14"
