@@ -9,7 +9,8 @@ use crate::{
 };
 use chrono::Utc;
 use hyperliquid_rust_sdk::{
-	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, UserDexAbstraction, Withdraw3,
+	ApproveAgent, ApproveBuilderFee, Eip712, SendAsset, SpotSend, UsdClassTransfer,
+	UserDexAbstraction, Withdraw3,
 };
 use jsonrpsee::RpcModule;
 use oe_client_pumpx::pubkey_to_address;
@@ -70,6 +71,15 @@ pub enum HyperliquidActionType {
 		user: String,
 		enabled: bool,
 	},
+	SpotSend {
+		destination: String,
+		token: String,
+		amount: String,
+	},
+	UsdClassTransfer {
+		amount: String,
+		to_perp: bool,
+	},
 }
 
 #[derive(Serialize, Clone)]
@@ -93,6 +103,8 @@ pub enum HyperliquidAction {
 	ApproveBuilderFee(ApproveBuilderFee),
 	SendAsset(SendAsset),
 	UserDexAbstraction(UserDexAbstraction),
+	SpotSend(SpotSend),
+	UsdClassTransfer(UsdClassTransfer),
 }
 
 fn is_testnet_chain(chain_id: ChainId) -> bool {
@@ -400,6 +412,32 @@ pub fn register_get_hyperliquid_signature_data<
 					let signature =
 						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
 					(HyperliquidAction::UserDexAbstraction(action), signature)
+				},
+				HyperliquidActionType::SpotSend { destination, token, amount } => {
+					let _ = validate_evm_address(&destination, "destination")?;
+					let action = SpotSend {
+						signature_chain_id: params.chain_id,
+						hyperliquid_chain,
+						destination,
+						token,
+						amount,
+						time: nonce,
+					};
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					(HyperliquidAction::SpotSend(action), signature)
+				},
+				HyperliquidActionType::UsdClassTransfer { amount, to_perp } => {
+					let action = UsdClassTransfer {
+						signature_chain_id: params.chain_id,
+						hyperliquid_chain,
+						amount,
+						to_perp,
+						nonce,
+					};
+					let signature =
+						generate_eip712_signature(&ctx, &action, omni_account.as_ref()).await?;
+					(HyperliquidAction::UsdClassTransfer(action), signature)
 				},
 			};
 
@@ -747,6 +785,102 @@ mod tests {
 			params.action_type,
 			HyperliquidActionType::UserDexAbstraction { user, enabled }
 			if user == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10" && enabled
+		));
+		assert_eq!(params.chain_id, 42161);
+	}
+
+	#[test]
+	fn test_spot_send_action_signature() {
+		let action = SpotSend {
+			signature_chain_id: 42161,
+			hyperliquid_chain: "Mainnet".to_string(),
+			destination: "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10".to_string(),
+			token: "USDC:0x6d1e7cde53ba9467b783cb7c530ce054".to_string(),
+			amount: "100.0".to_string(),
+			time: 1234567890,
+		};
+
+		let domain = action.domain();
+		assert_eq!(domain.name, Some("HyperliquidSignTransaction".into()));
+		assert_eq!(domain.version, Some("1".into()));
+		assert_eq!(domain.chain_id, Some(alloy::primitives::U256::from(42161)));
+
+		let struct_hash = action.struct_hash();
+		assert_eq!(struct_hash.len(), 32);
+
+		let signing_hash = action.eip712_signing_hash();
+		assert_eq!(signing_hash.len(), 32);
+	}
+
+	#[test]
+	fn test_params_deserialization_spot_send() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "spot_send",
+			"destination": "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10",
+			"token": "USDC:0x6d1e7cde53ba9467b783cb7c530ce054",
+			"amount": "100.0"
+		},
+		"chain_id": 42161
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::SpotSend { destination, token, amount }
+			if destination == "0x742d35Cc6634C0532925a3b844Bc9e7595f02A10"
+				&& token == "USDC:0x6d1e7cde53ba9467b783cb7c530ce054"
+				&& amount == "100.0"
+		));
+		assert_eq!(params.chain_id, 42161);
+	}
+
+	#[test]
+	fn test_usd_class_transfer_action_signature() {
+		let action = UsdClassTransfer {
+			signature_chain_id: 42161,
+			hyperliquid_chain: "Mainnet".to_string(),
+			amount: "50.0".to_string(),
+			to_perp: false,
+			nonce: 1234567890,
+		};
+
+		let domain = action.domain();
+		assert_eq!(domain.name, Some("HyperliquidSignTransaction".into()));
+		assert_eq!(domain.version, Some("1".into()));
+		assert_eq!(domain.chain_id, Some(alloy::primitives::U256::from(42161)));
+
+		let struct_hash = action.struct_hash();
+		assert_eq!(struct_hash.len(), 32);
+
+		let signing_hash = action.eip712_signing_hash();
+		assert_eq!(signing_hash.len(), 32);
+	}
+
+	#[test]
+	fn test_params_deserialization_usd_class_transfer() {
+		let json = r#"{
+		"user_id": {"type": "email", "value": "test@example.com"},
+		"user_auth": {"type": "email", "value": "123456"},
+		"client_id": "test_client",
+		"action_type": {
+			"type": "usd_class_transfer",
+			"amount": "50.0",
+			"to_perp": false
+		},
+		"chain_id": 42161
+	}"#;
+
+		let params: GetHyperliquidSignatureDataParams = serde_json::from_str(json).unwrap();
+
+		assert!(matches!(
+			params.action_type,
+			HyperliquidActionType::UsdClassTransfer { amount, to_perp }
+			if amount == "50.0" && !to_perp
 		));
 		assert_eq!(params.chain_id, 42161);
 	}
