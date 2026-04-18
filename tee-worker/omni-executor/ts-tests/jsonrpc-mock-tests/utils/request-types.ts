@@ -140,13 +140,20 @@ export interface GetHyperliquidSignatureDataParams {
         };
     };
     action_type: {
-        type: 'approve_agent' | 'withdraw3' | 'approve_builder_fee';
+        type: 'approve_agent' | 'withdraw3' | 'approve_builder_fee' | 'send_asset' | 'user_dex_abstraction' | 'spot_send' | 'usd_class_transfer';
         agent_address?: string;
         agent_name?: string;
         amount?: string;
         destination?: string;
         max_fee_rate?: string;
         builder?: string;
+        source_dex?: string;
+        destination_dex?: string;
+        token?: string;
+        from_sub_account?: string;
+        user?: string;
+        enabled?: boolean;
+        to_perp?: boolean;
     };
     chain_id: number;
 }

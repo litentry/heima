@@ -97,7 +97,7 @@ export interface GetHyperliquidSignatureDataResponse {
     main_address: string;
     hyperliquid_signature_data: {
         action: {
-            type: 'approve_agent' | 'withdraw3' | 'approve_builder_fee';
+            type: 'approve_agent' | 'withdraw3' | 'approve_builder_fee' | 'send_asset' | 'user_dex_abstraction' | 'spot_send' | 'usd_class_transfer';
             signatureChainId?: string;
             hyperliquidChain?: string;
             agentAddress?: string;
@@ -108,10 +108,15 @@ export interface GetHyperliquidSignatureDataResponse {
             destination?: string;
             maxFeeRate?: string;
             builder?: string;
+            sourceDex?: string;
+            destinationDex?: string;
+            token?: string;
+            fromSubAccount?: string;
+            user?: string;
+            enabled?: boolean;
+            toPerp?: boolean;
         };
         nonce: number;
         signature: string;
     };
 }
-
-// todo: add other types
