@@ -32,7 +32,7 @@
         "pidusage": "^4.0.1",
         "systeminformation": "^5.31.5",
         "table": "^6.8.1",
-        "viem": "^2.47.16",
+        "viem": "^2.48.1",
         "ws": "^8.20.0"
     },
     "devDependencies": {
@@ -43,7 +43,7 @@
         "@types/pidusage": "^2.0.5",
         "@types/ws": "^8.5.12",
         "chai": "^6.2.2",
-        "eslint": "^10.2.0",
+        "eslint": "^10.2.1",
         "mocha": "^11.7.5",
         "prettier": "^3.3.2",
         "tsx": "^4.16.2",
