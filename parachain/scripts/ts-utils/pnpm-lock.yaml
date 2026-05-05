@@ -32,7 +32,7 @@ importers:
         version: 3.8.3
       read-excel-file:
         specifier: ^9.0.6
-        version: 9.0.6
+        version: 9.0.9
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -537,8 +537,8 @@ packages:
     resolution: {integrity: sha512-vGrhOavPSTz4QVNuBNdcNXePNdNMaO1xj9yBeH1ScQPjk/rhg9sSlCXPhMkFuaNNW/syTvYqsnbIJxMBfRbbag==}
     engines: {node: '>= 8'}
 
-  read-excel-file@9.0.6:
-    resolution: {integrity: sha512-lVFe97e7XLsw9C7KPy5sZZd+axnIXweKK/LV8Gdb+eSx0j0V+aqXbDCQaMvrW66C2SHgTrsSaxrrhGraHxV2VQ==}
+  read-excel-file@9.0.9:
+    resolution: {integrity: sha512-FWwC3IypIQDVPTtO4pz0Sq6An7lQI17pXqCusaTX8yi3p9CCRtXx/SI3BtcPSTaLhwcwr9mI+KXSa/dWMmnvjQ==}
     engines: {node: '>=18'}
 
   readable-stream@2.3.8:
@@ -1214,7 +1214,7 @@ snapshots:
 
   propagate@2.0.1: {}
 
-  read-excel-file@9.0.6:
+  read-excel-file@9.0.9:
     dependencies:
       '@xmldom/xmldom': 0.9.10
       fflate: 0.8.2
