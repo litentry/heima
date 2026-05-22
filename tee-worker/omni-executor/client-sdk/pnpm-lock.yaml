@@ -29,8 +29,8 @@ importers:
         specifier: ^2.8.1
         version: 2.8.1
       ws:
-        specifier: ^8.20.0
-        version: 8.20.0
+        specifier: ^8.20.1
+        version: 8.20.1
     devDependencies:
       '@nx/devkit':
         specifier: ^22.7.1
@@ -142,10 +142,10 @@ importers:
         version: 15.10.2
       '@polkadot/util':
         specifier: ^13.4.3
-        version: 14.0.3
+        version: 13.5.9
       '@polkadot/util-crypto':
         specifier: ^13.4.3
-        version: 14.0.3(@polkadot/util@14.0.3)
+        version: 13.5.9(@polkadot/util@13.5.9)
       '@scure/base':
         specifier: ^1.2.4
         version: 1.2.5
@@ -164,7 +164,7 @@ importers:
     devDependencies:
       '@polkadot/keyring':
         specifier: ^14.0.3
-        version: 14.0.3(@polkadot/util-crypto@14.0.3(@polkadot/util@14.0.3))(@polkadot/util@14.0.3)
+        version: 14.0.3(@polkadot/util-crypto@13.5.9(@polkadot/util@13.5.9))(@polkadot/util@13.5.9)
       '@polkadot/rpc-provider':
         specifier: '*'
         version: 16.5.6
@@ -5044,8 +5044,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.20.0:
-    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
+  ws@8.20.1:
+    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -6814,6 +6814,12 @@ snapshots:
       '@polkadot/util-crypto': 13.5.9(@polkadot/util@13.5.9)
       tslib: 2.8.1
 
+  '@polkadot/keyring@14.0.3(@polkadot/util-crypto@13.5.9(@polkadot/util@13.5.9))(@polkadot/util@13.5.9)':
+    dependencies:
+      '@polkadot/util': 13.5.9
+      '@polkadot/util-crypto': 13.5.9(@polkadot/util@13.5.9)
+      tslib: 2.8.1
+
   '@polkadot/keyring@14.0.3(@polkadot/util-crypto@14.0.3(@polkadot/util@14.0.3))(@polkadot/util@14.0.3)':
     dependencies:
       '@polkadot/util': 14.0.3
@@ -7019,7 +7025,7 @@ snapshots:
       '@polkadot/wasm-util': 7.5.4(@polkadot/util@13.5.9)
       '@polkadot/x-bigint': 13.5.9
       '@polkadot/x-randomvalues': 13.5.9(@polkadot/util@13.5.9)(@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9))
-      '@scure/base': 1.2.5
+      '@scure/base': 1.2.6
       tslib: 2.8.1
 
   '@polkadot/util-crypto@14.0.3(@polkadot/util@14.0.3)':
@@ -7031,7 +7037,7 @@ snapshots:
       '@polkadot/wasm-crypto': 7.5.4(@polkadot/util@14.0.3)(@polkadot/x-randomvalues@14.0.3(@polkadot/util@14.0.3)(@polkadot/wasm-util@7.5.4(@polkadot/util@14.0.3)))
       '@polkadot/wasm-util': 7.5.4(@polkadot/util@14.0.3)
       '@polkadot/x-bigint': 14.0.3
-      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@14.0.3)(@polkadot/wasm-util@7.5.4(@polkadot/util@14.0.3))
+      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@13.5.9)(@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9))
       '@scure/base': 1.2.6
       '@scure/sr25519': 0.2.0
       tslib: 2.8.1
@@ -7077,7 +7083,7 @@ snapshots:
     dependencies:
       '@polkadot/util': 14.0.3
       '@polkadot/wasm-util': 7.5.4(@polkadot/util@14.0.3)
-      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@14.0.3)(@polkadot/wasm-util@7.5.4(@polkadot/util@14.0.3))
+      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@13.5.9)(@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9))
       tslib: 2.8.1
 
   '@polkadot/wasm-crypto-asmjs@7.5.4(@polkadot/util@13.5.9)':
@@ -7107,7 +7113,7 @@ snapshots:
       '@polkadot/wasm-crypto-asmjs': 7.5.4(@polkadot/util@14.0.3)
       '@polkadot/wasm-crypto-wasm': 7.5.4(@polkadot/util@14.0.3)
       '@polkadot/wasm-util': 7.5.4(@polkadot/util@14.0.3)
-      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@14.0.3)(@polkadot/wasm-util@7.5.4(@polkadot/util@14.0.3))
+      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@13.5.9)(@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9))
       tslib: 2.8.1
 
   '@polkadot/wasm-crypto-wasm@7.5.4(@polkadot/util@13.5.9)':
@@ -7141,7 +7147,7 @@ snapshots:
       '@polkadot/wasm-crypto-init': 7.5.4(@polkadot/util@14.0.3)(@polkadot/x-randomvalues@14.0.3(@polkadot/util@14.0.3)(@polkadot/wasm-util@7.5.4(@polkadot/util@14.0.3)))
       '@polkadot/wasm-crypto-wasm': 7.5.4(@polkadot/util@14.0.3)
       '@polkadot/wasm-util': 7.5.4(@polkadot/util@14.0.3)
-      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@14.0.3)(@polkadot/wasm-util@7.5.4(@polkadot/util@14.0.3))
+      '@polkadot/x-randomvalues': 14.0.3(@polkadot/util@13.5.9)(@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9))
       tslib: 2.8.1
 
   '@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9)':
@@ -7196,13 +7202,13 @@ snapshots:
   '@polkadot/x-randomvalues@13.5.9(@polkadot/util@13.5.9)(@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9))':
     dependencies:
       '@polkadot/util': 13.5.9
-      '@polkadot/wasm-util': 7.5.4(@polkadot/util@13.5.9)
+      '@polkadot/wasm-util': 7.5.4(@polkadot/util@14.0.3)
       '@polkadot/x-global': 13.5.9
       tslib: 2.8.1
 
-  '@polkadot/x-randomvalues@14.0.3(@polkadot/util@14.0.3)(@polkadot/wasm-util@7.5.4(@polkadot/util@14.0.3))':
+  '@polkadot/x-randomvalues@14.0.3(@polkadot/util@13.5.9)(@polkadot/wasm-util@7.5.4(@polkadot/util@13.5.9))':
     dependencies:
-      '@polkadot/util': 14.0.3
+      '@polkadot/util': 13.5.9
       '@polkadot/wasm-util': 7.5.4(@polkadot/util@14.0.3)
       '@polkadot/x-global': 14.0.3
       tslib: 2.8.1
@@ -7241,7 +7247,7 @@ snapshots:
     dependencies:
       '@polkadot/x-global': 13.5.9
       tslib: 2.8.1
-      ws: 8.18.2
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -7250,7 +7256,7 @@ snapshots:
     dependencies:
       '@polkadot/x-global': 14.0.3
       tslib: 2.8.1
-      ws: 8.20.0
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -10404,7 +10410,7 @@ snapshots:
 
   smoldot@2.0.26:
     dependencies:
-      ws: 8.20.0
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -10985,7 +10991,7 @@ snapshots:
 
   ws@8.18.2: {}
 
-  ws@8.20.0: {}
+  ws@8.20.1: {}
 
   xtend@4.0.2: {}
 
