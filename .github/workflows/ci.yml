@@ -180,7 +180,8 @@ jobs:
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
           npm install -g corepack@latest
           echo "After : corepack version => $(corepack --version)"
-          corepack enable && corepack enable pnpm
+          corepack enable
+          corepack prepare pnpm@9.15.2 --activate
           pnpm --version
 
       - name: Fail early
@@ -426,7 +427,8 @@ jobs:
           echo "Before: corepack version => $(corepack --version || echo 'not installed')"
           npm install -g corepack@latest
           echo "After : corepack version => $(corepack --version)"
-          corepack enable && corepack enable pnpm
+          corepack enable
+          corepack prepare pnpm@9.15.2 --activate
           pnpm --version
 
       - name: Run ts tests for ${{ matrix.chain }}
