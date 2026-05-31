@@ -1,5 +1,7 @@
 #![allow(unexpected_cfgs)]
 #![allow(deprecated)]
+// anchor 1.0's #[program] macro expansion trips this lint; not our code.
+#![allow(clippy::diverging_sub_expression)]
 
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
@@ -37,7 +39,7 @@ pub mod accounting_contract {
 	pub fn deposit_funds(ctx: Context<DepositFunds>, amount: u64) -> Result<()> {
 		system_program::transfer(
 			CpiContext::new(
-				ctx.accounts.system_program.to_account_info(),
+				ctx.accounts.system_program.key(),
 				system_program::Transfer {
 					from: ctx.accounts.signer.to_account_info(),
 					to: ctx.accounts.treasury.to_account_info(),

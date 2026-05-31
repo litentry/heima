@@ -11,6 +11,9 @@ async-trait = { workspace = true }
 bincode = { workspace = true }
 mockall = { workspace = true }
 oe-client-ethereum = { workspace = true }
+solana-commitment-config = { workspace = true }
+solana-sdk = { workspace = true }
+solana-system-interface = { workspace = true }
 sp-core = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
