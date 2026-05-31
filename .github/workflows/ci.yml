@@ -378,7 +378,10 @@ jobs:
 
       - name: Install anchor
         run: |
-          cargo install --git https://github.com/coral-xyz/anchor anchor-cli --locked
+          # Pin to the tag matching the project's anchor-lang 0.32; installing
+          # from the unpinned default branch pulls a newer anchor-cli whose
+          # anchor-syn fails to build against the current Rust toolchain.
+          cargo install --git https://github.com/coral-xyz/anchor --tag v0.32.1 anchor-cli --locked
           anchor -V
           solana -V
 
