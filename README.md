@@ -1,123 +1,105 @@
-
 <div align="center">
 
-![Image](https://github.com/user-attachments/assets/63bf12cf-f6cd-4021-8806-80405399c7cb)
+<img src="https://github.com/user-attachments/assets/63bf12cf-f6cd-4021-8806-80405399c7cb" alt="Heima" width="420" />
 
 [![general ci](https://github.com/litentry/heima/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/litentry/heima/actions/workflows/ci.yml)
-[![release](https://github.com/litentry/heima/actions/workflows/create-release-draft.yml/badge.svg)](https://github.com/litentry/heima/actions/workflows/create-release-draft.yml)
-[![runtime upgrade](https://github.com/litentry/heima/actions/workflows/check-runtime-upgrade.yml/badge.svg)](https://github.com/litentry/heima/actions/workflows/check-runtime-upgrade.yml)
 
 </div>
 
- Being evolved from Litentry, a substrate-based L1 blockchain,  **Heima Network** inherits its modularity, flexibility and security, which forms a solid ground for chain abstraction and cross-chain operations. It is also an EVM-compatible blockchain that connects to the relaychain (e.g. [Polkadot](https://polkadot.com/)) which ensures shared security and interoperability, which serves as the backbone of Heima Network:
-- HEI token native features: transfer, governance, staking ...
-- Runtime logic such as enclave management, DID ...
-- parentchain of identity-worker, which is a TEE-based sidechain to achieve identity aggregation and crediential issuance without promising users' privacy
-- parentchain of bitacross-worker, which is a TEE-based offchain-worker to bridge assets across chains using native custodian and multisig
+Evolved from Litentry, **Heima Network** is a substrate-based, EVM-compatible L1 that connects to a Polkadot-class relay chain for shared security and interoperability. It is built for chain abstraction and cross-chain operations, with:
 
-## Build parachain
+- **HEI token** — the native token: transfers, governance, staking.
+- **Runtime & pallets** — omni-account (cross-chain account abstraction), parachain-staking, omni-bridge, TEE worker registration (teebag), extrinsic filtering, and full EVM support.
+- **omni-executor** — a TEE (Gramine/SGX) worker that executes cross-chain UserOperations (EIP-4337 account abstraction) across Ethereum, Solana and other chains.
 
-To build the binary:
+### Repository layout
 
-```
-make build-node
-```
+- [`parachain/`](parachain/) — the node, runtimes (`heima`, `paseo`) and pallets.
+- [`tee-worker/omni-executor/`](tee-worker/omni-executor/) — the cross-chain TEE worker.
+- [`local-setup/`](local-setup/) — helper scripts for local development.
 
-To build the `litentry/heima` docker image, based on cargo profile:
+All commands below are run from the repository root unless noted otherwise.
 
-```
-make build-docker-release
-make build-docker-production
-```
+## Parachain
 
-To build the heima runtime wasm:
-
-```
-make build-runtime-heima
-```
-
-The wasms should be located under `target/release/wbuild/heima-runtime/`
-
-Similarly, use `make build-runtime-paseo` to build the paseo-runtime.
-
-## Launch parachain
-### Launch a parachain network with relaychains
-
-Heima uses [zombinet](https://github.com/paritytech/zombienet) to spin up a local network with 2 relaychain nodes and 1 parachain node:
-```
-make launch-network-heima
-```
-It will firstly look for the `target/release/heima-node` binary - and if not found - copy the binary out from `litentry/heima:latest` image if you are on Linux.
-
-If you see the screenshot below, you can tell the network is successfully spun up and you can access the [polkadot-js block explorer](https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9944#/explorer) locally:
-
-![](https://github.com/user-attachments/assets/125e43d7-b54f-41af-8de4-07bbe12b9702)
-
-When finished with the network, run
-
-```
-make clean-network
-```
-
-to stop the processes and tidy things up.
-
-### Launch a standalone parachain node
-
-To speed up the development, the parachain can be launched without relaychain nodes.
-In this case, parachain will author blocks by itself with instant block finalisation, please refer to [this PR](https://github.com/litentry/heima/pull/1059).
-
-```
-make launch-standalone
-```
-
-## How to build and run identity-worker
-
-### Preparation
-
-- Env: [Setup **SGX TEE** Environment](https://web3builders.notion.site/Setup-SGX-TEE-Environment-68066770831b45b7b632e682cf159477?pvs=4)
+The parachain ships two runtimes: `heima-runtime` (paraID 2013) and `paseo-runtime` (paraID 2106, for the [Paseo](https://github.com/paseo-network) testnet), both produced by the `heima-node` binary.
 
 ### Build
 
+```sh
+make build-node                 # build the heima-node binary
+make build-runtime-heima        # build the heima runtime wasm
+make build-runtime-paseo        # build the paseo runtime wasm
 ```
-cd /tee-worker/identity
-source /opt/intel/sgxsdk/environment
-SGX_MODE=SW WORKER_DEV=1 make
+
+Runtime wasms land under `parachain/target/release/wbuild/<runtime>/`.
+
+To build the `litentry/heima` docker image (by cargo profile):
+
+```sh
+make build-docker-release       # `release` profile
+make build-docker-production    # `production` profile
 ```
 
 ### Launch
 
-Before executing `launch.py`, the following Python libraries need to be installed
-```
-pip install python-dotenv pycurl docker toml
-```
+Spin up a local network (2 relaychain validators + 1 collator) with [zombienet](https://github.com/paritytech/zombienet):
 
-Identity-workers need a running parachain to become operational. We have an all-in-one script `local-setup/launch.py` to launch both parachain and workers:
-```
-./local-setup/launch.py -p standalone
-./local-setup/launch.py -p network
-./local-setup/launch.py -p remote
+```sh
+make launch-network-heima       # or: make launch-network-paseo
 ```
 
-They stand for different parachain launching options:
-- standalone parachain
-- parachain network with relaychains
-- parachain is remotely launched (elsewhere), so don't launch parachain in `launch.py`
-respectively.
+Once it is up, the chain is reachable in the [polkadot-js explorer](https://polkadot.js.org/apps/?rpc=ws://127.0.0.1:9944#/explorer) at `ws://127.0.0.1:9944`. Tear it down with:
 
-If you see the screenshot below, you can tell the worker is running:
+```sh
+make clean-network
+```
 
-![](https://github.com/cryptoade1/heima/assets/88367184/cb1cea60-bc5d-4b62-bae7-503583a135ee)
+For faster iteration, run a single standalone node (no relaychain, instant block finality):
 
-### Identity worker tests
+```sh
+make launch-standalone
+```
 
-Refer to [identity-worker ts-tests](https://github.com/litentry/heima/blob/dev/tee-worker/identity/ts-tests/README.md)
+### Test
 
-#### Teardown
+```sh
+make test-cargo-all             # cargo tests across the workspace
+make test-ts-heima              # TypeScript integration tests (or: test-ts-paseo)
+```
 
-In the worker launch terminal, `Ctrl + C` should interrupt and clean everything up automatically.
+The TypeScript suite lives in [`parachain/ts-tests/`](parachain/ts-tests/).
 
-#### Additional Info:
+## omni-executor
 
-1. Change the RUST_LOG level: `local-setup/worker-log-level-config.toml`
-2. Check existing ts-tests: `tee-worker/identity/ts-tests/package.json`
-3. JSON config parameters: `tee-worker/identity/service/src/cli.yml`
+`omni-executor` is a Rust TEE worker (running under Gramine/SGX) that executes cross-chain UserOperations — EIP-4337 account abstraction — across Ethereum, Solana and other chains, exposing a JSON-RPC server for authenticated submissions.
+
+It vendors its Solidity dependencies as git submodules, so initialize them first:
+
+```sh
+git submodule update --init --recursive
+```
+
+### Build
+
+```sh
+cd tee-worker/omni-executor
+cargo build --release           # host build, for local development
+make SGX=1                      # build & sign for Gramine/SGX
+```
+
+### Run locally
+
+A docker-compose setup brings up the worker together with a local Anvil EVM node and auto-deployed account-abstraction contracts. From `tee-worker/omni-executor/`:
+
+```sh
+make build-docker               # or: make build-docker-test (with test endpoints)
+make start-local                # or: make start-test
+make stop-local                 # tear down (or: make stop-test)
+```
+
+### Test
+
+TypeScript integration tests live in [`tee-worker/omni-executor/ts-tests/`](tee-worker/omni-executor/ts-tests/).
+
+For full details — environment variables, RPC endpoints, and CLI usage — see [`tee-worker/omni-executor/README.md`](tee-worker/omni-executor/README.md) and [`tee-worker/omni-executor/LOCAL_DEV.md`](tee-worker/omni-executor/LOCAL_DEV.md).
