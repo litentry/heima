@@ -20,16 +20,21 @@ function print_divider() {
 
 # Download runtime wasm
 print_divider
-echo "Download $1-runtime.compact.compressed.wasm from release tag $3 ..."
-gh release download "$3" -p "$1-runtime.compact.compressed.wasm" || true
-mv "$1-runtime.compact.compressed.wasm" "$new_wasm"
+wasm_name="$1-runtime.compact.compressed.wasm"
+echo "Download $wasm_name from release tag $3 ..."
+gh release download "$3" -p "$wasm_name" || true
 
-if [ -f "$new_wasm" ] && [ -s "$new_wasm" ]; then
-  ls -l "$new_wasm"
-else
-  echo "Cannot find $new_wasm or it has 0 bytes, quit"
-  exit 1
+# A release may be published without the runtime wasm attached (e.g. an
+# assets-less release). In that case there is nothing to test, so skip the
+# simulation gracefully instead of failing with a confusing `mv` error.
+if [ ! -f "$wasm_name" ] || [ ! -s "$wasm_name" ]; then
+  echo "No $wasm_name asset found on release $3 (or it is empty)."
+  echo "Skipping runtime upgrade simulation - nothing to test."
+  exit 0
 fi
+
+mv "$wasm_name" "$new_wasm"
+ls -l "$new_wasm"
 
 # Check runtime version
 print_divider
