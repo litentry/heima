@@ -4,3 +4,15 @@
 [submodule "tee-worker/omni-executor/contracts/lib/forge-libs/openzeppelin-contracts"]
 	path = tee-worker/omni-executor/contracts/lib/forge-libs/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "tee-worker/omni-executor/contracts/privacy-pool/lib/circomlib"]
+	path = tee-worker/omni-executor/contracts/privacy-pool/lib/circomlib
+	url = https://github.com/iden3/circomlib
+[submodule "tee-worker/omni-executor/contracts/privacy-pool/lib/forge-std"]
+	path = tee-worker/omni-executor/contracts/privacy-pool/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "tee-worker/omni-executor/contracts/privacy-pool/lib/openzeppelin-contracts"]
+	path = tee-worker/omni-executor/contracts/privacy-pool/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "tee-worker/omni-executor/contracts/privacy-pool/lib/poseidon-solidity"]
+	path = tee-worker/omni-executor/contracts/privacy-pool/lib/poseidon-solidity
+	url = https://github.com/privacy-scaling-explorations/poseidon-solidity
