@@ -1,8 +1,8 @@
 use anchor_client::anchor_lang::prelude::{Pubkey, UpgradeableLoaderState};
 use anchor_client::anchor_lang::{AccountDeserialize, AnchorDeserialize};
-use anchor_client::solana_sdk::bpf_loader_upgradeable::ID as BPF_LOADER_UPGRADEABLE_ID;
-use anchor_client::solana_sdk::commitment_config::CommitmentConfig;
-use anchor_client::solana_sdk::signature::{read_keypair_file, Keypair, Signer};
+use solana_sdk_ids::bpf_loader_upgradeable::ID as BPF_LOADER_UPGRADEABLE_ID;
+use solana_commitment_config::CommitmentConfig;
+use solana_sdk::signature::{read_keypair_file, Keypair, Signer};
 use anchor_client::{Client, Cluster, Program};
 use clap::{Parser, Subcommand};
 use std::str::FromStr;
@@ -111,7 +111,7 @@ fn main() {
 					admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
 					signer: payer.pubkey(),
 					program_account: address,
-					system_program: anchor_client::solana_sdk::system_program::ID,
+					system_program: solana_system_interface::program::ID,
 				})
 				.args(accounting_contract::instruction::SetAdmin { new_admin: admin })
 				.send()
@@ -130,7 +130,7 @@ fn main() {
 					worker_account: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 					signer: payer.pubkey(),
 					admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
-					system_program: anchor_client::solana_sdk::system_program::ID,
+					system_program: solana_system_interface::program::ID,
 				})
 				.args(accounting_contract::instruction::SetWorker { new_worker: worker })
 				.send()
@@ -174,7 +174,7 @@ fn main() {
 				.accounts(accounting_contract::accounts::DepositFunds {
 					treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 					signer: payer.pubkey(),
-					system_program: anchor_client::solana_sdk::system_program::ID,
+					system_program: solana_system_interface::program::ID,
 				})
 				.args(accounting_contract::instruction::DepositFunds { amount })
 				.send()
@@ -207,7 +207,7 @@ fn main() {
 					admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
 					treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 					beneficiary: payer.pubkey(),
-					system_program: anchor_client::solana_sdk::system_program::ID,
+					system_program: solana_system_interface::program::ID,
 				})
 				.args(accounting_contract::instruction::WithdrawFunds { amount })
 				.send()
@@ -246,7 +246,7 @@ fn main() {
 					worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 					treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 					beneficiary,
-					system_program: anchor_client::solana_sdk::system_program::ID,
+					system_program: solana_system_interface::program::ID,
 				})
 				.args(accounting_contract::instruction::CreatePayRequest { amount, nonce })
 				.send()

@@ -10,8 +10,14 @@ edition = "2021"
 
 [workspace.dependencies]
 # Anchor dependencies
-anchor-client = "0.32.1"
-anchor-lang = { version = "0.32", features = ["init-if-needed"] }
+anchor-client = "1.0.2"
+anchor-lang = { version = "1.0.2", features = ["init-if-needed"] }
+
+# Solana
+solana-sdk = "3"
+solana-sdk-ids = "3"
+solana-commitment-config = "3"
+solana-system-interface = "2"
 
 # Serialization
 bincode = "1.3"

@@ -4,12 +4,12 @@ use std::str::FromStr;
 
 use accounting_contract::accounting_contract::set_worker;
 use anchor_client::anchor_lang::AnchorDeserialize;
-use anchor_client::solana_sdk::instruction::InstructionError::Custom;
-use anchor_client::solana_sdk::program_error::ProgramError;
-use anchor_client::solana_sdk::rent::Rent;
-use anchor_client::solana_sdk::signature::SeedDerivable;
-use anchor_client::solana_sdk::transaction::TransactionError;
-use anchor_client::solana_sdk::transaction::TransactionError::InstructionError;
+use solana_sdk::instruction::InstructionError::Custom;
+use solana_sdk::program_error::ProgramError;
+use solana_sdk::rent::Rent;
+use solana_sdk::signature::SeedDerivable;
+use solana_sdk::transaction::TransactionError;
+use solana_sdk::transaction::TransactionError::InstructionError;
 use anchor_client::ClientError::SolanaClientError;
 use anchor_client::{
 	anchor_lang::{AccountDeserialize, ProgramData},
@@ -73,7 +73,7 @@ pub fn set_admin(program: &Program<&Keypair>, payer: &Keypair) -> Result<(), ()>
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
 			signer: payer.pubkey(),
 			program_account: address,
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::SetAdmin { new_admin: payer.pubkey() })
 		.send()
@@ -89,7 +89,7 @@ pub fn set_worker_account(program: &Program<&Keypair>, payer: &Keypair) -> Resul
 			worker_account: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			signer: payer.pubkey(),
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::SetWorker { new_worker: payer.pubkey() })
 		.send()
@@ -160,7 +160,7 @@ fn test_set_worker_unauthorized() {
 			worker_account: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			signer: second_payer.pubkey(),
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::SetWorker { new_worker: payer.pubkey() })
 		.send();
@@ -185,7 +185,7 @@ fn test_deposit_funds() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -221,7 +221,7 @@ fn test_create_pay_request() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -244,7 +244,7 @@ fn test_create_pay_request() {
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: keypair.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::CreatePayRequest {
 			amount: 1_000_000,
@@ -270,7 +270,7 @@ fn test_create_pay_request_invalid_nonce() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -293,7 +293,7 @@ fn test_create_pay_request_invalid_nonce() {
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: keypair.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::CreatePayRequest {
 			amount: 1_000_000,
@@ -319,7 +319,7 @@ fn test_create_pay_request_invalid_nonce() {
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: keypair.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::CreatePayRequest {
 			amount: 1_000_000,
@@ -347,7 +347,7 @@ fn create_pay_request_out_of_balance() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -370,7 +370,7 @@ fn create_pay_request_out_of_balance() {
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: keypair.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::CreatePayRequest {
 			amount: 2_000_000_000,
@@ -397,7 +397,7 @@ fn create_pay_request_unauthorized() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -430,7 +430,7 @@ fn create_pay_request_unauthorized() {
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: keypair.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::CreatePayRequest {
 			amount: 1_000_000_000,
@@ -457,7 +457,7 @@ fn test_withdraw() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -470,7 +470,7 @@ fn test_withdraw() {
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::WithdrawFunds { amount: 1_000_000 })
 		.send()
@@ -491,7 +491,7 @@ fn test_withdraw_out_of_funds() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -504,7 +504,7 @@ fn test_withdraw_out_of_funds() {
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::WithdrawFunds { amount: 2_000_000_000 })
 		.send();
@@ -528,7 +528,7 @@ fn test_withdraw_unauthorized() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -548,7 +548,7 @@ fn test_withdraw_unauthorized() {
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::WithdrawFunds { amount: 1_000_000_000 })
 		.send();
@@ -594,7 +594,7 @@ fn test_full_workerflow() {
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
 			signer: payer.pubkey(),
 			program_account: address,
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::SetAdmin { new_admin: payer.pubkey() })
 		.send()
@@ -606,7 +606,7 @@ fn test_full_workerflow() {
 			worker_account: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			signer: payer.pubkey(),
 			admin_account: Pubkey::find_program_address(&[b"admin"], &program.id()).0,
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::SetWorker { new_worker: payer.pubkey() })
 		.send()
@@ -637,7 +637,7 @@ fn test_full_workerflow() {
 		.accounts(accounting_contract::accounts::DepositFunds {
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			signer: payer.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::DepositFunds { amount: 1_000_000_000 })
 		.send()
@@ -678,7 +678,7 @@ fn test_full_workerflow() {
 			worker: Pubkey::find_program_address(&[b"worker"], &program.id()).0,
 			treasury: Pubkey::find_program_address(&[b"treasury"], &program.id()).0,
 			beneficiary: keypair.pubkey(),
-			system_program: anchor_client::solana_sdk::system_program::ID,
+			system_program: solana_system_interface::program::ID,
 		})
 		.args(accounting_contract::instruction::CreatePayRequest {
 			amount: 1_000_000,
