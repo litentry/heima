@@ -4,12 +4,6 @@ use std::str::FromStr;
 
 use accounting_contract::accounting_contract::set_worker;
 use anchor_client::anchor_lang::AnchorDeserialize;
-use solana_sdk::instruction::InstructionError::Custom;
-use solana_sdk::program_error::ProgramError;
-use solana_sdk::rent::Rent;
-use solana_sdk::signature::SeedDerivable;
-use solana_sdk::transaction::TransactionError;
-use solana_sdk::transaction::TransactionError::InstructionError;
 use anchor_client::ClientError::SolanaClientError;
 use anchor_client::{
 	anchor_lang::{AccountDeserialize, ProgramData},
@@ -21,6 +15,12 @@ use anchor_client::{
 	},
 	Client, ClientError, Cluster, Program,
 };
+use solana_sdk::instruction::InstructionError::Custom;
+use solana_sdk::program_error::ProgramError;
+use solana_sdk::rent::Rent;
+use solana_sdk::signature::SeedDerivable;
+use solana_sdk::transaction::TransactionError;
+use solana_sdk::transaction::TransactionError::InstructionError;
 
 // PK - 8QQds7P14EL1ZFjPLsTg2AHZaQHfNGH1EDW8wMhJmxaX
 pub fn setup_program<'a>(payer: &'a Keypair) -> Program<&'a Keypair> {

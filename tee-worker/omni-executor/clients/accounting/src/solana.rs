@@ -3,6 +3,7 @@ use std::str::FromStr;
 use crate::AccountingContractApi;
 use alloy::primitives::U256;
 use anchor_client::{Client, Cluster};
+use async_trait::async_trait;
 use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
 	pubkey::Pubkey,
@@ -10,7 +11,6 @@ use solana_sdk::{
 	signer::SeedDerivable,
 };
 use solana_system_interface::program::ID as SYSTEM_PROGRAM_ID;
-use async_trait::async_trait;
 use sp_core::ed25519;
 use std::sync::Arc;
 use tracing::{error, warn};
@@ -138,9 +138,9 @@ impl AccountingContractApi<Pubkey, u64> for AccountingContractClient {
 pub mod mocks {
 	use crate::AccountingContractApi;
 	use crate::U256;
-	use solana_sdk::pubkey::Pubkey;
 	use async_trait::async_trait;
 	use mockall::mock;
+	use solana_sdk::pubkey::Pubkey;
 
 	mock! {
 

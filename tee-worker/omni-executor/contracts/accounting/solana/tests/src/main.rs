@@ -1,10 +1,10 @@
 use anchor_client::anchor_lang::prelude::{Pubkey, UpgradeableLoaderState};
 use anchor_client::anchor_lang::{AccountDeserialize, AnchorDeserialize};
-use solana_sdk_ids::bpf_loader_upgradeable::ID as BPF_LOADER_UPGRADEABLE_ID;
-use solana_commitment_config::CommitmentConfig;
-use solana_sdk::signature::{read_keypair_file, Keypair, Signer};
 use anchor_client::{Client, Cluster, Program};
 use clap::{Parser, Subcommand};
+use solana_commitment_config::CommitmentConfig;
+use solana_sdk::signature::{read_keypair_file, Keypair, Signer};
+use solana_sdk_ids::bpf_loader_upgradeable::ID as BPF_LOADER_UPGRADEABLE_ID;
 use std::str::FromStr;
 
 #[derive(Parser)]
