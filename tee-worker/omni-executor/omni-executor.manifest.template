@@ -22,10 +22,12 @@ fs.mounts = [
   { path = "/usr", uri = "file:/usr" },
   { path = "/storage_db", uri = "file:storage_db", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
   { path = "/local", uri = "file:local", type="encrypted", key_name="{{'_sgx_mrsigner' if env.get('SGX', '0') == '1' else 'fake_sgx_mrsigner'}}" },
+  { path = "/circuits", uri = "file:circuits" },
 ]
 
 sgx.debug = {{ 'true' if env.get('SGX_DEBUG', '0') == '1' else 'false' }}
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.enclave_size = "2G"
 
 # dns
 sys.enable_extra_runtime_domain_names_conf = true
@@ -39,7 +41,10 @@ sgx.trusted_files = [
   "file:/usr/lib/ssl/certs/ca-certificates.crt",
 ]
 
-sgx.allowed_files = [ "file:/usr/lib/ssl/certs" ]
+sgx.allowed_files = [
+  "file:/usr/lib/ssl/certs",
+  "file:circuits/",
+]
 
 # The maximum number of threads in a single process needs to be declared in advance.
 # You need to account for:
@@ -90,6 +95,10 @@ loader.env.OE_HYPEREVM_TESTNET_URL = { passthrough = true }
 loader.env.OE_OMNI_FACTORY_ADDRESS = { passthrough = true }
 loader.env.OE_ENTRY_POINT_ADDRESS = { passthrough = true }
 loader.env.OE_WILDMETA_API_URL = { passthrough = true }
+loader.env.OE_PRIVACY_POOL_ADDRESS = { passthrough = true }
+loader.env.OE_ETH_RPC_URL = { passthrough = true }
+loader.env.OE_CIRCUIT_WASM_PATH = { passthrough = true }
+loader.env.OE_CIRCUIT_ZKEY_PATH = { passthrough = true }
 loader.env.OE_WILDMETA_BACKEND_ECDSA_PUBKEY = "{{ env.get('OE_WILDMETA_BACKEND_ECDSA_PUBKEY', '020000000000000000000000000000000000000000000000000000000000000000') }}"
 loader.env.OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY = "{{ env.get('OE_BUNDLER_KEY_EXPORT_AUTHORIZED_PUBKEY', '020000000000000000000000000000000000000000000000000000000000000000') }}"
 

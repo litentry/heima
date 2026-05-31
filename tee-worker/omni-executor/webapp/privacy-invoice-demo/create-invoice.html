@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Confidential Invoice - Heima Network</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ethers v6 for token lookups -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+</head>
+
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <div class="max-w-2xl mx-auto p-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Create Confidential Invoice</h1>
+            <p class="text-gray-600">
+                Invoice amounts are encrypted by TEE — not even the server can see them.
+            </p>
+            <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                    </path>
+                </svg>
+                <span class="text-sm text-purple-800 font-medium">TEE-Secured Encryption</span>
+            </div>
+        </div>
+
+        <!-- Invoice Form -->
+        <form id="invoiceForm" autocomplete="off" class="bg-white rounded-xl shadow-lg p-8 space-y-6">
+
+            <!-- Token + chain -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Token Contract Address</label>
+                <input type="text" id="tokenAddress" required autocomplete="off" readonly
+                    onfocus="this.removeAttribute('readonly')"
+                    class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="0xE7ECbb383987E374ceE676c89C81F41f6EEDC9fA"
+                    value="0xE7ECbb383987E374ceE676c89C81F41f6EEDC9fA"
+                    pattern="0x[a-fA-F0-9]{40}" />
+                <p class="mt-1 text-xs text-gray-500">
+                    ERC20 token address —
+                    <span id="tokenSymbol" class="font-semibold text-blue-600"></span>
+                    <span id="tokenDecimals" class="text-gray-400"></span>
+                </p>
+            </div>
+
+            <!-- Creator address -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Your Ethereum Address (Invoice Creator)</label>
+                <input type="text" id="createdBy" required autocomplete="off" readonly
+                    onfocus="this.removeAttribute('readonly')"
+                    class="w-full px-4 py-3 font-mono text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0"
+                    pattern="0x[a-fA-F0-9]{40}" />
+                <p class="mt-1 text-xs text-gray-500">Your address is used to generate a deterministic invoice ID. You don't have to be a recipient.</p>
+            </div>
+
+            <!-- Buyer email -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Buyer Email</label>
+                <input type="email" id="buyerEmail" required autocomplete="off"
+                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    placeholder="buyer@company.com" />
+                <p class="mt-1 text-xs text-gray-500">Buyer's email to receive the invoice link</p>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <textarea id="description" rows="2" required
+                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"
+                    placeholder="Q4 2025 Consulting Services"></textarea>
+            </div>
+
+            <!-- Recipients -->
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-semibold text-gray-700">Recipients</label>
+                    <button type="button" onclick="addRecipient()"
+                        class="inline-flex items-center gap-1 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium px-3 py-1.5 rounded-lg border border-blue-200 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Add Recipient
+                    </button>
+                </div>
+
+                <div id="recipientList" class="space-y-3">
+                    <!-- Recipients are added dynamically -->
+                </div>
+
+                <div class="mt-3 flex justify-between items-center text-sm">
+                    <span class="text-gray-500">Total:</span>
+                    <span id="totalDisplay" class="font-bold text-gray-900">0</span>
+                </div>
+            </div>
+
+            <button type="submit"
+                class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                <span id="submitText">Generate Confidential Invoice</span>
+                <span id="loadingText" class="hidden">Encrypting...</span>
+            </button>
+        </form>
+
+        <!-- Success Result -->
+        <div id="result" class="hidden mt-8 bg-green-50 border-2 border-green-200 rounded-xl shadow-lg p-8">
+            <div class="flex items-center gap-3 mb-6">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h2 class="text-2xl font-bold text-green-800">Invoice Created Successfully!</h2>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-white p-4 rounded-lg border border-green-200">
+                    <span class="text-sm font-semibold text-gray-700">Invoice ID:</span>
+                    <code id="invoiceId" class="block mt-1 text-sm bg-gray-100 px-3 py-2 rounded font-mono"></code>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-green-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-semibold text-gray-700">Payment Link (share with buyer):</span>
+                        <div class="flex gap-2">
+                            <button onclick="openInvoice()"
+                                class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                Open
+                            </button>
+                            <button onclick="copyLink()"
+                                class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                    <input type="text" id="invoiceUrl" readonly
+                        class="w-full px-3 py-2 bg-gray-50 rounded border border-gray-300 text-sm font-mono cursor-pointer hover:bg-gray-100"
+                        onclick="this.select()" />
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-green-200">
+                    <span class="text-sm font-semibold text-gray-700">Withdrawal Link (share with each recipient):</span>
+                    <p class="text-xs text-gray-500 mt-1 mb-2">Each recipient opens this link and enters their address to withdraw their share.</p>
+                    <input type="text" id="withdrawUrl" readonly
+                        class="w-full px-3 py-2 bg-gray-50 rounded border border-gray-300 text-sm font-mono cursor-pointer hover:bg-gray-100"
+                        onclick="this.select()" />
+                </div>
+
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                            </path>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-semibold text-purple-900 mb-1">Amount Encrypted</p>
+                            <p class="text-xs text-purple-800">
+                                Commitment: <code id="commitment"
+                                    class="bg-purple-100 px-2 py-0.5 rounded font-mono text-xs"></code>
+                            </p>
+                            <p class="text-xs text-purple-700 mt-2">
+                                Only the buyer can see the total amount. Individual recipient shares are hidden from each other.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="createAnother()"
+                    class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg transition">
+                    Create Another Invoice
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden mt-8 bg-red-50 border-2 border-red-200 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-2 mb-2">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="text-lg font-semibold text-red-800">Error Creating Invoice</h3>
+            </div>
+            <p id="errorMessage" class="text-sm text-red-700"></p>
+        </div>
+    </div>
+
+    <script>
+        const RPC_URL = 'ws://localhost:2100';
+        const CLIENT_ID = 'wildmeta';
+        const FACTORY_ADDRESS = '0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e';
+        const CHAIN_ID = 421614; // Arbitrum Sepolia
+        let tokenDecimals = 18;
+        let recipientCount = 0;
+
+        const ERC20_ABI = [
+            'function symbol() view returns (string)',
+            'function decimals() view returns (uint8)'
+        ];
+
+        const ACCOUNT_ABI = [
+            {
+                "inputs": [],
+                "name": "getNonce",
+                "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        const FACTORY_ABI = [
+            {
+                "type": "function",
+                "name": "getAddress",
+                "inputs": [
+                    { "name": "oa", "type": "bytes32" },
+                    { "name": "oaType", "type": "uint8" },
+                    { "name": "clientId", "type": "bytes" },
+                    { "name": "root", "type": "address" }
+                ],
+                "outputs": [{ "name": "", "type": "address" }],
+                "stateMutability": "view"
+            }
+        ];
+
+        const OwnerType = { Evm: 6 };
+
+        // Start with one recipient row
+        window.addEventListener('DOMContentLoaded', () => addRecipient());
+
+        // Token lookup on blur
+        document.getElementById('tokenAddress').addEventListener('blur', async function () {
+            const address = this.value.trim();
+            if (!address.match(/^0x[a-fA-F0-9]{40}$/)) return;
+            try {
+                const provider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
+                const contract = new ethers.Contract(address, ERC20_ABI, provider);
+                const [symbol, decimals] = await Promise.all([contract.symbol(), contract.decimals()]);
+                tokenDecimals = Number(decimals);
+                document.getElementById('tokenSymbol').textContent = symbol;
+                document.getElementById('tokenDecimals').textContent = `(${decimals} decimals)`;
+                updateTotal();
+            } catch {
+                document.getElementById('tokenSymbol').textContent = '(Unknown token)';
+                tokenDecimals = 18;
+            }
+        });
+
+        function addRecipient() {
+            const id = recipientCount++;
+            const list = document.getElementById('recipientList');
+            const row = document.createElement('div');
+            row.id = `recipient-${id}`;
+            row.className = 'flex gap-2 items-start p-3 bg-gray-50 rounded-lg border border-gray-200';
+            row.innerHTML = `
+                <div class="flex-1">
+                    <input type="text" id="raddr-${id}" required autocomplete="off" readonly
+                        onfocus="this.removeAttribute('readonly')"
+                        class="w-full px-3 py-2 font-mono text-xs border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition mb-1"
+                        placeholder="0xRecipientAddress" pattern="0x[a-fA-F0-9]{40}"
+                        oninput="updateTotal()" />
+                    <p class="text-xs text-gray-400">Recipient Ethereum address</p>
+                </div>
+                <div class="w-36">
+                    <input type="number" id="ramount-${id}" required min="0" step="any" autocomplete="off"
+                        class="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition mb-1"
+                        placeholder="Amount"
+                        oninput="updateTotal()" />
+                    <p class="text-xs text-gray-400">Token amount</p>
+                </div>
+                <button type="button" onclick="removeRecipient(${id})"
+                    class="mt-1.5 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                    title="Remove recipient">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            list.appendChild(row);
+            updateTotal();
+        }
+
+        function removeRecipient(id) {
+            const row = document.getElementById(`recipient-${id}`);
+            if (row) row.remove();
+            updateTotal();
+        }
+
+        function updateTotal() {
+            let total = 0;
+            const symbol = document.getElementById('tokenSymbol').textContent || '';
+            for (const input of document.querySelectorAll('[id^="ramount-"]')) {
+                const v = parseFloat(input.value) || 0;
+                total += v;
+            }
+            document.getElementById('totalDisplay').textContent =
+                total > 0 ? `${total.toLocaleString(undefined, { maximumFractionDigits: 8 })} ${symbol}` : '0';
+        }
+
+        function collectRecipients() {
+            const rows = document.querySelectorAll('[id^="recipient-"]');
+            const result = [];
+            for (const row of rows) {
+                const id = row.id.split('-')[1];
+                const address = document.getElementById(`raddr-${id}`).value.trim();
+                const amountStr = document.getElementById(`ramount-${id}`).value;
+                if (!address || !amountStr) continue;
+                const amountFloat = parseFloat(amountStr);
+                const amountUnits = BigInt(Math.round(amountFloat * Math.pow(10, tokenDecimals))).toString();
+                result.push({ address, amount: amountUnits });
+            }
+            return result;
+        }
+
+        document.getElementById('invoiceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const tokenAddress = document.getElementById('tokenAddress').value.trim();
+            const createdBy = document.getElementById('createdBy').value.trim();
+            const buyerEmail = document.getElementById('buyerEmail').value;
+            const description = document.getElementById('description').value;
+
+            if (!createdBy.match(/^0x[a-fA-F0-9]{40}$/)) {
+                showError('Please enter a valid Ethereum address for Invoice Creator');
+                return;
+            }
+
+            const recipients = collectRecipients();
+            if (recipients.length === 0) {
+                showError('Add at least one recipient with a valid address and amount');
+                return;
+            }
+
+            for (const r of recipients) {
+                if (!r.address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                    showError(`Invalid recipient address: ${r.address}`);
+                    return;
+                }
+            }
+
+            document.getElementById('submitText').classList.add('hidden');
+            document.getElementById('loadingText').classList.remove('hidden');
+            document.getElementById('error').classList.add('hidden');
+
+            try {
+                // Get creator smart wallet nonce for deterministic invoice ID
+                let nonce = null;
+                try {
+                    const omniAccountHash = await calculateOmniAccount(createdBy, CLIENT_ID);
+                    const rootSigner = await getRootSignerFromTEE(omniAccountHash);
+                    const provider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
+                    const factoryContract = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
+                    const clientIdBytes = ethers.toUtf8Bytes(CLIENT_ID);
+                    const smartWalletAddress = await factoryContract.getAddress(
+                        omniAccountHash, OwnerType.Evm, clientIdBytes, rootSigner
+                    );
+                    const code = await provider.getCode(smartWalletAddress);
+                    if (code !== '0x') {
+                        const accountContract = new ethers.Contract(smartWalletAddress, ACCOUNT_ABI, provider);
+                        nonce = Number(await accountContract.getNonce());
+                    } else {
+                        nonce = 0;
+                    }
+                } catch (err) {
+                    console.warn('Could not fetch nonce, using random invoice ID:', err);
+                }
+
+                const ws = new WebSocket(RPC_URL);
+                await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+
+                const requestId = Math.floor(Math.random() * 1000000);
+                ws.send(JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: requestId,
+                    method: 'omni_createConfidentialInvoice',
+                    params: {
+                        created_by: createdBy,
+                        buyer_identifier: buyerEmail,
+                        token_address: tokenAddress,
+                        chain_id: CHAIN_ID,
+                        description,
+                        nonce,
+                        recipients,
+                    }
+                }));
+
+                const response = await new Promise((resolve, reject) => {
+                    ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.id === requestId) {
+                            if (data.error) reject(new Error(data.error.message || 'RPC error'));
+                            else resolve(data.result);
+                        }
+                    };
+                    setTimeout(() => reject(new Error('Request timeout')), 10000);
+                });
+                ws.close();
+
+                const invoiceId = response.invoice_id;
+                const localPayUrl = `http://localhost:8080/pay-invoice.html?id=${invoiceId}`;
+                const localWithdrawUrl = `http://localhost:8080/withdraw-invoice.html?id=${invoiceId}`;
+
+                document.getElementById('invoiceId').textContent = invoiceId;
+                document.getElementById('invoiceUrl').value = localPayUrl;
+                document.getElementById('withdrawUrl').value = localWithdrawUrl;
+                document.getElementById('commitment').textContent = response.commitment.substring(0, 16) + '...';
+                document.getElementById('invoiceForm').classList.add('hidden');
+                document.getElementById('result').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error creating invoice:', error);
+                showError(error.message);
+            } finally {
+                document.getElementById('submitText').classList.remove('hidden');
+                document.getElementById('loadingText').classList.add('hidden');
+            }
+        });
+
+        function openInvoice() {
+            window.open(document.getElementById('invoiceUrl').value, '_blank');
+        }
+
+        function copyLink() {
+            const url = document.getElementById('invoiceUrl');
+            url.select();
+            document.execCommand('copy');
+            const btn = event.target.closest('button');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
+            setTimeout(() => { btn.innerHTML = orig; }, 2000);
+        }
+
+        function createAnother() {
+            document.getElementById('invoiceForm').classList.remove('hidden');
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('invoiceForm').reset();
+            document.getElementById('recipientList').innerHTML = '';
+            recipientCount = 0;
+            addRecipient();
+        }
+
+        function showError(msg) {
+            document.getElementById('errorMessage').textContent = msg;
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('submitText').classList.remove('hidden');
+            document.getElementById('loadingText').classList.add('hidden');
+        }
+
+        async function calculateOmniAccount(address, clientId) {
+            const encoder = new TextEncoder();
+            const clientIdBytes = encoder.encode(clientId);
+            const identityTypeBytes = encoder.encode('evm');
+            const addressHex = address.slice(2).toLowerCase();
+            const addressBytes = new Uint8Array(20);
+            for (let i = 0; i < addressHex.length; i += 2)
+                addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
+            const combined = new Uint8Array(clientIdBytes.length + identityTypeBytes.length + addressBytes.length);
+            combined.set(clientIdBytes, 0);
+            combined.set(identityTypeBytes, clientIdBytes.length);
+            combined.set(addressBytes, clientIdBytes.length + identityTypeBytes.length);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+            return '0x' + Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function getRootSignerFromTEE(omniAccountHash) {
+            const ws = new WebSocket(RPC_URL);
+            await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+            const requestId = Math.floor(Math.random() * 1000000);
+            ws.send(JSON.stringify({
+                jsonrpc: '2.0', id: requestId,
+                method: 'omni_getSmartWalletRootSigner',
+                params: { omni_account: omniAccountHash, chain_type: 'evm', wallet_index: 0 }
+            }));
+            const result = await new Promise((resolve, reject) => {
+                ws.onmessage = (event) => {
+                    const r = JSON.parse(event.data);
+                    if (r.id === requestId) {
+                        if (r.error) reject(new Error(r.error.message));
+                        else resolve(r.result);
+                    }
+                };
+                setTimeout(() => reject(new Error('Request timeout')), 10000);
+            });
+            ws.close();
+            return result;
+        }
+    </script>
+</body>
+
+</html>

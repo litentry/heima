@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay Invoice - Heima Network</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use ethers v6 for MetaMask SES compatibility -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+    <!-- Add viem for UserOp construction -->
+    <script type="module">
+        import * as viem from 'https://esm.sh/viem';
+        window.viem = viem;
+    </script>
+</head>
+
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <div class="max-w-3xl mx-auto p-8">
+        <!-- Login State -->
+        <div id="loginState" class="text-center">
+            <div class="bg-white rounded-xl shadow-lg p-12">
+                <div class="mb-6">
+                    <svg class="w-20 h-20 mx-auto text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Confidential Invoice Payment</h1>
+                <p class="text-gray-600 mb-8">
+                    Connect your wallet to view and pay this secure invoice
+                </p>
+                <button onclick="connectWallet()"
+                    class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Connect MetaMask
+                </button>
+            </div>
+        </div>
+
+        <!-- Invoice Details State -->
+        <div id="invoiceState" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <!-- Header -->
+                <div class="border-b border-gray-200 pb-6 mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Invoice from <span id="sellerName" class="copyable cursor-pointer hover:underline" title="Click to copy address">Heima Labs</span></h1>
+                            <p class="text-sm text-gray-600 mt-1" id="description"></p>
+                        </div>
+                        <div class="text-right">
+                            <span
+                                class="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Pending
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amount Display -->
+                <div class="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-8 mb-6">
+                    <div class="text-center">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Amount Due</p>
+                        <div id="amountLoading" class="text-4xl font-bold text-gray-400">
+                            <div class="inline-block animate-pulse">Loading...</div>
+                        </div>
+                        <div id="amountDisplay" class="hidden">
+                            <p class="text-5xl font-bold text-gray-900 mb-1">
+                                <span id="amount"></span>
+                            </p>
+                            <p class="text-lg text-gray-600" id="tokenSymbol"></p>
+                            <p class="copyable text-xs text-gray-500 mt-2 cursor-pointer hover:text-gray-700" id="tokenAddress" title="Click to copy token address"></p>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex items-center justify-center gap-2 px-4 py-3 bg-purple-100 rounded-lg">
+                        <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                            </path>
+                        </svg>
+                        <span class="text-sm text-purple-900 font-medium">Only you and the seller can see this
+                            amount</span>
+                    </div>
+                </div>
+
+                <!-- Invoice Details -->
+                <div class="space-y-3 mb-6">
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm font-medium text-gray-600">Invoice ID</span>
+                        <code id="invoiceIdDisplay" class="copyable text-sm bg-gray-100 px-2 py-1 rounded font-mono cursor-pointer hover:bg-gray-200" title="Click to copy"></code>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm font-medium text-gray-600">Created</span>
+                        <span id="createdAt" class="text-sm text-gray-900"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm font-medium text-gray-600">Network</span>
+                        <span class="text-sm text-gray-900">Arbitrum Sepolia</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm font-medium text-gray-600">Your EOA</span>
+                        <code id="walletAddress" class="copyable text-xs bg-gray-100 px-2 py-1 rounded font-mono cursor-pointer hover:bg-gray-200" title="Click to copy">Loading...</code>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm font-medium text-gray-600">Smart Wallet (fund USDC here)</span>
+                        <code id="smartWalletDisplay" class="copyable text-xs bg-gray-100 px-2 py-1 rounded font-mono cursor-pointer hover:bg-gray-200" title="Click to copy">Computing...</code>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-sm font-medium text-gray-600">Smart Wallet Token Balance</span>
+                        <span id="tokenBalance" class="text-sm text-gray-900">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Pay Button -->
+                <button onclick="payInvoice()" id="payButton"
+                    class="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="payButtonText">Pay into Privacy Pool</span>
+                </button>
+
+                <p class="text-xs text-center text-gray-500 mt-4">
+                    Funds deposited into privacy pool — amount hidden on-chain
+                </p>
+            </div>
+
+            <!-- Payment Success -->
+            <div id="successState" class="hidden mt-8 bg-green-50 border-2 border-green-200 rounded-xl shadow-lg p-8">
+                <div class="flex items-center gap-3 mb-4">
+                    <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <h2 class="text-2xl font-bold text-green-800">Deposited into Privacy Pool!</h2>
+                        <p class="text-sm text-green-700">Amount hidden — only a commitment is visible on-chain</p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-green-200 mt-4 space-y-3">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-1">Pool Deposit Transaction:</p>
+                        <a id="txLink" href="#" target="_blank"
+                            class="text-sm text-blue-600 hover:text-blue-800 underline font-mono break-all"></a>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-1">On-chain Commitments (amounts are hidden):</p>
+                        <code id="commitmentDisplay" class="text-xs bg-gray-100 px-2 py-1 rounded font-mono break-all block whitespace-pre-line"></code>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-600 mt-4 text-center">
+                    Arbiscan shows only the commitment hash — no amount visible to observers
+                </p>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden mt-8 bg-red-50 border-2 border-red-200 rounded-xl shadow-lg p-6">
+            <div class="flex items-center gap-2 mb-2">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="text-lg font-semibold text-red-800">Error</h3>
+            </div>
+            <p id="errorMessage" class="text-sm text-red-700"></p>
+        </div>
+    </div>
+
+    <script>
+        const RPC_URL = 'ws://localhost:2100';
+        const CHAIN_ID = 421614; // Arbitrum Sepolia
+        const CHAIN = {
+            id: CHAIN_ID,
+            name: 'Arbitrum Sepolia',
+            network: 'arbitrum-sepolia',
+            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: {
+                default: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] },
+                public: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] },
+            }
+        };
+        const FACTORY_ADDRESS = '0xC099F3Cc3cA145546B502A8d8B2866283Aaf054e'; // OmniAccountFactory V1
+        const ENTRYPOINT_ADDRESS = '0xe6042188857a822DDfcFE5fd9E17118049Ab539a'; // EntryPoint V1
+        const CLIENT_ID = 'wildmeta';
+        const PAYMASTER_ADDRESS = '0x6255B9F4A4E80BC20eE389fD35DE9d2c029D5912'; // SimplePaymaster staging-v1
+        // Set OE_PRIVACY_POOL_ADDRESS env var on the TEE server to configure this.
+        // The frontend reads it back from omni_payInvoice response (pool_address field).
+        let PRIVACY_POOL_ADDRESS = null; // populated from omni_payInvoice response
+
+        let provider, signer, userAddress;
+        let invoiceData = null; // Store full invoice data including token info
+        let smartWalletAddress = null;
+        let omniAccountHash = null;
+        let publicClient = null;
+        const invoiceId = new URLSearchParams(window.location.search).get('id');
+
+        // ERC20 ABI for token interactions
+        const ERC20_ABI = [
+            'function symbol() view returns (string)',
+            'function decimals() view returns (uint8)',
+            'function balanceOf(address) view returns (uint256)',
+            'function approve(address spender, uint256 amount) returns (bool)',
+            'function allowance(address owner, address spender) view returns (uint256)',
+            'function transfer(address to, uint256 amount) returns (bool)'
+        ];
+
+        // OmniAccountFactory ABI — getAddress computes deterministic CREATE2 address,
+        // createAccount deploys it (used in initCode for first-use UserOps).
+        const FACTORY_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "bytes32", "name": "oa", "type": "bytes32"},
+                    {"internalType": "uint8",   "name": "oaType", "type": "uint8"},
+                    {"internalType": "bytes",   "name": "clientId", "type": "bytes"},
+                    {"internalType": "address", "name": "root", "type": "address"}
+                ],
+                "name": "getAddress",
+                "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "bytes32", "name": "oa", "type": "bytes32"},
+                    {"internalType": "uint8",   "name": "oaType", "type": "uint8"},
+                    {"internalType": "bytes",   "name": "clientId", "type": "bytes"},
+                    {"internalType": "address", "name": "root", "type": "address"}
+                ],
+                "name": "createAccount",
+                "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        // OmniAccount ABI (simplified - only what we need)
+        const ACCOUNT_ABI = [
+            {
+                "inputs": [],
+                "name": "getNonce",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "dest", "type": "address"},
+                    {"internalType": "uint256", "name": "value", "type": "uint256"},
+                    {"internalType": "bytes", "name": "func", "type": "bytes"}
+                ],
+                "name": "execute",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "components": [
+                            {"internalType": "address", "name": "target", "type": "address"},
+                            {"internalType": "uint256", "name": "value",  "type": "uint256"},
+                            {"internalType": "bytes",   "name": "data",   "type": "bytes"}
+                        ],
+                        "internalType": "struct BaseAccount.Call[]",
+                        "name": "calls",
+                        "type": "tuple[]"
+                    }
+                ],
+                "name": "executeBatch",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        const UserOpSigner = {
+            Owner: 0x00,
+            RootKey: 0x01,
+            SessionKey: 0x02,
+            Passkey: 0x03,
+        };
+
+        if (!invoiceId) {
+            showError('No invoice ID provided in URL');
+        }
+
+        async function connectWallet() {
+            // Check if ethers library is loaded
+            if (typeof ethers === 'undefined') {
+                showError('ethers.js library failed to load. Please check your internet connection and refresh the page.');
+                console.error('ethers is not defined - CDN may be blocked or failed to load');
+                return;
+            }
+
+            if (!window.ethereum) {
+                showError('Please install MetaMask to continue');
+                return;
+            }
+
+            try {
+                // ethers v6 syntax
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+
+                console.log('Connected wallet:', userAddress);
+
+                // Switch to Arbitrum Sepolia
+                await switchToArbitrumSepolia();
+
+                // Initialize viem client
+                if (window.viem) {
+                    const { createPublicClient, http } = window.viem;
+                    publicClient = createPublicClient({
+                        chain: CHAIN,
+                        transport: http('https://sepolia-rollup.arbitrum.io/rpc')
+                    });
+                    console.log('Initialized viem public client');
+                }
+
+                // Calculate smart wallet address
+                try {
+                    omniAccountHash = await calculateOmniAccount(userAddress, CLIENT_ID);
+                    console.log('OmniAccount hash:', omniAccountHash);
+                    // Note: We'll set smartWalletAddress when needed in payment
+                } catch (error) {
+                    console.warn('Could not calculate smart wallet address:', error);
+                }
+
+                // Load invoice
+                await loadInvoice();
+
+                document.getElementById('loginState').classList.add('hidden');
+                document.getElementById('invoiceState').classList.remove('hidden');
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+                showError('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        async function switchToArbitrumSepolia() {
+            const chainId = '0x66eee'; // 421614 in hex
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId }],
+                });
+            } catch (error) {
+                // Chain not added, add it
+                if (error.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId,
+                            chainName: 'Arbitrum Sepolia',
+                            rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
+                            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                            blockExplorerUrls: ['https://sepolia.arbiscan.io/'],
+                        }],
+                    });
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        async function loadInvoice() {
+            try {
+                const ws = new WebSocket(RPC_URL);
+                await new Promise((resolve, reject) => {
+                    ws.onopen = resolve;
+                    ws.onerror = reject;
+                });
+
+                const requestId = Math.floor(Math.random() * 1000000);
+                const request = {
+                    jsonrpc: '2.0',
+                    id: requestId,
+                    method: 'omni_getInvoiceDetails',
+                    params: {
+                        invoice_id: invoiceId,
+                        auth_token: null  // MVP: no auth required
+                    }
+                };
+
+                ws.send(JSON.stringify(request));
+
+                const data = await new Promise((resolve, reject) => {
+                    ws.onmessage = (event) => {
+                        const response = JSON.parse(event.data);
+                        if (response.id === requestId) {
+                            if (response.error) {
+                                reject(new Error(response.error.message || 'RPC error'));
+                            } else {
+                                resolve(response.result);
+                            }
+                        }
+                    };
+                    setTimeout(() => reject(new Error('Request timeout')), 10000);
+                });
+
+                ws.close();
+
+                // Store invoice data for payment
+                invoiceData = data;
+
+                // Fetch token info from blockchain
+                const arbSepoliaProvider = new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
+                const tokenContract = new ethers.Contract(data.token_address, ERC20_ABI, arbSepoliaProvider);
+
+                let tokenSymbol, tokenDecimals, formattedAmount;
+                try {
+                    [tokenSymbol, tokenDecimals] = await Promise.all([
+                        tokenContract.symbol(),
+                        tokenContract.decimals()
+                    ]);
+
+                    // Format amount from smallest units to human-readable
+                    if (data.amount) {
+                        const amountBigInt = BigInt(data.amount);
+                        const divisor = BigInt(10 ** Number(tokenDecimals));
+                        const wholePart = amountBigInt / divisor;
+                        const fractionalPart = amountBigInt % divisor;
+                        const fractionalStr = fractionalPart.toString().padStart(Number(tokenDecimals), '0');
+
+                        // Trim trailing zeros from fractional part
+                        const trimmedFractional = fractionalStr.replace(/0+$/, '');
+                        formattedAmount = trimmedFractional ? `${wholePart}.${trimmedFractional}` : wholePart.toString();
+                    } else {
+                        formattedAmount = 'ENCRYPTED';
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch token info:', error);
+                    tokenSymbol = 'Unknown Token';
+                    tokenDecimals = 18;
+                    formattedAmount = data.amount || 'ENCRYPTED';
+                }
+
+                // Resolve smart wallet address so we can show it and check its balance
+                let resolvedSmartWallet = null;
+                try {
+                    if (omniAccountHash) {
+                        const walletInfo = await getSmartWalletAddress(omniAccountHash);
+                        resolvedSmartWallet = walletInfo.address;
+                        smartWalletAddress = resolvedSmartWallet;
+                        setCopyable('smartWalletDisplay', resolvedSmartWallet, resolvedSmartWallet.substring(0, 10) + '...' + resolvedSmartWallet.substring(38));
+                    }
+                } catch (error) {
+                    console.warn('Could not resolve smart wallet address:', error);
+                    document.getElementById('smartWalletDisplay').textContent = 'Error';
+                }
+
+                // Fetch smart wallet's token balance (that's where the USDC must be)
+                const balanceTarget = resolvedSmartWallet || userAddress;
+                let formattedBalance = '0';
+                try {
+                    const balance = await tokenContract.balanceOf(balanceTarget);
+                    const balanceBigInt = BigInt(balance);
+                    const divisor = BigInt(10 ** Number(tokenDecimals));
+                    const wholePart = balanceBigInt / divisor;
+                    const fractionalPart = balanceBigInt % divisor;
+                    const fractionalStr = fractionalPart.toString().padStart(Number(tokenDecimals), '0');
+                    const trimmedFractional = fractionalStr.replace(/0+$/, '');
+                    formattedBalance = trimmedFractional ? `${wholePart}.${trimmedFractional}` : wholePart.toString();
+                } catch (error) {
+                    console.warn('Could not fetch token balance:', error);
+                    formattedBalance = 'Unknown';
+                }
+
+                // Display invoice details
+                setCopyable('invoiceIdDisplay', invoiceId, invoiceId.substring(0, 20) + '...');
+                const creatorAddr = data.created_by || data.seller_account || 'Unknown';
+                setCopyable('sellerName', creatorAddr, creatorAddr.substring(0, 10) + '...' + creatorAddr.substring(38));
+                document.getElementById('description').textContent = data.description;
+                document.getElementById('amount').textContent = formattedAmount;
+                document.getElementById('tokenSymbol').textContent = tokenSymbol;
+                setCopyable('tokenAddress', data.token_address, data.token_address.substring(0, 10) + '...' + data.token_address.substring(38));
+                document.getElementById('createdAt').textContent = new Date(data.created_at * 1000).toLocaleDateString();
+
+                // Display wallet info
+                setCopyable('walletAddress', userAddress, userAddress.substring(0, 6) + '...' + userAddress.substring(38));
+                document.getElementById('tokenBalance').textContent = `${formattedBalance} ${tokenSymbol}`;
+
+                // Show amount
+                document.getElementById('amountLoading').classList.add('hidden');
+                document.getElementById('amountDisplay').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error loading invoice:', error);
+                showError('Failed to load invoice: ' + error.message);
+            }
+        }
+
+        async function payInvoice() {
+            const payButton = document.getElementById('payButton');
+            const payButtonText = document.getElementById('payButtonText');
+
+            payButton.disabled = true;
+            payButtonText.textContent = 'Preparing payment...';
+
+            try {
+                console.log('\n=== Starting Privacy Pool Deposit ===');
+
+                // Step 1: Derive smart wallet address + build initCode if not yet deployed
+                payButtonText.textContent = 'Getting smart wallet...';
+                const walletInfo = await getSmartWalletAddress(omniAccountHash);
+                smartWalletAddress = walletInfo.address;
+                const walletInitCode = walletInfo.initCode;
+                console.log('Smart wallet address:', smartWalletAddress, 'initCode:', walletInitCode !== '0x' ? '(deployment)' : '(already deployed)');
+
+                // Step 2: Call omni_payInvoice — TEE decrypts amount, generates commitment+secret
+                payButtonText.textContent = 'Preparing pool deposit (TEE)...';
+                const poolInfo = await callRpc('omni_payInvoice', {
+                    invoice_id: invoiceId,
+                    buyer_smart_wallet: smartWalletAddress,
+                    chain_id: CHAIN_ID
+                });
+                console.log('Pool deposit info from TEE:', poolInfo);
+                PRIVACY_POOL_ADDRESS = poolInfo.pool_address;
+
+                // Step 3: Build UserOp with executeBatch:
+                //   [approve(pool, total), deposit_0, deposit_1, ..., deposit_N]
+                // The approval must come from the smart wallet (msg.sender for the pool deposit),
+                // so we batch all calls in a single UserOp.
+                payButtonText.textContent = 'Building pool deposit UserOp...';
+                const userOp = await buildPoolDepositUserOp(
+                    smartWalletAddress,
+                    walletInitCode,
+                    PRIVACY_POOL_ADDRESS,
+                    invoiceData.token_address,
+                    poolInfo.total_amount_raw,
+                    poolInfo.deposits
+                );
+                console.log('Built pool deposit UserOp:', userOp);
+
+                // Step 4: Sign UserOp with MetaMask
+                payButtonText.textContent = 'Please sign in MetaMask...';
+                const signature = await signUserOperation(userOp, userAddress);
+                userOp.signature = signature;
+                console.log('Signed UserOp');
+
+                // Step 5: Submit to omni_settleUserOp
+                payButtonText.textContent = 'Submitting to blockchain...';
+                const txHash = await settleUserOp(userOp);
+                console.log('Pool deposit successful! Tx hash:', txHash);
+
+                // Step 6: Show success — list all commitments (no amounts visible)
+                document.getElementById('payButton').classList.add('hidden');
+                document.getElementById('successState').classList.remove('hidden');
+                document.getElementById('txLink').href = `https://sepolia.arbiscan.io/tx/${txHash}`;
+                document.getElementById('txLink').textContent = txHash;
+                // Show one commitment per recipient
+                const commitLines = poolInfo.deposits
+                    .map((d, i) => `Recipient ${i + 1}: 0x${d.commitment_hex}`)
+                    .join('\n');
+                document.getElementById('commitmentDisplay').textContent = commitLines;
+
+                console.log('=== Privacy Pool Deposit Complete ===\n');
+                console.log(`On-chain: ${poolInfo.deposits.length} commitment(s) visible, amounts hidden`);
+
+            } catch (error) {
+                console.error('Payment error:', error);
+                showError('Payment failed: ' + error.message);
+                payButton.disabled = false;
+                payButtonText.textContent = 'Pay into Privacy Pool';
+            }
+        }
+
+        /**
+         * Send a JSON-RPC call over WebSocket and return the result.
+         */
+        async function callRpc(method, params) {
+            const ws = new WebSocket(RPC_URL);
+            await new Promise((resolve, reject) => {
+                ws.onopen = resolve;
+                ws.onerror = reject;
+            });
+
+            const requestId = Math.floor(Math.random() * 1000000);
+            ws.send(JSON.stringify({ jsonrpc: '2.0', id: requestId, method, params }));
+
+            const result = await new Promise((resolve, reject) => {
+                ws.onmessage = (event) => {
+                    const response = JSON.parse(event.data);
+                    if (response.id === requestId) {
+                        if (response.error) {
+                            reject(new Error(response.error.message || 'RPC call failed'));
+                        } else {
+                            resolve(response.result);
+                        }
+                    }
+                };
+                setTimeout(() => reject(new Error('RPC timeout')), 30000);
+            });
+
+            ws.close();
+            return result;
+        }
+
+        /**
+         * Approve ERC20 token spending for a spender (direct MetaMask tx, not UserOp).
+         */
+        async function approveToken(tokenAddress, spender, amount) {
+            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+            const currentAllowance = await tokenContract.allowance(userAddress, spender);
+            if (BigInt(currentAllowance) >= BigInt(amount)) {
+                console.log('Allowance already sufficient:', currentAllowance.toString());
+                return;
+            }
+            const tx = await tokenContract.approve(spender, amount);
+            await tx.wait();
+            console.log('Approved tx:', tx.hash);
+        }
+
+        /**
+         * Build UserOp using executeBatch:
+         *   [0]   token.approve(pool, totalAmount)   — grant pool allowance from smart wallet
+         *   [1..N] pool.deposit(commitment_i, amount_i) — one deposit per recipient
+         *
+         * The approval MUST come from the smart wallet because deposit() calls
+         * token.safeTransferFrom(msg.sender, pool, amount), and msg.sender will
+         * be the smart wallet when routed through account.executeBatch().
+         *
+         * @param {Array} deposits — array of { calldata, amount_raw } from omni_payInvoice
+         */
+        async function buildPoolDepositUserOp(sender, initCode, poolAddress, tokenAddress, totalAmountRaw, deposits) {
+            const accountInterface = new ethers.Interface(ACCOUNT_ABI);
+            const tokenInterface = new ethers.Interface(ERC20_ABI);
+
+            // Call 0: approve pool to spend total tokens (from smart wallet)
+            const approveCalldata = tokenInterface.encodeFunctionData('approve', [
+                poolAddress,
+                BigInt(totalAmountRaw),
+            ]);
+
+            // Calls 1..N: one deposit per recipient
+            const depositCalls = deposits.map(d => ({
+                target: poolAddress,
+                value: 0,
+                data: d.calldata,
+            }));
+
+            const calls = [
+                { target: tokenAddress, value: 0, data: approveCalldata },
+                ...depositCalls,
+            ];
+
+            const callData = accountInterface.encodeFunctionData('executeBatch', [calls]);
+
+            const isDeployment = initCode && initCode !== '0x';
+
+            let nonce = 0;
+            if (!isDeployment) {
+                try {
+                    const accountContract = new ethers.Contract(sender, ACCOUNT_ABI, provider);
+                    nonce = Number(await accountContract.getNonce());
+                } catch (error) {
+                    console.warn('Could not fetch nonce, using 0:', error);
+                }
+            }
+
+            // Each deposit writes 20 cold Merkle tree slots on first use (400k gas) plus
+            // approve (~46k) + safeTransferFrom (~30k) + overhead.
+            // Budget 2M per deposit to be safe; minimum 2M total.
+            const callGasLimit = BigInt(Math.max(2000000, deposits.length * 2000000));
+            // Deployment needs more verification gas (account creation ~250k + validation)
+            const verificationGasLimit = isDeployment ? 800000n : 500000n;
+            const preVerificationGas = 50000n;
+            const maxFeePerGas = 300000000n;
+            const maxPriorityFeePerGas = 100000000n;
+
+            return {
+                sender,
+                nonce,
+                init_code: initCode,
+                call_data: callData,
+                account_gas_limits: packAccountGasLimits(callGasLimit, verificationGasLimit),
+                pre_verification_gas: Number(preVerificationGas),
+                gas_fees: packGasFees(maxFeePerGas, maxPriorityFeePerGas),
+                paymaster_and_data: buildPaymasterAndData(PAYMASTER_ADDRESS, 100000n, 50000n),
+                signature: '0x'
+            };
+        }
+
+        /**
+         * Calculate OmniAccount hash from EVM address
+         */
+        async function calculateOmniAccount(address, clientId) {
+            const encoder = new TextEncoder();
+            const clientIdBytes = encoder.encode(clientId);
+            const identityTypeBytes = encoder.encode('evm');
+
+            // Convert address hex to bytes
+            const addressHex = address.slice(2).toLowerCase();
+            const addressBytes = new Uint8Array(20);
+            for (let i = 0; i < addressHex.length; i += 2) {
+                addressBytes[i / 2] = parseInt(addressHex.substring(i, i + 2), 16);
+            }
+
+            // Combine all bytes
+            const combined = new Uint8Array(
+                clientIdBytes.length + identityTypeBytes.length + addressBytes.length
+            );
+            combined.set(clientIdBytes, 0);
+            combined.set(identityTypeBytes, clientIdBytes.length);
+            combined.set(addressBytes, clientIdBytes.length + identityTypeBytes.length);
+
+            // Calculate SHA256 hash
+            const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            return hashHex;
+        }
+
+        /**
+         * Derive the deterministic OmniAccount smart wallet address via the factory,
+         * and build initCode for first-time deployment if the account doesn't exist yet.
+         *
+         * Returns { address, initCode } where initCode is '0x' if already deployed.
+         */
+        async function getSmartWalletAddress(omniAccountHash) {
+            // Ask TEE for the root signer address (EVM address derived from the bundler key)
+            const rootSignerAddress = await callRpc('omni_getSmartWalletRootSigner', {
+                omni_account: omniAccountHash,
+                chain_type: 'evm',
+                wallet_index: 0,
+            });
+            console.log('Root signer address from TEE:', rootSignerAddress);
+
+            // OwnerType.Evm = 0
+            const OA_TYPE_EVM = 0;
+            const clientIdBytes = ethers.toUtf8Bytes(CLIENT_ID);
+
+            // Call factory.getAddress(oa, oaType, clientId, root) — pure view, no tx
+            const factoryInterface = new ethers.Interface(FACTORY_ABI);
+            const getAddressCalldata = factoryInterface.encodeFunctionData('getAddress', [
+                omniAccountHash,
+                OA_TYPE_EVM,
+                clientIdBytes,
+                rootSignerAddress,
+            ]);
+            const addressResult = await provider.call({
+                to: FACTORY_ADDRESS,
+                data: getAddressCalldata,
+            });
+            const [walletAddress] = factoryInterface.decodeFunctionResult('getAddress', addressResult);
+            console.log('Smart wallet address (CREATE2):', walletAddress);
+
+            // Check if already deployed
+            const code = await provider.getCode(walletAddress);
+            const isDeployed = code && code !== '0x';
+
+            let initCode = '0x';
+            if (!isDeployed) {
+                console.log('Account not deployed — building initCode for first-use deployment');
+                const createCalldata = factoryInterface.encodeFunctionData('createAccount', [
+                    omniAccountHash,
+                    OA_TYPE_EVM,
+                    clientIdBytes,
+                    rootSignerAddress,
+                ]);
+                // initCode = factory address (20 bytes) + createAccount calldata
+                initCode = FACTORY_ADDRESS + createCalldata.slice(2);
+            }
+
+            return { address: walletAddress, initCode };
+        }
+
+        /**
+         * Build UserOp for ERC20 payment
+         */
+        async function buildPaymentUserOp(sender, recipient, tokenAddress, amountRaw, omniAccountHash) {
+            if (!window.viem) {
+                throw new Error('Viem library not loaded');
+            }
+
+            const { encodeFunctionData } = window.viem;
+
+            // Build ERC20 transfer calldata
+            const tokenInterface = new ethers.Interface(ERC20_ABI);
+            const transferCalldata = tokenInterface.encodeFunctionData('transfer', [
+                recipient,
+                BigInt(amountRaw)
+            ]);
+
+            // Build smart wallet execute() calldata
+            const accountInterface = new ethers.Interface(ACCOUNT_ABI);
+            const callData = accountInterface.encodeFunctionData('execute', [
+                tokenAddress,  // dest (token contract)
+                0,             // value (0 ETH)
+                transferCalldata // func (transfer calldata)
+            ]);
+
+            // Get nonce
+            let nonce = 0;
+            try {
+                const code = await publicClient.getBytecode({ address: sender });
+                const isDeployed = code && code !== '0x' && code !== '0x0';
+
+                if (isDeployed) {
+                    nonce = Number(await publicClient.readContract({
+                        address: sender,
+                        abi: ACCOUNT_ABI,
+                        functionName: 'getNonce'
+                    }));
+                }
+            } catch (error) {
+                console.warn('Could not fetch nonce, using 0:', error);
+            }
+
+            // Gas parameters (conservative values for Arbitrum Sepolia)
+            const callGasLimit = 800000n;
+            const verificationGasLimit = 500000n;
+            const preVerificationGas = 50000n;
+            const maxFeePerGas = 300000000n; // 0.3 gwei
+            const maxPriorityFeePerGas = 100000000n; // 0.1 gwei
+
+            const userOp = {
+                sender: sender,
+                nonce: nonce,
+                init_code: '0x', // No deployment for now
+                call_data: callData,
+                account_gas_limits: packAccountGasLimits(callGasLimit, verificationGasLimit),
+                pre_verification_gas: Number(preVerificationGas),
+                gas_fees: packGasFees(maxFeePerGas, maxPriorityFeePerGas),
+                paymaster_and_data: '0x',
+                signature: '0x' // Will be filled after signing
+            };
+
+            return userOp;
+        }
+
+        /**
+         * Pack gas limits into accountGasLimits (bytes32)
+         */
+        function packAccountGasLimits(callGasLimit, verificationGasLimit) {
+            const packed = (verificationGasLimit << 128n) | callGasLimit;
+            return '0x' + packed.toString(16).padStart(64, '0');
+        }
+
+        /**
+         * Build paymasterAndData for SimplePaymaster:
+         * paymaster_address (20 bytes) + verificationGasLimit (16 bytes) + postOpGasLimit (16 bytes)
+         */
+        function buildPaymasterAndData(paymasterAddress, verificationGasLimit, postOpGasLimit) {
+            const addr = paymasterAddress.slice(2).toLowerCase(); // 40 hex chars
+            const vgl = verificationGasLimit.toString(16).padStart(32, '0'); // 16 bytes
+            const pogl = postOpGasLimit.toString(16).padStart(32, '0');      // 16 bytes
+            return '0x' + addr + vgl + pogl;
+        }
+
+        /**
+         * Pack gas fees into gasFees (bytes32)
+         */
+        function packGasFees(maxFeePerGas, maxPriorityFeePerGas) {
+            const packed = (maxPriorityFeePerGas << 128n) | maxFeePerGas;
+            return '0x' + packed.toString(16).padStart(64, '0');
+        }
+
+        /**
+         * Sign UserOperation with MetaMask using EIP-712
+         */
+        async function signUserOperation(userOp, walletAddress) {
+            if (!window.viem) {
+                throw new Error('Viem library not loaded');
+            }
+
+            const { hashTypedData, createWalletClient, custom } = window.viem;
+
+            // EIP-712 typed data for PackedUserOperation
+            const typedData = {
+                domain: {
+                    name: 'ERC4337',
+                    version: '1',
+                    chainId: CHAIN_ID,
+                    verifyingContract: ENTRYPOINT_ADDRESS,
+                },
+                types: {
+                    PackedUserOperation: [
+                        { name: 'sender', type: 'address' },
+                        { name: 'nonce', type: 'uint256' },
+                        { name: 'initCode', type: 'bytes' },
+                        { name: 'callData', type: 'bytes' },
+                        { name: 'accountGasLimits', type: 'bytes32' },
+                        { name: 'preVerificationGas', type: 'uint256' },
+                        { name: 'gasFees', type: 'bytes32' },
+                        { name: 'paymasterAndData', type: 'bytes' },
+                    ],
+                },
+                primaryType: 'PackedUserOperation',
+                message: {
+                    sender: userOp.sender,
+                    nonce: BigInt(userOp.nonce),
+                    initCode: userOp.init_code,
+                    callData: userOp.call_data,
+                    accountGasLimits: userOp.account_gas_limits,
+                    preVerificationGas: BigInt(userOp.pre_verification_gas),
+                    gasFees: userOp.gas_fees,
+                    paymasterAndData: userOp.paymaster_and_data,
+                }
+            };
+
+            console.log('Signing with EIP-712:', hashTypedData(typedData));
+
+            const walletClient = createWalletClient({
+                account: walletAddress,
+                chain: CHAIN,
+                transport: custom(window.ethereum),
+            });
+
+            const signature = await walletClient.signTypedData({
+                account: walletAddress,
+                domain: typedData.domain,
+                types: typedData.types,
+                primaryType: typedData.primaryType,
+                message: typedData.message,
+            });
+
+            // Add UserOpSigner.Owner prefix (0x00)
+            const prefixedSignature = `0x${UserOpSigner.Owner.toString(16).padStart(2, '0')}${signature.slice(2)}`;
+            return prefixedSignature;
+        }
+
+        /**
+         * Submit UserOp to TEE worker via omni_settleUserOp
+         */
+        async function settleUserOp(userOp) {
+            const result = await callRpc('omni_settleUserOp', {
+                user_operation: userOp,
+                chain_id: CHAIN_ID
+            });
+            return result.transaction_hash;
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+        }
+
+        /**
+         * Set element text to a truncated display value while storing the full
+         * value in data-full for click-to-copy.
+         */
+        function setCopyable(id, fullValue, displayValue) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = displayValue;
+            el.dataset.full = fullValue;
+        }
+
+        /**
+         * Copy the full value stored in data-full to clipboard and briefly show
+         * a "Copied!" tooltip next to the element.
+         */
+        async function copyFull(el) {
+            const value = el.dataset.full;
+            if (!value) return;
+            try {
+                await navigator.clipboard.writeText(value);
+                const prev = el.textContent;
+                el.textContent = 'Copied!';
+                setTimeout(() => { el.textContent = prev; }, 1200);
+            } catch (e) {
+                console.warn('Copy failed', e);
+            }
+        }
+
+        // Wire up click-to-copy on all .copyable elements (including dynamically populated ones)
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest('.copyable');
+            if (el && el.dataset.full) copyFull(el);
+        });
+
+        // Diagnostic: Log library loading status
+        window.addEventListener('load', () => {
+            console.log('Page loaded');
+            console.log('ethers available:', typeof ethers !== 'undefined');
+            console.log('MetaMask available:', typeof window.ethereum !== 'undefined');
+            if (typeof ethers !== 'undefined') {
+                console.log('ethers version:', ethers.version);
+            }
+        });
+    </script>
+</body>
+
+</html>

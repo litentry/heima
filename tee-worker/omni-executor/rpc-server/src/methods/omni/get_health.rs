@@ -64,6 +64,8 @@ mod test {
 		let wildmeta_api: Arc<Box<dyn WildmetaApi>> = Arc::new(Box::new(MockWildmetaApi));
 		let wildmeta_timestamp_storage = Arc::new(WildmetaTimestampStorage::new(db.clone()));
 		let loan_record_storage = Arc::new(oe_storage::LoanRecordStorage::new(db.clone()));
+		let confidential_invoice_storage =
+			Arc::new(oe_storage::ConfidentialInvoiceStorage::new(db.clone()));
 
 		let (cross_chain_intent_executor, _cross_chain_mock_recv) = MockedIntentExecutor::new();
 		let aes_key = [0u8; 32];
@@ -81,6 +83,7 @@ mod test {
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
+			confidential_invoice_storage,
 			[0u8; 33], // Test ECDSA public key
 			[0u8; 32], // Test bundler private key
 			[0u8; 33], // Test bundler export authorized pubkey

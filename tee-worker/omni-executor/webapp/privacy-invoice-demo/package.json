@@ -1,0 +1,19 @@
+{
+  "name": "privacy-invoice-demo",
+  "version": "1.0.0",
+  "description": "Privacy-preserving invoice payment demo using TEE encryption",
+  "scripts": {
+    "start": "python3 -m http.server 8080 || npx http-server -p 8080",
+    "dev": "python3 -m http.server 8080",
+    "serve": "npx http-server -p 8080"
+  },
+  "keywords": [
+    "privacy",
+    "invoice",
+    "tee",
+    "encryption",
+    "arbitrum"
+  ],
+  "author": "Heima Network",
+  "license": "GPL-3.0"
+}

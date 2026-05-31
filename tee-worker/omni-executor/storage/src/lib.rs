@@ -24,6 +24,11 @@ mod wildmeta_timestamp;
 pub use wildmeta_timestamp::WildmetaTimestampStorage;
 pub mod loan_record;
 pub use loan_record::{LoanRecord, LoanRecordStorage, LoanState};
+pub mod confidential_invoice;
+pub use confidential_invoice::{
+	ConfidentialInvoice, ConfidentialInvoiceStorage, InvoiceMetadata, InvoiceStatus,
+	RecipientWithdrawal, RecipientWithdrawalStorage,
+};
 
 pub use asset_lock::AssetLockStorage;
 pub use asset_lock::Key as AssetLockStorageKey;
