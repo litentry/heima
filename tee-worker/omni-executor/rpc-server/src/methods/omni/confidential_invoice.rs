@@ -619,7 +619,7 @@ mod tests {
 	use super::*;
 	use crate::{start_server, ShieldingKey};
 	use jsonrpsee::core::client::ClientT;
-	use jsonrpsee::rpc_params;
+	use jsonrpsee::core::params::ObjectParams;
 	use jsonrpsee::ws_client::WsClientBuilder;
 	use oe_client_binance::mocks::MockBinanceApiClient;
 	use oe_client_pumpx::PumpxApiClient;
@@ -687,37 +687,37 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		// Create invoice with two recipients
-		let create_response: CreateInvoiceResponse = client
-			.request(
-				"omni_createConfidentialInvoice",
-				rpc_params![
-					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", // created_by
-					"buyer@example.com",                          // buyer_identifier
-					"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // token_address
-					421614u64,                                    // chain_id
-					"Test invoice",                               // description
-					serde_json::json!([
-						{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", "amount": "30000000000"},
-						{"address": "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01", "amount": "20000000000"}
-					])  // recipients
-				],
-			)
-			.await
+		// Create invoice with two recipients.
+		// The method parses params into a struct, so pass named (object) params.
+		let mut create_params = ObjectParams::new();
+		create_params.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0").unwrap();
+		create_params.insert("buyer_identifier", "buyer@example.com").unwrap();
+		create_params
+			.insert("token_address", "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d")
 			.unwrap();
+		create_params.insert("chain_id", 421614u64).unwrap();
+		create_params.insert("description", "Test invoice").unwrap();
+		create_params
+			.insert(
+				"recipients",
+				serde_json::json!([
+					{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", "amount": "30000000000"},
+					{"address": "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01", "amount": "20000000000"}
+				]),
+			)
+			.unwrap();
+		let create_response: CreateInvoiceResponse =
+			client.request("omni_createConfidentialInvoice", create_params).await.unwrap();
 
 		assert!(create_response.invoice_id.starts_with("inv_"));
 		assert!(!create_response.commitment.is_empty());
 		assert_eq!(create_response.total_amount, "50000000000");
 
 		// Get invoice details
-		let get_response: GetInvoiceDetailsResponse = client
-			.request(
-				"omni_getInvoiceDetails",
-				rpc_params![create_response.invoice_id.clone(), None::<String>],
-			)
-			.await
-			.unwrap();
+		let mut get_params = ObjectParams::new();
+		get_params.insert("invoice_id", create_response.invoice_id.clone()).unwrap();
+		let get_response: GetInvoiceDetailsResponse =
+			client.request("omni_getInvoiceDetails", get_params).await.unwrap();
 
 		assert_eq!(get_response.invoice_id, create_response.invoice_id);
 		assert_eq!(get_response.amount, Some("50000000000".to_string()));
@@ -781,66 +781,57 @@ mod tests {
 		let url = format!("ws://127.0.0.1:{}", port);
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
-		let create_response: CreateInvoiceResponse = client
-			.request(
-				"omni_createConfidentialInvoice",
-				rpc_params![
-					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0",
-					"buyer@example.com",
-					"0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
-					421614u64,
-					"Test invoice",
-					serde_json::json!([
-						{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", "amount": "30000000000"},
-						{"address": "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01", "amount": "20000000000"}
-					])
-				],
-			)
-			.await
+		let mut create_params = ObjectParams::new();
+		create_params.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0").unwrap();
+		create_params.insert("buyer_identifier", "buyer@example.com").unwrap();
+		create_params
+			.insert("token_address", "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d")
 			.unwrap();
+		create_params.insert("chain_id", 421614u64).unwrap();
+		create_params.insert("description", "Test invoice").unwrap();
+		create_params
+			.insert(
+				"recipients",
+				serde_json::json!([
+					{"address": "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0", "amount": "30000000000"},
+					{"address": "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01", "amount": "20000000000"}
+				]),
+			)
+			.unwrap();
+		let create_response: CreateInvoiceResponse =
+			client.request("omni_createConfidentialInvoice", create_params).await.unwrap();
 
-		let _: serde_json::Value = client
-			.request(
-				"omni_markInvoicePaid",
-				rpc_params![create_response.invoice_id.clone(), "0xpaidtx"],
-			)
-			.await
-			.unwrap();
+		let mut paid_params = ObjectParams::new();
+		paid_params.insert("invoice_id", create_response.invoice_id.clone()).unwrap();
+		paid_params.insert("tx_hash", "0xpaidtx").unwrap();
+		let _: serde_json::Value =
+			client.request("omni_markInvoicePaid", paid_params).await.unwrap();
 
-		let _: serde_json::Value = client
-			.request(
-				"omni_markInvoiceWithdrawn",
-				rpc_params![
-					create_response.invoice_id.clone(),
-					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0",
-					"0xwithdrawtx1"
-				],
-			)
-			.await
+		let mut withdraw_params = ObjectParams::new();
+		withdraw_params.insert("invoice_id", create_response.invoice_id.clone()).unwrap();
+		withdraw_params
+			.insert("seller_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0")
 			.unwrap();
+		withdraw_params.insert("tx_hash", "0xwithdrawtx1").unwrap();
+		let _: serde_json::Value =
+			client.request("omni_markInvoiceWithdrawn", withdraw_params).await.unwrap();
 
-		let list_response: serde_json::Value = client
-			.request(
-				"omni_listInvoicesByCreator",
-				rpc_params![
-					"0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0",
-					Some("0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0".to_string())
-				],
-			)
-			.await
+		let mut list_params = ObjectParams::new();
+		list_params.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0").unwrap();
+		list_params
+			.insert("viewer_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0")
 			.unwrap();
+		let list_response: serde_json::Value =
+			client.request("omni_listInvoicesByCreator", list_params).await.unwrap();
 
 		assert_eq!(list_response["invoices"][0]["status"], "Paid");
 		assert_eq!(list_response["invoices"][0]["display_status"], "Withdrawn");
 		assert_eq!(list_response["invoices"][0]["withdrawal_tx_hash"], "0xwithdrawtx1");
 
-		let get_response: GetInvoiceDetailsResponse = client
-			.request(
-				"omni_getInvoiceDetails",
-				rpc_params![create_response.invoice_id.clone(), None::<String>],
-			)
-			.await
-			.unwrap();
+		let mut get_params = ObjectParams::new();
+		get_params.insert("invoice_id", create_response.invoice_id.clone()).unwrap();
+		let get_response: GetInvoiceDetailsResponse =
+			client.request("omni_getInvoiceDetails", get_params).await.unwrap();
 
 		assert!(matches!(get_response.status, InvoiceStatus::Paid));
 		assert_eq!(
@@ -850,25 +841,19 @@ mod tests {
 		assert!(get_response.recipients[0].withdrawn_at.is_some());
 		assert_eq!(get_response.recipients[1].withdrawal_tx_hash, None);
 
-		let _: serde_json::Value = client
-			.request(
-				"omni_markInvoiceWithdrawn",
-				rpc_params![
-					create_response.invoice_id.clone(),
-					"0xAbCdEf0123456789AbCdEf0123456789AbCdEf01",
-					"0xwithdrawtx2"
-				],
-			)
-			.await
+		let mut withdraw_params2 = ObjectParams::new();
+		withdraw_params2.insert("invoice_id", create_response.invoice_id.clone()).unwrap();
+		withdraw_params2
+			.insert("seller_address", "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01")
 			.unwrap();
+		withdraw_params2.insert("tx_hash", "0xwithdrawtx2").unwrap();
+		let _: serde_json::Value =
+			client.request("omni_markInvoiceWithdrawn", withdraw_params2).await.unwrap();
 
-		let final_response: GetInvoiceDetailsResponse = client
-			.request(
-				"omni_getInvoiceDetails",
-				rpc_params![create_response.invoice_id, None::<String>],
-			)
-			.await
-			.unwrap();
+		let mut final_params = ObjectParams::new();
+		final_params.insert("invoice_id", create_response.invoice_id).unwrap();
+		let final_response: GetInvoiceDetailsResponse =
+			client.request("omni_getInvoiceDetails", final_params).await.unwrap();
 
 		assert!(matches!(final_response.status, InvoiceStatus::Withdrawn));
 		assert!(final_response.withdrawn_at.is_some());
