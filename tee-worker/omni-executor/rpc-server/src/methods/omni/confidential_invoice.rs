@@ -690,7 +690,9 @@ mod tests {
 		// Create invoice with two recipients.
 		// The method parses params into a struct, so pass named (object) params.
 		let mut create_params = ObjectParams::new();
-		create_params.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0").unwrap();
+		create_params
+			.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0")
+			.unwrap();
 		create_params.insert("buyer_identifier", "buyer@example.com").unwrap();
 		create_params
 			.insert("token_address", "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d")
@@ -782,7 +784,9 @@ mod tests {
 		let client = WsClientBuilder::default().build(&url).await.unwrap();
 
 		let mut create_params = ObjectParams::new();
-		create_params.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0").unwrap();
+		create_params
+			.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0")
+			.unwrap();
 		create_params.insert("buyer_identifier", "buyer@example.com").unwrap();
 		create_params
 			.insert("token_address", "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d")
@@ -808,7 +812,9 @@ mod tests {
 			client.request("omni_markInvoicePaid", paid_params).await.unwrap();
 
 		let mut withdraw_params = ObjectParams::new();
-		withdraw_params.insert("invoice_id", create_response.invoice_id.clone()).unwrap();
+		withdraw_params
+			.insert("invoice_id", create_response.invoice_id.clone())
+			.unwrap();
 		withdraw_params
 			.insert("seller_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0")
 			.unwrap();
@@ -817,7 +823,9 @@ mod tests {
 			client.request("omni_markInvoiceWithdrawn", withdraw_params).await.unwrap();
 
 		let mut list_params = ObjectParams::new();
-		list_params.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0").unwrap();
+		list_params
+			.insert("created_by", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0")
+			.unwrap();
 		list_params
 			.insert("viewer_address", "0x742d35Cc6634C0532925a3b844Bc9e7595f6bEb0")
 			.unwrap();
@@ -842,7 +850,9 @@ mod tests {
 		assert_eq!(get_response.recipients[1].withdrawal_tx_hash, None);
 
 		let mut withdraw_params2 = ObjectParams::new();
-		withdraw_params2.insert("invoice_id", create_response.invoice_id.clone()).unwrap();
+		withdraw_params2
+			.insert("invoice_id", create_response.invoice_id.clone())
+			.unwrap();
 		withdraw_params2
 			.insert("seller_address", "0xAbCdEf0123456789AbCdEf0123456789AbCdEf01")
 			.unwrap();
