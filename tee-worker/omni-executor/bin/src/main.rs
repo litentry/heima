@@ -253,7 +253,7 @@ async fn main() -> Result<(), ()> {
 				name: "bsc_accounting_signer".to_string(),
 			});
 
-			let join = start_wallet_metrics(Handle::current(), wallet_metrics);
+			let _join = start_wallet_metrics(Handle::current(), wallet_metrics);
 			// wallet monitoring setup end
 
 			let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =

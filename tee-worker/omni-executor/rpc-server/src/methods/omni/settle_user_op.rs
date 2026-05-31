@@ -100,7 +100,9 @@ pub fn register_settle_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 
 			// Step 1: Run simulation first
 			info!("Running simulation before settlement");
-			match entry_point_client.simulate_handle_ops(&[aa_user_op.clone()], beneficiary).await
+			match entry_point_client
+				.simulate_handle_ops(std::slice::from_ref(&aa_user_op), beneficiary)
+				.await
 			{
 				Ok(simulation_results) => {
 					if let Some(result) = simulation_results.first() {
@@ -137,7 +139,7 @@ pub fn register_settle_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 					})
 				},
 				Err(_) => {
-					let err_msg = format!("Failed to submit UserOp to chain");
+					let err_msg = "Failed to submit UserOp to chain".to_string();
 					error!("{}", err_msg);
 					Err(DetailedError::internal_error(&err_msg).to_rpc_error())
 				},

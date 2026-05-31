@@ -100,7 +100,7 @@ pub fn register_verify_user_op<CrossChainIntentExecutor: IntentExecutor + Send +
 			// If signature present, attempt an off-chain verification first (strip leading UserOpSigner byte)
 			if !user_op.signature.is_empty() {
 				let sig_bytes = user_op.signature.as_ref();
-				if sig_bytes.len() < 1 {
+				if sig_bytes.is_empty() {
 					error!("Signature too short for UserOp");
 					return Ok::<VerifyUserOpResponse, ErrorObjectOwned>(VerifyUserOpResponse {
 						valid: false,

@@ -162,9 +162,9 @@ pub fn generate_withdrawal_proof(
 
 	tracing::debug!(
 		"Public inputs from witness: root={:?}, nullifier={:?}, commitment={:?}",
-		pub_inputs.get(0).map(|f| fr_to_bytes32(f)),
-		pub_inputs.get(1).map(|f| fr_to_bytes32(f)),
-		pub_inputs.get(2).map(|f| fr_to_bytes32(f)),
+		pub_inputs.first().map(fr_to_bytes32),
+		pub_inputs.get(1).map(fr_to_bytes32),
+		pub_inputs.get(2).map(fr_to_bytes32),
 	);
 
 	let proof = Groth16::<Bn254, CircomReduction>::create_random_proof_with_reduction(

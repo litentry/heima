@@ -231,12 +231,12 @@ async fn query_merkle_state(
 
 	// filledSubtrees(uint256) — selector 0xf178e47c
 	let mut filled_subtrees = [[0u8; 32]; 20];
-	for i in 0..20usize {
+	for (i, subtree) in filled_subtrees.iter_mut().enumerate() {
 		let data = format!("0xf178e47c{:064x}", i);
 		let hex = call(data).await?;
 		let bytes = hex::decode(&hex).map_err(|e| format!("decode subtree {i}: {e}"))?;
 		if bytes.len() >= 32 {
-			filled_subtrees[i].copy_from_slice(&bytes[bytes.len() - 32..]);
+			subtree.copy_from_slice(&bytes[bytes.len() - 32..]);
 		}
 	}
 
@@ -302,7 +302,7 @@ async fn query_leaf_index_from_receipt(
 			Some(t) => t,
 			None => continue,
 		};
-		let t0 = topics.get(0).and_then(|t| t.as_str()).unwrap_or("");
+		let t0 = topics.first().and_then(|t| t.as_str()).unwrap_or("");
 		let t1 = topics.get(1).and_then(|t| t.as_str()).unwrap_or("");
 		if !t0.eq_ignore_ascii_case(DEPOSIT_TOPIC) || !t1.eq_ignore_ascii_case(&commitment_topic) {
 			continue;

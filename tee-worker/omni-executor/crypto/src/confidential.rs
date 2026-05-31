@@ -118,7 +118,7 @@ pub fn decrypt_amount(encrypted: &[u8], tee_key: &[u8; 32]) -> Result<u128, Conf
 pub fn generate_commitment(invoice_id: &str, amount: u128) -> [u8; 32] {
 	let mut hasher = Sha256::new();
 	hasher.update(invoice_id.as_bytes());
-	hasher.update(&amount.to_le_bytes());
+	hasher.update(amount.to_le_bytes());
 	hasher.finalize().into()
 }
 

@@ -200,7 +200,7 @@ fn calculate_domain_separator(
 
 	// chain ID (32 bytes, big-endian)
 	let chain_id_bytes = U256::from(chain_id).to_be_bytes::<32>();
-	tracing::debug!("Chain ID: {} (0x{})", chain_id, hex::encode(&chain_id_bytes));
+	tracing::debug!("Chain ID: {} (0x{})", chain_id, hex::encode(chain_id_bytes));
 	encoded.extend_from_slice(&chain_id_bytes);
 
 	// verifying contract (32 bytes, left-padded)
@@ -209,7 +209,7 @@ fn calculate_domain_separator(
 	tracing::debug!(
 		"Verifying Contract: {} (padded: 0x{})",
 		verifying_contract,
-		hex::encode(&contract_bytes)
+		hex::encode(contract_bytes)
 	);
 	encoded.extend_from_slice(&contract_bytes);
 
