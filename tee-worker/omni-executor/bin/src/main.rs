@@ -75,6 +75,15 @@ async fn main() -> Result<(), ()> {
 			export_bundler_key(args).await?;
 		},
 		Commands::Run(args) => {
+			// Install a SIGINT handler early so Ctrl+C always terminates the process,
+			// even if a later panic leaves the async runtime in a broken state.
+			tokio::spawn(async {
+				match tokio::signal::ctrl_c().await {
+					Ok(()) => std::process::exit(0),
+					Err(e) => eprintln!("Unable to listen for shutdown signal: {e}"),
+				}
+			});
+
 			if args.enable_mock_server {
 				#[cfg(feature = "mock-server")]
 				{
@@ -244,7 +253,7 @@ async fn main() -> Result<(), ()> {
 				name: "bsc_accounting_signer".to_string(),
 			});
 
-			let join = start_wallet_metrics(Handle::current(), wallet_metrics);
+			let _join = start_wallet_metrics(Handle::current(), wallet_metrics);
 			// wallet monitoring setup end
 
 			let account_assets_lock: Arc<AccountAssetLocks<PreciseAssetsLock>> =
@@ -472,6 +481,10 @@ async fn main() -> Result<(), ()> {
 			let loan_record_storage =
 				Arc::new(oe_storage::LoanRecordStorage::new(storage_db.clone()));
 
+			// Create confidential invoice storage
+			let confidential_invoice_storage =
+				Arc::new(oe_storage::ConfidentialInvoiceStorage::new(storage_db.clone()));
+
 			// Parse wildmeta backend ECDSA public key from hex
 			let wildmeta_backend_ecdsa_pubkey = {
 				use oe_primitives::utils::hex::decode_hex;
@@ -512,7 +525,7 @@ async fn main() -> Result<(), ()> {
 				};
 
 			start_rpc_server(
-				worker_url.port().expect("Missing worker port"),
+				worker_url.port_or_known_default().expect("Missing worker port"),
 				shielding_key,
 				pumpx_api,
 				storage_db.clone(),
@@ -523,6 +536,7 @@ async fn main() -> Result<(), ()> {
 				wildmeta_api,
 				wildmeta_timestamp_storage,
 				loan_record_storage,
+				confidential_invoice_storage,
 				wildmeta_backend_ecdsa_pubkey,
 				evm_accounting_ecdsa_signer_key,
 				bundler_key_export_authorized_pubkey,
@@ -535,17 +549,13 @@ async fn main() -> Result<(), ()> {
 				error!("Could not start server: {:?}", e);
 			})?;
 
-			if let Err(e) = join.await {
-				error!("There was an error in associated task: {:?}", e);
-			};
-
 			match signal::ctrl_c().await {
 				Ok(()) => {},
-				Err(err) => {
-					eprintln!("Unable to listen for shutdown signal: {}", err);
-					// we also shut down in case of error
-				},
+				Err(err) => eprintln!("Unable to listen for shutdown signal: {}", err),
 			}
+			// spawn_blocking threads cannot be interrupted — abort() detaches the handle but the
+			// OS thread keeps sleeping for up to 1 hour. Force-exit the process instead.
+			std::process::exit(0);
 		},
 	}
 

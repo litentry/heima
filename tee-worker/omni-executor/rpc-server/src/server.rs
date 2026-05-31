@@ -18,7 +18,9 @@ use oe_client_wildmeta::WildmetaApi;
 use oe_core::config::ConfigLoader;
 use oe_core::intent::executor::IntentExecutor;
 use oe_crypto::aes256::Aes256Key;
-use oe_storage::{LoanRecordStorage, StorageDB, WildmetaTimestampStorage};
+use oe_storage::{
+	ConfidentialInvoiceStorage, LoanRecordStorage, StorageDB, WildmetaTimestampStorage,
+};
 use std::collections::HashMap;
 use std::marker::{Send, Sync};
 use std::{env, net::SocketAddr, sync::Arc};
@@ -40,12 +42,21 @@ pub struct RpcContext<CrossChainIntentExecutor: IntentExecutor + Send + Sync + '
 	pub wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	#[cfg_attr(not(feature = "test-endpoints"), allow(dead_code))]
 	pub loan_record_storage: Arc<LoanRecordStorage>,
+	pub confidential_invoice_storage: Arc<ConfidentialInvoiceStorage>,
 	pub wildmeta_backend_ecdsa_pubkey: [u8; 33], // Compressed ECDSA public key for wildmeta backend signature verification
 	pub bundler_private_key: [u8; 32],           // Bundler (accounting ECDSA) private key for export
 	pub bundler_key_export_authorized_pubkey: [u8; 33], // Compressed ECDSA public key authorized to export bundler key
 	pub cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 	pub aes256_key: Aes256Key,
 	pub entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
+	/// Deployed SimplePrivacyPool contract address (loaded from OE_PRIVACY_POOL_ADDRESS env var)
+	pub privacy_pool_address: String,
+	/// Ethereum JSON-RPC URL for querying on-chain Merkle state at withdrawal time
+	pub eth_rpc_url: String,
+	/// Path to the circom withdraw_js/withdraw.wasm (Groth16 witness generator)
+	pub circuit_wasm_path: String,
+	/// Path to withdraw_final.zkey (Groth16 proving key)
+	pub circuit_zkey_path: String,
 }
 
 impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
@@ -65,12 +76,17 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 		wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 		wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 		loan_record_storage: Arc<LoanRecordStorage>,
+		confidential_invoice_storage: Arc<ConfidentialInvoiceStorage>,
 		wildmeta_backend_ecdsa_pubkey: [u8; 33],
 		bundler_private_key: [u8; 32],
 		bundler_key_export_authorized_pubkey: [u8; 33],
 		cross_chain_intent_executor: Arc<CrossChainIntentExecutor>,
 		aes256_key: Aes256Key,
 		entry_point_clients: Arc<HashMap<u64, Arc<EntryPointClient<AlloyRpcProvider>>>>,
+		privacy_pool_address: String,
+		eth_rpc_url: String,
+		circuit_wasm_path: String,
+		circuit_zkey_path: String,
 	) -> Self {
 		Self {
 			shielding_key,
@@ -85,12 +101,17 @@ impl<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 'static>
 			wildmeta_api,
 			wildmeta_timestamp_storage,
 			loan_record_storage,
+			confidential_invoice_storage,
 			wildmeta_backend_ecdsa_pubkey,
 			bundler_private_key,
 			bundler_key_export_authorized_pubkey,
 			cross_chain_intent_executor,
 			aes256_key,
 			entry_point_clients,
+			privacy_pool_address,
+			eth_rpc_url,
+			circuit_wasm_path,
+			circuit_zkey_path,
 		}
 	}
 }
@@ -108,6 +129,7 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	wildmeta_api: Arc<Box<dyn WildmetaApi>>,
 	wildmeta_timestamp_storage: Arc<WildmetaTimestampStorage>,
 	loan_record_storage: Arc<LoanRecordStorage>,
+	confidential_invoice_storage: Arc<ConfidentialInvoiceStorage>,
 	wildmeta_backend_ecdsa_pubkey: [u8; 33],
 	bundler_private_key: [u8; 32],
 	bundler_key_export_authorized_pubkey: [u8; 33],
@@ -118,6 +140,15 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 	let config_loader_arc = Arc::new(config_loader.clone());
 	let mailer_factory = Arc::new(MailerFactory::new(config_loader_arc.clone()));
 	let oauth2_factory = Arc::new(OAuth2ConfigFactory::new(config_loader_arc.clone()));
+
+	let privacy_pool_address = env::var("OE_PRIVACY_POOL_ADDRESS")
+		.unwrap_or_else(|_| "0x0000000000000000000000000000000000000000".to_string());
+	let eth_rpc_url = env::var("OE_ETH_RPC_URL")
+		.unwrap_or_else(|_| "https://sepolia-rollup.arbitrum.io/rpc".to_string());
+	let circuit_wasm_path = env::var("OE_CIRCUIT_WASM_PATH")
+		.unwrap_or_else(|_| "circuits/build/withdraw_js/withdraw.wasm".to_string());
+	let circuit_zkey_path = env::var("OE_CIRCUIT_ZKEY_PATH")
+		.unwrap_or_else(|_| "circuits/build/withdraw_final.zkey".to_string());
 
 	let ctx = RpcContext::new(
 		shielding_key,
@@ -132,12 +163,17 @@ pub async fn start_server<CrossChainIntentExecutor: IntentExecutor + Send + Sync
 		wildmeta_api,
 		wildmeta_timestamp_storage,
 		loan_record_storage,
+		confidential_invoice_storage,
 		wildmeta_backend_ecdsa_pubkey,
 		bundler_private_key,
 		bundler_key_export_authorized_pubkey,
 		cross_chain_intent_executor,
 		aes256_key,
 		entry_point_clients,
+		privacy_pool_address,
+		eth_rpc_url,
+		circuit_wasm_path,
+		circuit_zkey_path,
 	);
 	let mut module = RpcModule::new(ctx);
 	register_methods(&mut module);

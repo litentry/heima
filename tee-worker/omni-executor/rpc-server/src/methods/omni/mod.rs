@@ -79,8 +79,23 @@ use list_passkey::*;
 mod request_passkey_challenge;
 use request_passkey_challenge::*;
 
+mod verify_user_op;
+use verify_user_op::*;
+
+mod settle_user_op;
+use settle_user_op::*;
+
 mod rename_passkey_alias;
 use rename_passkey_alias::*;
+
+mod confidential_invoice;
+use confidential_invoice::*;
+
+mod pay_invoice;
+use pay_invoice::*;
+
+mod withdraw_pool;
+use withdraw_pool::*;
 
 #[cfg(test)]
 mod test_protected_method;
@@ -149,6 +164,11 @@ pub fn register_omni<CrossChainIntentExecutor: IntentExecutor + Send + Sync + 's
 	register_estimate_user_op_gas(module);
 	register_submit_user_op_with_auth(module);
 	register_get_hyperliquid_signature_data(module);
+	register_verify_user_op(module);
+	register_settle_user_op(module);
+	register_confidential_invoice(module);
+	register_pay_invoice(module);
+	register_withdraw_from_pool(module);
 
 	#[cfg(test)]
 	test_protected_method::register_test_protected_method(module);

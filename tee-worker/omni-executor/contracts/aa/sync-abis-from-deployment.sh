@@ -6,7 +6,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEMO_APP_DIR="$SCRIPT_DIR/aa-demo-app"
+DEMO_APP_DIR="$SCRIPT_DIR/../../webapp/aa-demo"
 ABI_DIR="$DEMO_APP_DIR/src/contracts/abis"
 
 # Default to local deployment, can be overridden
@@ -112,4 +112,4 @@ echo "   Extracted $ABI_COUNT ABI files to: $ABI_DIR"
 echo ""
 echo "📝 Next steps:"
 echo "   1. Run ./update-demo-addresses.sh to update contract addresses"
-echo "   2. cd aa-demo-app && pnpm dev"
+echo "   2. cd ../../webapp/aa-demo && pnpm dev"

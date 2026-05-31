@@ -30,6 +30,7 @@ use oe_client_hyperliquid::*;
 use oe_client_signer::ChainType;
 use oe_core::intent::executor::IntentExecutor;
 use oe_core::types::SerializablePackedUserOperation;
+use oe_primitives::signature::recover_evm_address;
 use oe_primitives::utils::hex::decode_hex;
 use oe_primitives::{AccountId, ChainId};
 use std::sync::Arc;
@@ -335,7 +336,7 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 					ChainType::Evm,
 					wallet_index,
 					omni_account.clone().into(),
-					message_to_sign,
+					message_to_sign.clone(),
 				)
 				.await
 				.map_err(|_| DetailedError::signer_service_error().to_rpc_error())?;
@@ -343,6 +344,19 @@ pub async fn submit_user_ops<CrossChainIntentExecutor: IntentExecutor + Send + S
 			let signature = substrate_to_ethereum_signature(&sig)
 				.map_err_internal("Failed to convert signature")?
 				.to_vec();
+
+			match recover_evm_address(
+				message_to_sign.as_slice().try_into().unwrap(),
+				&sig.try_into().unwrap(),
+			) {
+				Ok(recovered) => {
+					let recovered_addr = Address::from_slice(&recovered);
+					info!("Recovered signer address off-chain: {}", recovered_addr);
+				},
+				Err(_) => {
+					error!("Failed to recover EVM address from signature");
+				},
+			}
 
 			// Prepend 0x01 byte to indicate Root signature type (according to UserOpSigner enum)
 			let mut signature_with_prefix: Vec<u8> = vec![0x01];
