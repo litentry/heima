@@ -760,5 +760,213 @@ describe('Hyperliquid Signature Data Tests', function () {
                 expect(error).to.have.property('message', 'Invalid params');
             }
         });
+
+        it('should successfully generate signature data for spot_send action on testnet', async function () {
+            const params = {
+                user_id: {
+                    type: 'email' as const,
+                    value: 'test@example.com',
+                },
+                user_auth: {
+                    type: 'auth_token' as const,
+                    value: id_token,
+                },
+                client_id: ClientId.Wildmeta,
+                client_auth: {
+                    type: 'wildmeta_hl' as const,
+                    value: {
+                        agent_address: '0x1234567890123456789012345678901234567890',
+                        business_json: JSON.stringify({ test: 'data' }),
+                        main_address: evmWallet.address,
+                        signature: 'test_signature',
+                        login_type: 1,
+                    },
+                },
+                action_type: {
+                    type: 'spot_send' as const,
+                    destination: '0x1234567890123456789012345678901234567890',
+                    token: 'USDC:0x6d1e7cde53ba9467b783cb7c530ce054',
+                    amount: '100.0',
+                },
+                chain_id: 421614,
+            };
+
+            const result: GetHyperliquidSignatureDataResponse = await omniApi.getHyperliquidSignatureData(params);
+
+            validateBasicResponse(result);
+            expect(result.hyperliquid_signature_data.action).to.have.property('type', 'spot_send');
+
+            const action = result.hyperliquid_signature_data.action;
+            validateActionBase(action, params.chain_id);
+            expect(action).to.have.property('destination', params.action_type.destination);
+            expect(action).to.have.property('token', params.action_type.token);
+            expect(action).to.have.property('amount', params.action_type.amount);
+            expect(action).to.have.property('time');
+            expect(action.time).to.be.a('number');
+            expect(action.time).to.be.greaterThan(0);
+        });
+
+        it('should successfully generate signature data for spot_send action on mainnet', async function () {
+            const params = {
+                user_id: {
+                    type: 'email' as const,
+                    value: 'test@example.com',
+                },
+                user_auth: {
+                    type: 'auth_token' as const,
+                    value: id_token,
+                },
+                client_id: ClientId.Wildmeta,
+                client_auth: {
+                    type: 'wildmeta_hl' as const,
+                    value: {
+                        agent_address: '0x1234567890123456789012345678901234567890',
+                        business_json: JSON.stringify({ test: 'data' }),
+                        main_address: evmWallet.address,
+                        signature: 'test_signature',
+                        login_type: 1,
+                    },
+                },
+                action_type: {
+                    type: 'spot_send' as const,
+                    destination: '0x1234567890123456789012345678901234567890',
+                    token: 'USDC:0x6d1e7cde53ba9467b783cb7c530ce054',
+                    amount: '50.0',
+                },
+                chain_id: 42161,
+            };
+
+            const result: GetHyperliquidSignatureDataResponse = await omniApi.getHyperliquidSignatureData(params);
+
+            validateBasicResponse(result);
+            expect(result.hyperliquid_signature_data.action).to.have.property('type', 'spot_send');
+
+            const action = result.hyperliquid_signature_data.action;
+            validateActionBase(action, params.chain_id);
+            expect(action).to.have.property('destination', params.action_type.destination);
+            expect(action).to.have.property('token', params.action_type.token);
+            expect(action).to.have.property('amount', params.action_type.amount);
+        });
+
+        it('should fail with invalid destination address in spot_send (with valid auth)', async function () {
+            try {
+                const params = {
+                    user_id: {
+                        type: 'email' as const,
+                        value: 'test@example.com',
+                    },
+                    user_auth: {
+                        type: 'auth_token' as const,
+                        value: id_token,
+                    },
+                    client_id: ClientId.Wildmeta,
+                    client_auth: {
+                        type: 'wildmeta_hl' as const,
+                        value: {
+                            agent_address: '0x1234567890123456789012345678901234567890',
+                            business_json: JSON.stringify({ test: 'data' }),
+                            main_address: evmWallet.address,
+                            signature: 'test_signature',
+                            login_type: 1,
+                        },
+                    },
+                    action_type: {
+                        type: 'spot_send' as const,
+                        destination: 'not_an_address',
+                        token: 'USDC:0x6d1e7cde53ba9467b783cb7c530ce054',
+                        amount: '100.0',
+                    },
+                    chain_id: 42161,
+                };
+
+                await omniApi.getHyperliquidSignatureData(params);
+                expect.fail('Expected method to throw an error for invalid destination');
+            } catch (error: any) {
+                expect(error).to.have.property('message', 'Invalid params');
+            }
+        });
+
+        it('should successfully generate signature data for usd_class_transfer (spot to perp) on testnet', async function () {
+            const params = {
+                user_id: {
+                    type: 'email' as const,
+                    value: 'test@example.com',
+                },
+                user_auth: {
+                    type: 'auth_token' as const,
+                    value: id_token,
+                },
+                client_id: ClientId.Wildmeta,
+                client_auth: {
+                    type: 'wildmeta_hl' as const,
+                    value: {
+                        agent_address: '0x1234567890123456789012345678901234567890',
+                        business_json: JSON.stringify({ test: 'data' }),
+                        main_address: evmWallet.address,
+                        signature: 'test_signature',
+                        login_type: 1,
+                    },
+                },
+                action_type: {
+                    type: 'usd_class_transfer' as const,
+                    amount: '50.0',
+                    to_perp: true,
+                },
+                chain_id: 421614,
+            };
+
+            const result: GetHyperliquidSignatureDataResponse = await omniApi.getHyperliquidSignatureData(params);
+
+            validateBasicResponse(result);
+            expect(result.hyperliquid_signature_data.action).to.have.property('type', 'usd_class_transfer');
+
+            const action = result.hyperliquid_signature_data.action;
+            validateActionBase(action, params.chain_id);
+            expect(action).to.have.property('amount', params.action_type.amount);
+            expect(action).to.have.property('toPerp', true);
+            expect(action).to.have.property('nonce');
+            expect(action.nonce).to.be.a('number');
+            expect(action.nonce).to.be.greaterThan(0);
+        });
+
+        it('should successfully generate signature data for usd_class_transfer (perp to spot) on mainnet', async function () {
+            const params = {
+                user_id: {
+                    type: 'email' as const,
+                    value: 'test@example.com',
+                },
+                user_auth: {
+                    type: 'auth_token' as const,
+                    value: id_token,
+                },
+                client_id: ClientId.Wildmeta,
+                client_auth: {
+                    type: 'wildmeta_hl' as const,
+                    value: {
+                        agent_address: '0x1234567890123456789012345678901234567890',
+                        business_json: JSON.stringify({ test: 'data' }),
+                        main_address: evmWallet.address,
+                        signature: 'test_signature',
+                        login_type: 1,
+                    },
+                },
+                action_type: {
+                    type: 'usd_class_transfer' as const,
+                    amount: '200.0',
+                    to_perp: false,
+                },
+                chain_id: 42161,
+            };
+
+            const result: GetHyperliquidSignatureDataResponse = await omniApi.getHyperliquidSignatureData(params);
+
+            validateBasicResponse(result);
+            expect(result.hyperliquid_signature_data.action).to.have.property('type', 'usd_class_transfer');
+
+            const action = result.hyperliquid_signature_data.action;
+            validateActionBase(action, params.chain_id);
+            expect(action).to.have.property('amount', params.action_type.amount);
+            expect(action).to.have.property('toPerp', false);
+        });
     });
 });

@@ -1,6 +1,5 @@
-const { Keyring } = require('@polkadot/api');
+import { Keyring } from '@polkadot/api';
 import { initApi } from './initApis';
-const { hexToU8a } = require('@polkadot/util');
 import colors from 'colors';
 
 // 100 token
@@ -9,7 +8,7 @@ const enclaveAccount = process.argv[2];
 
 async function transfer(api, Alice) {
     console.log(colors.green('Transfer start...'));
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         api.tx.balances.transferKeepAlive(enclaveAccount, transferAmount).signAndSend(Alice, ({ status, events }) => {
             if (status.isInBlock || status.isFinalized) {
                 events.forEach(({ event: { method, section } }) => {

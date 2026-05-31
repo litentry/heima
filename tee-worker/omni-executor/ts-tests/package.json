@@ -13,7 +13,9 @@
             "js-yaml": ">=4.1.1",
             "axios": ">=1.12.0",
             "validator": ">=13.15.20",
-            "fast-redact": ">=3.5.1"
+            "fast-redact": ">=3.5.1",
+            "mocha>serialize-javascript": "7.0.3",
+            "mocha>diff": "8.0.3"
         }
     }
 }

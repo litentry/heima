@@ -1,10 +1,10 @@
-// run: pnpm exec ts-node batch-transfer.ts
+// run: pnpm exec tsx batch-transfer.ts
 
 import { initApi } from './initApis';
-const fs = require('fs');
-const path = require('path');
-const prettier = require('prettier');
 import colors from 'colors';
+import fs from 'node:fs';
+import path from 'node:path';
+import prettier from 'prettier';
 
 // maximal calls are 1000 per batch
 const BATCH_SIZE = 750;
@@ -41,9 +41,10 @@ async function encodeExtrinsic() {
 
     console.log('totalIssuance:', totalIssuance.toString());
 
-    const filename = `system-accounts-entries-litmus-${new Date().toISOString().slice(0, 10)}.json`;
+    const dateSuffix = new Date().toISOString().slice(0, 10);
+    const filename = `system-accounts-entries-litmus-${dateSuffix}.json`;
     const filepath = path.join(__dirname, filename);
-    const formattedData = prettier.format(JSON.stringify(data), {
+    const formattedData = await prettier.format(JSON.stringify(data), {
         parser: 'json',
         printWidth: 120,
         tabWidth: 2,
@@ -79,10 +80,10 @@ async function encodeExtrinsic() {
             ];
             txs = [];
             if (data.length === 0) {
-                const extrinsicsFilename = `extrinsics-${new Date().toISOString().slice(0, 10)}.json`;
+                const extrinsicsFilename = `extrinsics-${dateSuffix}.json`;
                 const extrinsicsFilepath = path.join(__dirname, extrinsicsFilename);
 
-                const formattedHexData = prettier.format(JSON.stringify(hexData), {
+                const formattedHexData = await prettier.format(JSON.stringify(hexData), {
                     parser: 'json',
                     printWidth: 120,
                     tabWidth: 2,

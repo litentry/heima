@@ -26,10 +26,11 @@
       }
     },
     "lint": {
-      "executor": "@nx/linter:eslint",
+      "executor": "nx:run-commands",
       "outputs": ["{options.outputFile}"],
       "options": {
-        "lintFilePatterns": ["packages/client-sdk/src/**/*.ts", "packages/client-sdk/package.json"]
+        "cwd": "./packages/client-sdk",
+        "command": "ESLINT_USE_FLAT_CONFIG=false eslint src/**/*.ts package.json"
       }
     },
     "test": {

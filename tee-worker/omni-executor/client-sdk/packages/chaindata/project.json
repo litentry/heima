@@ -19,15 +19,13 @@
       "dependsOn": ["build"]
     },
     "lint": {
-      "executor": "@nx/linter:eslint",
+      "executor": "nx:run-commands",
       "outputs": [
         "{options.outputFile}"
       ],
       "options": {
-        "lintFilePatterns": [
-          "packages/chaindata/**/*.ts",
-          "packages/chaindata/package.json"
-        ]
+        "cwd": "./packages/chaindata",
+        "command": "ESLINT_USE_FLAT_CONFIG=false eslint src/**/*.ts package.json"
       }
     }
   },

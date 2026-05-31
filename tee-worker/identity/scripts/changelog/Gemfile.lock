@@ -1,17 +1,17 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.8.0)
-      public_suffix (>= 2.0.2, < 5.0)
+    addressable (2.9.0)
+      public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.2)
-    faraday (2.14.1)
+    faraday (2.14.2)
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
     faraday-net_http (3.4.2)
       net-http (~> 0.5)
     git_diff_parser (3.2.0)
-    json (2.18.1)
+    json (2.19.5)
     logger (1.4.4)
     net-http (0.9.1)
       uri (>= 0.11.1)
@@ -24,7 +24,7 @@ GEM
       ast (~> 2.4.1)
     parslet (2.0.0)
     power_assert (2.0.1)
-    public_suffix (4.0.6)
+    public_suffix (7.0.5)
     rainbow (3.0.0)
     rake (13.0.6)
     regexp_parser (2.1.1)

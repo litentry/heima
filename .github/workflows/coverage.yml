@@ -21,7 +21,7 @@ jobs:
 
       # Checks to see if any files in the PR/commit match one of the listed file types.
       # We can use this filter to decide whether or not to build docker images
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: .github/file-filter.yml
@@ -59,7 +59,7 @@ jobs:
           --exclude-files **/mock.rs **/weights.rs **/benchmarking.rs **/weights/* node/* runtime/*
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           fail_ci_if_error: false
           verbose: true
