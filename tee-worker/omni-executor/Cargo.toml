@@ -40,7 +40,7 @@ ethers = "2.0"
 futures = "0.3.32"
 hex = "0.4"
 hex-literal = "1.1"
-hmac = "0.12.1"
+hmac = "0.13.0"
 http = "1.4.1"
 hyperliquid_rust_sdk = { git = "https://github.com/BillyWooo/hyperliquid-rust-sdk", branch = "fork_new_feature" }
 jsonrpsee = { version = "0.26.0", features = ["server"] }
@@ -63,24 +63,24 @@ scale-encode = "0.10.1"
 scale-info = "2.11.6"
 secp256k1 = "=0.29.1"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
+serde_json = "1.0.150"
 serde_repr = "0.1.20"
 serde_with = { version = "3.20", features = ["hex"] }
 sha2 = "0.10.8"
 # ZK proof generation
-ark-bn254 = "0.5.0"
+ark-bn254 = "0.6.0"
 # Use singlepass backend to avoid JIT (cranelift requires mmap+PROT_EXEC, incompatible with SGX)
 ark-circom = { version = "0.5.0", default-features = false, features = ["ethereum"] }
-ark-ff = "0.5.0"
-ark-groth16 = "0.5.0"
-ark-relations = "0.5.0"
-ark-std = "0.5.0"
+ark-ff = "0.6.0"
+ark-groth16 = "0.6.0"
+ark-relations = "0.6.0"
+ark-std = "0.6.0"
 light-poseidon = "0.4.0"
 num-bigint = "0.4"
 solana-client = "3"
 solana-commitment-config = "3"
 solana-sdk = "3"
-solana-system-interface = "2"
+solana-system-interface = "3"
 sp-core = "35.0.0"
 spl-associated-token-account = "8"
 spl-token = "9"
@@ -94,7 +94,7 @@ tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 url = "2.5.8"
 uuid = "1.23.2"
-wasmer = { version = "4.4.0", default-features = false, features = ["singlepass", "sys"] }
+wasmer = { version = "7.1.0", default-features = false, features = ["singlepass", "sys"] }
 wasmer-wasix = { version = "0.28.0", default-features = false, features = ["sys"] }
 
 
