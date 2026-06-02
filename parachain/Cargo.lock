@@ -4705,6 +4705,7 @@ dependencies = [
  "pallet-evm-precompile-ed25519",
  "pallet-evm-precompile-modexp",
  "pallet-evm-precompile-omni-bridge",
+ "pallet-evm-precompile-p256",
  "pallet-evm-precompile-parachain-staking",
  "pallet-evm-precompile-score-staking",
  "pallet-evm-precompile-sha3fips",
@@ -8323,6 +8324,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-evm-precompile-p256"
+version = "0.1.0"
+dependencies = [
+ "fp-evm",
+ "hex-literal 1.1.0",
+ "p256",
+ "precompile-utils",
+ "sp-core",
+]
+
+[[package]]
 name = "pallet-evm-precompile-parachain-staking"
 version = "0.1.0"
 dependencies = [
@@ -9505,6 +9517,7 @@ dependencies = [
  "pallet-evm-precompile-ed25519",
  "pallet-evm-precompile-modexp",
  "pallet-evm-precompile-omni-bridge",
+ "pallet-evm-precompile-p256",
  "pallet-evm-precompile-parachain-staking",
  "pallet-evm-precompile-score-staking",
  "pallet-evm-precompile-sha3fips",

@@ -1,0 +1,22 @@
+[package]
+authors = ["Trust Computing GmbH <info@litentry.com>"]
+edition = '2021'
+name = "pallet-evm-precompile-p256"
+version = '0.1.0'
+description = "RIP-7212 secp256r1 (P-256) signature verification precompile for EVM pallet."
+
+[dependencies]
+fp-evm = { workspace = true }
+p256 = { workspace = true }
+
+[dev-dependencies]
+hex-literal = { workspace = true }
+precompile-utils = { workspace = true, features = ["std", "testing"] }
+sp-core = { workspace = true, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+    "fp-evm/std",
+    "p256/std",
+]
