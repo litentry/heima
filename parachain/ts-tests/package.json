@@ -25,11 +25,11 @@
     "license": "ISC",
     "devDependencies": {
         "@types/node": "^25.9.1",
-        "@vitest/ui": "^4.1.7",
+        "@vitest/ui": "^4.1.8",
         "prettier": "^3.8.3",
-        "tsx": "^4.22.3",
+        "tsx": "^4.22.4",
         "typescript": "^6.0.3",
-        "vitest": "^4.1.7"
+        "vitest": "^4.1.8"
     },
     "dependencies": {
         "@polkadot/api": "^16.5.6",
