@@ -31,6 +31,7 @@ use pallet_evm_precompile_dispatch::{Dispatch, DispatchValidateT};
 use pallet_evm_precompile_ed25519::Ed25519Verify;
 use pallet_evm_precompile_modexp::Modexp;
 use pallet_evm_precompile_omni_bridge::OmniBridgePrecompile;
+use pallet_evm_precompile_p256::P256Verify;
 use pallet_evm_precompile_parachain_staking::ParachainStakingPrecompile;
 use pallet_evm_precompile_score_staking::ScoreStakingPrecompile;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
@@ -107,6 +108,10 @@ pub type PrecompilesSetAt<R> = (
 	PrecompileAt<AddressU64<7>, Bn128Mul, EthereumPrecompilesChecks>,
 	PrecompileAt<AddressU64<8>, Bn128Pairing, EthereumPrecompilesChecks>,
 	PrecompileAt<AddressU64<9>, Blake2F, EthereumPrecompilesChecks>,
+	// RIP-7212 secp256r1 (P-256) signature verification at the standard address 0x100 (256).
+	// Treated as an Ethereum-spec-style precompile: allow DELEGATECALL for caller compatibility
+	// (stateless + caller-agnostic, so delegatecall is safe). See agentKeys#170.
+	PrecompileAt<AddressU64<256>, P256Verify, EthereumPrecompilesChecks>,
 	// Non-Litentry specific nor Ethereum precompiles :
 	PrecompileAt<AddressU64<1024>, Sha3FIPS256, (CallableByContract, CallableByPrecompile)>,
 	PrecompileAt<

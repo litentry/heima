@@ -111,6 +111,7 @@ pallet-evm-precompile-bn128 = { workspace = true }
 pallet-evm-precompile-dispatch = { workspace = true }
 pallet-evm-precompile-ed25519 = { workspace = true }
 pallet-evm-precompile-modexp = { workspace = true }
+pallet-evm-precompile-p256 = { workspace = true }
 pallet-evm-precompile-sha3fips = { workspace = true }
 pallet-evm-precompile-simple = { workspace = true }
 
@@ -241,6 +242,7 @@ std = [
     "pallet-evm-precompile-dispatch/std",
     "pallet-evm-precompile-ed25519/std",
     "pallet-evm-precompile-modexp/std",
+    "pallet-evm-precompile-p256/std",
     "pallet-evm-precompile-parachain-staking/std",
     "pallet-evm-precompile-score-staking/std",
     "pallet-evm-precompile-sha3fips/std",
