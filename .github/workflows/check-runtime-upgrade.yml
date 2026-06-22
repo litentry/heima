@@ -18,8 +18,6 @@ on:
 env:
   SUBWASM_VERSION: 0.21.3
   TRYRUNTIME_VERSION: 0.10.1
-  # Chain block time in milliseconds (6s since the 12s -> 6s upgrade at spec_version 9270).
-  BLOCKTIME: 6000
   RELEASE_TAG: ${{ github.event.inputs.release_tag || github.event.release.tag_name }}
 
 jobs:
@@ -153,11 +151,25 @@ jobs:
           echo "Upgrade needed: $onchain_version -> $release_version"
           echo "Running migration checks..."
 
+          # Derive the block time from the runtime *being tested*, not a hard-coded value, so this
+          # works for any runtime (current 6s, old 12s, or a future elastic-scaling target). Aura's
+          # slot duration is twice `Timestamp::MinimumPeriod`; subwasm reads that constant (a
+          # little-endian u64, in ms) straight from the built wasm's metadata.
+          MIN_PERIOD=$(subwasm metadata "$RUNTIME_BLOB_PATH" --format json \
+            | jq -r '[.. | objects | select(.name=="MinimumPeriod") | .value][0]
+                     | to_entries | map(.value * pow(256; .key)) | add')
+          if ! [[ "$MIN_PERIOD" =~ ^[0-9]+$ ]] || [ "$MIN_PERIOD" -le 0 ]; then
+            echo "Failed to read Timestamp::MinimumPeriod from runtime metadata (got '$MIN_PERIOD')"
+            exit 1
+          fi
+          BLOCKTIME=$((MIN_PERIOD * 2))
+          echo "Derived block time: ${BLOCKTIME}ms (MinimumPeriod=${MIN_PERIOD}ms)"
+
           export RUST_LOG=remote-ext=debug,runtime=debug
 
           COMMAND="./try-runtime \
             --runtime $RUNTIME_BLOB_PATH \
-            on-runtime-upgrade --blocktime ${{ env.BLOCKTIME }} \
+            on-runtime-upgrade --blocktime $BLOCKTIME \
             live --uri ${{ matrix.runtime.uri }}"
 
           echo "Running command:"
