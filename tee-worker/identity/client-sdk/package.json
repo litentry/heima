@@ -49,5 +49,10 @@
 	"nx": {
 		"includedScripts": []
 	},
+	"pnpm": {
+		"overrides": {
+			"handlebars": ">=4.7.9"
+		}
+	},
 	"packageManager": "pnpm@9.15.2"
 }

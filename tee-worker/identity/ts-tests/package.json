@@ -19,6 +19,7 @@
             "@polkadot/types": "*",
             "@polkadot/types-codec": "*",
             "@substrate/connect": "^0.8.12",
+            "handlebars": ">=4.7.9",
             "js-yaml": "4.1.1",
             "mocha>serialize-javascript": "7.0.3",
             "ts-node>diff": "4.0.4",
