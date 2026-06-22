@@ -23,7 +23,7 @@
 //! * [`vesting::VestingRescaleMigration`] — a `SteppedMigration` (multi-block) for the large
 //!   `pallet_vesting` map. Register it in `pallet_migrations::Config::Migrations` in `lib.rs`.
 //!
-//! Both are one-shot: remove them in the release *after* the one that ships spec_version 9270, once
+//! Both are one-shot: remove them in the release *after* the one that ships spec_version 9262, once
 //! the upgrade has been enacted and finalized on every network.
 
 pub mod onepass;
