@@ -154,6 +154,10 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 /// Migrations to apply on runtime upgrade.
 pub type Migrations = (
+	// one-shot: rescale bounded block-number/per-block state for the 12s -> 6s block-time change
+	// (spec_version 9262). Remove in the release after this one. The large `pallet_vesting` map is
+	// migrated separately as a multi-block migration, see `pallet_migrations::Config::Migrations`.
+	migration::block_time_6s::OnePassRescale<Runtime>,
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 );
@@ -246,7 +250,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9261,
+	spec_version: 9262,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -476,7 +480,12 @@ parameter_types! {
 impl pallet_migrations::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	#[cfg(not(feature = "runtime-benchmarks"))]
-	type Migrations = pallet_identity::migration::v2::LazyMigrationV1ToV2<Runtime>;
+	type Migrations = (
+		pallet_identity::migration::v2::LazyMigrationV1ToV2<Runtime>,
+		// one-shot: rescale vesting schedules for the 12s -> 6s block-time change (spec 9262).
+		// Remove in the release after this one.
+		migration::block_time_6s::VestingRescaleMigration<Runtime>,
+	);
 	// Benchmarks need mocked migrations to guarantee that they succeed.
 	#[cfg(feature = "runtime-benchmarks")]
 	type Migrations = pallet_migrations::mock_helpers::MockedMigrations;
@@ -1111,7 +1120,9 @@ impl pallet_parachain_staking::Config for Runtime {
 
 parameter_types! {
 	pub const BridgeChainId: u8 = 3;
-	pub const ProposalLifetime: BlockNumber = 50400; // ~7 days
+	// Derived from `DAYS` so it auto-rescales with the block time (was hard-coded `50400` for 12s
+	// blocks, which would have silently halved to ~3.5 days once block time dropped to 6s).
+	pub const ProposalLifetime: BlockNumber = 7 * DAYS;
 }
 
 impl pallet_chain_bridge::Config for Runtime {

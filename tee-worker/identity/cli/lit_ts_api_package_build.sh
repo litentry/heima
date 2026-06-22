@@ -48,10 +48,6 @@ cd /client-api
 curl -s -H "Content-Type: application/json" -d '{"id": "1", "jsonrpc": "2.0", "method": "state_getMetadata", "params": []}' $NODEHTTPURL:$NPORT > metadata-parachain.json
 echo "update parachain metadata"
 
-cd  /client-api/sidechain-api
-${CLIENT} print-sgx-metadata-raw > metadata-sidechain.json
-echo "update sidechain metadata"
-
 cd /client-api
 pnpm install
 pnpm run generate

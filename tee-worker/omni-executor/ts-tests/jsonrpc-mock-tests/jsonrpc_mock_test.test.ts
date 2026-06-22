@@ -21,7 +21,7 @@ import {
 } from './utils';
 import { signMessage } from 'viem/accounts';
 import { u8aToHex } from '@polkadot/util';
-import { AesOutput } from '@heima-network/api-augment/identity';
+import { AesOutput } from '@heima-network/api-augment/omni';
 describe('Omni JsonRpc Mock Tests', function () {
     this.timeout(100000);
 
