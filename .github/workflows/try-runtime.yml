@@ -1,11 +1,30 @@
 name: Check try-runtime
 
+# Runs `try-runtime on-runtime-upgrade --checks=all` for each runtime against live chain state,
+# exercising the runtime's migration `pre_upgrade`/`on_runtime_upgrade`/`post_upgrade` hooks and the
+# `try_state` checks of every pallet. This is the canonical pre-merge check that a runtime upgrade
+# (and any storage migration it carries) applies cleanly, is idempotent, and preserves invariants.
+#
+# NOTE: this repo's cargo workspace lives under `parachain/`, so we build and run try-runtime
+# ourselves (the `paritytech/try-runtime-gha` action assumes a repo-root manifest and cannot find
+# `parachain/Cargo.toml`). The build/run steps mirror the `try-runtime` job in
+# `check-runtime-upgrade.yml`.
+
+# Manual trigger only: try-runtime compiles both runtimes from scratch and scrapes full live chain
+# state (~10+ min), which is too heavy to run on every PR. Dispatch it on a feature branch when a
+# runtime change carries a migration or otherwise warrants pre-merge migration testing.
 on:
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  # try-runtime CLI version. Must support `on-runtime-upgrade --blocktime`.
+  TRYRUNTIME_VERSION: 0.10.1
+  # subwasm is used to read the block time out of the built runtime (see the run step).
+  SUBWASM_VERSION: 0.21.3
 
 jobs:
   runtime-matrix:
@@ -38,11 +57,57 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-    
+
+      - name: Install rust toolchain
+        run: rustup show
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq protobuf-compiler
+
+      - name: Download try-runtime-cli
+        run: |
+          curl -sL https://github.com/paritytech/try-runtime-cli/releases/download/v${{ env.TRYRUNTIME_VERSION }}/try-runtime-x86_64-unknown-linux-musl -o try-runtime
+          chmod +x ./try-runtime
+          mv try-runtime parachain
+
+      - name: Build ${{ matrix.runtime.name }} runtime
+        run: |
+          cd parachain
+          cargo build --profile production -p ${{ matrix.runtime.package }} --features try-runtime -q --locked
+
+      - name: Install subwasm ${{ env.SUBWASM_VERSION }}
+        run: |
+          wget https://github.com/chevdor/subwasm/releases/download/v${{ env.SUBWASM_VERSION }}/subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
+          sudo dpkg -i subwasm_linux_amd64_v${{ env.SUBWASM_VERSION }}.deb
+          subwasm --version
+
       - name: Run ${{ matrix.runtime.name }} try-runtime check
-        uses: paritytech/try-runtime-gha@v0.2.0
-        with:
-          runtime-package: ${{ matrix.runtime.package }}
-          node-uri: ${{ matrix.runtime.uri }}
-          checks: "all"
-          extra-args: ""
+        run: |
+          cd parachain
+          PACKAGE_NAME=${{ matrix.runtime.package }}
+          RUNTIME_BLOB_NAME=$(echo $PACKAGE_NAME | sed 's/-/_/g').compact.compressed.wasm
+          RUNTIME_BLOB_PATH=./target/production/wbuild/$PACKAGE_NAME/$RUNTIME_BLOB_NAME
+
+          # Derive the block time from the runtime *being tested*, not a hard-coded value, so this
+          # works for any runtime (the current 6s, the old 12s, or a future elastic-scaling target).
+          # Aura's slot duration is twice `Timestamp::MinimumPeriod`; subwasm reads that constant
+          # (a little-endian u64, in ms) straight from the built wasm's metadata.
+          MIN_PERIOD=$(subwasm metadata "$RUNTIME_BLOB_PATH" --format json \
+            | jq -r '[.. | objects | select(.name=="MinimumPeriod") | .value][0]
+                     | to_entries | map(.value * pow(256; .key)) | add')
+          if ! [[ "$MIN_PERIOD" =~ ^[0-9]+$ ]] || [ "$MIN_PERIOD" -le 0 ]; then
+            echo "Failed to read Timestamp::MinimumPeriod from runtime metadata (got '$MIN_PERIOD')"
+            exit 1
+          fi
+          BLOCKTIME=$((MIN_PERIOD * 2))
+          echo "Derived block time: ${BLOCKTIME}ms (MinimumPeriod=${MIN_PERIOD}ms)"
+
+          export RUST_LOG=remote-ext=info,runtime=info
+
+          ./try-runtime \
+            --runtime "$RUNTIME_BLOB_PATH" \
+            on-runtime-upgrade --checks=all --blocktime "$BLOCKTIME" \
+            live --uri ${{ matrix.runtime.uri }}
+        shell: bash

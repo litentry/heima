@@ -20,19 +20,6 @@ coverage_src: &coverage_src
   - *parachain_src
   - ".github/workflows/coverage.yml"
 
-identity_src: &identity_src
-  - "parachain/primitives/**"
-  - "tee-worker/identity/Cargo.toml"
-  - "tee-worker/identity/Cargo.lock"
-  - "tee-worker/identity/**/*.rs"
-  - "tee-worker/identity/**/rust-toolchain.toml"
-  - "tee-worker/identity/build.Dockerfile"
-  - "tee-worker/identity/enclave-runtime/**"
-
-identity_test: &identity_test
-  - "tee-worker/identity/client-api/**"
-  - "tee-worker/identity/ts-tests/**"
-
 omni_executor_src: &omni_executor_src
   - "tee-worker/omni-executor/Cargo.toml"
   - "tee-worker/omni-executor/Cargo.lock"
@@ -42,6 +29,7 @@ omni_executor_src: &omni_executor_src
 
 omni_executor_test: &omni_executor_test
   - "parachain/docker/**"
+  - "tee-worker/client-api/**"
   - "tee-worker/omni-executor/docker/*.yml"
   - "tee-worker/omni-executor/client-sdk/**"
   - "tee-worker/omni-executor/ts-tests/**"

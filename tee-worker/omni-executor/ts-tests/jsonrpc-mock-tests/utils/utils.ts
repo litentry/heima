@@ -6,7 +6,7 @@ import { GetShieldingKeyResponse } from './response-types';
 import { hexToU8a, u8aToHex, u8aToString } from '@polkadot/util';
 import { base64Encode, base64Trim } from '@polkadot/util-crypto';
 import type { HexString, U8aLike } from '@polkadot/util/types';
-import { AesOutput } from '@heima-network/api-augment/identity';
+import { AesOutput } from '@heima-network/api-augment/omni';
 
 export function u8aToBase64Url(value: U8aLike): string {
     return (
