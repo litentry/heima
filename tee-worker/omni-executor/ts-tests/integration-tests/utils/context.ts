@@ -1,7 +1,6 @@
 import type { HexString } from '@polkadot/util/types';
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { omniAccount, omniExecutor } from '@heima-network/api-augment/omni';
-import { identity, trusted_operations} from '@heima-network/api-augment/identity';
+import { omniAccount, omniExecutor, identity, trusted_operations } from '@heima-network/api-augment/omni';
 import { hexToString } from '@polkadot/util';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WsAsPromiseOptions from 'websocket-as-promised/types/options';

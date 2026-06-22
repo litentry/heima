@@ -27,7 +27,7 @@ pnpm install
 
 ## Type Generated
 
-Update metadata: `pnpm load:metadata` or `pnpm load:metadata:identity` for specific directory
+Update metadata: `pnpm load:metadata`
 
 Generate types:`pnpm generate`
 
@@ -39,8 +39,7 @@ pnpm run generate
 pnpm run build
 ```
 
-- `import '@heima-network/api-augment/identity'` - applies Identity types and endpoint augmentation
-- `import '@heima-network/api-augment/omni'` - applies Omni types and endpoint augmentation
+- `import '@heima-network/api-augment/omni'` - applies the Heima parachain types and endpoint augmentation (also the package default export)
 
 ## Publish
 
