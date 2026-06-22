@@ -1,8 +1,6 @@
 import { defineConfig } from "tsup";
 import { execSync } from "node:child_process";
 
-const skipSidechain = process.env.SKIP_SIDECHAIN === "true";
-
 const configs = [
   {
     entry: ["src/identity"],
@@ -31,24 +29,5 @@ const configs = [
     },
   },
 ];
-
-if (!skipSidechain) {
-  configs.push({
-    entry: ["src/sidechain"],
-    outDir: "dist/sidechain",
-    format: ["esm", "cjs"],
-    splitting: false,
-    clean: true,
-    onSuccess: async () => {
-      console.log("Running tsc for sidechain...");
-      execSync(
-        "pnpm tsc -p src/sidechain/tsconfig.json --emitDeclarationOnly",
-        {
-          stdio: "inherit",
-        }
-      );
-    },
-  });
-}
 
 export default defineConfig(configs);
