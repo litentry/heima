@@ -12,6 +12,7 @@ overrides:
   axios: '>=1.12.0'
   validator: '>=13.15.20'
   fast-redact: '>=3.5.1'
+  handlebars: '>=4.7.9'
   mocha>serialize-javascript: 7.0.3
   mocha>diff: 8.0.3
 
@@ -2071,8 +2072,8 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  handlebars@4.7.8:
-    resolution: {integrity: sha512-vafaFqs8MZkRrSX7sFVUdo3ap/eNiLnb4IakshzvP56X5Nr1iGKAIqdX6tMlm6HcNRIkr6AxO5jFEoJzzpT8aQ==}
+  handlebars@4.7.9:
+    resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
     engines: {node: '>=0.4.7'}
     hasBin: true
 
@@ -3832,7 +3833,7 @@ snapshots:
       '@polkadot/util-crypto': 13.5.8(@polkadot/util@13.5.8)
       '@polkadot/x-ws': 13.5.4(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       comment-parser: 1.4.1
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       tslib: 2.8.1
       yargs: 17.7.2
     transitivePeerDependencies:
@@ -5459,7 +5460,7 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  handlebars@4.7.8:
+  handlebars@4.7.9:
     dependencies:
       minimist: 1.2.8
       neo-async: 2.6.2
