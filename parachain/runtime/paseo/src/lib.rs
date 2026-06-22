@@ -154,10 +154,6 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 /// Migrations to apply on runtime upgrade.
 pub type Migrations = (
-	// one-shot: rescale bounded block-number/per-block state for the 12s -> 6s block-time change
-	// (spec_version 9262). Remove in the release after this one. The large `pallet_vesting` map is
-	// migrated separately as a multi-block migration, see `pallet_migrations::Config::Migrations`.
-	migration::block_time_6s::OnePassRescale<Runtime>,
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 );
@@ -250,7 +246,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9262,
+	spec_version: 9263,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
@@ -480,12 +476,7 @@ parameter_types! {
 impl pallet_migrations::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	#[cfg(not(feature = "runtime-benchmarks"))]
-	type Migrations = (
-		pallet_identity::migration::v2::LazyMigrationV1ToV2<Runtime>,
-		// one-shot: rescale vesting schedules for the 12s -> 6s block-time change (spec 9262).
-		// Remove in the release after this one.
-		migration::block_time_6s::VestingRescaleMigration<Runtime>,
-	);
+	type Migrations = pallet_identity::migration::v2::LazyMigrationV1ToV2<Runtime>;
 	// Benchmarks need mocked migrations to guarantee that they succeed.
 	#[cfg(feature = "runtime-benchmarks")]
 	type Migrations = pallet_migrations::mock_helpers::MockedMigrations;
@@ -898,11 +889,14 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
-	// note here we intentionally use this hook to ignore relay chain proof so that
-	// it's possible to launch as standalone chain
-	//
-	// Litentry parachain has a different(standard) setting
-	type ConsensusHook = cumulus_pallet_parachain_system::consensus_hook::ExpectParentIncluded;
+	// Use the fixed-velocity hook (same as the heima runtime). The legacy `ExpectParentIncluded`
+	// hook requires each block's parent to already be included by the relay chain and does not
+	// support an unincluded segment, so it cannot pipeline blocks for async backing — at 6s block
+	// time it stalls the chain (`expected parent to be included` panics / reorgs). The
+	// `ConsensusHook` defined above is parameterised by RELAY_CHAIN_SLOT_DURATION_MILLIS /
+	// BLOCK_PROCESSING_VELOCITY / UNINCLUDED_SEGMENT_CAPACITY and is the correct hook for a
+	// relay-attached parachain.
+	type ConsensusHook = ConsensusHook;
 	type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
 	type WeightInfo = ();
 }
