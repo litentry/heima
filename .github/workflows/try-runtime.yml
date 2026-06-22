@@ -10,17 +10,11 @@ name: Check try-runtime
 # `parachain/Cargo.toml`). The build/run steps mirror the `try-runtime` job in
 # `check-runtime-upgrade.yml`.
 
+# Manual trigger only: try-runtime compiles both runtimes from scratch and scrapes full live chain
+# state (~10+ min), which is too heavy to run on every PR. Dispatch it on a feature branch when a
+# runtime change carries a migration or otherwise warrants pre-merge migration testing.
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - dev
-    paths:
-      - "parachain/runtime/**"
-      - "parachain/primitives/**"
-      - "parachain/pallets/**"
-      - ".github/runtime.json"
-      - ".github/workflows/try-runtime.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
