@@ -178,3 +178,108 @@ where
 		Ok(())
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::{Runtime, RuntimeCall, RuntimeOrigin};
+	use frame_support::traits::OnRuntimeUpgrade;
+	use sp_runtime::BuildStorage;
+
+	fn new_test_ext() -> sp_io::TestExternalities {
+		let t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| frame_system::Pallet::<Runtime>::set_block_number(1));
+		ext
+	}
+
+	// Mirrors the real heima on-chain scheduled burn: an anonymous, non-periodic Root-origin call
+	// (there it is a `utility.batchAll([utility.dispatchAs(Signed(_), balances.burn{..})])`; the
+	// rebase treats the call opaquely, so a plain `balances.burn` exercises the same code path).
+	#[test]
+	fn scheduled_burn_keeps_wall_clock_expiry_after_block_time_halving() {
+		new_test_ext().execute_with(|| {
+			let now: crate::BlockNumber = 1_000;
+			frame_system::Pallet::<Runtime>::set_block_number(now);
+
+			// Schedule a burn 100_000 blocks out — at the OLD 12s block time that is ~13.9 days.
+			let blocks_until_fire: crate::BlockNumber = 100_000;
+			let when = now + blocks_until_fire;
+			let burn = RuntimeCall::Balances(pallet_balances::Call::burn {
+				value: 1_000_000_000_000_000_000_000,
+				keep_alive: false,
+			});
+			pallet_scheduler::Pallet::<Runtime>::schedule(
+				RuntimeOrigin::root(),
+				when,
+				None, // non-periodic
+				0,
+				Box::new(burn),
+			)
+			.expect("schedule should succeed");
+
+			// Sanity: exactly one slot, sitting at `when`, none at the rebased target yet.
+			assert_eq!(pallet_scheduler::Agenda::<Runtime>::iter().count(), 1);
+			let live = |b: crate::BlockNumber| {
+				pallet_scheduler::Agenda::<Runtime>::get(b)
+					.iter()
+					.filter(|s| s.is_some())
+					.count()
+			};
+			assert_eq!(live(when), 1);
+
+			let rebased = now + 2 * blocks_until_fire;
+			assert_eq!(live(rebased), 0);
+
+			// Run the migration (block time is now halved 12s -> 6s).
+			let _ = OnePassRescale::<Runtime>::on_runtime_upgrade();
+
+			// The task moved from `when` to `now + 2*(when-now)`: same number of slots, none left
+			// behind at the old block.
+			assert_eq!(live(when), 0, "old agenda slot must be cleared");
+			assert_eq!(live(rebased), 1, "task must be rebased to now + 2*(when-now)");
+			assert_eq!(
+				pallet_scheduler::Agenda::<Runtime>::iter()
+					.map(|(_, a)| a.iter().filter(|s| s.is_some()).count())
+					.sum::<usize>(),
+				1,
+				"no task dropped or duplicated"
+			);
+
+			// Wall-clock invariant: old (12s) and new (6s) fire at the same real-world time.
+			let old_secs = (when - now) as u64 * 12;
+			let new_secs = (rebased - now) as u64 * 6;
+			assert_eq!(old_secs, new_secs, "real-world expiry must be unchanged");
+		});
+	}
+
+	#[test]
+	fn migration_is_idempotent() {
+		new_test_ext().execute_with(|| {
+			let now: crate::BlockNumber = 1_000;
+			frame_system::Pallet::<Runtime>::set_block_number(now);
+			let when = now + 50_000;
+			let burn = RuntimeCall::Balances(pallet_balances::Call::burn {
+				value: 1_000,
+				keep_alive: false,
+			});
+			pallet_scheduler::Pallet::<Runtime>::schedule(
+				RuntimeOrigin::root(),
+				when,
+				None,
+				0,
+				Box::new(burn),
+			)
+			.unwrap();
+
+			OnePassRescale::<Runtime>::on_runtime_upgrade();
+			let after_first: Vec<_> = pallet_scheduler::Agenda::<Runtime>::iter_keys().collect();
+
+			// Second run must be a no-op (guarded), leaving the rebased agenda untouched.
+			OnePassRescale::<Runtime>::on_runtime_upgrade();
+			let after_second: Vec<_> = pallet_scheduler::Agenda::<Runtime>::iter_keys().collect();
+
+			assert_eq!(after_first, after_second, "second run must not rebase again");
+		});
+	}
+}

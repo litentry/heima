@@ -122,6 +122,7 @@ polkadot-runtime-parachains = { workspace = true, features = ["std"] }
 runtime-common = { workspace = true, features = ["tests"] }
 xcm-simulator = { workspace = true }
 pallet-message-queue = { workspace = true, features = ["std"] }
+sp-io = { workspace = true, features = ["std"] }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
