@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  handlebars: '>=4.7.9'
+
 importers:
 
   .:
@@ -3591,8 +3594,8 @@ packages:
     resolution: {integrity: sha512-4haO1M4mLO91PW57BMsDFf75UmwoRX0GkdD+Faw+Lr+r/OZrOCS0pIBwOL1xCKQqnQzbNFGgK2V2CpBUPeFNTw==}
     hasBin: true
 
-  handlebars@4.7.8:
-    resolution: {integrity: sha512-vafaFqs8MZkRrSX7sFVUdo3ap/eNiLnb4IakshzvP56X5Nr1iGKAIqdX6tMlm6HcNRIkr6AxO5jFEoJzzpT8aQ==}
+  handlebars@4.7.9:
+    resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
     engines: {node: '>=0.4.7'}
     hasBin: true
 
@@ -7129,12 +7132,6 @@ snapshots:
     transitivePeerDependencies:
       - nx
 
-  '@nrwl/devkit@19.8.4(nx@19.8.4(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13))':
-    dependencies:
-      '@nx/devkit': 19.8.4(nx@19.8.4(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13))
-    transitivePeerDependencies:
-      - nx
-
   '@nrwl/eslint-plugin-nx@17.3.2(@babel/traverse@7.29.7)(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13)(@types/node@18.7.1)(@typescript-eslint/parser@5.62.0(eslint@8.46.0)(typescript@5.4.5))(eslint-config-prettier@8.10.0(eslint@8.46.0))(eslint@8.46.0)(nx@17.3.2(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13))(typescript@5.4.5)(verdaccio@5.33.0(typanion@3.14.0))':
     dependencies:
       '@nx/eslint-plugin': 17.3.2(@babel/traverse@7.29.7)(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13)(@types/node@18.7.1)(@typescript-eslint/parser@5.62.0(eslint@8.46.0)(typescript@5.4.5))(eslint-config-prettier@8.10.0(eslint@8.46.0))(eslint@8.46.0)(nx@17.3.2(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13))(typescript@5.4.5)(verdaccio@5.33.0(typanion@3.14.0))
@@ -7279,7 +7276,7 @@ snapshots:
 
   '@nx/devkit@19.8.4(nx@19.8.4(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13))':
     dependencies:
-      '@nrwl/devkit': 19.8.4(nx@19.8.4(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13))
+      '@nrwl/devkit': 19.8.4(nx@17.3.2(@swc-node/register@1.10.10(@swc/core@1.11.13)(@swc/types@0.1.23)(typescript@5.4.5))(@swc/core@1.11.13))
       ejs: 3.1.10
       enquirer: 2.3.6
       ignore: 5.3.2
@@ -10343,7 +10340,7 @@ snapshots:
       pumpify: 1.5.1
       through2: 2.0.5
 
-  handlebars@4.7.8:
+  handlebars@4.7.9:
     dependencies:
       minimist: 1.2.8
       neo-async: 2.6.2
@@ -12010,7 +12007,7 @@ snapshots:
 
   typedoc-plugin-markdown@3.17.1(typedoc@0.25.13(typescript@5.4.5)):
     dependencies:
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       typedoc: 0.25.13(typescript@5.4.5)
 
   typedoc@0.25.13(typescript@5.4.5):
@@ -12133,7 +12130,7 @@ snapshots:
       express: 4.21.1
       express-rate-limit: 5.5.1
       fast-safe-stringify: 2.1.1
-      handlebars: 4.7.8
+      handlebars: 4.7.9
       js-yaml: 4.1.0
       jsonwebtoken: 9.0.2
       kleur: 4.1.5
