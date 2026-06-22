@@ -140,7 +140,9 @@ if is_runtime_release; then
   echo "## Parachain runtime" >> "$1"
   for CHAIN in heima paseo; do
     SRTOOL_DIGEST_FILE=$CHAIN-runtime/$CHAIN-srtool-digest.json
-    RUNTIME_VERSION=$(grep spec_version parachain/runtime/$CHAIN/src/lib.rs | sed 's/.*version: //;s/,//')
+    # Match only the actual `spec_version:` field, not comments that mention "spec_version"
+    # (e.g. migration notes), which would otherwise pull extra lines into the version string.
+    RUNTIME_VERSION=$(grep -E '^[[:space:]]*spec_version:' parachain/runtime/$CHAIN/src/lib.rs | head -n1 | sed 's/.*spec_version: //;s/,.*//')
     RUNTIME_COMPRESSED_SIZE=$(cat "$SRTOOL_DIGEST_FILE" | jq .runtimes.compressed.size | sed 's/"//g')
     RUNTIME_RUSTC_VERSION=$(cat "$SRTOOL_DIGEST_FILE" | jq .rustc | sed 's/"//g')
     RUNTIME_COMPRESSED_SHA256=$(cat "$SRTOOL_DIGEST_FILE" | jq .runtimes.compressed.sha256 | sed 's/"//g')
