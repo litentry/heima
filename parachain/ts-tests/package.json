@@ -24,7 +24,7 @@
     "author": "Heima Dev",
     "license": "ISC",
     "devDependencies": {
-        "@types/node": "^25.9.3",
+        "@types/node": "^26.0.0",
         "@vitest/ui": "^4.1.9",
         "prettier": "^3.8.4",
         "tsx": "^4.22.4",
@@ -42,7 +42,7 @@
         "add": "^2.0.6",
         "bn.js": "^5.2.3",
         "dotenv": "^17.4.2",
-        "ethers": "^6.16.0",
+        "ethers": "^6.17.0",
         "solc": "^0.8.35",
         "web3": "^4.16.0",
         "web3-types": "^1.10.0",
