@@ -4,9 +4,9 @@
   "description": "Heima types augment for @polkadot/api",
   "license": "ISC",
   "author": "Heima dev",
-  "main": "./dist/identity/index.cjs",
-  "module": "./dist/identity/index.js",
-  "types": "./dist/identity/index.d.ts",
+  "main": "./dist/omni/index.cjs",
+  "module": "./dist/omni/index.js",
+  "types": "./dist/omni/index.d.ts",
   "version": "0.0.3",
   "files": [
     "dist",
@@ -15,36 +15,20 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/identity/index.d.ts",
-      "require": "./dist/identity/index.cjs",
-      "import": "./dist/identity/index.js"
-    },
-    "./identity": {
-      "types": "./dist/identity/index.d.ts",
-      "require": "./dist/identity/index.cjs",
-      "import": "./dist/identity/index.js"
+      "types": "./dist/omni/index.d.ts",
+      "require": "./dist/omni/index.cjs",
+      "import": "./dist/omni/index.js"
     },
     "./omni": {
       "types": "./dist/omni/index.d.ts",
       "require": "./dist/omni/index.cjs",
       "import": "./dist/omni/index.js"
-    },
-    "./sidechain": {
-      "types": "./dist/sidechain/index.d.ts",
-      "require": "./dist/sidechain/index.cjs",
-      "import": "./dist/sidechain/index.js"
     }
   },
   "typesVersions": {
     "*": {
-      "identity": [
-        "./dist/identity/index.d.ts"
-      ],
       "omni": [
         "./dist/omni/index.d.ts"
-      ],
-      "sidechain": [
-        "./dist/sidechain/index.d.ts"
       ]
     }
   },
@@ -54,24 +38,17 @@
   "scripts": {
     "clean": "rm -rf dist node_modules",
     "generate": "pnpm generate:defs && pnpm generate:meta",
-    "load:metadata": "pnpm load:metadata:identity && pnpm load:metadata:omni && pnpm load:metadata:sidechain",
-    "load:metadata:identity": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
+    "load:metadata": "pnpm load:metadata:omni",
     "load:metadata:omni": "curl -s -H \"Content-Type: application/json\" -d '{\"id\":\"1\", \"jsonrpc\":\"2.0\", \"method\": \"state_getMetadata\", \"params\":[]}' http://localhost:9944 > metadata-parachain.json",
-    "load:metadata:sidechain": "../identity/bin/litentry-cli print-sgx-metadata-raw > metadata-sidechain.json",
-    "generate:defs": "pnpm run generate:defs:identity && pnpm generate:defs:omni && pnpm generate:defs:sidechain",
-    "generate:defs:identity": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/identity/interfaces --input ./src/identity/interfaces --endpoint ./metadata-parachain.json",
+    "generate:defs": "pnpm generate:defs:omni",
     "generate:defs:omni": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/omni/interfaces --input ./src/omni/interfaces --endpoint ./metadata-parachain.json",
-    "generate:defs:sidechain": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-defs.mjs --package @heima-network/api-augment/sidechain/interfaces --input ./src/sidechain/interfaces --endpoint ./metadata-sidechain.json",
-    "generate:meta": "pnpm run generate:meta:identity && pnpm generate:meta:omni && pnpm generate:meta:sidechain",
-    "generate:meta:identity": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-chain.mjs --endpoint ./metadata-parachain.json --package @heima-network/api-augment/identity/interfaces --output ./src/identity/interfaces",
+    "generate:meta": "pnpm generate:meta:omni",
     "generate:meta:omni": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-chain.mjs --endpoint ./metadata-parachain.json --package @heima-network/api-augment/omni/interfaces --output ./src/omni/interfaces",
-    "generate:meta:sidechain": "pnpm tsx node_modules/@polkadot/typegen/scripts/polkadot-types-from-chain.mjs --endpoint ./metadata-sidechain.json --package @heima-network/api-augment/sidechain/interfaces --output ./src/sidechain/interfaces",
     "build": "pnpm generate && tsup",
     "build-publish": "pnpm generate && pnpm build && npm publish",
     "format": "pnpm exec prettier --write .",
     "check-format": "pnpm exec prettier --check .",
-    "lint": "tsc --noEmit --pretty",
-    "build-skip-sidechain": "pnpm generate:defs:identity && pnpm generate:defs:omni && pnpm generate:meta:identity && pnpm generate:meta:omni && SKIP_SIDECHAIN=true tsup"
+    "lint": "tsc --noEmit --pretty"
   },
   "dependencies": {
     "@polkadot/api": "*",

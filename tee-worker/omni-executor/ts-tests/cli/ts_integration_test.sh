@@ -47,8 +47,7 @@ echo "Installing dependencies and building client-api"
 cd /client-api
 pnpm install --force
 
-# Here is no need to use sidechain, so skip the build of sidechain.  
-pnpm run build-skip-sidechain
+pnpm run build
 
 echo "Installing dependencies and building ts-tests"
 cd /ts-tests
