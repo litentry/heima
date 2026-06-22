@@ -39,6 +39,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use frame_support::{
+	storage::unhashed,
 	traits::{Get, OnRuntimeUpgrade},
 	weights::Weight,
 };
@@ -46,6 +47,18 @@ use frame_system::pallet_prelude::BlockNumberFor;
 #[cfg(feature = "try-runtime")]
 use parity_scale_codec::Encode;
 use sp_runtime::Saturating;
+
+/// Storage key for the once-only guard. The rebases below are **not** naturally idempotent
+/// (re-rebasing a scheduler task would push it out again), so we record completion under this key
+/// and short-circuit on any subsequent execution. Derived as
+/// `twox_128("BlockTime6s") ++ twox_128("OnePassRescaleDone")` — a regular pallet-style storage
+/// prefix that cannot collide with any real pallet (no pallet is named `BlockTime6s`).
+fn done_key() -> [u8; 32] {
+	let mut key = [0u8; 32];
+	key[..16].copy_from_slice(&sp_core::hashing::twox_128(b"BlockTime6s"));
+	key[16..].copy_from_slice(&sp_core::hashing::twox_128(b"OnePassRescaleDone"));
+	key
+}
 
 /// Rebase an absolute future block `b` so the same number of *remaining* blocks, at 2x speed, take
 /// the same wall-clock time: `b' = now + 2 * (b - now)`. Past blocks are left untouched.
@@ -70,9 +83,16 @@ where
 		+ pallet_scheduler::Config,
 {
 	fn on_runtime_upgrade() -> Weight {
+		let key = done_key();
+		// Idempotency guard: the rebases below are not safe to apply twice, so run at most once.
+		if unhashed::get_raw(&key).is_some() {
+			log::info!("OnePassRescale: already applied, skipping");
+			return T::DbWeight::get().reads(1);
+		}
+
 		let now = frame_system::Pallet::<T>::block_number();
-		let mut reads: u64 = 0;
-		let mut writes: u64 = 0;
+		let mut reads: u64 = 1;
+		let mut writes: u64 = 1;
 
 		// --- parachain-staking Round ---
 		pallet_parachain_staking::Round::<T>::mutate(|r| {
@@ -119,6 +139,10 @@ where
 			});
 			writes += 1;
 		}
+
+		// Mark complete so a re-execution is a no-op (idempotency).
+		unhashed::put_raw(&key, &[1u8]);
+		writes += 1;
 
 		T::DbWeight::get().reads_writes(reads, writes)
 	}
