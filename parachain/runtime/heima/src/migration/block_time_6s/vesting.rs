@@ -57,6 +57,12 @@ type BalanceOf<T> = <<T as pallet_vesting::Config>::Currency as frame_support::t
 	<T as frame_system::Config>::AccountId,
 >>::Balance;
 
+/// An account's full vesting-schedule list, as stored by `pallet_vesting`.
+type ScheduleList<T> = BoundedVec<
+	VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
+	pallet_vesting::MaxVestingSchedulesGet<T>,
+>;
+
 pub struct VestingRescaleMigration<T>(PhantomData<T>);
 
 impl<T> VestingRescaleMigration<T>
@@ -69,16 +75,8 @@ where
 	/// no longer has any live schedule (everything was fully vested).
 	fn rescale_account(
 		now: BlockNumberFor<T>,
-		schedules: BoundedVec<
-			VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
-			pallet_vesting::MaxVestingSchedulesGet<T>,
-		>,
-	) -> Option<
-		BoundedVec<
-			VestingInfo<BalanceOf<T>, BlockNumberFor<T>>,
-			pallet_vesting::MaxVestingSchedulesGet<T>,
-		>,
-	> {
+		schedules: ScheduleList<T>,
+	) -> Option<ScheduleList<T>> {
 		let mut out: Vec<VestingInfo<BalanceOf<T>, BlockNumberFor<T>>> = Vec::new();
 
 		for s in schedules.into_iter() {
