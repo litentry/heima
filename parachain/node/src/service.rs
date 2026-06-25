@@ -60,9 +60,11 @@ use sc_network::{
 };
 use sc_network_sync::SyncingService;
 use sc_service::{
-	Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager, WarpSyncConfig,
+	Configuration, PartialComponents, SpawnTaskHandle, TFullBackend, TFullClient, TaskManager,
+	WarpSyncConfig,
 };
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
+use sp_core::traits::SpawnEssentialNamed;
 use sp_keystore::KeystorePtr;
 use sp_runtime::{
 	app_crypto::AppCrypto,
@@ -70,6 +72,37 @@ use sp_runtime::{
 };
 use sp_std::{collections::btree_map::BTreeMap, sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
+
+/// Adapts a non-essential [`SpawnTaskHandle`] to the [`SpawnEssentialNamed`] interface required by
+/// `sc_transaction_pool::FullChainApi::new`, forwarding to the *non-essential* spawn methods.
+///
+/// The secondary transaction pool we build only to expose a low-level `graph::Pool` to the Frontier
+/// `txpool`/`graph` RPC must not be spawned with the real essential handle: its
+/// `transaction-pool-task-{0,1}` validation tasks resolve at startup, and an *essential* task that
+/// resolves tears down the whole node (`Essential task ... failed. Shutting down service.`). Spawning
+/// them as ordinary tasks keeps the RPC graph working without making their completion fatal.
+#[derive(Clone)]
+struct NonEssentialSpawner(SpawnTaskHandle);
+
+impl SpawnEssentialNamed for NonEssentialSpawner {
+	fn spawn_essential_blocking(
+		&self,
+		name: &'static str,
+		group: Option<&'static str>,
+		future: futures::future::BoxFuture<'static, ()>,
+	) {
+		self.0.spawn_blocking(name, group, future);
+	}
+
+	fn spawn_essential(
+		&self,
+		name: &'static str,
+		group: Option<&'static str>,
+		future: futures::future::BoxFuture<'static, ()>,
+	) {
+		self.0.spawn(name, group, future);
+	}
+}
 
 #[cfg(not(feature = "runtime-benchmarks"))]
 pub type HostFunctions = cumulus_client_service::ParachainHostFunctions;
@@ -183,11 +216,13 @@ where
 	.with_prometheus(config.prometheus_registry())
 	.build();
 
-	// Create a separate pool for Frontier RPC that has access to the inner Pool type
+	// Create a separate pool for Frontier RPC that has access to the inner Pool type.
+	// Spawn its validation tasks NON-essentially (see `NonEssentialSpawner`): otherwise their
+	// startup completion would shut the whole node down with "Essential task ... failed".
 	let chain_api = Arc::new(sc_transaction_pool::FullChainApi::new(
 		client.clone(),
 		None,
-		&task_manager.spawn_essential_handle(),
+		&NonEssentialSpawner(task_manager.spawn_handle()),
 	));
 	let transaction_pool_inner = Arc::new(sc_transaction_pool::Pool::new(
 		sc_transaction_pool::Options::default(),
