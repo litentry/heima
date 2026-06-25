@@ -64,7 +64,7 @@ use sc_service::{
 	WarpSyncConfig,
 };
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_core::traits::{SpawnEssentialNamed, SpawnNamed};
+use sp_core::traits::SpawnEssentialNamed;
 use sp_keystore::KeystorePtr;
 use sp_runtime::{
 	app_crypto::AppCrypto,
