@@ -98,6 +98,7 @@ num-integer = { version = "0.1", default-features = false }
 rustc-hex = { version = "2.0.1", default-features = false }
 x509-cert = { version = "0.2", default-features = false }
 evm = { version = "1.0", default-features = false }
+ethereum = { version = "0.18.2", default-features = false }
 
 # cumulus client
 cumulus-client-cli = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2512" }

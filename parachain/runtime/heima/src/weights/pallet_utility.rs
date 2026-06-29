@@ -98,4 +98,15 @@ impl<T: frame_system::Config> pallet_utility::WeightInfo for WeightInfo<T> {
 			// Standard Error: 1_288
 			.saturating_add(Weight::from_parts(2_905_799, 0).saturating_mul(c.into()))
 	}
+	fn dispatch_as_fallible() -> Weight {
+		// Minimum execution time: 5_417_000 picoseconds.
+		Weight::from_parts(5_705_000, 0)
+	}
+	/// Storage: `SafeMode::EnteredUntil` (r:1 w:0)
+	fn if_else() -> Weight {
+		// Minimum execution time: 11_273_000 picoseconds.
+		Weight::from_parts(11_571_000, 7004)
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+	}
+
 }

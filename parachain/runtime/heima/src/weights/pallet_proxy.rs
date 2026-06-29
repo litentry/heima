@@ -220,4 +220,12 @@ impl<T: frame_system::Config> pallet_proxy::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(1))
 			.saturating_add(T::DbWeight::get().writes(1))
 	}
+	/// Storage: `Proxy::Announcements` (r:1 w:1)
+	fn poke_deposit() -> Weight {
+		// Minimum execution time: 46_733_000 picoseconds.
+		Weight::from_parts(47_972_000, 5698)
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
+	}
+
 }

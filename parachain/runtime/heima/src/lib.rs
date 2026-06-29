@@ -49,7 +49,8 @@ use frame_support::{
 	ConsensusEngineId, PalletId,
 };
 use frame_system::EnsureRoot;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
+use ethereum::AuthorizationList;
 
 // for TEE
 pub use pallet_balances::Call as BalancesCall;
@@ -312,6 +313,7 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type MaxSignatories = ConstU32<100>;
 	type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+	type BlockNumberProvider = System;
 }
 
 /// The type used to represent the kinds of proxying allowed.
@@ -411,6 +413,7 @@ impl pallet_proxy::Config for Runtime {
 	type CallHasher = BlakeTwo256;
 	type AnnouncementDepositBase = AnnouncementDepositBase;
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+	type BlockNumberProvider = System;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -441,6 +444,7 @@ impl pallet_scheduler::Config for Runtime {
 	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
 	type OriginPrivilegeCmp = frame_support::traits::EqualPrivilegeOnly;
 	type Preimages = Preimage;
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -836,7 +840,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 	type ConsensusHook = ConsensusHook;
-	type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
+	type RelayParentOffset = ConstU32<0>;
 	type WeightInfo = ();
 }
 
@@ -859,7 +863,10 @@ impl pallet_session::Config for Runtime {
 	// Essentially just Aura, but lets be pedantic.
 	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
+	type DisablingStrategy = ();
 	type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
+	type Currency = Balances;
+	type KeyDeposit = ();
 }
 
 impl pallet_aura::Config for Runtime {
@@ -967,7 +974,6 @@ impl pallet_evm::Config for Runtime {
 	type WithdrawOrigin = pallet_evm::EnsureAddressTruncated;
 	type AddressMapping = pallet_evm::HashedAddressMapping<BlakeTwo256>;
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
 	type PrecompilesType = Precompiles;
 	type PrecompilesValue = PrecompilesValue;
@@ -979,6 +985,8 @@ impl pallet_evm::Config for Runtime {
 	type FindAuthor = FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
 	type GasLimitStorageGrowthRatio = ConstU64<4>;
+	type CreateOriginFilter = ();
+	type CreateInnerOriginFilter = ();
 	type WeightInfo = weights::pallet_evm::WeightInfo<Runtime>;
 }
 
@@ -987,7 +995,6 @@ parameter_types! {
 }
 
 impl pallet_ethereum::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type StateRoot =
 		pallet_ethereum::IntermediateStateRoot<<Runtime as frame_system::Config>::Version>;
 	type PostLogContent = PostBlockAndTxnHashes;
@@ -1426,7 +1433,7 @@ impl_runtime_apis! {
 			VERSION
 		}
 
-		fn execute_block(block: Block) {
+		fn execute_block(block: <Block as BlockT>::LazyBlock) {
 			Executive::execute_block(block)
 		}
 
@@ -1464,7 +1471,7 @@ impl_runtime_apis! {
 			data.create_extrinsics()
 		}
 
-		fn check_inherents(block: Block, data: sp_inherents::InherentData) -> sp_inherents::CheckInherentsResult {
+		fn check_inherents(block: <Block as BlockT>::LazyBlock, data: sp_inherents::InherentData) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
 		}
 	}
@@ -1624,6 +1631,7 @@ impl_runtime_apis! {
 			nonce: Option<U256>,
 			estimate: bool,
 			access_list: Option<Vec<(H160, Vec<H256>)>>,
+			authorization_list: Option<AuthorizationList>,
 		) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
 			let config = if estimate {
 				let mut config = <Runtime as pallet_evm::Config>::config().clone();
@@ -1681,6 +1689,7 @@ impl_runtime_apis! {
 				max_priority_fee_per_gas,
 				nonce,
 				Vec::new(),
+				authorization_list.unwrap_or_default(),
 				is_transactional,
 				validate,
 				weight_limit,
@@ -1702,6 +1711,7 @@ impl_runtime_apis! {
 			nonce: Option<U256>,
 			estimate: bool,
 			access_list: Option<Vec<(H160, Vec<H256>)>>,
+			authorization_list: Option<AuthorizationList>,
 		) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
 			let config = if estimate {
 				let mut config = <Runtime as pallet_evm::Config>::config().clone();
@@ -1759,6 +1769,7 @@ impl_runtime_apis! {
 				max_priority_fee_per_gas,
 				nonce,
 				Vec::new(),
+				authorization_list.unwrap_or_default(),
 				is_transactional,
 				validate,
 				weight_limit,
