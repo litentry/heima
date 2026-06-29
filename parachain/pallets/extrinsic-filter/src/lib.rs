@@ -82,7 +82,9 @@ use sp_std::prelude::*;
 use scale_info::TypeInfo;
 pub use weights::WeightInfo;
 
-#[derive(PartialEq, Eq, Clone, Copy, Default, Encode, Decode, Debug, TypeInfo)]
+#[derive(
+	PartialEq, Eq, Clone, Copy, Default, Encode, Decode, DecodeWithMemTracking, Debug, TypeInfo,
+)]
 pub enum OperationalMode {
 	/// when parachain runs normally
 	#[default]
