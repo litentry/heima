@@ -131,6 +131,8 @@ impl pallet_assets::Config for Test {
 	type CallbackHandle = ();
 	type Extra = ();
 	type RemoveItemsLimit = ConstU32<5>;
+	type ReserveData = ();
+	type Holder = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
@@ -164,6 +166,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(RELAYER_A, ENDOWED_BALANCE),
 			(treasury_account, ENDOWED_BALANCE),
 		],
+		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

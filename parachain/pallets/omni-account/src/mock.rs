@@ -25,7 +25,7 @@ use frame_system::EnsureRoot;
 use heima_primitives::{DefaultOmniAccountConverter, Identity, MemberAccount};
 pub use pallet_teebag::test_util::get_signer;
 use pallet_teebag::test_util::{TEST8_CERT, TEST8_SIGNER_PUB, TEST8_TIMESTAMP, URL};
-use sp_keyring::AccountKeyring;
+use sp_keyring::Sr25519Keyring;
 use sp_runtime::{
 	traits::{IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
@@ -81,28 +81,28 @@ pub struct Accounts {
 	pub identity: Identity,
 }
 
-fn create_accounts(keyring: AccountKeyring) -> Accounts {
+fn create_accounts(keyring: Sr25519Keyring) -> Accounts {
 	let native_account = keyring.to_account_id();
 	let identity = Identity::from(native_account.clone());
 	Accounts { native_account, omni_account: identity.to_omni_account("test_client"), identity }
 }
 
 pub fn alice() -> Accounts {
-	create_accounts(AccountKeyring::Alice)
+	create_accounts(Sr25519Keyring::Alice)
 }
 
 pub fn bob() -> Accounts {
-	create_accounts(AccountKeyring::Bob)
+	create_accounts(Sr25519Keyring::Bob)
 }
 
 #[allow(dead_code)]
 pub fn charlie() -> Accounts {
-	create_accounts(AccountKeyring::Charlie)
+	create_accounts(Sr25519Keyring::Charlie)
 }
 
 #[allow(dead_code)]
 pub fn dave() -> Accounts {
-	create_accounts(AccountKeyring::Dave)
+	create_accounts(Sr25519Keyring::Dave)
 }
 
 #[allow(dead_code)]
@@ -182,9 +182,12 @@ pub fn get_tee_signer() -> SystemAccountId {
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	pallet_balances::GenesisConfig::<Test> { balances: vec![(alice().native_account, 10)] }
-		.assimilate_storage(&mut t)
-		.unwrap();
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec![(alice().native_account, 10)],
+		dev_accounts: None,
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	let mut ext: sp_io::TestExternalities = t.into();
 	ext.execute_with(|| {

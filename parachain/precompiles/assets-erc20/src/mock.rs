@@ -126,7 +126,6 @@ impl pallet_evm::Config for Runtime {
 	type WithdrawOrigin = EnsureAddressNever<AccountId>;
 	type AddressMapping = AccountId;
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
 	type PrecompilesType = Erc20AssetsPrecompileSet<Self>;
 	type PrecompilesValue = PrecompilesValue;
@@ -140,6 +139,8 @@ impl pallet_evm::Config for Runtime {
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
 	type GasLimitStorageGrowthRatio = ConstU64<4>;
+	type CreateOriginFilter = ();
+	type CreateInnerOriginFilter = ();
 }
 
 // These parameters dont matter much as this will only be called by root with the forced arguments
@@ -172,6 +173,8 @@ impl pallet_assets::Config for Runtime {
 	type RemoveItemsLimit = ConstU32<0>;
 	type AssetIdParameter = AssetId;
 	type CallbackHandle = ();
+	type ReserveData = ();
+	type Holder = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
@@ -203,7 +206,7 @@ impl ExtBuilder {
 	pub(crate) fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
-		pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
+		pallet_balances::GenesisConfig::<Runtime> { balances: self.balances, dev_accounts: None }
 			.assimilate_storage(&mut t)
 			.expect("Pallet balances storage can be assimilated");
 

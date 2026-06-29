@@ -108,7 +108,7 @@ pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
 
 	let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
-	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(alice(), 10 * UNIT)] }
+	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(alice(), 10 * UNIT)], dev_accounts: None }
 		.assimilate_storage(&mut t)
 		.unwrap();
 
@@ -125,7 +125,7 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 
 	let mut t = frame_system::GenesisConfig::<Runtime>::default().build_storage().unwrap();
 
-	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(alice(), 10 * UNIT)] }
+	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(alice(), 10 * UNIT)], dev_accounts: None }
 		.assimilate_storage(&mut t)
 		.unwrap();
 

@@ -81,7 +81,6 @@ parameter_types! {
 }
 
 impl pallet_parachain_staking::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = frame_system::EnsureRoot<AccountId>;
 	type MinBlocksPerRound = MinBlocksPerRound;
@@ -171,7 +170,6 @@ impl pallet_evm::Config for Test {
 	type WithdrawOrigin = EnsureAddressNever<AccountId>;
 	type AddressMapping = TruncatedAddressMapping;
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
 	type PrecompilesType = ParachainStakingMockPrecompile<Self>;
 	type PrecompilesValue = PrecompilesValue;
@@ -185,6 +183,8 @@ impl pallet_evm::Config for Test {
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
 	type GasLimitStorageGrowthRatio = ConstU64<4>;
+	type CreateOriginFilter = ();
+	type CreateInnerOriginFilter = ();
 }
 
 parameter_types! {
@@ -270,7 +270,7 @@ impl ExtBuilder {
 	pub(crate) fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
-		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances, dev_accounts: None }
 			.assimilate_storage(&mut t)
 			.expect("Pallet balances storage can be assimilated");
 		pallet_parachain_staking::GenesisConfig::<Test> {

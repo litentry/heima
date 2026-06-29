@@ -22,7 +22,7 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use sp_core::{ConstU32, H256};
-use sp_keyring::AccountKeyring;
+use sp_keyring::Sr25519Keyring;
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -111,14 +111,15 @@ impl pallet_utility::Config for Test {
 pub fn new_test_ext(is_dev_mode: bool) -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	pallet_balances::GenesisConfig::<Test> {
-		balances: vec![(AccountKeyring::Alice.to_account_id(), 1 << 60)],
+		balances: vec![(Sr25519Keyring::Alice.to_account_id(), 1 << 60)],
+		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
 
 	let mut genesis_config: pallet_teebag::GenesisConfig<Test> = crate::GenesisConfig {
 		allow_sgx_debug_mode: true,
-		admin: Some(AccountKeyring::Alice.to_account_id()),
+		admin: Some(Sr25519Keyring::Alice.to_account_id()),
 		mode: OperationalMode::Production,
 	};
 

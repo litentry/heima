@@ -24,7 +24,7 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use sp_core::{ConstU128, ConstU32, H256};
-use sp_keyring::AccountKeyring;
+use sp_keyring::Sr25519Keyring;
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -137,22 +137,25 @@ impl pallet_score_staking::Config for Test {
 }
 
 pub fn alice() -> AccountId {
-	AccountKeyring::Alice.to_account_id()
+	Sr25519Keyring::Alice.to_account_id()
 }
 
 pub fn bob() -> AccountId {
-	AccountKeyring::Bob.to_account_id()
+	Sr25519Keyring::Bob.to_account_id()
 }
 
 pub fn charlie() -> AccountId {
-	AccountKeyring::Charlie.to_account_id()
+	Sr25519Keyring::Charlie.to_account_id()
 }
 
 pub fn new_test_ext(fast_round: bool) -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	pallet_balances::GenesisConfig::<Test> { balances: vec![(alice(), 2 * UNIT)] }
-		.assimilate_storage(&mut t)
-		.unwrap();
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec![(alice(), 2 * UNIT)],
+		dev_accounts: None,
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	pallet_score_staking::GenesisConfig::<Test> {
 		state: PoolState::Stopped,
@@ -180,6 +183,7 @@ pub fn new_test_ext_with_parachain_staking() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![(alice(), 2 * UNIT), (bob(), 10 * UNIT)],
+		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

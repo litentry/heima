@@ -82,6 +82,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(RELAYER_A, ENDOWED_BALANCE),
 			(treasury_account, ENDOWED_BALANCE),
 		],
+		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

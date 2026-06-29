@@ -25,7 +25,7 @@ pub use frame_support::{
 		AsEnsureOriginWithArg, ConstU32, ConstU64,
 	},
 };
-use sp_keyring::AccountKeyring;
+use sp_keyring::Sr25519Keyring;
 use sp_runtime::{
 	traits::{IdentifyAccount, IdentityLookup, Verify},
 	BuildStorage,
@@ -39,19 +39,19 @@ pub type AssetId = u32;
 pub const TEST_ASSET: AssetId = 1;
 
 pub fn alice() -> AccountId {
-	AccountKeyring::Alice.to_account_id()
+	Sr25519Keyring::Alice.to_account_id()
 }
 
 pub fn bob() -> AccountId {
-	AccountKeyring::Bob.to_account_id()
+	Sr25519Keyring::Bob.to_account_id()
 }
 
 pub fn charlie() -> AccountId {
-	AccountKeyring::Charlie.to_account_id()
+	Sr25519Keyring::Charlie.to_account_id()
 }
 
 pub fn dave() -> AccountId {
-	AccountKeyring::Dave.to_account_id()
+	Sr25519Keyring::Dave.to_account_id()
 }
 
 pub fn native_pay_in_request() -> PayInRequest<NativeOrWithId<AssetId>, Balance> {
@@ -138,6 +138,8 @@ impl pallet_assets::Config for Test {
 	type CallbackHandle = ();
 	type Extra = ();
 	type RemoveItemsLimit = ConstU32<5>;
+	type ReserveData = ();
+	type Holder = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
@@ -160,6 +162,7 @@ pub fn new_test_ext(should_init: bool) -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![(alice(), 50), (bob(), 50), (charlie(), 50)],
+		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

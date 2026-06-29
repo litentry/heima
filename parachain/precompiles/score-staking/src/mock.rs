@@ -82,7 +82,6 @@ parameter_types! {
 	pub const MinDelegation: u128 = 3;
 }
 impl pallet_parachain_staking::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
 	type MinBlocksPerRound = MinBlocksPerRound;
@@ -124,7 +123,6 @@ parameter_types! {
 
 impl pallet_score_staking::Config for Test {
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type AccountIdConvert = IdentityAccountIdConvert;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type YearlyIssuance = ConstU128<{ 100_000_000 * UNIT }>;
@@ -185,7 +183,6 @@ impl pallet_evm::Config for Test {
 	type WithdrawOrigin = EnsureAddressNever<AccountId>;
 	type AddressMapping = TruncatedAddressMapping;
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
 	type PrecompilesType = ScoreStakingMockPrecompile<Self>;
 	type PrecompilesValue = PrecompilesValue;
@@ -199,6 +196,8 @@ impl pallet_evm::Config for Test {
 	type WeightInfo = ();
 	type GasLimitPovSizeRatio = ConstU64<4>;
 	type GasLimitStorageGrowthRatio = ConstU64<4>;
+	type CreateOriginFilter = ();
+	type CreateInnerOriginFilter = ();
 }
 
 parameter_types! {
@@ -223,7 +222,10 @@ pub fn bob() -> AccountId {
 
 pub fn new_test_ext(fast_round: bool) -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	pallet_balances::GenesisConfig::<Test> { balances: vec![(alice(), 2 * UNIT)] }
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec![(alice(), 2 * UNIT)],
+		dev_accounts: None,
+	}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
