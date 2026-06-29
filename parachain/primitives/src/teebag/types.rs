@@ -38,7 +38,18 @@ pub type EnclaveFingerprint = H256;
 /// `Attestation::Ignore` is only possible under `OperationalMode::Development`, but not vice versa.
 /// So if you define `Attestation::Dcap`, the attestation will be verified even in `Development` mode
 #[derive(
-	PartialEq, Eq, Clone, Copy, Default, Encode, Decode, DecodeWithMemTracking, Debug, TypeInfo, Serialize, Deserialize,
+	PartialEq,
+	Eq,
+	Clone,
+	Copy,
+	Default,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Debug,
+	TypeInfo,
+	Serialize,
+	Deserialize,
 )]
 pub enum OperationalMode {
 	#[default]
@@ -47,7 +58,18 @@ pub enum OperationalMode {
 	Maintenance,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Default, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Default,
+	Clone,
+	Copy,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	TypeInfo,
+)]
 pub enum DcapProvider {
 	#[default]
 	Intel,
@@ -56,7 +78,18 @@ pub enum DcapProvider {
 	Integritee,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	Copy,
+	Default,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	TypeInfo,
+)]
 pub enum AttestationType {
 	#[default]
 	Ignore,
@@ -65,7 +98,18 @@ pub enum AttestationType {
 	Dcap(DcapProvider),
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	Copy,
+	Default,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	TypeInfo,
+)]
 pub enum WorkerType {
 	#[default]
 	Identity,
@@ -73,28 +117,54 @@ pub enum WorkerType {
 	OmniExecutor,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	Copy,
+	Default,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	TypeInfo,
+)]
 pub enum WorkerMode {
 	#[default]
 	OffChainWorker,
 	Sidechain,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Copy, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Copy,
+	Clone,
+	Default,
+	PartialEq,
+	Eq,
+	RuntimeDebug,
+	TypeInfo,
+)]
 pub enum SgxBuildMode {
 	#[default]
 	Production,
 	Debug,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, Debug, Copy, Default, TypeInfo)]
+#[derive(
+	PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, Debug, Copy, Default, TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SidechainBlockConfirmation {
 	pub block_number: SidechainBlockNumber,
 	pub block_header_hash: H256,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo,
+)]
 pub struct Enclave {
 	pub worker_type: WorkerType,
 	pub worker_mode: WorkerMode,

@@ -289,7 +289,18 @@ pub struct SgxQuote {
 	pub report_body: SgxReportBody, /* 48 */
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo, Default)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	sp_core::RuntimeDebug,
+	TypeInfo,
+	Default,
+)]
 pub enum SgxStatus {
 	#[default]
 	#[codec(index = 0)]
@@ -304,7 +315,17 @@ pub enum SgxStatus {
 	ConfigurationNeeded,
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Default, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Default,
+	Clone,
+	PartialEq,
+	Eq,
+	sp_core::RuntimeDebug,
+	TypeInfo,
+)]
 pub struct SgxReport {
 	pub mr_enclave: MrEnclave,
 	pub pubkey: [u8; 32],

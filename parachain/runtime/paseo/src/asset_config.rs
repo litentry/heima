@@ -102,7 +102,9 @@ impl pallet_assets::Config for Runtime {
 	type BenchmarkHelper = AssetsBenchmarkHelper;
 }
 
-#[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
+#[derive(
+	Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, DecodeWithMemTracking, TypeInfo,
+)]
 pub enum ForeignAssetType {
 	Xcm(xcm::v4::Location),
 }

@@ -25,7 +25,18 @@ pub type Score = u32;
 
 /// an on/off flag
 #[derive(
-	Clone, Copy, Default, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, Debug, TypeInfo, Deserialize, Serialize,
+	Clone,
+	Copy,
+	Default,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Debug,
+	TypeInfo,
+	Deserialize,
+	Serialize,
 )]
 pub enum PoolState {
 	#[default]
@@ -42,7 +53,8 @@ pub enum PoolState {
 	PartialEq,
 	Eq,
 	Encode,
-	Decode, DecodeWithMemTracking,
+	Decode,
+	DecodeWithMemTracking,
 	RuntimeDebug,
 	TypeInfo,
 	Deserialize,
@@ -55,7 +67,18 @@ pub struct RoundInfo<BlockNumber> {
 	pub start_block: BlockNumber,
 }
 
-#[derive(Copy, Clone, Default, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+#[derive(
+	Copy,
+	Clone,
+	Default,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+)]
 pub struct RoundSetting {
 	/// Interval of rounds in block number
 	pub interval: RoundDuration,
@@ -72,7 +95,8 @@ pub struct RoundSetting {
 	PartialEq,
 	Eq,
 	Encode,
-	Decode, DecodeWithMemTracking,
+	Decode,
+	DecodeWithMemTracking,
 	RuntimeDebug,
 	TypeInfo,
 	Deserialize,

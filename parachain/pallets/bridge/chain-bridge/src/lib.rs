@@ -72,7 +72,9 @@ pub mod pallet {
 		}
 	}
 
-	#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+	#[derive(
+		PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+	)]
 	pub enum ProposalStatus {
 		#[codec(index = 0)]
 		Initiated,
@@ -82,7 +84,9 @@ pub mod pallet {
 		Rejected,
 	}
 
-	#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+	#[derive(
+		PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+	)]
 	pub struct ProposalVotes<AccountId, BlockNumber> {
 		pub votes_for: Vec<AccountId>,
 		pub votes_against: Vec<AccountId>,
@@ -90,7 +94,9 @@ pub mod pallet {
 		pub expiry: BlockNumber,
 	}
 
-	#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+	#[derive(
+		PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+	)]
 	pub enum BridgeEvent {
 		#[codec(index = 0)]
 		FungibleTransfer(BridgeChainId, DepositNonce, ResourceId, u128, Vec<u8>),

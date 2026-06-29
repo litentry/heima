@@ -22,14 +22,35 @@ use crate::{EthereumToken, SolanaToken};
 
 // TODO: maybe using xcm Location is better
 //       but we'd need enums for all foreign types, or use GeneralIndex
-#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(
+	PartialEq,
+	Eq,
+	Clone,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 pub enum ChainType {
 	Heima,         // this chain
 	Ethereum(u32), // with chain id
 	Solana,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo, Hash, MaxEncodedLen)]
+#[derive(
+	PartialEq,
+	Eq,
+	Clone,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+	Hash,
+	MaxEncodedLen,
+)]
 pub enum ChainAsset {
 	// TODO: Revisit renaming Ethereum to Evm
 	Ethereum(u32, EthereumToken), // with chain id

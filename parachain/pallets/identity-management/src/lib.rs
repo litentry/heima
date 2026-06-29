@@ -57,7 +57,16 @@ pub mod pallet {
 	use heima_primitives::{ErrorDetail, IMPError, Identity, ShardIdentifier};
 
 	#[derive(
-		Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, Default, RuntimeDebug, TypeInfo, MaxEncodedLen,
+		Clone,
+		Eq,
+		PartialEq,
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		Default,
+		RuntimeDebug,
+		TypeInfo,
+		MaxEncodedLen,
 	)]
 	#[scale_info(skip_type_params(MaxOIDCClientUris, MaxRedirectUriLen))]
 	pub struct OIDCClient<MaxOIDCClientUris: Get<u32>, MaxRedirectUriLen: Get<u32>> {

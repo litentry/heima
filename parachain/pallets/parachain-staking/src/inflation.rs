@@ -111,7 +111,17 @@ pub fn round_issuance_range<T: Config>(round: Range<Perbill>) -> Range<BalanceOf
 }
 
 #[derive(
-	Eq, PartialEq, Clone, Encode, Decode, DecodeWithMemTracking, Default, RuntimeDebug, TypeInfo, Serialize, Deserialize,
+	Eq,
+	PartialEq,
+	Clone,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Default,
+	RuntimeDebug,
+	TypeInfo,
+	Serialize,
+	Deserialize,
 )]
 pub struct InflationInfo<Balance> {
 	/// Staking expectations

@@ -100,7 +100,8 @@ impl Debug for IdentityString {
 
 #[derive(
 	Encode,
-	Decode, DecodeWithMemTracking,
+	Decode,
+	DecodeWithMemTracking,
 	Copy,
 	Clone,
 	Default,
@@ -150,7 +151,8 @@ impl Debug for Address20 {
 
 #[derive(
 	Encode,
-	Decode, DecodeWithMemTracking,
+	Decode,
+	DecodeWithMemTracking,
 	Copy,
 	Clone,
 	Default,
@@ -238,7 +240,18 @@ impl Debug for Address32 {
 
 // TODO: maybe use macros to reduce verbosity
 #[derive(
-	Encode, Decode, DecodeWithMemTracking, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, PartialOrd, Ord, Hash,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	TypeInfo,
+	MaxEncodedLen,
+	PartialOrd,
+	Ord,
+	Hash,
 )]
 pub struct Address33([u8; 33]);
 impl AsRef<[u8; 33]> for Address33 {
@@ -304,7 +317,18 @@ impl Debug for Address33 {
 /// We only include the network categories (substrate/evm) without concrete types
 /// see https://github.com/litentry/heima/issues/1841
 #[derive(
-	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, EnumIter, Ord, PartialOrd,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	Debug,
+	PartialEq,
+	Eq,
+	TypeInfo,
+	MaxEncodedLen,
+	EnumIter,
+	Ord,
+	PartialOrd,
 )]
 pub enum Identity {
 	#[codec(index = 0)]

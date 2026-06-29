@@ -40,7 +40,18 @@ use sp_runtime::{traits::Saturating, Percent};
 use sp_std::{prelude::*, vec::Vec};
 
 /// Represents the auto-compounding amount for a delegation.
-#[derive(Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
+#[derive(
+	Clone,
+	Eq,
+	PartialEq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+	PartialOrd,
+	Ord,
+)]
 pub struct AutoCompoundConfig<AccountId> {
 	pub delegator: AccountId,
 	pub value: Percent,

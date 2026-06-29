@@ -27,7 +27,17 @@ use sp_std::prelude::*;
 
 /// An ordered set backed by `Vec`
 #[derive(
-	RuntimeDebug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, Default, Clone, TypeInfo, Deserialize, Serialize,
+	RuntimeDebug,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Default,
+	Clone,
+	TypeInfo,
+	Deserialize,
+	Serialize,
 )]
 pub struct OrderedSet<T>(pub Vec<T>);
 

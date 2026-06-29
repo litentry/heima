@@ -42,7 +42,18 @@ use sp_runtime::traits::{Saturating, Zero};
 use sp_std::{vec, vec::Vec};
 
 /// An action that can be performed upon a delegation
-#[derive(Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
+#[derive(
+	Clone,
+	Eq,
+	PartialEq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+	PartialOrd,
+	Ord,
+)]
 pub enum DelegationAction<Balance> {
 	#[codec(index = 0)]
 	Revoke(Balance),
@@ -62,7 +73,18 @@ impl<Balance: Copy> DelegationAction<Balance> {
 
 /// Represents a scheduled request that define a [DelegationAction]. The request is executable
 /// iff the provided [RoundIndex] is achieved.
-#[derive(Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
+#[derive(
+	Clone,
+	Eq,
+	PartialEq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+	PartialOrd,
+	Ord,
+)]
 pub struct ScheduledRequest<AccountId, Balance> {
 	pub delegator: AccountId,
 	pub when_executable: RoundIndex,

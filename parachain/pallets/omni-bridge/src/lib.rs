@@ -95,7 +95,9 @@ pub struct PayOutVote<AccountId> {
 	pub status: VoteStatus,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Default, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+#[derive(
+	PartialEq, Eq, Clone, Encode, Default, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 pub enum VoteStatus {
 	#[default]
 	Pending,

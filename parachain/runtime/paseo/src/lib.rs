@@ -34,6 +34,7 @@ use std::string::String;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
+use ethereum::AuthorizationList;
 use frame_support::{
 	construct_runtime,
 	genesis_builder_helper::{build_state, get_preset},
@@ -51,7 +52,6 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use heima_primitives::HEIMA_PARA_ID;
 use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
-use ethereum::AuthorizationList;
 
 // for TEE
 pub use pallet_balances::Call as BalancesCall;
@@ -331,7 +331,8 @@ impl pallet_multisig::Config for Runtime {
 	Ord,
 	PartialOrd,
 	Encode,
-	Decode, DecodeWithMemTracking,
+	Decode,
+	DecodeWithMemTracking,
 	RuntimeDebug,
 	MaxEncodedLen,
 	scale_info::TypeInfo,

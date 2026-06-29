@@ -81,7 +81,18 @@ impl<AccountId: Ord, Balance> PartialEq for Bond<AccountId, Balance> {
 	}
 }
 
-#[derive(Copy, Clone, Default, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+#[derive(
+	Copy,
+	Clone,
+	Default,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+)]
 /// The activity status of the collator
 pub enum CollatorStatus {
 	/// Committed to be online and producing valid blocks (not equivocating)
@@ -166,7 +177,9 @@ pub struct DelayedPayout<Balance> {
 	pub collator_commission: Perbill,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+#[derive(
+	PartialEq, Eq, Clone, Copy, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 /// Request scheduled to change the collator candidate self-bond
 pub struct CandidateBondLessRequest<Balance> {
 	pub amount: Balance,
@@ -1029,7 +1042,9 @@ impl<
 
 /// Convey relevant information describing if a delegator was added to the top or bottom
 /// Delegations added to the top yield a new total
-#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+#[derive(
+	Clone, Copy, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 pub enum DelegatorAdded<B> {
 	#[codec(index = 0)]
 	AddedToTop { new_total: B },
@@ -1193,7 +1208,9 @@ impl<
 	}
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
+#[derive(
+	Copy, Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 /// The current round index and transition information
 pub struct RoundInfo<BlockNumber> {
 	/// Current round index

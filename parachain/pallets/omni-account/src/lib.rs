@@ -51,7 +51,17 @@ use sp_std::{boxed::Box, vec::Vec};
 // 1. to decouple `TEECallOrigin` and extrinsic that should be sent from `OmniAccount` origin only
 // 2. allow other pallets to specify ensure_origin using this origin
 // 3. leave room for more delicate control over OmniAccount in the future (e.g. multisig-like control)
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen)]
+#[derive(
+	PartialEq,
+	Eq,
+	Clone,
+	RuntimeDebug,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub enum RawOrigin<AccountId> {
 	// dispatched from OmniAccount T::AccountId

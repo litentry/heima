@@ -34,7 +34,9 @@ impl QeTcb {
 	}
 }
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Default, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Default, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo,
+)]
 pub struct TcbVersionStatus {
 	pub cpusvn: Cpusvn,
 	pub pcesvn: Pcesvn,
@@ -57,7 +59,9 @@ impl TcbVersionStatus {
 
 /// This represents all the collateral data that we need to store on chain in order to verify
 /// the quoting enclave validity of another enclave that wants to register itself on chain
-#[derive(Encode, Decode, DecodeWithMemTracking, Default, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Default, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo,
+)]
 pub struct TcbInfoOnChain {
 	// Todo: make timestamp: Moment
 	pub issue_date: u64, // unix epoch in milliseconds

@@ -121,7 +121,9 @@ where
 }
 
 // Identity Management Pallet Error
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen,
+)]
 pub enum IMPError {
 	// errors when executing individual error
 	#[codec(index = 0)]
@@ -142,7 +144,9 @@ impl frame_support::traits::PalletError for IMPError {
 }
 
 // Verified Credential(VC) Management Pallet Error
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen,
+)]
 pub enum VCMPError {
 	#[codec(index = 0)]
 	RequestVCFailed(Assertion, ErrorDetail),

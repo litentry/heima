@@ -21,7 +21,9 @@ use sp_runtime::{traits::ConstU32, BoundedVec};
 
 pub type DynamicContractParams = BoundedVec<u8, ConstU32<1024>>;
 
-#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo,
+)]
 pub struct DynamicParams {
 	// smart contract code identifier
 	pub smart_contract_id: H160,

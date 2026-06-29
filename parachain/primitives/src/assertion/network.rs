@@ -42,7 +42,8 @@ pub type BoundedWeb3Network = BoundedVec<Web3Network, ConstU32<MAX_WEB3NETWORK_L
 /// the same network or not (e.g. bitcoin/substrate)
 #[derive(
 	Encode,
-	Decode, DecodeWithMemTracking,
+	Decode,
+	DecodeWithMemTracking,
 	Copy,
 	Clone,
 	Debug,
