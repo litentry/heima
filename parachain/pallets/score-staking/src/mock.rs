@@ -96,7 +96,6 @@ parameter_types! {
 	pub const MinDelegation: u128 = 3;
 }
 impl pallet_parachain_staking::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
 	type MinBlocksPerRound = MinBlocksPerRound;
@@ -130,7 +129,6 @@ parameter_types! {
 
 impl pallet_score_staking::Config for Test {
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type AccountIdConvert = IdentityAccountIdConvert;
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type YearlyIssuance = ConstU128<{ 100_000_000 * UNIT }>;

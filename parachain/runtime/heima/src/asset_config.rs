@@ -110,7 +110,6 @@ pub enum ForeignAssetType {
 }
 
 impl pallet_asset_manager::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type ForeignAssetType = ForeignAssetType; // TODO

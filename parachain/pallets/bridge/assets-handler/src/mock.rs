@@ -67,7 +67,6 @@ parameter_types! {
 }
 
 impl pallet_chain_bridge::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
@@ -137,7 +136,6 @@ impl pallet_assets::Config for Test {
 }
 
 impl pallet_assets_handler::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type TreasuryAccount = TreasuryAccount;
 	type SetMaximumIssuanceOrigin = EnsureSignedBy<SetMaximumIssuanceOrigin, u64>;
 	type DefaultMaximumIssuance = MaximumIssuance;

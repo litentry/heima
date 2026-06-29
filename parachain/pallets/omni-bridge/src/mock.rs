@@ -148,7 +148,6 @@ parameter_types! {
 
 // Keep it same as real runtime
 impl pallet_omni_bridge::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetKind = NativeOrWithId<AssetId>;
 	type Assets =

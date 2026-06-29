@@ -161,7 +161,6 @@ impl pallet_utility::Config for Test {
 }
 
 impl pallet_teebag::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = ConstU64<86_400_000>; // [ms/d]
 	type SetAdminOrigin = EnsureRoot<Self::AccountId>;
 	type MaxEnclaveIdentifier = ConstU32<3>;
@@ -172,7 +171,6 @@ impl pallet_teebag::Config for Test {
 impl pallet_omni_account::Config for Test {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type RuntimeEvent = RuntimeEvent;
 	type TEECallOrigin = EnsureEnclaveSigner<Self>;
 	type OmniAccountOrigin = EnsureOmniAccount<Self::AccountId>;
 	type OmniAccountConverter = DefaultOmniAccountConverter;

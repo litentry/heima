@@ -113,7 +113,6 @@ impl From<MockAssetType> for Option<Location> {
 }
 
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type ForeignAssetType = MockAssetType;

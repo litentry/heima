@@ -78,7 +78,6 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 }
 
 impl pallet_extrinsic_filter::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EnsureRoot<Self::AccountId>;
 	type SafeModeFilter = SafeModeFilter;
 	type NormalModeFilter = NormalModeFilter;

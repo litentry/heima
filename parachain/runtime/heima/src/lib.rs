@@ -1029,7 +1029,6 @@ parameter_types! {
 }
 
 impl pallet_parachain_staking::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = EnsureRootOrAllCouncil;
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
@@ -1081,7 +1080,6 @@ parameter_types! {
 }
 
 impl pallet_chain_bridge::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = EnsureRootOrHalfCouncil;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = BridgeChainId;
@@ -1127,7 +1125,6 @@ parameter_types! {
 }
 
 impl pallet_assets_handler::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type TreasuryAccount = TreasuryAccount;
 	type SetMaximumIssuanceOrigin = EnsureRootOrHalfCouncil;
 	type DefaultMaximumIssuance = MaximumIssuance;
@@ -1135,7 +1132,6 @@ impl pallet_assets_handler::Config for Runtime {
 }
 
 impl pallet_extrinsic_filter::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EnsureRootOrHalfTechnicalCommittee;
 	type NormalModeFilter = NormalModeFilter;
 	type SafeModeFilter = SafeModeFilter;
@@ -1148,7 +1144,6 @@ parameter_types! {
 }
 
 impl pallet_teebag::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
 	type SetAdminOrigin = EnsureRootOrHalfCouncil;
 	type MaxEnclaveIdentifier = ConstU32<3>;
@@ -1157,7 +1152,6 @@ impl pallet_teebag::Config for Runtime {
 }
 
 impl pallet_identity_management::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_identity_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
@@ -1167,14 +1161,12 @@ impl pallet_identity_management::Config for Runtime {
 impl pallet_omni_account::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type RuntimeEvent = RuntimeEvent;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type OmniAccountOrigin = EnsureOmniAccount;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 }
 
 impl pallet_omni_bridge::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetKind = NativeOrWithId<AssetId>; // No XCM assets for now
 	type Assets =
@@ -1184,14 +1176,12 @@ impl pallet_omni_bridge::Config for Runtime {
 }
 
 impl pallet_evm_assertions::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type AssertionId = H160;
 	type ContractDevOrigin = pallet_collective::EnsureMember<AccountId, DeveloperCommitteeInstance>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 }
 
 impl pallet_vc_management::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_vc_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type SetAdminOrigin = EnsureRootOrHalfCouncil;
@@ -1212,7 +1202,6 @@ impl pallet_score_staking::AccountIdConvert<Runtime> for IdentityAccountIdConver
 
 impl pallet_score_staking::Config for Runtime {
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type AccountIdConvert = IdentityAccountIdConvert;
 	type AdminOrigin = EnsureRootOrHalfCouncil;
 	// Temporary suspend of reward
