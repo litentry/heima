@@ -16,17 +16,17 @@
 
 use crate::{MrEnclave, MrSigner, QuotingEnclave, SgxBuildMode};
 use alloc::vec;
-use parity_scale_codec::{Decode, Encode, Input};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, Input};
 use scale_info::TypeInfo;
 
 const SGX_REPORT_DATA_SIZE: usize = 64;
-#[derive(Debug, Encode, Decode, PartialEq, Eq, Copy, Clone, TypeInfo)]
+#[derive(Debug, Encode, Decode, DecodeWithMemTracking, PartialEq, Eq, Copy, Clone, TypeInfo)]
 #[repr(C)]
 pub struct SgxReportData {
 	pub d: [u8; SGX_REPORT_DATA_SIZE],
 }
 
-#[derive(Debug, Encode, Decode, PartialEq, Eq, Copy, Clone, TypeInfo)]
+#[derive(Debug, Encode, Decode, DecodeWithMemTracking, PartialEq, Eq, Copy, Clone, TypeInfo)]
 #[repr(C)]
 pub struct SGXAttributes {
 	flags: u64,
@@ -34,7 +34,7 @@ pub struct SGXAttributes {
 }
 
 /// This is produced by an SGX platform, when it wants to be attested.
-#[derive(Debug, Decode, Clone, TypeInfo)]
+#[derive(Debug, Decode, DecodeWithMemTracking, Clone, TypeInfo)]
 #[repr(C)]
 pub struct DcapQuote {
 	pub header: DcapQuoteHeader,
@@ -44,7 +44,7 @@ pub struct DcapQuote {
 }
 
 /// All the documentation about this can be found in the `PCK_Certificate_CRL_Spec-1.1` page 62.
-#[derive(Debug, Encode, Decode, Copy, Clone, TypeInfo)]
+#[derive(Debug, Encode, Decode, DecodeWithMemTracking, Copy, Clone, TypeInfo)]
 #[repr(C)]
 pub struct DcapQuoteHeader {
 	/// Version of the Quote data structure.
@@ -74,7 +74,7 @@ pub struct DcapQuoteHeader {
 pub const ATTESTATION_KEY_SIZE: usize = 64;
 pub const REPORT_SIGNATURE_SIZE: usize = 64;
 
-#[derive(Debug, Decode, Clone, TypeInfo)]
+#[derive(Debug, Decode, DecodeWithMemTracking, Clone, TypeInfo)]
 #[repr(C)]
 pub struct EcdsaQuoteSignature {
 	pub isv_enclave_report_signature: [u8; REPORT_SIGNATURE_SIZE],
@@ -104,6 +104,8 @@ impl Decode for QeAuthenticationData {
 		Ok(Self { size, certification_data })
 	}
 }
+
+impl DecodeWithMemTracking for QeAuthenticationData {}
 
 #[derive(Debug, Clone, TypeInfo)]
 #[repr(C)]
@@ -139,6 +141,8 @@ impl Decode for QeCertificationData {
 	}
 }
 
+impl DecodeWithMemTracking for QeCertificationData {}
+
 // see Intel SGX SDK https://github.com/intel/linux-sgx/blob/master/common/inc/sgx_report.h
 const SGX_REPORT_BODY_RESERVED1_BYTES: usize = 12;
 const SGX_REPORT_BODY_RESERVED2_BYTES: usize = 32;
@@ -152,7 +156,7 @@ const SGX_FLAGS_DEBUG: u64 = 0x0000000000000002;
 /// not related to the overall validity of an enclave. We only check security related fields. The
 /// only exception to this is the quoting enclave, where we validate specific fields against known
 /// values.
-#[derive(Debug, Encode, Decode, Copy, Clone, TypeInfo)]
+#[derive(Debug, Encode, Decode, DecodeWithMemTracking, Copy, Clone, TypeInfo)]
 #[repr(C)]
 pub struct SgxReportBody {
 	/// Security version of the CPU.
@@ -272,7 +276,7 @@ impl SgxReportBody {
 	}
 }
 // see Intel SGX SDK https://github.com/intel/linux-sgx/blob/master/common/inc/sgx_quote.h
-#[derive(Encode, Decode, Copy, Clone, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Copy, Clone, TypeInfo)]
 #[repr(C)]
 pub struct SgxQuote {
 	pub version: u16,               /* 0 */
@@ -285,7 +289,7 @@ pub struct SgxQuote {
 	pub report_body: SgxReportBody, /* 48 */
 }
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo, Default)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo, Default)]
 pub enum SgxStatus {
 	#[default]
 	#[codec(index = 0)]
@@ -300,7 +304,7 @@ pub enum SgxStatus {
 	ConfigurationNeeded,
 }
 
-#[derive(Encode, Decode, Default, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Default, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 pub struct SgxReport {
 	pub mr_enclave: MrEnclave,
 	pub pubkey: [u8; 32],

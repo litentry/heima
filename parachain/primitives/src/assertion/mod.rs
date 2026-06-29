@@ -56,11 +56,11 @@ use dynamic::DynamicParams;
 
 use crate::{vec, AccountId, ParameterString, Vec};
 
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 #[rustfmt::skip]
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub enum Assertion {
 	#[codec(index = 0)]
 	A1,

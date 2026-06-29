@@ -1,11 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #[cfg(feature = "runtime-benchmarks")]
 use frame_support::pallet_prelude::DispatchResult;
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::DispatchError;
 
-#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Debug, Decode, DecodeWithMemTracking, TypeInfo)]
 pub struct AssetInfo<AssetId, Balance> {
 	pub fee: Balance,
 	// None for native token

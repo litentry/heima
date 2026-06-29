@@ -21,7 +21,7 @@ pub type PubKey33 = [u8; 33];
 pub type PubKey32 = [u8; 32];
 
 /// custodial wallet that each tee worker generates and holds
-#[derive(Encode, Decode, Clone, Default, Debug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Default, Debug, PartialEq, Eq, TypeInfo)]
 pub struct CustodialWallet {
 	pub btc: Option<PubKey33>,
 	pub eth: Option<PubKey33>,

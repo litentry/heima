@@ -15,7 +15,7 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{String, Vec};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{traits::ConstU32, BoundedVec};
 use strum::IntoEnumIterator;
@@ -42,7 +42,7 @@ pub type BoundedWeb3Network = BoundedVec<Web3Network, ConstU32<MAX_WEB3NETWORK_L
 /// the same network or not (e.g. bitcoin/substrate)
 #[derive(
 	Encode,
-	Decode,
+	Decode, DecodeWithMemTracking,
 	Copy,
 	Clone,
 	Debug,

@@ -15,11 +15,11 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{AccountId, Hash, Identity, Vec};
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
-#[derive(Encode, Decode, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, DecodeWithMemTracking, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]
 pub enum OmniAccountAuthType {
 	Web3,
 	Email,
@@ -28,7 +28,7 @@ pub enum OmniAccountAuthType {
 	Passkey,
 }
 
-#[derive(Encode, Decode, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, DecodeWithMemTracking, TypeInfo, Clone, PartialEq, Eq, RuntimeDebug)]
 pub enum MemberAccount {
 	Public(Identity),
 	Private(Vec<u8>, Hash),
@@ -68,7 +68,7 @@ impl OmniAccountConverter for DefaultOmniAccountConverter {
 }
 
 // This type must be kept in sync with the `Permission` type used in the runtime.
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq)]
 pub enum OmniAccountPermission {
 	All,
 	AccountManagement,

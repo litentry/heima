@@ -89,7 +89,7 @@ pub mod pallet {
 	pub(crate) type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-	#[derive(Clone, Default, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
+	#[derive(Clone, Default, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
 	pub struct AssetMetadata<Balance> {
 		pub name: Vec<u8>,
 		pub symbol: Vec<u8>,

@@ -329,7 +329,7 @@ impl pallet_multisig::Config for Runtime {
 	Ord,
 	PartialOrd,
 	Encode,
-	Decode,
+	Decode, DecodeWithMemTracking,
 	RuntimeDebug,
 	MaxEncodedLen,
 	scale_info::TypeInfo,

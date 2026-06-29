@@ -1,6 +1,6 @@
 use crate::{AccountId, Address20, Address32, Address33, Balance, BoundedVec, ChainAsset};
 use alloc::string::String;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::Deserialize;
 use sp_core::H160;
@@ -13,7 +13,7 @@ pub type AmountLen = ConstU32<32>;
 
 pub type IntentId = u32;
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum Intent {
 	#[codec(index = 0)]
 	TransferEthereum(TransferEthereum),
@@ -29,32 +29,32 @@ pub enum Intent {
 	Swap(SwapOrder, Option<CrossChainSwapProvider>, OnChainSingleChainSwapProvider),
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct TransferEthereum {
 	pub to: H160,
 	pub value: [u8; 32],
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct CallEthereum {
 	pub address: H160,
 	pub input: BoundedVec<u8, CallEthereumInputLen>,
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct TransferNative {
 	pub to: AccountId,
 	pub value: Balance,
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct TransferSolana {
 	pub to: [u8; 32],
 	pub value: u64,
 }
 
 #[derive(
-	Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd, Debug,
+	Encode, Decode, DecodeWithMemTracking, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Ord, PartialOrd, Debug,
 )]
 pub enum HeimaMultiAddress {
 	Address20(Address20),
@@ -62,7 +62,7 @@ pub enum HeimaMultiAddress {
 	Address33(Address33),
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub struct SwapOrder {
 	pub from_asset: ChainAsset,
 	pub from_amount: BoundedVec<u8, AmountLen>,
@@ -70,12 +70,12 @@ pub struct SwapOrder {
 	pub to_address: Option<HeimaMultiAddress>,
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum CrossChainSwapProvider {
 	Binance(BinanceConfig),
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub struct BinanceConfig {
 	// placeholder
 }
@@ -144,7 +144,7 @@ impl TryFrom<OnChainPumpxConfig> for PumpxConfig {
 }
 
 // basically copied from pumpx API
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub struct OnChainPumpxConfig {
 	pub order_type: PumpxOrderType,
 	pub swap_type: u32, // 1：buy 2：sell
@@ -205,7 +205,7 @@ impl TryFrom<PumpxConfig> for OnChainPumpxConfig {
 	}
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Deserialize)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PumpxOrderType {
 	Market,
@@ -232,7 +232,7 @@ impl TryFrom<OnChainSingleChainSwapProvider> for SingleChainSwapProvider {
 	}
 }
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Debug, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum OnChainSingleChainSwapProvider {
 	Pumpx(OnChainPumpxConfig),
 	Omni,

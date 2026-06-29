@@ -33,14 +33,14 @@ use frame_support::{
 	ensure,
 	traits::{Get, ReservableCurrency},
 };
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode};
 use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 use sp_runtime::{traits::Saturating, Percent};
 use sp_std::{prelude::*, vec::Vec};
 
 /// Represents the auto-compounding amount for a delegation.
-#[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialEq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo, PartialOrd, Ord)]
 pub struct AutoCompoundConfig<AccountId> {
 	pub delegator: AccountId,
 	pub value: Percent,

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::{ed25519::Public as Ed25519Public, RuntimeDebug, H256};
@@ -38,7 +38,7 @@ pub type EnclaveFingerprint = H256;
 /// `Attestation::Ignore` is only possible under `OperationalMode::Development`, but not vice versa.
 /// So if you define `Attestation::Dcap`, the attestation will be verified even in `Development` mode
 #[derive(
-	PartialEq, Eq, Clone, Copy, Default, Encode, Decode, Debug, TypeInfo, Serialize, Deserialize,
+	PartialEq, Eq, Clone, Copy, Default, Encode, Decode, DecodeWithMemTracking, Debug, TypeInfo, Serialize, Deserialize,
 )]
 pub enum OperationalMode {
 	#[default]
@@ -47,7 +47,7 @@ pub enum OperationalMode {
 	Maintenance,
 }
 
-#[derive(Encode, Decode, Default, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Default, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum DcapProvider {
 	#[default]
 	Intel,
@@ -56,7 +56,7 @@ pub enum DcapProvider {
 	Integritee,
 }
 
-#[derive(Encode, Decode, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum AttestationType {
 	#[default]
 	Ignore,
@@ -65,7 +65,7 @@ pub enum AttestationType {
 	Dcap(DcapProvider),
 }
 
-#[derive(Encode, Decode, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum WorkerType {
 	#[default]
 	Identity,
@@ -73,28 +73,28 @@ pub enum WorkerType {
 	OmniExecutor,
 }
 
-#[derive(Encode, Decode, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Copy, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum WorkerMode {
 	#[default]
 	OffChainWorker,
 	Sidechain,
 }
 
-#[derive(Encode, Decode, Copy, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Copy, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum SgxBuildMode {
 	#[default]
 	Production,
 	Debug,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, Debug, Copy, Default, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, Debug, Copy, Default, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SidechainBlockConfirmation {
 	pub block_number: SidechainBlockNumber,
 	pub block_header_hash: H256,
 }
 
-#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct Enclave {
 	pub worker_type: WorkerType,
 	pub worker_mode: WorkerMode,
@@ -158,7 +158,7 @@ impl Enclave {
 #[macro_export]
 macro_rules! decl_rsa_request {
     ($($t:meta),*) => {
-        #[derive(Encode, Decode, Default, Clone, PartialEq, Eq, $($t),*)]
+        #[derive(Encode, Decode, DecodeWithMemTracking, Default, Clone, PartialEq, Eq, $($t),*)]
         pub struct RsaRequest {
             pub shard: ShardIdentifier,
             pub payload: Vec<u8>,
