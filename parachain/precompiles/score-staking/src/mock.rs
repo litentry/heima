@@ -226,8 +226,8 @@ pub fn new_test_ext(fast_round: bool) -> sp_io::TestExternalities {
 		balances: vec![(alice(), 2 * UNIT)],
 		dev_accounts: None,
 	}
-		.assimilate_storage(&mut t)
-		.unwrap();
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	pallet_score_staking::GenesisConfig::<Test> {
 		state: PoolState::Stopped,

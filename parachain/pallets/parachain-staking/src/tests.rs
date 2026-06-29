@@ -5848,26 +5848,14 @@ fn staked_capacity() {
 			assert_ok!(ParachainStaking::candidate_bond_more(RuntimeOrigin::signed(2), 500));
 			assert_ok!(ParachainStaking::delegate(RuntimeOrigin::signed(5), 1, 500));
 
-			// Delegate/Candidate can not stake more if they enough balance and lock significant
-			// large
+			// Even with a significant `TRANSFER` lock in place, staking still succeeds as long as
+			// there is enough free balance: since polkadot-sdk stable2512, `Currency::reserve`
+			// only checks free balance (and optionally the existential deposit) and no longer
+			// fails on `WithdrawReasons` locks (see `pallet_balances::ensure_can_reserve`).
 			Balances::set_lock(ID_1, &3, 600, WithdrawReasons::TRANSFER);
 			Balances::set_lock(ID_1, &6, 600, WithdrawReasons::TRANSFER);
-			assert_noop!(
-				ParachainStaking::candidate_bond_more(RuntimeOrigin::signed(3), 500),
-				DispatchError::Module(ModuleError {
-					index: 1,
-					error: [1, 0, 0, 0],
-					message: Some("LiquidityRestrictions")
-				})
-			);
-			assert_noop!(
-				ParachainStaking::delegate(RuntimeOrigin::signed(6), 1, 500),
-				DispatchError::Module(ModuleError {
-					index: 1,
-					error: [1, 0, 0, 0],
-					message: Some("LiquidityRestrictions")
-				})
-			);
+			assert_ok!(ParachainStaking::candidate_bond_more(RuntimeOrigin::signed(3), 500));
+			assert_ok!(ParachainStaking::delegate(RuntimeOrigin::signed(6), 1, 500));
 
 			// After stake, if some locks added, the unstake proccess is uneffected.
 			Balances::set_lock(ID_1, &2, u128::MAX, WithdrawReasons::all());

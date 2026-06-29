@@ -47,7 +47,7 @@ mod __ {  // Leave mod name with double discards, which is to be replaced by the
 	}
 
 	#[x]  // Specifying multiple cases indicates that the item would appear on all of them
-	#[y] .// This behaviour is designed to be different from `#[cfg(..)]`
+	#[y] // This behaviour is designed to be different from `#[cfg(..)]`
 	fn a() -> i32 {
 		#[x]  // This statement would only appear on case `x`
 		let p = 1;
