@@ -24,9 +24,9 @@
     "author": "Heima Dev",
     "license": "ISC",
     "devDependencies": {
-        "@types/node": "^26.0.0",
+        "@types/node": "^26.0.1",
         "@vitest/ui": "^4.1.9",
-        "prettier": "^3.8.4",
+        "prettier": "^3.9.3",
         "tsx": "^4.22.4",
         "typescript": "^6.0.3",
         "vitest": "^4.1.9"
@@ -40,7 +40,7 @@
         "@polkadot/util-crypto": "^14.0.3",
         "@types/bn.js": "^5.2.0",
         "add": "^2.0.6",
-        "bn.js": "^5.2.3",
+        "bn.js": "^5.2.4",
         "dotenv": "^17.4.2",
         "ethers": "^6.17.0",
         "solc": "^0.8.35",
