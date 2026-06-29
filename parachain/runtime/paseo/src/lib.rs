@@ -1923,15 +1923,13 @@ impl_runtime_apis! {
 		}
 
 		fn execute_block(
-			block: Block,
+			block: <Block as BlockT>::LazyBlock,
 			state_root_check: bool,
 			signature_check: bool,
 			select: frame_try_runtime::TryStateSelect
 		) -> Weight {
 			log::info!(
-				"try-runtime: executing block #{} ({:?}) / root checks: {:?} / sanity-checks: {:?}",
-				block.header.number,
-				block.header.hash(),
+				"try-runtime: executing block / root checks: {:?} / sanity-checks: {:?}",
 				state_root_check,
 				select,
 			);
