@@ -17,6 +17,7 @@
 //! These are used to provide a type that implements these runtime APIs without requiring to import
 //! the native runtimes.
 
+use ethereum::AuthorizationList;
 use frame_support::weights::Weight;
 use heima_primitives::{AccountId, AuraId, Balance, Nonce};
 use polkadot_primitives::Block;
@@ -36,7 +37,7 @@ sp_api::impl_runtime_apis! {
 			unimplemented!()
 		}
 
-		fn execute_block(_: Block) {
+		fn execute_block(_: <Block as BlockT>::LazyBlock) {
 			unimplemented!()
 		}
 
@@ -91,7 +92,7 @@ sp_api::impl_runtime_apis! {
 			unimplemented!()
 		}
 
-		fn check_inherents(_: Block, _: sp_inherents::InherentData) -> sp_inherents::CheckInherentsResult {
+		fn check_inherents(_: <Block as BlockT>::LazyBlock, _: sp_inherents::InherentData) -> sp_inherents::CheckInherentsResult {
 			unimplemented!()
 		}
 	}
@@ -231,6 +232,7 @@ sp_api::impl_runtime_apis! {
 			_nonce: Option<U256>,
 			_estimate: bool,
 			_access_list: Option<Vec<(H160, Vec<H256>)>>,
+			_authorization_list: Option<AuthorizationList>,
 		) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
 			unimplemented!()
 		}
@@ -245,6 +247,7 @@ sp_api::impl_runtime_apis! {
 			_nonce: Option<U256>,
 			_estimate: bool,
 			_access_list: Option<Vec<(H160, Vec<H256>)>>,
+			_authorization_list: Option<AuthorizationList>,
 		) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
 			unimplemented!()
 		}

@@ -22,6 +22,7 @@ frame-support = { workspace = true, features = ["std"] }
 futures = { workspace = true }
 jsonrpsee = { workspace = true }
 log = { workspace = true }
+ethereum = { workspace = true, features = ["with-scale", "std"] }
 pallet-ethereum = { workspace = true, features = ["std"] }
 pallet-evm = { workspace = true, features = ["std"] }
 pallet-transaction-payment = { workspace = true, features = ["std"] }

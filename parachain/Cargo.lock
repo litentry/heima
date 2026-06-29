@@ -4774,6 +4774,7 @@ dependencies = [
  "cumulus-primitives-aura",
  "cumulus-primitives-core",
  "cumulus-relay-chain-interface",
+ "ethereum",
  "fc-api",
  "fc-consensus",
  "fc-db",
