@@ -76,5 +76,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "packageManager": "pnpm@9.15.2"
+  "packageManager": "pnpm@9.15.2",
+  "pnpm": {
+    "overrides": {
+      "ws": ">=8.21.0"
+    }
+  }
 }
