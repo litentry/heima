@@ -59,35 +59,69 @@ export async function sudoWrapperGc(api: ApiPromise, tx: SubmittableExtrinsic<Ap
     }
 }
 
+// Returns the matching `section.method` events found in a single block, or [] if none.
+const matchEventsInBlock = async (
+    api: ApiPromise,
+    blockHash: Uint8Array | string,
+    section: string,
+    method: string
+): Promise<FrameSystemEventRecord[]> => {
+    const shiftedApi = await api.at(blockHash);
+    const allBlockEvents = await shiftedApi.query.system.events();
+    return allBlockEvents
+        .filter(({ phase }) => phase.isApplyExtrinsic)
+        .filter(({ event }) => event.section === section && event.method === method);
+};
+
+/**
+ * Wait for a `section.method` event.
+ *
+ * The event is frequently emitted by an extrinsic that callers `await` *before* calling
+ * this helper, so by the time we subscribe the event may already be in a past block. To be
+ * robust against that race (and against block-time changes), we first scan a window of recent
+ * blocks back from the current head, then fall back to watching new heads for a bounded
+ * wall-clock duration. The budget is time-based so it does not silently shrink when block
+ * time drops (e.g. 12s -> 6s).
+ */
 export const subscribeToEvents = async (
     section: string,
     method: string,
     api: ApiPromise
 ): Promise<FrameSystemEventRecord[]> => {
+    const LOOKBACK_BLOCKS = 10; // recent blocks to scan for an already-emitted event
+    const FORWARD_TIMEOUT_MS = 180_000; // wall-clock budget for the forward watch
+
+    // 1) Look back: the triggering extrinsic was likely already mined before we got here.
+    const head = await api.rpc.chain.getHeader();
+    let cursor = head.hash;
+    for (let i = 0; i < LOOKBACK_BLOCKS; i++) {
+        const matching = await matchEventsInBlock(api, cursor, section, method);
+        if (matching.length > 0) {
+            return matching;
+        }
+        const header = await api.rpc.chain.getHeader(cursor);
+        if (header.number.toNumber() === 0) break; // reached genesis
+        cursor = header.parentHash;
+    }
+
+    // 2) Fall back to watching forward, bounded by wall-clock time rather than block count.
     return new Promise<FrameSystemEventRecord[]>((resolve, reject) => {
-        let blocksToScan = 30;
+        let settled = false;
+        const finish = async (unsub: Promise<() => void>, fn: () => void) => {
+            if (settled) return;
+            settled = true;
+            (await unsub)();
+            fn();
+        };
         const unsubscribe = api.rpc.chain.subscribeNewHeads(async (blockHeader) => {
-            const shiftedApi = await api.at(blockHeader.hash);
-
-            const allBlockEvents = await shiftedApi.query.system.events();
-            const allExtrinsicEvents = allBlockEvents.filter(({ phase }) => phase.isApplyExtrinsic);
-
-            const matchingEvent = allExtrinsicEvents.filter(({ event, phase }) => {
-                return event.section === section && event.method === method;
-            });
-
-            if (matchingEvent.length == 0) {
-                blocksToScan -= 1;
-                if (blocksToScan < 1) {
-                    reject(new Error(`timed out listening for event ${section}.${method}`));
-                    (await unsubscribe)();
-                }
-                return;
+            const matching = await matchEventsInBlock(api, blockHeader.hash, section, method);
+            if (matching.length > 0) {
+                await finish(unsubscribe, () => resolve(matching));
             }
-
-            resolve(matchingEvent);
-            (await unsubscribe)();
         });
+        setTimeout(() => {
+            finish(unsubscribe, () => reject(new Error(`timed out listening for event ${section}.${method}`)));
+        }, FORWARD_TIMEOUT_MS);
     });
 };
 
