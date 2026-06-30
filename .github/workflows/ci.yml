@@ -489,7 +489,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update && \
-          sudo apt-get install -yq protobuf-compiler
+          sudo apt-get install -yq protobuf-compiler clang libclang-dev llvm-dev
 
       - name: Run cargo clippy check
         run: make clippy
