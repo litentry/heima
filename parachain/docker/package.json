@@ -9,5 +9,10 @@
   "dependencies": {
     "@open-web3/parachain-launch": "^2.0.0"
   },
+  "pnpm": {
+    "overrides": {
+      "ws": ">=8.21.0"
+    }
+  },
   "packageManager": "pnpm@9.15.2"
 }
