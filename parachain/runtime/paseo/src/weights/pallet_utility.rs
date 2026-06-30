@@ -98,4 +98,12 @@ impl<T: frame_system::Config> pallet_utility::WeightInfo for WeightInfo<T> {
 			// Standard Error: 1_550
 			.saturating_add(Weight::from_parts(2_956_671, 0).saturating_mul(c.into()))
 	}
+	fn dispatch_as_fallible() -> Weight {
+		Weight::from_parts(5_705_000, 0)
+	}
+	fn if_else() -> Weight {
+		Weight::from_parts(11_571_000, 7004)
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+	}
+
 }

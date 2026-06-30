@@ -58,7 +58,6 @@ parameter_types! {
 }
 
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
@@ -83,6 +82,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(RELAYER_A, ENDOWED_BALANCE),
 			(treasury_account, ENDOWED_BALANCE),
 		],
+		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

@@ -16,10 +16,12 @@
 
 use crate::assertion::network::Web3Network;
 use crate::{vec, Vec};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo,
+)]
 pub enum Web3TokenType {
 	#[codec(index = 0)]
 	Bnb,

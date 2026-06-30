@@ -15,19 +15,23 @@
 // along with Litentry.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::FromStr;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
 const BNB_999_CLUB_MEMBER_LENGTH: usize = 3;
 const BNB_9999_CLUB_MEMBER_LENGTH: usize = 4;
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo,
+)]
 pub enum BnbDigitDomainType {
 	Bnb999ClubMember, // 000-999.bnb
 	Bnb10kClubMember, // 0000-9999.bnb
 }
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo,
+)]
 pub struct DigitDomainTypeError;
 
 impl BnbDigitDomainType {

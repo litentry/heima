@@ -82,7 +82,9 @@ use sp_std::prelude::*;
 use scale_info::TypeInfo;
 pub use weights::WeightInfo;
 
-#[derive(PartialEq, Eq, Clone, Copy, Default, Encode, Decode, Debug, TypeInfo)]
+#[derive(
+	PartialEq, Eq, Clone, Copy, Default, Encode, Decode, DecodeWithMemTracking, Debug, TypeInfo,
+)]
 pub enum OperationalMode {
 	/// when parachain runs normally
 	#[default]
@@ -109,10 +111,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
+	pub trait Config: frame_system::Config<RuntimeEvent: From<Event<Self>>> {
 		/// The priviledged origin to perform all operations
 		type UpdateOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 

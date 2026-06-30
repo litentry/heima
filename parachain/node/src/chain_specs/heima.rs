@@ -166,7 +166,7 @@ fn generate_genesis(
 ) -> serde_json::Value {
 	let config = RuntimeGenesisConfig {
 		system: Default::default(),
-		balances: BalancesConfig { balances: endowed_accounts },
+		balances: BalancesConfig { balances: endowed_accounts, dev_accounts: None },
 		parachain_info: ParachainInfoConfig { parachain_id: id, ..Default::default() },
 		parachain_staking: ParachainStakingConfig {
 			// Should be enough for both heima and paseo

@@ -95,7 +95,8 @@ where
 		let mut old_sender_balance = Balances::<R>::free_balance(&alice());
 		let mut old_treasury_balance = Balances::<R>::free_balance(Treasury::<R>::account_id());
 		let fee: Balance = 0;
-		let val = pallet_transaction_payment::Val::Charge { tip: fee, who: alice(), fee };
+		let val =
+			pallet_transaction_payment::Val::Charge { tip: fee, who: alice(), fee_with_tip: fee };
 		let pre = pallet_transaction_payment::ChargeTransactionPayment::<R>::from(fee)
 			.prepare(
 				val,

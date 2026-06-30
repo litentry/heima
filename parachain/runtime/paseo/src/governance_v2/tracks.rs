@@ -17,7 +17,9 @@
 //! Track configurations for governance.
 
 use super::*;
+use alloc::borrow::Cow;
 use runtime_common::currency::DOLLARS;
+use sp_runtime::str_array as s;
 
 const fn percent(x: i32) -> sp_runtime::FixedI64 {
 	sp_runtime::FixedI64::from_rational(x as u128, 100)
@@ -27,12 +29,12 @@ const fn permill(x: i32) -> sp_runtime::FixedI64 {
 }
 
 use pallet_referenda::Curve;
-const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 4] = [
-	(
-		0,
-		pallet_referenda::TrackInfo {
+const TRACKS_DATA: [pallet_referenda::Track<u16, Balance, BlockNumber>; 4] = [
+	pallet_referenda::Track {
+		id: 0,
+		info: pallet_referenda::TrackInfo {
 			// Name of this track.
-			name: "root",
+			name: s("root"),
 			// A limit for the number of referenda on this track that can be being decided at once.
 			// For Root origin this should generally be just one.
 			max_deciding: 5,
@@ -53,11 +55,11 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 4]
 			// is needed for approval as a function of time into decision period.
 			min_support: Curve::make_linear(14, 14, permill(5), percent(25)),
 		},
-	),
-	(
-		1,
-		pallet_referenda::TrackInfo {
-			name: "whitelisted_caller",
+	},
+	pallet_referenda::Track {
+		id: 1,
+		info: pallet_referenda::TrackInfo {
+			name: s("whitelisted_caller"),
 			max_deciding: 100,
 			decision_deposit: 100 * DOLLARS,
 			prepare_period: 10 * MINUTES,
@@ -67,11 +69,11 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 4]
 			min_approval: Curve::make_reciprocal(1, 14, percent(96), percent(50), percent(100)),
 			min_support: Curve::make_reciprocal(1, 14 * 24, percent(1), percent(0), percent(2)),
 		},
-	),
-	(
-		2,
-		pallet_referenda::TrackInfo {
-			name: "referendum_canceller",
+	},
+	pallet_referenda::Track {
+		id: 2,
+		info: pallet_referenda::TrackInfo {
+			name: s("referendum_canceller"),
 			max_deciding: 20,
 			decision_deposit: 10 * DOLLARS,
 			prepare_period: 1 * HOURS,
@@ -81,11 +83,11 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 4]
 			min_approval: Curve::make_reciprocal(1, 14, percent(96), percent(50), percent(100)),
 			min_support: Curve::make_reciprocal(1, 14, percent(1), percent(0), percent(50)),
 		},
-	),
-	(
-		3,
-		pallet_referenda::TrackInfo {
-			name: "referendum_killer",
+	},
+	pallet_referenda::Track {
+		id: 3,
+		info: pallet_referenda::TrackInfo {
+			name: s("referendum_killer"),
 			max_deciding: 100,
 			decision_deposit: 10 * DOLLARS,
 			prepare_period: 1 * HOURS,
@@ -95,15 +97,17 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 4]
 			min_approval: Curve::make_reciprocal(1, 14, percent(96), percent(50), percent(100)),
 			min_support: Curve::make_reciprocal(1, 14, percent(1), percent(0), percent(10)),
 		},
-	),
+	},
 ];
 
 pub struct TracksInfo;
 impl pallet_referenda::TracksInfo<Balance, BlockNumber> for TracksInfo {
 	type Id = u16;
 	type RuntimeOrigin = <RuntimeOrigin as frame_support::traits::OriginTrait>::PalletsOrigin;
-	fn tracks() -> &'static [(Self::Id, pallet_referenda::TrackInfo<Balance, BlockNumber>)] {
-		&TRACKS_DATA[..]
+	fn tracks(
+	) -> impl Iterator<Item = Cow<'static, pallet_referenda::Track<Self::Id, Balance, BlockNumber>>>
+	{
+		TRACKS_DATA.iter().map(Cow::Borrowed)
 	}
 	fn track_for(id: &Self::RuntimeOrigin) -> Result<Self::Id, ()> {
 		if let Ok(system_origin) = frame_system::RawOrigin::try_from(id.clone()) {

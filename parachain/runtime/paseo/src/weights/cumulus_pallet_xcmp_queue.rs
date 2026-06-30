@@ -53,13 +53,12 @@ impl<T: frame_system::Config> cumulus_pallet_xcmp_queue::WeightInfo for WeightIn
 	/// Proof: `XcmpQueue::QueueConfig` (`max_values`: Some(1), `max_size`: Some(12), added: 507, mode: `MaxEncodedLen`)
 	fn set_config_with_u32() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `109`
+		//  Measured:  `175`
 		//  Estimated: `1497`
-		// Minimum execution time: 4_030_000 picoseconds.
-		Weight::from_parts(4_370_000, 0)
-			.saturating_add(Weight::from_parts(0, 1497))
-			.saturating_add(T::DbWeight::get().reads(1))
-			.saturating_add(T::DbWeight::get().writes(1))
+		// Minimum execution time: 3_000_000 picoseconds.
+		Weight::from_parts(4_000_000, 1497)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: `XcmpQueue::QueueConfig` (r:1 w:0)
 	/// Proof: `XcmpQueue::QueueConfig` (`max_values`: Some(1), `max_size`: Some(12), added: 507, mode: `MaxEncodedLen`)
@@ -70,48 +69,133 @@ impl<T: frame_system::Config> cumulus_pallet_xcmp_queue::WeightInfo for WeightIn
 	/// Storage: `XcmpQueue::InboundXcmpSuspended` (r:1 w:0)
 	/// Proof: `XcmpQueue::InboundXcmpSuspended` (`max_values`: Some(1), `max_size`: Some(4002), added: 4497, mode: `MaxEncodedLen`)
 	/// Storage: `MessageQueue::Pages` (r:0 w:1)
-	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(134193), added: 136668, mode: `MaxEncodedLen`)
-	fn enqueue_xcmp_message() -> Weight {
+	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[0, 105467]`.
+	fn enqueue_n_bytes_xcmp_message(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `189`
+		//  Measured:  `251`
 		//  Estimated: `5487`
-		// Minimum execution time: 12_350_000 picoseconds.
-		Weight::from_parts(12_770_000, 0)
-			.saturating_add(Weight::from_parts(0, 5487))
-			.saturating_add(T::DbWeight::get().reads(4))
-			.saturating_add(T::DbWeight::get().writes(3))
+		// Minimum execution time: 11_000_000 picoseconds.
+		Weight::from_parts(12_262_916, 5487)
+			// Standard Error: 0
+			.saturating_add(Weight::from_parts(187, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(4_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
+	}
+	/// Storage: `XcmpQueue::QueueConfig` (r:1 w:0)
+	/// Proof: `XcmpQueue::QueueConfig` (`max_values`: Some(1), `max_size`: Some(12), added: 507, mode: `MaxEncodedLen`)
+	/// Storage: `MessageQueue::BookStateFor` (r:1 w:1)
+	/// Proof: `MessageQueue::BookStateFor` (`max_values`: None, `max_size`: Some(52), added: 2527, mode: `MaxEncodedLen`)
+	/// Storage: `MessageQueue::ServiceHead` (r:1 w:1)
+	/// Proof: `MessageQueue::ServiceHead` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `MaxEncodedLen`)
+	/// Storage: `XcmpQueue::InboundXcmpSuspended` (r:1 w:0)
+	/// Proof: `XcmpQueue::InboundXcmpSuspended` (`max_values`: Some(1), `max_size`: Some(4002), added: 4497, mode: `MaxEncodedLen`)
+	/// Storage: `MessageQueue::Pages` (r:0 w:1)
+	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[0, 1000]`.
+	fn enqueue_n_empty_xcmp_messages(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `251`
+		//  Estimated: `5487`
+		// Minimum execution time: 9_000_000 picoseconds.
+		Weight::from_parts(13_664_993, 5487)
+			// Standard Error: 220
+			.saturating_add(Weight::from_parts(131_195, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(4_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
+	}
+	/// Storage: `XcmpQueue::QueueConfig` (r:1 w:0)
+	/// Proof: `XcmpQueue::QueueConfig` (`max_values`: Some(1), `max_size`: Some(12), added: 507, mode: `Measured`)
+	/// Storage: `MessageQueue::BookStateFor` (r:1 w:1)
+	/// Proof: `MessageQueue::BookStateFor` (`max_values`: None, `max_size`: Some(52), added: 2527, mode: `Measured`)
+	/// Storage: `MessageQueue::Pages` (r:1 w:1)
+	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `Measured`)
+	/// Storage: `XcmpQueue::InboundXcmpSuspended` (r:1 w:0)
+	/// Proof: `XcmpQueue::InboundXcmpSuspended` (`max_values`: Some(1), `max_size`: Some(4002), added: 4497, mode: `Measured`)
+	/// The range of component `n` is `[0, 105457]`.
+	fn enqueue_empty_xcmp_message_at(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `434 + n * (1 ±0)`
+		//  Estimated: `3897 + n * (1 ±0)`
+		// Minimum execution time: 16_000_000 picoseconds.
+		Weight::from_parts(16_490_667, 3897)
+			// Standard Error: 2
+			.saturating_add(Weight::from_parts(720, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(4_u64))
+			.saturating_add(T::DbWeight::get().writes(2_u64))
+			.saturating_add(Weight::from_parts(0, 1).saturating_mul(n.into()))
+	}
+	/// Storage: `XcmpQueue::QueueConfig` (r:1 w:0)
+	/// Proof: `XcmpQueue::QueueConfig` (`max_values`: Some(1), `max_size`: Some(12), added: 507, mode: `MaxEncodedLen`)
+	/// Storage: `MessageQueue::BookStateFor` (r:1 w:1)
+	/// Proof: `MessageQueue::BookStateFor` (`max_values`: None, `max_size`: Some(52), added: 2527, mode: `MaxEncodedLen`)
+	/// Storage: `MessageQueue::ServiceHead` (r:1 w:1)
+	/// Proof: `MessageQueue::ServiceHead` (`max_values`: Some(1), `max_size`: Some(5), added: 500, mode: `MaxEncodedLen`)
+	/// Storage: `XcmpQueue::InboundXcmpSuspended` (r:1 w:0)
+	/// Proof: `XcmpQueue::InboundXcmpSuspended` (`max_values`: Some(1), `max_size`: Some(4002), added: 4497, mode: `MaxEncodedLen`)
+	/// Storage: `MessageQueue::Pages` (r:0 w:100)
+	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `MaxEncodedLen`)
+	/// The range of component `n` is `[0, 100]`.
+	fn enqueue_n_full_pages(n: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `286`
+		//  Estimated: `5487`
+		// Minimum execution time: 9_000_000 picoseconds.
+		Weight::from_parts(10_000_000, 5487)
+			// Standard Error: 26_047
+			.saturating_add(Weight::from_parts(23_938_725, 0).saturating_mul(n.into()))
+			.saturating_add(T::DbWeight::get().reads(4_u64))
+			.saturating_add(T::DbWeight::get().writes(2_u64))
+			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(n.into())))
+	}
+	/// Storage: `XcmpQueue::QueueConfig` (r:1 w:0)
+	/// Proof: `XcmpQueue::QueueConfig` (`max_values`: Some(1), `max_size`: Some(12), added: 507, mode: `Measured`)
+	/// Storage: `MessageQueue::BookStateFor` (r:1 w:1)
+	/// Proof: `MessageQueue::BookStateFor` (`max_values`: None, `max_size`: Some(52), added: 2527, mode: `Measured`)
+	/// Storage: `MessageQueue::Pages` (r:1 w:1)
+	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `Measured`)
+	/// Storage: `XcmpQueue::InboundXcmpSuspended` (r:1 w:0)
+	/// Proof: `XcmpQueue::InboundXcmpSuspended` (`max_values`: Some(1), `max_size`: Some(4002), added: 4497, mode: `Measured`)
+	fn enqueue_1000_small_xcmp_messages() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `53167`
+		//  Estimated: `56632`
+		// Minimum execution time: 175_000_000 picoseconds.
+		Weight::from_parts(181_000_000, 56632)
+			.saturating_add(T::DbWeight::get().reads(4_u64))
+			.saturating_add(T::DbWeight::get().writes(2_u64))
 	}
 	/// Storage: `XcmpQueue::OutboundXcmpStatus` (r:1 w:1)
 	/// Proof: `XcmpQueue::OutboundXcmpStatus` (`max_values`: Some(1), `max_size`: Some(1282), added: 1777, mode: `MaxEncodedLen`)
 	fn suspend_channel() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `109`
+		//  Measured:  `175`
 		//  Estimated: `2767`
-		// Minimum execution time: 2_490_000 picoseconds.
-		Weight::from_parts(2_720_000, 0)
-			.saturating_add(Weight::from_parts(0, 2767))
-			.saturating_add(T::DbWeight::get().reads(1))
-			.saturating_add(T::DbWeight::get().writes(1))
+		// Minimum execution time: 2_000_000 picoseconds.
+		Weight::from_parts(2_000_000, 2767)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	/// Storage: `XcmpQueue::OutboundXcmpStatus` (r:1 w:1)
 	/// Proof: `XcmpQueue::OutboundXcmpStatus` (`max_values`: Some(1), `max_size`: Some(1282), added: 1777, mode: `MaxEncodedLen`)
 	fn resume_channel() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `144`
+		//  Measured:  `210`
 		//  Estimated: `2767`
-		// Minimum execution time: 3_480_000 picoseconds.
-		Weight::from_parts(3_710_000, 0)
-			.saturating_add(Weight::from_parts(0, 2767))
-			.saturating_add(T::DbWeight::get().reads(1))
-			.saturating_add(T::DbWeight::get().writes(1))
+		// Minimum execution time: 3_000_000 picoseconds.
+		Weight::from_parts(3_000_000, 2767)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
-	fn take_first_concatenated_xcm() -> Weight {
+	/// The range of component `n` is `[0, 92]`.
+	fn take_first_concatenated_xcm(n: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
-		// Minimum execution time: 6_360_000 picoseconds.
-		Weight::from_parts(6_530_000, 0)
-			.saturating_add(Weight::from_parts(0, 0))
+		// Minimum execution time: 1_000_000 picoseconds.
+		Weight::from_parts(1_878_097, 0)
+			// Standard Error: 558
+			.saturating_add(Weight::from_parts(44_593, 0).saturating_mul(n.into()))
 	}
 	/// Storage: UNKNOWN KEY `0x7b3237373ffdfeb1cab4222e3b520d6b345d8e88afa015075c945637c07e8f20` (r:1 w:1)
 	/// Proof: UNKNOWN KEY `0x7b3237373ffdfeb1cab4222e3b520d6b345d8e88afa015075c945637c07e8f20` (r:1 w:1)
@@ -126,16 +210,15 @@ impl<T: frame_system::Config> cumulus_pallet_xcmp_queue::WeightInfo for WeightIn
 	/// Storage: `XcmpQueue::InboundXcmpSuspended` (r:1 w:0)
 	/// Proof: `XcmpQueue::InboundXcmpSuspended` (`max_values`: Some(1), `max_size`: Some(4002), added: 4497, mode: `MaxEncodedLen`)
 	/// Storage: `MessageQueue::Pages` (r:0 w:1)
-	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(134193), added: 136668, mode: `MaxEncodedLen`)
+	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `MaxEncodedLen`)
 	fn on_idle_good_msg() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `134426`
-		//  Estimated: `137891`
-		// Minimum execution time: 210_330_000 picoseconds.
-		Weight::from_parts(224_159_000, 0)
-			.saturating_add(Weight::from_parts(0, 137891))
-			.saturating_add(T::DbWeight::get().reads(6))
-			.saturating_add(T::DbWeight::get().writes(5))
+		//  Measured:  `105816`
+		//  Estimated: `109281`
+		// Minimum execution time: 63_000_000 picoseconds.
+		Weight::from_parts(67_000_000, 109281)
+			.saturating_add(T::DbWeight::get().reads(6_u64))
+			.saturating_add(T::DbWeight::get().writes(5_u64))
 	}
 	/// Storage: UNKNOWN KEY `0x7b3237373ffdfeb1cab4222e3b520d6b345d8e88afa015075c945637c07e8f20` (r:1 w:1)
 	/// Proof: UNKNOWN KEY `0x7b3237373ffdfeb1cab4222e3b520d6b345d8e88afa015075c945637c07e8f20` (r:1 w:1)
@@ -150,15 +233,14 @@ impl<T: frame_system::Config> cumulus_pallet_xcmp_queue::WeightInfo for WeightIn
 	/// Storage: `XcmpQueue::InboundXcmpSuspended` (r:1 w:0)
 	/// Proof: `XcmpQueue::InboundXcmpSuspended` (`max_values`: Some(1), `max_size`: Some(4002), added: 4497, mode: `MaxEncodedLen`)
 	/// Storage: `MessageQueue::Pages` (r:0 w:1)
-	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(134193), added: 136668, mode: `MaxEncodedLen`)
+	/// Proof: `MessageQueue::Pages` (`max_values`: None, `max_size`: Some(105521), added: 107996, mode: `MaxEncodedLen`)
 	fn on_idle_large_msg() -> Weight {
 		// Proof Size summary in bytes:
-		//  Measured:  `65823`
-		//  Estimated: `69288`
-		// Minimum execution time: 116_250_000 picoseconds.
-		Weight::from_parts(121_040_000, 0)
-			.saturating_add(Weight::from_parts(0, 69288))
-			.saturating_add(T::DbWeight::get().reads(6))
-			.saturating_add(T::DbWeight::get().writes(5))
+		//  Measured:  `65885`
+		//  Estimated: `69350`
+		// Minimum execution time: 42_000_000 picoseconds.
+		Weight::from_parts(47_000_000, 69350)
+			.saturating_add(T::DbWeight::get().reads(6_u64))
+			.saturating_add(T::DbWeight::get().writes(5_u64))
 	}
 }

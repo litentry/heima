@@ -57,7 +57,16 @@ pub mod pallet {
 	use heima_primitives::{ErrorDetail, IMPError, Identity, ShardIdentifier};
 
 	#[derive(
-		Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen,
+		Clone,
+		Eq,
+		PartialEq,
+		Encode,
+		Decode,
+		DecodeWithMemTracking,
+		Default,
+		RuntimeDebug,
+		TypeInfo,
+		MaxEncodedLen,
 	)]
 	#[scale_info(skip_type_params(MaxOIDCClientUris, MaxRedirectUriLen))]
 	pub struct OIDCClient<MaxOIDCClientUris: Get<u32>, MaxRedirectUriLen: Get<u32>> {
@@ -68,8 +77,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+	pub trait Config: frame_system::Config<RuntimeEvent: From<Event<Self>>> {
 		type WeightInfo: WeightInfo;
 		// some extrinsics should only be called by origins from TEE
 		type TEECallOrigin: EnsureOrigin<Self::RuntimeOrigin>;

@@ -90,7 +90,7 @@ pub struct FullDeps<C, P, A: ChainApi> {
 	/// Transaction pool instance.
 	pub pool: Arc<P>,
 	/// Graph pool instance.
-	pub graph: Arc<Pool<A>>,
+	pub graph: Arc<Pool<A, ()>>,
 	/// Network service
 	pub network: Arc<dyn NetworkService>,
 	/// Chain syncing service
@@ -156,7 +156,7 @@ where
 	let FullDeps {
 		client,
 		pool,
-		graph,
+		graph: _graph,
 		network,
 		sync,
 		is_authority,
@@ -195,10 +195,9 @@ where
 		};
 
 		module.merge(
-			Eth::<_, _, _, _, _, A, _, LitentryEthConfig<C, BE>>::new(
+			Eth::<_, _, _, _, _, _, LitentryEthConfig<C, BE>>::new(
 				client.clone(),
 				pool.clone(),
-				graph.clone(),
 				no_tx_converter,
 				sync.clone(),
 				Default::default(),
@@ -214,19 +213,22 @@ where
 				pending_create_inherent_data_providers,
 				Some(pending_consenus_data_provider),
 			)
+			.replace_config::<LitentryEthConfig<C, BE>>()
 			.into_rpc(),
 		)?;
 
 		let max_past_logs: u32 = 10_000;
+		let max_block_range: u32 = 1_024;
 		let max_stored_filters: usize = 500;
 		module.merge(
 			EthFilter::new(
 				client.clone(),
 				frontier_backend,
-				graph.clone(),
+				pool.clone(),
 				filter_pool,
 				max_stored_filters,
 				max_past_logs,
+				max_block_range,
 				block_data_cache,
 			)
 			.into_rpc(),
@@ -238,7 +240,7 @@ where
 
 		module.merge(
 			EthPubSub::new(
-				pool,
+				pool.clone(),
 				client.clone(),
 				sync,
 				subscription_task_executor,
@@ -248,7 +250,7 @@ where
 			.into_rpc(),
 		)?;
 
-		module.merge(TxPool::new(Arc::clone(&client), graph.clone()).into_rpc())?;
+		module.merge(TxPool::new(Arc::clone(&client), pool.clone()).into_rpc())?;
 	}
 
 	Ok(module)

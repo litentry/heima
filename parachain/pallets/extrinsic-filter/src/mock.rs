@@ -78,7 +78,6 @@ impl Contains<RuntimeCall> for NormalModeFilter {
 }
 
 impl pallet_extrinsic_filter::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EnsureRoot<Self::AccountId>;
 	type SafeModeFilter = SafeModeFilter;
 	type NormalModeFilter = NormalModeFilter;
@@ -88,7 +87,7 @@ impl pallet_extrinsic_filter::Config for Test {
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
-	pallet_balances::GenesisConfig::<Test> { balances: vec![(1, 100)] }
+	pallet_balances::GenesisConfig::<Test> { balances: vec![(1, 100)], dev_accounts: None }
 		.assimilate_storage(&mut t)
 		.unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);

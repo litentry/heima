@@ -21,10 +21,12 @@ use crate::{
 	assertion::network::{BoundedWeb3Network, Web3Network},
 	ParameterString, Vec,
 };
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo,
+)]
 pub enum AmountHoldingTimeType {
 	#[codec(index = 0)]
 	LIT,
@@ -38,7 +40,7 @@ pub enum AmountHoldingTimeType {
 
 macro_rules! AchainableRequestParams {
 	($type_name:ident, {$( $field_name:ident : $field_type:ty , )* }) => {
-		#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+		#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 		pub struct $type_name {
 			pub name: ParameterString,
 			pub chain: BoundedWeb3Network,
@@ -100,7 +102,7 @@ AchainableRequestParams!(AchainableMirror, {
 });
 
 #[rustfmt::skip]
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub enum AchainableParams {
 	#[codec(index = 0)]
 	AmountHolding(AchainableAmountHolding),

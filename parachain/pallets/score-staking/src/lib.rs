@@ -98,11 +98,12 @@ pub mod pallet {
 	}
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + ParaStaking::Config {
+	pub trait Config:
+		frame_system::Config<RuntimeEvent: From<Event<Self>>> + ParaStaking::Config
+	{
 		type Currency: Currency<Self::AccountId>
 			+ ReservableCurrency<Self::AccountId>
 			+ LockableCurrency<Self::AccountId>;
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type YearlyIssuance: Get<BalanceOf<Self>>;
 		#[pallet::constant]

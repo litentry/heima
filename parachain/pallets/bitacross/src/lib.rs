@@ -40,8 +40,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+	pub trait Config: frame_system::Config<RuntimeEvent: From<Event<Self>>> {
 		// some extrinsics should only be called by origins from TEE
 		type TEECallOrigin: EnsureOrigin<Self::RuntimeOrigin, Success = Self::AccountId>;
 		// origin to manage Relayer Admin

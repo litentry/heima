@@ -23,17 +23,17 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok, traits::Time};
 use hex_literal::hex;
-use sp_keyring::AccountKeyring;
+use sp_keyring::Sr25519Keyring;
 use sp_runtime::AccountId32;
 
 const VALID_TIMESTAMP: Moment = 1671606747000;
 
 fn alice() -> AccountId32 {
-	AccountKeyring::Alice.to_account_id()
+	Sr25519Keyring::Alice.to_account_id()
 }
 
 fn bob() -> AccountId32 {
-	AccountKeyring::Bob.to_account_id()
+	Sr25519Keyring::Bob.to_account_id()
 }
 
 fn default_enclave() -> Enclave {

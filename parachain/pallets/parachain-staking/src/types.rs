@@ -39,7 +39,7 @@ pub struct CountedDelegations<T: Config> {
 	pub rewardable_delegations: Vec<Bond<T::AccountId, BalanceOf<T>>>,
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 pub struct Bond<AccountId, Balance> {
 	pub owner: AccountId,
 	pub amount: Balance,
@@ -81,7 +81,18 @@ impl<AccountId: Ord, Balance> PartialEq for Bond<AccountId, Balance> {
 	}
 }
 
-#[derive(Copy, Clone, Default, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(
+	Copy,
+	Clone,
+	Default,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+)]
 /// The activity status of the collator
 pub enum CollatorStatus {
 	/// Committed to be online and producing valid blocks (not equivocating)
@@ -96,7 +107,7 @@ pub enum CollatorStatus {
 	Leaving(RoundIndex),
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 pub struct BondWithAutoCompound<AccountId, Balance> {
 	pub owner: AccountId,
 	pub amount: Balance,
@@ -114,7 +125,7 @@ impl<A: Decode, B: Default> Default for BondWithAutoCompound<A, B> {
 	}
 }
 
-#[derive(Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 /// Snapshot of collator state at the start of the round for which they are selected
 pub struct CollatorSnapshot<AccountId, Balance> {
 	/// The total value locked by the collator.
@@ -155,7 +166,7 @@ impl<A, B: Default> Default for CollatorSnapshot<A, B> {
 	}
 }
 
-#[derive(Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Default, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 /// Info needed to make delayed payments to stakers after round end
 pub struct DelayedPayout<Balance> {
 	/// Total round reward (result of compute_issuance() at round end)
@@ -166,14 +177,16 @@ pub struct DelayedPayout<Balance> {
 	pub collator_commission: Perbill,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(
+	PartialEq, Eq, Clone, Copy, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 /// Request scheduled to change the collator candidate self-bond
 pub struct CandidateBondLessRequest<Balance> {
 	pub amount: Balance,
 	pub when_executable: RoundIndex,
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 /// Type for top and bottom delegation storage item
 pub struct Delegations<AccountId, Balance> {
 	pub delegations: Vec<Bond<AccountId, Balance>>,
@@ -253,7 +266,7 @@ impl<AccountId, Balance: Copy + Ord + sp_std::ops::AddAssign + Zero + Saturating
 	}
 }
 
-#[derive(PartialEq, Clone, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Clone, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 /// Capacity status for top or bottom delegations
 pub enum CapacityStatus {
 	/// Reached capacity
@@ -267,7 +280,7 @@ pub enum CapacityStatus {
 	Partial,
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 /// All candidate info except the top and bottom delegations
 pub struct CandidateMetadata<Balance> {
 	/// This candidate's self bond amount
@@ -1029,7 +1042,9 @@ impl<
 
 /// Convey relevant information describing if a delegator was added to the top or bottom
 /// Delegations added to the top yield a new total
-#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(
+	Clone, Copy, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 pub enum DelegatorAdded<B> {
 	#[codec(index = 0)]
 	AddedToTop { new_total: B },
@@ -1037,14 +1052,14 @@ pub enum DelegatorAdded<B> {
 	AddedToBottom,
 }
 
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 pub enum DelegatorStatus {
 	/// Active with no scheduled exit
 	#[codec(index = 0)]
 	Active,
 }
 
-#[derive(Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 /// Delegator state
 pub struct Delegator<AccountId, Balance> {
 	/// Delegator account
@@ -1193,7 +1208,9 @@ impl<
 	}
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(
+	Copy, Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 /// The current round index and transition information
 pub struct RoundInfo<BlockNumber> {
 	/// Current round index
@@ -1229,7 +1246,7 @@ impl<
 	}
 }
 
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 /// Reserve information { account, percent_of_inflation }
 pub struct ParachainBondConfig<AccountId> {
 	/// Account which receives funds intended for parachain bond

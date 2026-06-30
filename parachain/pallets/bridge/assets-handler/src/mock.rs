@@ -67,7 +67,6 @@ parameter_types! {
 }
 
 impl pallet_chain_bridge::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = frame_system::EnsureRoot<Self::AccountId>;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = TestChainId;
@@ -132,12 +131,13 @@ impl pallet_assets::Config for Test {
 	type CallbackHandle = ();
 	type Extra = ();
 	type RemoveItemsLimit = ConstU32<5>;
+	type ReserveData = ();
+	type Holder = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
 
 impl pallet_assets_handler::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type TreasuryAccount = TreasuryAccount;
 	type SetMaximumIssuanceOrigin = EnsureSignedBy<SetMaximumIssuanceOrigin, u64>;
 	type DefaultMaximumIssuance = MaximumIssuance;
@@ -166,6 +166,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(RELAYER_A, ENDOWED_BALANCE),
 			(treasury_account, ENDOWED_BALANCE),
 		],
+		dev_accounts: None,
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();

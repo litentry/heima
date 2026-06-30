@@ -29,7 +29,6 @@ use cumulus_client_consensus_aura::collators::lookahead::{self as aura, Params a
 #[allow(deprecated)]
 use cumulus_client_consensus_aura::SlotProportion;
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
-use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_network::{AssumeSybilResistance, RequireSecondedInBlockAnnounce};
 use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
 use cumulus_client_service::{
@@ -56,7 +55,7 @@ use sc_consensus_aura::StartAuraParams;
 use sc_executor::{HeapAllocStrategy, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY};
 use sc_network::{
 	config::FullNetworkConfiguration, config::SyncMode, service::traits::NetworkBackend,
-	NetworkBlock,
+	NetworkBlock, PeerId,
 };
 use sc_network_sync::SyncingService;
 use sc_service::{
@@ -149,6 +148,7 @@ pub fn new_partial<BIQ>(
 			Arc<
 				sc_transaction_pool::Pool<
 					sc_transaction_pool::FullChainApi<ParachainClient, Block>,
+					(),
 				>,
 			>,
 		),
@@ -331,6 +331,7 @@ where
 		Duration,
 		ParaId,
 		CollatorPair,
+		PeerId,
 		OverseerHandle,
 		Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 		Arc<ParachainBackend>,
@@ -353,16 +354,17 @@ where
 	let backend = params.backend.clone();
 
 	let mut task_manager = params.task_manager;
-	let (relay_chain_interface, collator_key) = build_relay_chain_interface(
-		polkadot_config,
-		&parachain_config,
-		telemetry_worker_handle,
-		&mut task_manager,
-		collator_options.clone(),
-		hwbench.clone(),
-	)
-	.await
-	.map_err(|e| sc_service::Error::Application(Box::new(e) as Box<_>))?;
+	let (relay_chain_interface, collator_key, _relay_chain_network, _paranode_rx) =
+		build_relay_chain_interface(
+			polkadot_config,
+			&parachain_config,
+			telemetry_worker_handle,
+			&mut task_manager,
+			collator_options.clone(),
+			hwbench.clone(),
+		)
+		.await
+		.map_err(|e| sc_service::Error::Application(Box::new(e) as Box<_>))?;
 
 	let validator = parachain_config.role.is_authority();
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
@@ -400,7 +402,7 @@ where
 	let metrics = Net::register_notification_metrics(
 		parachain_config.prometheus_config.as_ref().map(|config| &config.registry),
 	);
-	let (network, system_rpc_tx, tx_handler_controller, start_network, sync_service) =
+	let (network, system_rpc_tx, tx_handler_controller, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: &parachain_config,
 			net_config,
@@ -488,6 +490,7 @@ where
 		system_rpc_tx,
 		tx_handler_controller,
 		telemetry: telemetry.as_mut(),
+		tracing_execute_block: None,
 	})?;
 
 	if let Some(hwbench) = hwbench {
@@ -532,6 +535,7 @@ where
 		relay_chain_slot_duration,
 		recovery_handle: Box::new(overseer_handle.clone()),
 		sync_service: sync_service.clone(),
+		prometheus_registry: prometheus_registry.as_ref(),
 	})?;
 
 	if validator {
@@ -547,13 +551,12 @@ where
 			relay_chain_slot_duration,
 			para_id,
 			collator_key.expect("Command line arguments do not allow this. qed"),
+			network.local_peer_id(),
 			overseer_handle,
 			announce_block,
 			backend.clone(),
 		)?;
 	}
-
-	start_network.start_network();
 
 	Ok((task_manager, client))
 }
@@ -718,7 +721,7 @@ pub async fn start_standalone_node(
 		None,
 	);
 
-	let (network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
+	let (network, system_rpc_tx, tx_handler_controller, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: &config,
 			net_config,
@@ -891,9 +894,9 @@ pub async fn start_standalone_node(
 		sync_service,
 		tx_handler_controller,
 		telemetry: None,
+		tracing_execute_block: None,
 	})?;
 
-	network_starter.start_network();
 	Ok(task_manager)
 }
 
@@ -991,6 +994,7 @@ fn start_lookahead_aura_consensus(
 	relay_chain_slot_duration: Duration,
 	para_id: ParaId,
 	collator_key: CollatorPair,
+	collator_peer_id: PeerId,
 	overseer_handle: OverseerHandle,
 	announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 	backend: Arc<ParachainBackend>,
@@ -1021,13 +1025,15 @@ fn start_lookahead_aura_consensus(
 		},
 		keystore,
 		collator_key,
+		collator_peer_id,
 		para_id,
 		overseer_handle,
 		relay_chain_slot_duration,
-		proposer: Proposer::new(proposer_factory),
+		proposer: proposer_factory,
 		collator_service,
 		authoring_duration: Duration::from_millis(1500),
 		reinitialize: false,
+		max_pov_percentage: None,
 	};
 
 	let fut = aura::run::<Block, <AuraId as AppCrypto>::Pair, _, _, _, _, _, _, _, _>(params);

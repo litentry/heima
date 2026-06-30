@@ -47,7 +47,7 @@ const DEFAULT_RELAYER_THRESHOLD: u32 = 1;
 
 // We assume "chain + asset-id" can uniquely identify an asset that can
 // be bridged out/in
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 pub struct ChainAsset<AssetKind> {
 	pub chain: ChainType,
 	pub asset: AssetKind,
@@ -64,7 +64,7 @@ pub type ResourceId = [u8; 32]; // to be compatible with chainsafe's contract
 pub type PayOutRequestHash = H256;
 
 // payin request by user (from user to foreign chain) - better name?
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 pub struct PayInRequest<AssetKind, Balance> {
 	pub asset: AssetKind,
 	pub dest_chain: ChainType,
@@ -73,7 +73,7 @@ pub struct PayInRequest<AssetKind, Balance> {
 }
 
 // payout request by relayer (from foreign chain to user) - better name?
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 pub struct PayOutRequest<AccountId, Balance> {
 	pub source_chain: ChainType,
 	pub nonce: Nonce,
@@ -88,14 +88,16 @@ impl<AccountId: Encode, Balance: Encode> PayOutRequest<AccountId, Balance> {
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo)]
 pub struct PayOutVote<AccountId> {
 	pub ayes: Vec<AccountId>,
 	pub nays: Vec<AccountId>,
 	pub status: VoteStatus,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Default, Decode, RuntimeDebug, TypeInfo)]
+#[derive(
+	PartialEq, Eq, Clone, Encode, Default, Decode, DecodeWithMemTracking, RuntimeDebug, TypeInfo,
+)]
 pub enum VoteStatus {
 	#[default]
 	Pending,
@@ -139,10 +141,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
+	pub trait Config: frame_system::Config<RuntimeEvent: From<Event<Self>>> {
 		/// Treasury account to receive the bridging fee
 		type TreasuryAccount: Get<Self::AccountId>;
 

@@ -55,7 +55,18 @@ impl pallet_balances::Config for Test {
 }
 
 pub type AssetId = u32;
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(
+	Clone,
+	Eq,
+	PartialEq,
+	Ord,
+	PartialOrd,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	RuntimeDebug,
+	TypeInfo,
+)]
 pub enum MockAssetType {
 	#[codec(index = 0)]
 	MockAsset(AssetId),
@@ -102,7 +113,6 @@ impl From<MockAssetType> for Option<Location> {
 }
 
 impl Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type ForeignAssetType = MockAssetType;

@@ -113,7 +113,7 @@ pub type PrecompilesSetAt<R> = (
 	// (stateless + caller-agnostic, so delegatecall is safe). See agentKeys#170.
 	PrecompileAt<AddressU64<256>, P256Verify, EthereumPrecompilesChecks>,
 	// Non-Litentry specific nor Ethereum precompiles :
-	PrecompileAt<AddressU64<1024>, Sha3FIPS256, (CallableByContract, CallableByPrecompile)>,
+	PrecompileAt<AddressU64<1024>, Sha3FIPS256<R, ()>, (CallableByContract, CallableByPrecompile)>,
 	PrecompileAt<
 		AddressU64<1025>,
 		Dispatch<R, DispatchFilterValidate<RuntimeCall, WhitelistedCalls>>,

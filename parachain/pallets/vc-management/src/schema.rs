@@ -19,11 +19,13 @@
 
 use crate::Config;
 use heima_primitives::{SchemaContentString, SchemaIdString};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen,
+)]
 pub enum Status {
 	#[codec(index = 0)]
 	Active,
@@ -32,7 +34,9 @@ pub enum Status {
 	// Revoked, // commented out for now, we can delete the VC entry when revoked
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(
+	Clone, Eq, PartialEq, Debug, Encode, Decode, DecodeWithMemTracking, TypeInfo, MaxEncodedLen,
+)]
 #[scale_info(skip_type_params(T))]
 #[codec(mel_bound())]
 pub struct VCSchema<T: Config> {

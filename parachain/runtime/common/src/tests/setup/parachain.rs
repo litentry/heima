@@ -203,6 +203,7 @@ impl Config for XcmConfig {
 	type HrmpChannelAcceptedHandler = ();
 	type HrmpChannelClosingHandler = ();
 	type XcmRecorder = ();
+	type XcmEventEmitter = PolkadotXcm;
 }
 
 #[frame_support::pallet]
@@ -285,11 +286,13 @@ pub mod mock_msg_queue {
 						max_weight,
 						Weight::zero(),
 					) {
-						Outcome::Error { error } => (Err(error), Event::Fail(Some(hash), error)),
+						Outcome::Error(InstructionError { error, .. }) => {
+							(Err(error), Event::Fail(Some(hash), error))
+						},
 						Outcome::Complete { used } => (Ok(used), Event::Success(Some(hash))),
 						// As far as the caller is concerned, this was dispatched without error, so
 						// we just report the weight used.
-						Outcome::Incomplete { used, error } => {
+						Outcome::Incomplete { used, error: InstructionError { error, .. } } => {
 							(Ok(used), Event::Fail(Some(hash), error))
 						},
 					}
@@ -404,6 +407,7 @@ impl pallet_xcm::Config for Runtime {
 	type RemoteLockConsumerIdentifier = ();
 	type WeightInfo = pallet_xcm::TestWeightInfo;
 	type AdminOrigin = EnsureRoot<AccountId>;
+	type AuthorizedAliasConsideration = ();
 }
 
 type Block = frame_system::mocking::MockBlock<Runtime>;

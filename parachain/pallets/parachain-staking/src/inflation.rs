@@ -24,7 +24,7 @@ use crate::{
 	traits::IssuanceAdapter,
 };
 use frame_support::traits::Currency;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::RuntimeDebug;
@@ -46,6 +46,7 @@ fn rounds_per_year<T: Config>() -> u32 {
 	Copy,
 	Encode,
 	Decode,
+	DecodeWithMemTracking,
 	Default,
 	RuntimeDebug,
 	MaxEncodedLen,
@@ -110,7 +111,17 @@ pub fn round_issuance_range<T: Config>(round: Range<Perbill>) -> Range<BalanceOf
 }
 
 #[derive(
-	Eq, PartialEq, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo, Serialize, Deserialize,
+	Eq,
+	PartialEq,
+	Clone,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Default,
+	RuntimeDebug,
+	TypeInfo,
+	Serialize,
+	Deserialize,
 )]
 pub struct InflationInfo<Balance> {
 	/// Staking expectations

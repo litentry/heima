@@ -109,7 +109,6 @@ impl pallet_timestamp::Config for Test {
 }
 
 impl pallet_vc_management::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type TEECallOrigin = EnsureEnclaveSigner<Self>;
 	type SetAdminOrigin = EnsureRoot<Self::AccountId>;
@@ -121,7 +120,6 @@ parameter_types! {
 }
 
 impl pallet_teebag::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
 	type SetAdminOrigin = EnsureRoot<Self::AccountId>;
 	type MaxEnclaveIdentifier = ConstU32<3>;

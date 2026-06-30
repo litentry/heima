@@ -34,6 +34,7 @@ use std::string::String;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
+use ethereum::AuthorizationList;
 use frame_support::{
 	construct_runtime,
 	genesis_builder_helper::{build_state, get_preset},
@@ -49,7 +50,7 @@ use frame_support::{
 	ConsensusEngineId, PalletId,
 };
 use frame_system::EnsureRoot;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 
 // for TEE
 pub use pallet_balances::Call as BalancesCall;
@@ -312,6 +313,7 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type MaxSignatories = ConstU32<100>;
 	type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+	type BlockNumberProvider = System;
 }
 
 /// The type used to represent the kinds of proxying allowed.
@@ -324,6 +326,7 @@ impl pallet_multisig::Config for Runtime {
 	PartialOrd,
 	Encode,
 	Decode,
+	DecodeWithMemTracking,
 	RuntimeDebug,
 	MaxEncodedLen,
 	scale_info::TypeInfo,
@@ -411,6 +414,7 @@ impl pallet_proxy::Config for Runtime {
 	type CallHasher = BlakeTwo256;
 	type AnnouncementDepositBase = AnnouncementDepositBase;
 	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+	type BlockNumberProvider = System;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -441,6 +445,7 @@ impl pallet_scheduler::Config for Runtime {
 	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
 	type OriginPrivilegeCmp = frame_support::traits::EqualPrivilegeOnly;
 	type Preimages = Preimage;
+	type BlockNumberProvider = System;
 }
 
 parameter_types! {
@@ -836,7 +841,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 	type ConsensusHook = ConsensusHook;
-	type SelectCore = cumulus_pallet_parachain_system::DefaultCoreSelector<Runtime>;
+	type RelayParentOffset = ConstU32<0>;
 	type WeightInfo = ();
 }
 
@@ -859,7 +864,10 @@ impl pallet_session::Config for Runtime {
 	// Essentially just Aura, but lets be pedantic.
 	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
+	type DisablingStrategy = ();
 	type WeightInfo = weights::pallet_session::WeightInfo<Runtime>;
+	type Currency = Balances;
+	type KeyDeposit = ();
 }
 
 impl pallet_aura::Config for Runtime {
@@ -967,7 +975,6 @@ impl pallet_evm::Config for Runtime {
 	type WithdrawOrigin = pallet_evm::EnsureAddressTruncated;
 	type AddressMapping = pallet_evm::HashedAddressMapping<BlakeTwo256>;
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type Runner = pallet_evm::runner::stack::Runner<Self>;
 	type PrecompilesType = Precompiles;
 	type PrecompilesValue = PrecompilesValue;
@@ -979,6 +986,8 @@ impl pallet_evm::Config for Runtime {
 	type FindAuthor = FindAuthorTruncated<Aura>;
 	type GasLimitPovSizeRatio = GasLimitPovSizeRatio;
 	type GasLimitStorageGrowthRatio = ConstU64<4>;
+	type CreateOriginFilter = ();
+	type CreateInnerOriginFilter = ();
 	type WeightInfo = weights::pallet_evm::WeightInfo<Runtime>;
 }
 
@@ -987,7 +996,6 @@ parameter_types! {
 }
 
 impl pallet_ethereum::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type StateRoot =
 		pallet_ethereum::IntermediateStateRoot<<Runtime as frame_system::Config>::Version>;
 	type PostLogContent = PostBlockAndTxnHashes;
@@ -1021,7 +1029,6 @@ parameter_types! {
 }
 
 impl pallet_parachain_staking::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type MonetaryGovernanceOrigin = EnsureRootOrAllCouncil;
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
@@ -1073,7 +1080,6 @@ parameter_types! {
 }
 
 impl pallet_chain_bridge::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type BridgeCommitteeOrigin = EnsureRootOrHalfCouncil;
 	type Proposal = RuntimeCall;
 	type BridgeChainId = BridgeChainId;
@@ -1119,7 +1125,6 @@ parameter_types! {
 }
 
 impl pallet_assets_handler::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type TreasuryAccount = TreasuryAccount;
 	type SetMaximumIssuanceOrigin = EnsureRootOrHalfCouncil;
 	type DefaultMaximumIssuance = MaximumIssuance;
@@ -1127,7 +1132,6 @@ impl pallet_assets_handler::Config for Runtime {
 }
 
 impl pallet_extrinsic_filter::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type UpdateOrigin = EnsureRootOrHalfTechnicalCommittee;
 	type NormalModeFilter = NormalModeFilter;
 	type SafeModeFilter = SafeModeFilter;
@@ -1140,7 +1144,6 @@ parameter_types! {
 }
 
 impl pallet_teebag::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
 	type SetAdminOrigin = EnsureRootOrHalfCouncil;
 	type MaxEnclaveIdentifier = ConstU32<3>;
@@ -1149,7 +1152,6 @@ impl pallet_teebag::Config for Runtime {
 }
 
 impl pallet_identity_management::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_identity_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type DelegateeAdminOrigin = EnsureRootOrAllCouncil;
@@ -1159,14 +1161,12 @@ impl pallet_identity_management::Config for Runtime {
 impl pallet_omni_account::Config for Runtime {
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type RuntimeEvent = RuntimeEvent;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type OmniAccountOrigin = EnsureOmniAccount;
 	type OmniAccountConverter = DefaultOmniAccountConverter;
 }
 
 impl pallet_omni_bridge::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetKind = NativeOrWithId<AssetId>; // No XCM assets for now
 	type Assets =
@@ -1176,14 +1176,12 @@ impl pallet_omni_bridge::Config for Runtime {
 }
 
 impl pallet_evm_assertions::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type AssertionId = H160;
 	type ContractDevOrigin = pallet_collective::EnsureMember<AccountId, DeveloperCommitteeInstance>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 }
 
 impl pallet_vc_management::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = weights::pallet_vc_management::WeightInfo<Runtime>;
 	type TEECallOrigin = EnsureEnclaveSigner<Runtime>;
 	type SetAdminOrigin = EnsureRootOrHalfCouncil;
@@ -1204,7 +1202,6 @@ impl pallet_score_staking::AccountIdConvert<Runtime> for IdentityAccountIdConver
 
 impl pallet_score_staking::Config for Runtime {
 	type Currency = Balances;
-	type RuntimeEvent = RuntimeEvent;
 	type AccountIdConvert = IdentityAccountIdConvert;
 	type AdminOrigin = EnsureRootOrHalfCouncil;
 	// Temporary suspend of reward
@@ -1426,7 +1423,7 @@ impl_runtime_apis! {
 			VERSION
 		}
 
-		fn execute_block(block: Block) {
+		fn execute_block(block: <Block as BlockT>::LazyBlock) {
 			Executive::execute_block(block)
 		}
 
@@ -1464,7 +1461,7 @@ impl_runtime_apis! {
 			data.create_extrinsics()
 		}
 
-		fn check_inherents(block: Block, data: sp_inherents::InherentData) -> sp_inherents::CheckInherentsResult {
+		fn check_inherents(block: <Block as BlockT>::LazyBlock, data: sp_inherents::InherentData) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
 		}
 	}
@@ -1624,6 +1621,7 @@ impl_runtime_apis! {
 			nonce: Option<U256>,
 			estimate: bool,
 			access_list: Option<Vec<(H160, Vec<H256>)>>,
+			authorization_list: Option<AuthorizationList>,
 		) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
 			let config = if estimate {
 				let mut config = <Runtime as pallet_evm::Config>::config().clone();
@@ -1681,6 +1679,7 @@ impl_runtime_apis! {
 				max_priority_fee_per_gas,
 				nonce,
 				Vec::new(),
+				authorization_list.unwrap_or_default(),
 				is_transactional,
 				validate,
 				weight_limit,
@@ -1702,6 +1701,7 @@ impl_runtime_apis! {
 			nonce: Option<U256>,
 			estimate: bool,
 			access_list: Option<Vec<(H160, Vec<H256>)>>,
+			authorization_list: Option<AuthorizationList>,
 		) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
 			let config = if estimate {
 				let mut config = <Runtime as pallet_evm::Config>::config().clone();
@@ -1759,6 +1759,7 @@ impl_runtime_apis! {
 				max_priority_fee_per_gas,
 				nonce,
 				Vec::new(),
+				authorization_list.unwrap_or_default(),
 				is_transactional,
 				validate,
 				weight_limit,
@@ -1852,15 +1853,13 @@ impl_runtime_apis! {
 		}
 
 		fn execute_block(
-			block: Block,
+			block: <Block as BlockT>::LazyBlock,
 			state_root_check: bool,
 			signature_check: bool,
 			select: frame_try_runtime::TryStateSelect
 		) -> Weight {
 			log::info!(
-				"try-runtime: executing block #{} ({:?}) / root checks: {:?} / sanity-checks: {:?}",
-				block.header.number,
-				block.header.hash(),
+				"try-runtime: executing block / root checks: {:?} / sanity-checks: {:?}",
 				state_root_check,
 				select,
 			);

@@ -38,17 +38,16 @@ pub mod pallet {
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
-	#[derive(Encode, Decode, Clone, Default, Debug, PartialEq, Eq, TypeInfo)]
+	#[derive(
+		Encode, Decode, DecodeWithMemTracking, Clone, Default, Debug, PartialEq, Eq, TypeInfo,
+	)]
 	pub struct Assertion {
 		pub byte_code: Vec<u8>,
 		pub secrets: Vec<Vec<u8>>,
 	}
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		/// The overarching event type.
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
+	pub trait Config: frame_system::Config<RuntimeEvent: From<Event<Self>>> {
 		/// Assertion identifier, usually H160
 		type AssertionId: Default
 			+ Copy

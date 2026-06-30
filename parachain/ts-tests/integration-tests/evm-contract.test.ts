@@ -47,7 +47,8 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
             25000000000,
             null,
             null,
-            []
+            [],
+            [] // authorization_list (EIP-7702), added in frontier stable2512
         );
         await signAndSend(tx, context.eve);
 
@@ -118,7 +119,8 @@ describeLitentry('Test EVM Module Contract', ``, (context) => {
             25000000000,
             null,
             null,
-            []
+            [],
+            [] // authorization_list (EIP-7702), added in frontier stable2512
         );
         await signAndSend(tx, context.eve);
 

@@ -63,14 +63,11 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config:
-		frame_system::Config
+		frame_system::Config<RuntimeEvent: From<Event<Self>>>
 		+ pallet_balances::Config
 		+ pallet_assets::Config
 		+ pallet_chain_bridge::Config
 	{
-		/// Overarching event type
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		/// Treasury account to receive assets fee
 		type TreasuryAccount: Get<Self::AccountId>;
 

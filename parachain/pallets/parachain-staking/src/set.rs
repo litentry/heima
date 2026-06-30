@@ -19,7 +19,7 @@
 //! implementations.
 
 /* TODO: use orml_utilities::OrderedSet without leaking substrate v2.0 dependencies */
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_core::RuntimeDebug;
@@ -27,7 +27,17 @@ use sp_std::prelude::*;
 
 /// An ordered set backed by `Vec`
 #[derive(
-	RuntimeDebug, PartialEq, Eq, Encode, Decode, Default, Clone, TypeInfo, Deserialize, Serialize,
+	RuntimeDebug,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Default,
+	Clone,
+	TypeInfo,
+	Deserialize,
+	Serialize,
 )]
 pub struct OrderedSet<T>(pub Vec<T>);
 

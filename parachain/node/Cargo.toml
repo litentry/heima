@@ -18,6 +18,7 @@ targets = ['x86_64-unknown-linux-gnu']
 [dependencies]
 async-trait = { workspace = true }
 clap = { workspace = true }
+ethereum = { workspace = true, features = ["with-scale", "std"] }
 frame-support = { workspace = true, features = ["std"] }
 futures = { workspace = true }
 jsonrpsee = { workspace = true }

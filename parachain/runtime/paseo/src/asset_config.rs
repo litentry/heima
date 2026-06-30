@@ -26,7 +26,7 @@ use frame_support::{
 	traits::{AsEnsureOriginWithArg, ConstU32, NeverEnsureOrigin},
 };
 use pallet_evm_precompile_assets_erc20::AddressToAssetId;
-use parity_scale_codec::Compact;
+use parity_scale_codec::{Compact, DecodeWithMemTracking};
 use runtime_common::currency::{DOLLARS, EXISTENTIAL_DEPOSIT};
 use scale_info::TypeInfo;
 use sp_core::{ConstU128, H160};
@@ -96,17 +96,20 @@ impl pallet_assets::Config for Runtime {
 	type RemoveItemsLimit = ConstU32<1000>;
 	type AssetIdParameter = Compact<AssetId>;
 	type CallbackHandle = ();
+	type ReserveData = ();
+	type Holder = ();
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = AssetsBenchmarkHelper;
 }
 
-#[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
+#[derive(
+	Clone, Eq, Debug, PartialEq, Ord, PartialOrd, Encode, Decode, DecodeWithMemTracking, TypeInfo,
+)]
 pub enum ForeignAssetType {
 	Xcm(xcm::v4::Location),
 }
 
 impl pallet_asset_manager::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type ForeignAssetType = ForeignAssetType; // TODO

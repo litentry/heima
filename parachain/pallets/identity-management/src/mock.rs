@@ -114,7 +114,6 @@ parameter_types! {
 }
 
 impl pallet_teebag::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
 	type SetAdminOrigin = EnsureRoot<Self::AccountId>;
 	type MaxEnclaveIdentifier = ConstU32<3>;
@@ -123,7 +122,6 @@ impl pallet_teebag::Config for Test {
 }
 
 impl pallet_identity_management::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 	type TEECallOrigin = EnsureEnclaveSigner<Self>;
 	type DelegateeAdminOrigin = EnsureRoot<Self::AccountId>;

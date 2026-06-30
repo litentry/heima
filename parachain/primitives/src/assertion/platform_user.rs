@@ -16,10 +16,12 @@
 
 use crate::assertion::network::{all_evm_web3networks, Web3Network};
 use crate::Vec;
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+#[derive(
+	Encode, Decode, DecodeWithMemTracking, Clone, Debug, PartialEq, Eq, MaxEncodedLen, TypeInfo,
+)]
 pub enum PlatformUserType {
 	#[codec(index = 0)]
 	KaratDao,

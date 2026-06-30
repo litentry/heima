@@ -51,7 +51,17 @@ use sp_std::{boxed::Box, vec::Vec};
 // 1. to decouple `TEECallOrigin` and extrinsic that should be sent from `OmniAccount` origin only
 // 2. allow other pallets to specify ensure_origin using this origin
 // 3. leave room for more delicate control over OmniAccount in the future (e.g. multisig-like control)
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, TypeInfo, MaxEncodedLen)]
+#[derive(
+	PartialEq,
+	Eq,
+	Clone,
+	RuntimeDebug,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	TypeInfo,
+	MaxEncodedLen,
+)]
 #[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub enum RawOrigin<AccountId> {
 	// dispatched from OmniAccount T::AccountId
@@ -72,7 +82,7 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config<RuntimeEvent: From<Event<Self>>> {
 		/// The runtime origin type
 		type RuntimeOrigin: From<RawOrigin<Self::AccountId>>
 			+ From<frame_system::RawOrigin<Self::AccountId>>;
@@ -87,9 +97,6 @@ pub mod pallet {
 			+ UnfilteredDispatchable<RuntimeOrigin = <Self as Config>::RuntimeOrigin>
 			+ IsSubType<Call<Self>>
 			+ IsType<<Self as frame_system::Config>::RuntimeCall>;
-
-		/// The event type of this pallet
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		/// The origin that represents the off-chain worker
 		type TEECallOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
@@ -163,12 +170,12 @@ pub mod pallet {
 		IntentCompleted { who: T::AccountId, intent_id: IntentId, detail: IntentCompletedDetail },
 	}
 
-	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
 	pub enum IntentInProcessDetail {
 		Swap(SwapInProcessDetail),
 	}
 
-	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
 	pub enum IntentCompletedDetail {
 		// TODO - we might want to add more details except for just OK/NOK
 		//        and maybe also per-intent case
@@ -176,7 +183,7 @@ pub mod pallet {
 		Failure,
 	}
 
-	#[derive(Clone, Debug, PartialEq, Encode, Decode, TypeInfo)]
+	#[derive(Clone, Debug, PartialEq, Encode, Decode, DecodeWithMemTracking, TypeInfo)]
 	pub enum SwapInProcessDetail {
 		SourceChainBalanceDeducted { asset: ChainAsset, amount: u64 },
 		DestChainBalanceAdded { asset: ChainAsset, amount: u64 },

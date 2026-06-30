@@ -100,6 +100,7 @@ pallet-vc-management = { workspace = true }
 runtime-common = { workspace = true }
 
 
+ethereum = { workspace = true, features = ["with-scale"] }
 fp-evm = { workspace = true }
 fp-rpc = { workspace = true }
 fp-self-contained = { workspace = true }
@@ -209,6 +210,7 @@ std = [
     "cumulus-primitives-aura/std",
     "cumulus-primitives-core/std",
     "cumulus-primitives-utility/std",
+    "ethereum/std",
     "fp-evm/std",
     "fp-rpc/std",
     "fp-self-contained/std",

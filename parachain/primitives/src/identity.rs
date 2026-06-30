@@ -25,7 +25,7 @@ use base58::{FromBase58, ToBase58};
 use core::fmt::{Debug, Formatter};
 use heima_utils::{decode_hex, hex_encode, if_development_or};
 use pallet_evm::{AddressMapping, HashedAddressMapping as GenericHashedAddressMapping};
-use parity_scale_codec::{Decode, Encode, Error, Input, MaxEncodedLen};
+use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, Error, Input, MaxEncodedLen};
 use scale_info::{meta_type, Type, TypeDefSequence, TypeInfo};
 use sha2::{Digest, Sha256};
 use sp_core::{
@@ -49,6 +49,8 @@ impl Decode for IdentityString {
 		Ok(IdentityString { inner })
 	}
 }
+
+impl DecodeWithMemTracking for IdentityString {}
 
 impl Encode for IdentityString {
 	fn encode(&self) -> Vec<u8> {
@@ -99,6 +101,7 @@ impl Debug for IdentityString {
 #[derive(
 	Encode,
 	Decode,
+	DecodeWithMemTracking,
 	Copy,
 	Clone,
 	Default,
@@ -149,6 +152,7 @@ impl Debug for Address20 {
 #[derive(
 	Encode,
 	Decode,
+	DecodeWithMemTracking,
 	Copy,
 	Clone,
 	Default,
@@ -236,7 +240,18 @@ impl Debug for Address32 {
 
 // TODO: maybe use macros to reduce verbosity
 #[derive(
-	Encode, Decode, Copy, Clone, PartialEq, Eq, TypeInfo, MaxEncodedLen, PartialOrd, Ord, Hash,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	TypeInfo,
+	MaxEncodedLen,
+	PartialOrd,
+	Ord,
+	Hash,
 )]
 pub struct Address33([u8; 33]);
 impl AsRef<[u8; 33]> for Address33 {
@@ -302,7 +317,18 @@ impl Debug for Address33 {
 /// We only include the network categories (substrate/evm) without concrete types
 /// see https://github.com/litentry/heima/issues/1841
 #[derive(
-	Encode, Decode, Clone, Debug, PartialEq, Eq, TypeInfo, MaxEncodedLen, EnumIter, Ord, PartialOrd,
+	Encode,
+	Decode,
+	DecodeWithMemTracking,
+	Clone,
+	Debug,
+	PartialEq,
+	Eq,
+	TypeInfo,
+	MaxEncodedLen,
+	EnumIter,
+	Ord,
+	PartialOrd,
 )]
 pub enum Identity {
 	#[codec(index = 0)]
