@@ -29,7 +29,7 @@ use sp_std::vec;
 use pallet_teebag::test_util::TEST8_MRENCLAVE;
 const USER_SEED: u32 = 9966;
 
-fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
+fn assert_last_event<T: Config>(generic_event: <T as frame_system::Config>::RuntimeEvent) {
 	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
