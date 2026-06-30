@@ -81,7 +81,7 @@ solana-client = "3"
 solana-commitment-config = "3"
 solana-sdk = "3"
 solana-system-interface = "2"
-sp-core = "35.0.0"
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "stable2512", default-features = false }
 spl-associated-token-account = "8"
 spl-token = "9"
 tempfile = "3.27.0"
