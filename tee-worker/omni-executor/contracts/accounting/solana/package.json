@@ -16,5 +16,9 @@
     "prettier": "^3.9.3",
     "ts-mocha": "^11.1.0",
     "typescript": "^6.0.3"
+  },
+  "resolutions": {
+    "serialize-javascript": ">=7.0.5",
+    "uuid": ">=11.1.1"
   }
 }

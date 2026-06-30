@@ -1,29 +1,31 @@
 {
-    "type": "module",
-    "license": "ISC",
-    "scripts": {
-        "format": "pnpm run --recursive format",
-        "check-format": "pnpm run --recursive check-format",
-        "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
-    },
-    "engines": {
-        "node": ">=20.0.0"
-    },
-    "packageManager": "pnpm@9.15.2",
-    "pnpm": {
-        "overrides": {
-            "base-x": "4.0.1",
-            "elliptic": "6.6.1",
-            "ws": "^8.18.2",
-            "@types/ws": "^8.5.9",
-            "@polkadot/types": "*",
-            "@polkadot/types-codec": "*",
-            "@substrate/connect": "^0.8.12",
-            "handlebars": ">=4.7.9",
-            "js-yaml": "4.1.1",
-            "mocha>serialize-javascript": "7.0.3",
-            "ts-node>diff": "4.0.4",
-            "mocha>diff": "8.0.3"
-        }
+  "type": "module",
+  "license": "ISC",
+  "scripts": {
+    "format": "pnpm run --recursive format",
+    "check-format": "pnpm run --recursive check-format",
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' +"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.15.2",
+  "pnpm": {
+    "overrides": {
+      "base-x": "4.0.1",
+      "elliptic": "6.6.1",
+      "ws": "^8.18.2",
+      "@types/ws": "^8.5.9",
+      "@polkadot/types": "*",
+      "@polkadot/types-codec": "*",
+      "@substrate/connect": "^0.8.12",
+      "handlebars": ">=4.7.9",
+      "js-yaml": ">=4.2.0",
+      "mocha>serialize-javascript": ">=7.0.5",
+      "ts-node>diff": "4.0.4",
+      "mocha>diff": "8.0.3",
+      "serialize-javascript": ">=7.0.5",
+      "uuid": ">=11.1.1"
     }
+  }
 }
