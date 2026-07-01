@@ -80,12 +80,12 @@ fi
 print_divider
 
 echo "launching zombienet network (in background), dir = $ZOMBIENET_DIR ..."
-# Log at `info` (not `silent`) and keep the orchestrator output in a file under the
-# zombienet dir so it is captured by CI's "Archive logs if test fails" step. Per-node
-# logs already land in $ZOMBIENET_DIR/*.log; this adds zombienet's own startup/scheduling
-# output, which is what reveals stalls (e.g. a collator that never produces block #1).
-mkdir -p "$HEIMA_DIR/$ZOMBIENET_DIR"
-nohup $ZOMBIENET_BIN -d $ZOMBIENET_DIR -l info spawn config.toml > "$HEIMA_DIR/$ZOMBIENET_DIR/zombienet.log" 2>&1 &
+# Log at `text` (not `silent`) and keep the orchestrator output in a file so it is captured
+# by CI's "Archive logs if test fails" step. Write it as a sibling of the zombienet dir
+# (NOT inside it — zombienet requires `-d` to be a fresh/absent directory and pre-creating
+# it breaks spawn). Per-node logs still land in $ZOMBIENET_DIR/*.log.
+# (`-l` accepts only table|text|silent; `text` is the plain-text verbose mode.)
+nohup $ZOMBIENET_BIN -d $ZOMBIENET_DIR -l text spawn config.toml > "$HEIMA_DIR/zombienet-$ZOMBIENET_DIR.log" 2>&1 &
 
 cd "$ROOTDIR/parachain/ts-tests"
 
