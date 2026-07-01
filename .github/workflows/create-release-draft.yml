@@ -249,8 +249,14 @@ jobs:
         if: ${{ failure() }}
         with:
           name: ${{ matrix.chain }}-ts-tests-artifacts
-          path: /tmp/parachain_dev/
+          # Only the log/spec files, NOT the downloaded relay binaries: the `polkadot`
+          # binary is written without an owner read bit, so archiving the whole dir fails
+          # the zip with EACCES and we lose all logs. Globs below are readable text only.
+          path: |
+            /tmp/parachain_dev/**/*.log
+            /tmp/parachain_dev/**/*.json
           retention-days: 3
+          if-no-files-found: warn
 
       - name: Dockerhub login
         uses: docker/login-action@v4
