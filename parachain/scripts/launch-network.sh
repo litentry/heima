@@ -80,7 +80,12 @@ fi
 print_divider
 
 echo "launching zombienet network (in background), dir = $ZOMBIENET_DIR ..."
-nohup $ZOMBIENET_BIN -d $ZOMBIENET_DIR -l silent spawn config.toml > /dev/null 2>&1 &
+# Log at `text` (not `silent`) and keep the orchestrator output in a file so it is captured
+# by CI's "Archive logs if test fails" step. Write it as a sibling of the zombienet dir
+# (NOT inside it — zombienet requires `-d` to be a fresh/absent directory and pre-creating
+# it breaks spawn). Per-node logs still land in $ZOMBIENET_DIR/*.log.
+# (`-l` accepts only table|text|silent; `text` is the plain-text verbose mode.)
+nohup $ZOMBIENET_BIN -d $ZOMBIENET_DIR -l text spawn config.toml > "$HEIMA_DIR/zombienet-$ZOMBIENET_DIR.log" 2>&1 &
 
 cd "$ROOTDIR/parachain/ts-tests"
 

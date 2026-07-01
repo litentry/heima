@@ -463,7 +463,12 @@ jobs:
         if: failure()
         with:
           name: ${{ matrix.chain }}-ts-tests-artifact
-          path: /tmp/parachain_dev/
+          # Only log/spec files, NOT the downloaded relay binaries: the `polkadot` binary
+          # has no owner read bit, so archiving the whole dir fails the zip with EACCES and
+          # loses all logs. Globs below match readable text only.
+          path: |
+            /tmp/parachain_dev/**/*.log
+            /tmp/parachain_dev/**/*.json
           if-no-files-found: ignore
           retention-days: 3
 
