@@ -32,7 +32,7 @@ use alloc::string::String;
 #[cfg(feature = "std")]
 use std::string::String;
 
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::RelayNumberMonotonicallyIncreases;
 use cumulus_primitives_core::AggregateMessageOrigin;
 use ethereum::AuthorizationList;
 use frame_support::{
@@ -893,7 +893,11 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedDmpWeight = ReservedDmpWeight;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
-	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+	// Async backing pipelines multiple parachain blocks against the same relay parent, so
+	// consecutive parachain blocks can share a relay number. `RelayNumberStrictlyIncreases`
+	// panics in that case; the SDK prescribes `RelayNumberMonotonicallyIncreases` whenever
+	// async backing is enabled.
+	type CheckAssociatedRelayNumber = RelayNumberMonotonicallyIncreases;
 	// Use the fixed-velocity hook (same as the heima runtime). The legacy `ExpectParentIncluded`
 	// hook requires each block's parent to already be included by the relay chain and does not
 	// support an unincluded segment, so it cannot pipeline blocks for async backing — at 6s block
@@ -935,7 +939,12 @@ impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type DisabledValidators = ();
 	type MaxAuthorities = ConstU32<250>;
-	type AllowMultipleBlocksPerSlot = ConstBool<false>;
+	// Must be `true` under async backing: the lookahead collator pipelines multiple parachain
+	// blocks against the same relay parent within an unincluded segment, so `pallet_aura`'s
+	// `on_initialize` would otherwise panic with "Slot must increase" on the second block built
+	// in the same relay slot. The real block rate stays bounded by `FixedVelocityConsensusHook`
+	// (BLOCK_PROCESSING_VELOCITY / UNINCLUDED_SEGMENT_CAPACITY), not by this flag.
+	type AllowMultipleBlocksPerSlot = ConstBool<true>;
 	type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 
