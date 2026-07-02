@@ -96,6 +96,27 @@ else
 fi
 corepack pnpm install
 
+# Wait for the collator RPC to be up before the ts client connects. zombienet spawn +
+# (in the release path) docker image load can take a while, and the polkadot-js client
+# does not reliably recover if it opens before the RPC port is listening — it then hangs
+# in `ApiPromise.create()` forever (past its own timeout). Poll `system_health` on the
+# collator's RPC port until it answers, up to ~3 min.
+echo "waiting for collator RPC on 127.0.0.1:$COLLATOR_WS_PORT to be ready..."
+rpc_ready=false
+for i in $(seq 1 90); do
+  if curl -s -m 2 -H 'Content-Type: application/json' \
+      -d '{"id":1,"jsonrpc":"2.0","method":"system_health","params":[]}' \
+      "http://127.0.0.1:$COLLATOR_WS_PORT" 2>/dev/null | grep -q '"result"'; then
+    echo "collator RPC is ready (after ~$((i*2))s)"
+    rpc_ready=true
+    break
+  fi
+  sleep 2
+done
+if [ "$rpc_ready" != true ]; then
+  echo "collator RPC did not come up within ~3min; continuing anyway (wait-finalized-block will report)"
+fi
+
 echo "wait for parachain to produce block #1..."
 pnpm run wait-finalized-block 2>&1
 
