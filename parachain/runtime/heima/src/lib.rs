@@ -154,6 +154,17 @@ pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 
 /// Migrations to apply on runtime upgrade.
 pub type Migrations = (
+	// One-time SDK storage-version migrations introduced by the polkadot-stable2512 upgrade.
+	// Without these, on-chain storage versions stay behind the in-code versions (try-runtime
+	// `--checks=all` fails with "storage version do not match") and the affected pallets read
+	// data in the wrong format. Remove after this upgrade is enacted on-chain.
+	pallet_session::migrations::v1::MigrateV0ToV1<
+		Runtime,
+		pallet_session::migrations::v1::InitOffenceSeverity<Runtime>,
+	>,
+	cumulus_pallet_aura_ext::migration::MigrateV0ToV1<Runtime>,
+	cumulus_pallet_xcmp_queue::migration::v6::MigrateV5ToV6<Runtime>,
+	cumulus_pallet_xcmp_queue::migration::v7::MigrateV6ToV7<Runtime>,
 	// permanent
 	pallet_xcm::migration::MigrateToLatestXcmVersion<Runtime>,
 );
@@ -246,7 +257,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	impl_name: alloc::borrow::Cow::Borrowed("heima"),
 	authoring_version: 1,
 	// same versioning-mechanism as polkadot: use last digit for minor updates
-	spec_version: 9270,
+	spec_version: 9271,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 2,
