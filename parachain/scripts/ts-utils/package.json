@@ -21,7 +21,7 @@
         "prettier": "^3.6.2",
         "read-excel-file": "^9.0.6",
         "tsx": "^4.21.0",
-        "typescript": "^6.0.2"
+        "typescript": "^7.0.2"
     },
     "pnpm": {
         "overrides": {
