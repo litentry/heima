@@ -35,7 +35,7 @@ importers:
         version: 3.9.5
       read-excel-file:
         specifier: ^9.0.6
-        version: 9.3.1
+        version: 9.3.3
       tsx:
         specifier: ^4.21.0
         version: 4.23.1
@@ -628,15 +628,15 @@ packages:
     resolution: {integrity: sha512-vGrhOavPSTz4QVNuBNdcNXePNdNMaO1xj9yBeH1ScQPjk/rhg9sSlCXPhMkFuaNNW/syTvYqsnbIJxMBfRbbag==}
     engines: {node: '>= 8'}
 
-  read-excel-file@9.3.1:
-    resolution: {integrity: sha512-yzC1vJ/yl3PGJfCDrOI6/rBagF0bRm/CK1NTNXYdomB+13mDB9SFyoRibsDXxDAFrwCANfuRqzuUWDljkkSEuQ==}
+  read-excel-file@9.3.3:
+    resolution: {integrity: sha512-Eogrq3sqre8IP28bSil9+0yUfZB67o//h5w3R0zdOznkhNAmRJGHz7z38oH8NC5AWO78YG1TXVHGyJZZ2PzZUw==}
     engines: {node: '>=18'}
 
   rxjs@7.8.2:
     resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
 
-  saxen@11.0.2:
-    resolution: {integrity: sha512-WDb4gqac8uiJzOdOdVpr9NWh9NrJMm7Brn5GX2Poj+mjE/QTXqYQENr8T/mom54dDDgbd3QjwTg23TRHYiWXRA==}
+  saxen@11.1.0:
+    resolution: {integrity: sha512-GOxBOAmiWVAytOHBuMlgFMZ4MAk+2Ny5QJpzM9I4IozfPLXq3FsDdIHNviTQGZGIx7G2mBkA+uySiJlYmSU1Gg==}
     engines: {node: '>= 20.12'}
 
   scale-ts@1.6.1:
@@ -1307,17 +1307,17 @@ snapshots:
 
   propagate@2.0.1: {}
 
-  read-excel-file@9.3.1:
+  read-excel-file@9.3.3:
     dependencies:
       fflate: 0.8.3
-      saxen: 11.0.2
+      saxen: 11.1.0
       unzipper-esm: 0.13.2
 
   rxjs@7.8.2:
     dependencies:
       tslib: 2.8.1
 
-  saxen@11.0.2: {}
+  saxen@11.1.0: {}
 
   scale-ts@1.6.1:
     optional: true
