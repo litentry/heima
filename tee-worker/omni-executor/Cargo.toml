@@ -44,7 +44,7 @@ hmac = "0.12.1"
 http = "1.4.1"
 hyperliquid_rust_sdk = { git = "https://github.com/BillyWooo/hyperliquid-rust-sdk", branch = "fork_new_feature" }
 jsonrpsee = { version = "0.26.0", features = ["server"] }
-jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
 libsecp256k1 = "0.7.2"
 log = "0.4.30"
 metrics = "0.24.6"
