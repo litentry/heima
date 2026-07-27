@@ -26,22 +26,22 @@
     "@swc-node/register": "^1.12.1",
     "@swc/core": "^1.15.46",
     "@types/jest": "^30.0.0",
-    "@types/node": "26.1.1",
+    "@types/node": "26.1.2",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "~8.65.0",
     "@typescript-eslint/parser": "~8.65.0",
-    "eslint": "^10.7.0",
+    "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
     "jest": "^30.4.2",
     "jest-environment-node": "^30.4.1",
     "nx": "^23.1.0",
-    "prettier": "^3.9.5",
-    "ts-jest": "^29.4.11",
+    "prettier": "^3.9.6",
+    "ts-jest": "^29.4.12",
     "typedoc": "^0.28.20",
     "typedoc-plugin-markdown": "^4.12.0",
     "typescript": "7.0.2",
     "validate-npm-package-name": "^8.0.0",
-    "verdaccio": "^6.8.0"
+    "verdaccio": "^6.9.0"
   },
   "nx": {
     "includedScripts": []
