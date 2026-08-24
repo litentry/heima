@@ -35,10 +35,10 @@ importers:
         version: 3.9.6
       read-excel-file:
         specifier: ^9.0.6
-        version: 9.3.7
+        version: 9.3.10
       tsx:
         specifier: ^4.21.0
-        version: 4.23.11
+        version: 4.23.12
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -628,8 +628,8 @@ packages:
     resolution: {integrity: sha512-vGrhOavPSTz4QVNuBNdcNXePNdNMaO1xj9yBeH1ScQPjk/rhg9sSlCXPhMkFuaNNW/syTvYqsnbIJxMBfRbbag==}
     engines: {node: '>= 8'}
 
-  read-excel-file@9.3.7:
-    resolution: {integrity: sha512-hYbfCWds+QcdLVNI+BN8OIJ+l2T2rt/PVFWYTO5HlDkILZO9RXfmensIvGYxurzUNos+8PxnvwyAe+dMUrcaEQ==}
+  read-excel-file@9.3.10:
+    resolution: {integrity: sha512-zFcBdzunLCGBmLRT4Q3mLPJnhKPAXXfGAZ83feODlEqX2aRUbgF1h/n2oY0UF7I8tVwnJNRas6fTRD5veDUs+g==}
     engines: {node: '>=18'}
 
   rxjs@7.8.2:
@@ -651,8 +651,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tsx@4.23.11:
-    resolution: {integrity: sha512-Ry2oTEUnhBdeEdWIztY8kf3/nBGnPnjMLVGL0YfdRXMORuPER5NlKmayqxtxRxwB1xBN+RivRaJfe7PM1rtiyw==}
+  tsx@4.23.12:
+    resolution: {integrity: sha512-FDf4L4sYzKtzWYhU/Xm0AQFdTjdIxNo9ElTf2mxXM6k8YMHXzYUe4yODVaXP4V9uMFbVg8c0qyBccK2OOxb45Q==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -1311,7 +1311,7 @@ snapshots:
 
   propagate@2.0.1: {}
 
-  read-excel-file@9.3.7:
+  read-excel-file@9.3.10:
     dependencies:
       fflate: 0.8.3
       saxen: 11.1.1
@@ -1339,7 +1339,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsx@4.23.11:
+  tsx@4.23.12:
     dependencies:
       esbuild: 0.28.2
     optionalDependencies:
