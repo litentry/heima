@@ -30,9 +30,9 @@
         "js-sha256": "^1.0.0",
         "ora": "^9.4.1",
         "pidusage": "^4.0.1",
-        "systeminformation": "^5.33.1",
+        "systeminformation": "^5.33.5",
         "table": "^6.8.1",
-        "viem": "^2.55.19",
+        "viem": "^2.56.0",
         "ws": "^8.21.3"
     },
     "devDependencies": {
@@ -43,7 +43,7 @@
         "@types/pidusage": "^2.0.5",
         "@types/ws": "^8.5.12",
         "chai": "^6.2.2",
-        "eslint": "^10.9.0",
+        "eslint": "^10.9.1",
         "mocha": "^11.8.0",
         "prettier": "^3.3.2",
         "tsx": "^4.16.2",
