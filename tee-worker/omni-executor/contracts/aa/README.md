@@ -7,6 +7,10 @@ licensed under the GNU General Public License v3.0.
 
 ## Compiling
 
+Install all required git submodules with 
+
+`git submodule update --init --recursive`
+
 `forge compile`
 
 ## Running tests
@@ -125,3 +129,9 @@ Each deployment artifact includes:
 The included bytecode can be used to verify deployed contracts on block explorers or to ensure the deployed code matches the source.
 
 Also see [DEPLOYMENT.md](./DEPLOYMENT.md) for more information.
+
+### Versioning
+
+All changes resulting in bytecode change should be properly versioned using new files suffixed with V{N} where N is a version number.
+Each version directory should contain all files required to build contracts, there should be no cross version imports.
+Work on new version begins when first change is introduced after previous version deployment and continues until deployment.

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-import {EntryPointV1} from "../src/core/EntryPointV1.sol";
-import {IStakeManager} from "../src/interfaces/IStakeManager.sol";
+import {EntryPointV1} from "../src/v1/core/EntryPointV1.sol";
+import {IStakeManager} from "../src/v1/interfaces/IStakeManager.sol";
 
 contract StakeManagerTest is Test {
     EntryPointV1 public entryPoint;

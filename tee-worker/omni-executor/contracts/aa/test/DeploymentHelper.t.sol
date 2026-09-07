@@ -202,7 +202,8 @@ contract DeploymentHelperTest is Test {
         string memory testDir = getTestDir("fallback");
         // Create an invalid JSON file first
         string memory filename = string(abi.encodePacked(testDir, "/local.json"));
-        try vm.createDir(testDir, true) {} catch {} // Allow creation to fail if directory exists
+        // Allow creation to fail if directory exists
+        try vm.createDir(testDir, true) {} catch {}
         vm.writeFile(filename, "{ invalid json structure without proper closing");
 
         DeploymentHelper.ContractDeployment[] memory newDeployments = new DeploymentHelper.ContractDeployment[](1);

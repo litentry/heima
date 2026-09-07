@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.28;
 
-import {PackedUserOperation} from "../src/v1/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from "../../src/v2/interfaces/PackedUserOperation.sol";
 
-library TestUtils {
+library TestUtilsV2 {
     function prepare_evm_oa(address account, bytes memory clientId) public pure returns (bytes32) {
         // bytes("evm");
         bytes3 oaType = 0x65766d;

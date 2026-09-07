@@ -2,9 +2,9 @@
 pragma solidity ^0.8.28;
 
 import "forge-std/Script.sol";
-import "../src/core/EntryPointV1.sol";
-import "../src/accounts/OmniAccountFactoryV1.sol";
-import "../src/core/SimplePaymaster.sol";
+import "../src/v1/core/EntryPointV1.sol";
+import "../src/v1/accounts/OmniAccountFactoryV1.sol";
+import "../src/v1/core/SimplePaymaster.sol";
 import "../src/TestToken.sol";
 
 contract DeployLocal is Script {
