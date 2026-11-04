@@ -30,7 +30,7 @@
         "js-sha256": "^1.0.0",
         "ora": "^9.4.1",
         "pidusage": "^4.0.1",
-        "systeminformation": "^5.33.5",
+        "systeminformation": "^5.33.16",
         "table": "^6.8.1",
         "viem": "^2.56.0",
         "ws": "^8.21.3"
