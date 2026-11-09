@@ -2,8 +2,8 @@
   "name": "@heima-network/chaindata",
   "version": "0.0.7",
   "dependencies": {
-    "tslib": "^2.5.3",
-    "tsup": "^8.5.1"
+    "tslib": "^2.9.1",
+    "tsup": "^9.0.0"
   },
   "type": "module",
   "types": "./dist/index.d.ts",

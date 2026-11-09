@@ -11,7 +11,7 @@
   "devDependencies": {
     "@polkadot/keyring": "^14.0.3",
     "@polkadot/rpc-provider": "*",
-    "@types/ws": "^8.5.13"
+    "@types/ws": "^8.18.2"
   },
   "peerDependencies": {
     "@heima-network/chaindata": "0.0.5",
