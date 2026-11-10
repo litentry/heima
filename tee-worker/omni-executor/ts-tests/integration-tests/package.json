@@ -32,7 +32,7 @@
         "@polkadot/util-crypto": "^14.0.2",
         "@solana/web3.js": "^1.98.4",
         "add": "^2.0.9",
-        "bitcoinjs-lib": "^7.0.1",
+        "bitcoinjs-lib": "^7.0.2",
         "bitcoinjs-message": "^2.2.0",
         "chai": "^6.2.2",
         "colors": "^1.4.0",
